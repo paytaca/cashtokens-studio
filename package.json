@@ -14,8 +14,13 @@
   },
   "dependencies": {
     "@bitauth/libauth": "^2.0.0-alpha.8",
+    "@cashscript/utils": "0.8.0-next.3",
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
+    "@mainnet-cash/contract": "^1.1.23",
     "@quasar/extras": "^1.0.0",
+    "@rollup/plugin-inject": "^5.0.3",
     "axios": "^1.2.1",
+    "cashscript": "0.8.0-next.3",
     "mainnet-js": "^1.1.30",
     "pinia": "^2.0.11",
     "quasar": "^2.6.0",
