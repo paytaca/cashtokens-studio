@@ -2,10 +2,15 @@
   <q-page class="row justify-evenly">
     <div class="col-8">
       <div class="row q-my-lg">
-        <div class="col">Create New Fungible Token {{ env }}</div>
+        <div class="col">Create New Fungible Token</div>
       </div>
       <q-form class="row">
         <div class="col">
+          <div class="row q-my-lg">
+            <div class="col">
+              <q-input :filled="true" v-model="fungibleToken.ownerAddress" label="Token owner's address"></q-input>
+            </div>  
+          </div>
           <div class="row q-my-lg">
             <div class="col">
               <q-input :filled="true" v-model="fungibleToken.name" label="Token name"></q-input>
@@ -23,7 +28,7 @@
           </div>
           <div class="row q-my-lg">
             <div class="col">
-              <q-btn color="primary">Create Token Genesis</q-btn>
+              <q-btn color="primary" @click.stop="createFtTokenGenesis">Create Token Genesis</q-btn>
             </div>  
           </div>
         </div>
@@ -35,23 +40,78 @@
 <script lang="ts">
 
 import { defineComponent } from 'vue';
+import getWalletClass from 'src/utils/getWalletClass';
+import { useUserStore } from 'src/stores/user';
+import { hexToBin, OpReturnData } from 'mainnet-js'
+import { sha256, utf8ToBin } from '@bitauth/libauth';
 
 export default defineComponent({
   name: 'FtCreate',
   setup () {
     const env = process.env.APP_ENV
     console.log(process.env)
+    const user = useUserStore()
     const fungibleToken = {
+      ownerAddress: user.connectedPaytacaAddress,
       name: '',
-      maxSupply : '',
-      bcmrUrl: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
+      tokenId: '',
+      maxSupply : 1000000, //arbitrary value
+      bcmrUrl: 'https://bitcatsheroes.club/.well-known/bitcoin-cash-metadata-registry.json'
     }
-    return { fungibleToken, env };
+    return { fungibleToken, env, user};
   },
   methods: {
-    async createTokenGenesis() {
-      console.log('CREATING TOKEN GENESIS')
+    async createFtTokenGenesis() {
+      let contentHash;
+      try {
+        const response = await fetch(this.fungibleToken.bcmrUrl);
+        console.log(response)
+        const text = await response.text();
+        contentHash = sha256.hash(utf8ToBin(text));
+      } catch(error) {
+        console.log(error)
+        return;
+      }
+
+      if (this.fungibleToken.ownerAddress) {
+        const WalletClass = getWalletClass()
+        const wallet = await WalletClass.watchOnly(this.fungibleToken.ownerAddress)
+        const nonceTx = (await wallet.getAddressUtxos()).filter(val => !val.token && val.vout === 0)[0];
+        const { unsignedTransaction, sourceOutputs } = await wallet.tokenGenesis({
+          // cashaddr: !,      // token UTXO recipient, if not specified will default to sender's address
+          amount: this.fungibleToken.maxSupply,                      // fungible token amount
+          // commitment: "abcd",             // NFT Commitment message
+          // capability: NFTCapability.none, // NFT capability
+          value: 1000,                    // Satoshi value
+        },  [OpReturnData.fromArray([
+          "BCMR",
+          contentHash, // sha256 of the contents from the uri below
+          this.fungibleToken.bcmrUrl.replace("https://", ""),
+        ])], { buildUnsigned: true, utxoIds: [nonceTx] });
+
+        // const tokenId = genesisResponse.tokenIds![0];
+        // console.log(tokenId)
+        const signingResult = await window.paytaca!.signTransaction({
+          transaction: unsignedTransaction!,
+          sourceOutputs: sourceOutputs!,
+          broadcast: false,
+          userPrompt: "Create new minting contract"
+        });
+
+        if (signingResult == undefined) {
+          return
+        }
+        try {
+        const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
+        console.log('TX:', tx)
+        } catch (error) {
+          console.log('Contract Creation Error: ', error)
+          return
+        }
+
+      }
     }
+
   }
 });
 </script>
