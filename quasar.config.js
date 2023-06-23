@@ -12,6 +12,7 @@
 const { configure } = require('quasar/wrappers');
 const path = require('path');
 
+
 if (process.env.NODE_ENV==='development') {
   require('dotenv').config({path: '.env.dev'})
 }
@@ -96,7 +97,12 @@ module.exports = configure(function (/* ctx */) {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf (viteConf) {
+        const inject = require('@rollup/plugin-inject')
+        viteConf.build.rollupOptions = {
+          plugins: [inject({ Buffer: ['buffer', 'Buffer'] })]
+        }
+      },
       // viteVuePluginOptions: {},
 
       vitePlugins: [
