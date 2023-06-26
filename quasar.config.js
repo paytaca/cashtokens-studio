@@ -8,12 +8,14 @@
 // Configuration for your app
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js
 
-
+const { NodeGlobalsPolyfillPlugin } = require('@esbuild-plugins/node-globals-polyfill')
 const { configure } = require('quasar/wrappers');
 const path = require('path');
+const EMPTY_PATH = require.resolve(
+  'rollup-plugin-node-polyfills/polyfills/empty.js',
+)
 
-
-if (process.env.NODE_ENV==='development') {
+if (process.env.NODE_ENV==='development' || process.env.NODE_ENV==='development-build') {
   require('dotenv').config({path: '.env.dev'})
 }
 
@@ -41,6 +43,7 @@ module.exports = configure(function (/* ctx */) {
     boot: [
       'i18n',
       'axios',
+      'buffer'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
@@ -99,9 +102,37 @@ module.exports = configure(function (/* ctx */) {
 
       extendViteConf (viteConf) {
         const inject = require('@rollup/plugin-inject')
-        viteConf.build.rollupOptions = {
-          plugins: [inject({ Buffer: ['buffer', 'Buffer'] })]
+        viteConf.build = {
+          target: 'esnext',
+          rollupOptions: {
+            plugins: [inject({ Buffer: ['buffer', 'Buffer'] })]
+          }
         }
+        // viteConf.resolve.alias = stdLibBrowser
+        viteConf.optimizeDeps = {
+          // ...viteConf.optimizeDeps,
+          esbuildOptions: {
+            define: {global: 'globalThis'},
+            target: 'esnext',
+            plugins: [
+              NodeGlobalsPolyfillPlugin({
+                  process: true,
+                  buffer: true,
+              }),
+            ]
+          },
+          include: ['buffer', 'process']
+
+        }
+        
+        viteConf.resolve.alias.pg = EMPTY_PATH
+        viteConf.resolve.alias['pg-format'] = EMPTY_PATH
+        viteConf.resolve.alias['pg-native'] = EMPTY_PATH
+        viteConf.resolve.alias.stream = require.resolve('stream-browserify')
+        viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
+        viteConf.resolve.alias.bufferutil = EMPTY_PATH
+        viteConf.resolve.alias.child_process = EMPTY_PATH
+        viteConf.resolve.alias.utils = path.resolve('./src/utils')
       },
       // viteVuePluginOptions: {},
 
@@ -164,13 +195,38 @@ module.exports = configure(function (/* ctx */) {
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-ssr/configuring-ssr
     ssr: {
-      // ssrPwaHtmlFilename: 'offline.html', // do NOT use index.html as name!
+      ssrPwaHtmlFilename: 'offline.html', // do NOT use index.html as name!
                                           // will mess up SSR
 
-      // extendSSRWebserverConf (esbuildConf) {},
-      // extendPackageJson (json) {},
+      extendSSRWebserverConf (esbuildConf) {},
+      extendPackageJson (json) {},
 
       pwa: false,
+      /**
+       * Manually serialize the store state and provide it yourself
+       * as window.__INITIAL_STATE__ to the client-side (through a <script> tag)
+       * (Requires @quasar/app-vite v1.0.0-beta.14+)
+       */
+      manualStoreSerialization: false,
+
+      /**
+       * Manually inject the store state into ssrContext.state
+       * (Requires @quasar/app-vite v1.0.0-beta.14+)
+       */
+      manualStoreSsrContextInjection: false,
+
+      /**
+       * Manually handle the store hydration instead of letting Quasar CLI do it.
+       * For Pinia: store.state.value = window.__INITIAL_STATE__
+       * For Vuex: store.replaceState(window.__INITIAL_STATE__)
+       */
+      manualStoreHydration: false,
+
+      /**
+       * Manually call $q.onSSRHydrated() instead of letting Quasar CLI do it.
+       * This announces that client-side code should takeover.
+       */
+      manualPostHydrationTrigger: false,
 
       // manualStoreHydration: true,
       // manualPostHydrationTrigger: true,
