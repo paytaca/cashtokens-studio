@@ -12,12 +12,12 @@ export default {
     }
   },
   identities: {
-    '<example_token_category_id>': {
+    '<example_token_id>': {
       '2023-06-26T03:02:34.464Z': {
         name: 'example name',
         description: 'example description',
         token: {
-          category: '<example_token_category_id>',
+          category: '<example_token_id>',
           symbol: 'EXAMPLE',
           decimals: 18
         },
