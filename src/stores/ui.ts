@@ -3,7 +3,7 @@ import { defineStore } from 'pinia';
 export const useUIStore = defineStore('ui', {
   state: () => ({
     isBusy: false,
-    message: { text: '', type: '' as '' | 'error' | 'warning' | 'info' }
+    message: { text: '', type: '' as '' | 'error' | 'warning' | 'info' | 'success'}
   }),
   getters: {
     // doubleCount: (state) => state.counter * 2,
