@@ -45,6 +45,47 @@ import { useUserStore } from 'src/stores/user';
 import { hexToBin, OpReturnData } from 'mainnet-js'
 import { sha256, utf8ToBin } from '@bitauth/libauth';
 
+const token_category = "369e93d4eb677462b94937d8e6ecc64e8a52872c12f5155ead12700247485876"
+//         token_category_timestamp = "2023-05-19T00:00:00Z"
+//         latestRevision = "2023-05-19T00:00:00Z"
+//         # latestRevision = f"{datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
+const bcmr = {
+          $schema: 'https://cashtokens.org/bcmr-v2.schema.json',
+          version: { 'major': 1, 'minor': 0, 'patch': 0 },
+          latestRevision: '2023-06-26T03:02:34.464Z',
+          registryIdentity: {
+            name: 'BitRon metadata registry',
+            description: 'Metadata for the BitRon Asset',
+            uris: {
+              icon: 'https://bitron.cash/icons/bitron.png',
+              web: 'https://bitron.cash',
+              registry: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json'
+            }
+          },
+          identities: {
+            [token_category]: {
+              '2023-06-26T03:02:34.464Z': {
+                name: 'bitron',
+                description: 'universal currency',
+                token: {
+                  category: token_category,
+                  symbol: 'BRON',
+                  decimals: 18
+                },
+                uris: {
+                  icon: 'https://bitron.cash/icons/bitron.png',
+                  web: 'https://bitron.cash',
+                  chat: 'https://t.me/BitRon',
+                  registry: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json',
+                  support: 'https://t.me/BitRon'
+                }
+              }
+            }
+          },
+          license: 'CC0-1.0'
+        }
+
+
 export default defineComponent({
   name: 'FtCreate',
   setup () {
@@ -55,23 +96,24 @@ export default defineComponent({
       ownerAddress: user.connectedPaytacaAddress,
       name: '',
       tokenId: '',
-      maxSupply : 1000000, //arbitrary value
-      bcmrUrl: 'https://bitcatsheroes.club/.well-known/bitcoin-cash-metadata-registry.json'
+      maxSupply : 10000000000000000, //arbitrary value
+      bcmrUrl: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json'
     }
     return { fungibleToken, env, user};
   },
   methods: {
     async createFtTokenGenesis() {
       let contentHash;
-      try {
-        const response = await fetch(this.fungibleToken.bcmrUrl);
-        console.log(response)
-        const text = await response.text();
-        contentHash = sha256.hash(utf8ToBin(text));
-      } catch(error) {
-        console.log(error)
-        return;
-      }
+      // try {
+      //   const response = await fetch(this.fungibleToken.bcmrUrl);
+      //   console.log(response)
+      //   const text = await response.text();
+      //   contentHash = sha256.hash(utf8ToBin(text));
+      // } catch(error) {
+      //   console.log(error)
+      //   return;
+      // }
+      contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
 
       if (this.fungibleToken.ownerAddress) {
         const WalletClass = getWalletClass()
@@ -95,7 +137,7 @@ export default defineComponent({
           transaction: unsignedTransaction!,
           sourceOutputs: sourceOutputs!,
           broadcast: false,
-          userPrompt: "Create new minting contract"
+          userPrompt: "Create Fungible Token"
         });
 
         if (signingResult == undefined) {
