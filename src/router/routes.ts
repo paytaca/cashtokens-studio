@@ -12,6 +12,11 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/ft/Create.vue') }],
   },
   {
+    path: '/ft/new',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/ft/New.vue') }],
+  },
+  {
     path: '/nft/create',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/nft/Create.vue') }],
