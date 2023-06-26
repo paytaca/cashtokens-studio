@@ -42,7 +42,7 @@
     </q-drawer>
 
     <q-page-container>
-      <div class="q-ma-sm q-pa-sm full-width row inline no-wrap justify-start items-center content-start" align="right">
+      <div id="status-bar" class="q-ma-sm q-pa-sm full-width row inline no-wrap justify-start items-center content-start" align="right">
         <q-spinner-pie v-if="ui.isBusy" size="md" color="deep-purple" />
         <div v-if="ui.message?.text != ''" class="q-ml-md"><i>{{ ui.message.text }}</i></div>
       </div>
@@ -101,6 +101,13 @@ export default defineComponent({
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
       user
+    }
+  },
+  watch: {
+    'ui.message.text'(messageText){
+      if (messageText.length > 0) {
+        window.scrollTo({behavior:'smooth', top:0, left:0 })
+      }
     }
   }
 });
