@@ -109,30 +109,31 @@ module.exports = configure(function (/* ctx */) {
           }
         }
         // viteConf.resolve.alias = stdLibBrowser
-        viteConf.optimizeDeps = {
-          // ...viteConf.optimizeDeps,
-          esbuildOptions: {
-            define: {global: 'globalThis'},
-            target: 'esnext',
-            plugins: [
-              NodeGlobalsPolyfillPlugin({
-                  process: true,
-                  buffer: true,
-              }),
-            ]
-          },
-          include: ['buffer', 'process']
+        // viteConf.optimizeDeps = {
+        //   // ...viteConf.optimizeDeps,
+        //   esbuildOptions: {
+        //     define: {global: 'globalThis'},
+        //     target: 'esnext',
+        //     plugins: [
+        //       NodeGlobalsPolyfillPlugin({
+        //           process: true,
+        //           buffer: true,
+        //       }),
+        //     ]
+        //   },
+        //   include: ['buffer', 'process']
 
-        }
+        // }
         
         viteConf.resolve.alias.pg = EMPTY_PATH
         viteConf.resolve.alias['pg-format'] = EMPTY_PATH
         viteConf.resolve.alias['pg-native'] = EMPTY_PATH
         viteConf.resolve.alias.stream = require.resolve('stream-browserify')
-        viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
+        // viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
         viteConf.resolve.alias.bufferutil = EMPTY_PATH
         viteConf.resolve.alias.child_process = EMPTY_PATH
         viteConf.resolve.alias.utils = path.resolve('./src/utils')
+        viteConf.resolve.alias.resources = path.resolve('./src/resources')
       },
       // viteVuePluginOptions: {},
 
