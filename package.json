@@ -10,17 +10,19 @@
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "echo \"No test specified\" && exit 0",
     "dev": "quasar dev",
-    "build": "quasar build"
+    "build": "quasar build",
+    "devssr": "node dist/ssr/index.js"
   },
   "dependencies": {
     "@bitauth/libauth": "^2.0.0-alpha.8",
     "@cashscript/utils": "0.8.0-next.3",
-    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@mainnet-cash/contract": "^1.1.23",
     "@quasar/extras": "^1.0.0",
     "@rollup/plugin-inject": "^5.0.3",
     "axios": "^1.2.1",
     "cashscript": "0.8.0-next.3",
+    "esbuild": "^0.18.8",
+    "libpq": "^1.8.12",
     "mainnet-js": "^1.1.30",
     "pinia": "^2.0.11",
     "quasar": "^2.6.0",
@@ -29,6 +31,7 @@
     "vue-router": "^4.0.0"
   },
   "devDependencies": {
+    "@esbuild-plugins/node-globals-polyfill": "^0.2.3",
     "@intlify/vite-plugin-vue-i18n": "^3.3.1",
     "@quasar/app-vite": "^1.0.0",
     "@types/node": "^12.20.21",
@@ -40,6 +43,7 @@
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-vue": "^9.0.0",
     "prettier": "^2.5.1",
+    "rollup-plugin-node-polyfills": "^0.2.1",
     "typescript": "^4.5.4"
   },
   "engines": {
