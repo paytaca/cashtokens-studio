@@ -69,6 +69,8 @@ import { sha256, utf8ToBin } from '@bitauth/libauth';
 import { ref, defineComponent, reactive } from 'vue'
 import JsonEditor from 'vue3-ts-jsoneditor'
 import bcmrTemplate from 'resources/bcmr'
+import { uid } from 'quasar';
+import { useUIStore } from 'src/stores/ui';
 
 export default defineComponent({
   name: 'FtNew',
@@ -79,6 +81,7 @@ export default defineComponent({
       fungibleToken: {
         ownerAddress: '',
         name: '',
+        symbol: '',
         tokenId: '',
         maxSupply : 0, //arbitrary value
         bcmrUrl: ''
@@ -101,6 +104,7 @@ export default defineComponent({
     this.fungibleToken = {
       ownerAddress: user.connectedPaytacaAddress,
       name: '',
+      symbol: '',
       tokenId: '',
       maxSupply : Number('10000000000000000'), //arbitrary value
       bcmrUrl: bcmrTemplate.registryIdentity.uris.registry
@@ -108,6 +112,9 @@ export default defineComponent({
     this.bcmr = Object.assign({}, bcmrTemplate)
   },
   watch: {
+    'user.connectedPaytacaAddress'(newPaytacaAddress){
+      this.fungibleToken.ownerAddress = newPaytacaAddress
+    },
     'fungibleToken.name'(newName, oldName){
       console.log(newName)
       console.log(oldName)
@@ -121,6 +128,8 @@ export default defineComponent({
   },
   methods: {
     async createFT() {
+      const ui = useUIStore()
+      ui.busy({text: 'Creating FT', type: 'info'})
       let contentHash;
       // try {
       //   const response = await fetch(this.fungibleToken.bcmrUrl);
@@ -131,12 +140,12 @@ export default defineComponent({
       //   console.log(error)
       //   return;
       // }
-      contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
+      contentHash = sha256.hash(utf8ToBin(JSON.stringify(this.bcmr)));
 
       if (this.fungibleToken.ownerAddress) {
         const WalletClass = getWalletClass()
         const wallet = await WalletClass.watchOnly(this.fungibleToken.ownerAddress)
-        const nonceTx = (await wallet.getAddressUtxos()).filter(val => !val.token && val.vout === 0)[0];
+        const nonceTx = (await wallet.getAddressUtxos()).filter((val: any) => !val.token && val.vout === 0)[0];
         const { unsignedTransaction, sourceOutputs } = await wallet.tokenGenesis({
           // cashaddr: !,      // token UTXO recipient, if not specified will default to sender's address
           amount: this.fungibleToken.maxSupply,                      // fungible token amount
@@ -159,16 +168,21 @@ export default defineComponent({
         });
 
         if (signingResult == undefined) {
+          ui.idle()
           return
         }
         try {
-        const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
-        console.log('TX:', tx)
+          const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
+          ui.isBusy = false
+          ui.message.text = 'Success! ' + tx
+          ui.message.type = 'success'
         } catch (error) {
           console.log('Contract Creation Error: ', error)
           return
+        } finally {
+          // ui.idle()
         }
-
+        
       }
     }
 
