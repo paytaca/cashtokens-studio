@@ -15,8 +15,9 @@
           Cashtokens Studio
         </q-toolbar-title>
 
-        <div>v0.1.0</div>
+        <!-- <div>v0.1.0</div> -->
         <light-switch />
+        <paytaca-connect />
       </q-toolbar>
     </q-header>
 
@@ -41,6 +42,10 @@
     </q-drawer>
 
     <q-page-container>
+      <div class="q-ma-sm q-pa-sm full-width row inline no-wrap justify-start items-center content-start" align="right">
+        <q-spinner-pie v-if="ui.isBusy" size="md" color="deep-purple" />
+        <div v-if="ui.message?.text != ''" class="q-ml-md"><i>{{ ui.message.text }}</i></div>
+      </div>
       <router-view />
     </q-page-container>
   </q-layout>
@@ -49,8 +54,10 @@
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import { useUserStore } from 'stores/user';
+import { useUIStore } from 'stores/ui';
 import EssentialLink from 'components/EssentialLink.vue';
 import LightSwitch from 'components/LightSwitch.vue';
+import PaytacaConnect from 'components/PaytacaConnect.vue';
 
 const links = [
   {
@@ -64,6 +71,12 @@ const links = [
     caption: 'Create new non-fungible token',
     icon: 'add',
     link: '/nft/create'
+  },
+  {
+    title: 'New Fungible Token',
+    caption: 'New fungible token',
+    icon: 'add',
+    link: '/ft/new'
   }
 ];
 
@@ -72,13 +85,16 @@ export default defineComponent({
 
   components: {
     EssentialLink,
-    LightSwitch
+    LightSwitch,
+    PaytacaConnect
   },
 
   setup () {
     const leftDrawerOpen = ref(false)
     const user = useUserStore()
+    const ui = useUIStore()
     return {
+      ui,
       essentialLinks: links,
       leftDrawerOpen,
       toggleLeftDrawer () {
