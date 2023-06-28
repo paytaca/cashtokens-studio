@@ -24,6 +24,7 @@ import { defineComponent } from 'vue';
 import { useUserStore } from 'stores/user';
 import { useUIStore } from 'stores/ui';
 import formatAddress from 'src/utils/formatAddress';
+import getWalletClass from 'utils/getWalletClass';
 
 export default defineComponent({
   name: 'PaytacaConnect',
@@ -50,10 +51,16 @@ export default defineComponent({
           return
       }
       if (!paytacaConnection.address.startsWith('bitcoincash')) {
+        ui.idle()
         return
       } 
       this.user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
       this.connected = true
+      const WalletClass = getWalletClass()
+      const wallet = await WalletClass.watchOnly(this.user.connectedPaytacaAddress)
+
+      this.user.connectedPaytacaWalletBchBalance = await wallet.getBalance('sat')
+      console.log(this.user.connectedPaytacaWalletBchBalance)
       ui.idle()
     },
     async disconnect(){
