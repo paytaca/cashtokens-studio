@@ -33,11 +33,12 @@
           {{ user.connectedPaytacaAddress }}
         </q-item-label>
 
-        <EssentialLink
+        <!-- <EssentialLink
           v-for="link in essentialLinks"
           :key="link.title"
           v-bind="link"
-        />
+        /> -->
+        <SidebarMenu />
       </q-list>
     </q-drawer>
 
@@ -55,7 +56,8 @@
 import { defineComponent, ref } from 'vue';
 import { useUserStore } from 'stores/user';
 import { useUIStore } from 'stores/ui';
-import EssentialLink from 'components/EssentialLink.vue';
+// import EssentialLink from 'components/EssentialLink.vue';
+import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 
@@ -84,7 +86,8 @@ export default defineComponent({
   name: 'MainLayout',
 
   components: {
-    EssentialLink,
+    SidebarMenu,
+    // EssentialLink,
     LightSwitch,
     PaytacaConnect
   },
