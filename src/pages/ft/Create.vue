@@ -1,108 +1,135 @@
 <template>
-  <q-page class="row justify-evenly">
-    <div class="col-8">
-      <div class="row q-my-lg">
-        <div class="col">Create New Fungible Token</div>
-      </div>
-      <q-form class="row">
-        <div class="col">
-          <div class="row q-my-lg">
-            <div class="col">
-              <q-input :filled="true" v-model="fungibleToken.ownerAddress" label="Token owner's address"></q-input>
-            </div>  
+  <q-page class="q-pa-md q-ma-sm" style="min-height: 100vh">
+    <div>
+      <q-tabs
+        v-model="tab"
+        dense
+        class="text-grey"
+        active-color="primary"
+        indicator-color="primary"
+        align="justify"
+      >
+        <q-tab name="token" label="Token" />
+        <q-tab name="bcmr" label="BCMR" />
+      </q-tabs>
+
+      <q-separator />
+
+      <q-tab-panels v-model="tab" animated>
+        <q-tab-panel name="token">
+          <div class="text-h5 q-mb-md">Create New Fungible Token</div>
+          <div class="row justify-evenly">
+            <div class="col-8">
+              <q-form class="row">
+                <div class="col">
+                  <div class="row q-my-lg">
+                    <div class="col">
+                      <q-input :filled="true" v-model="fungibleToken.ownerAddress" label="Token owner's address"></q-input>
+                    </div>  
+                  </div>
+                  <div class="row q-my-lg">
+                    <div class="col">
+                      <q-input :filled="true" v-model="fungibleToken.name" label="Token name"></q-input>
+                    </div>  
+                  </div>
+                  <div class="row q-my-lg">
+                    <div class="col">
+                      <q-input :filled="true" v-model="fungibleToken.maxSupply" label="Max Supply"></q-input>
+                    </div>  
+                  </div>
+                  <div class="row q-my-lg">
+                    <div class="col">
+                      <q-input :filled="true" v-model="fungibleToken.bcmrUrl" label="BCMR Url"></q-input>
+                    </div>  
+                  </div>
+                  <div class="row q-my-lg">
+                    <div class="col">
+                      <q-btn color="primary" @click.stop="createFT">Create Token Genesis</q-btn>
+                    </div>  
+                  </div>
+                </div>
+              </q-form>
+            </div>
           </div>
-          <div class="row q-my-lg">
-            <div class="col">
-              <q-input :filled="true" v-model="fungibleToken.name" label="Token name"></q-input>
-            </div>  
-          </div>
-          <div class="row q-my-lg">
-            <div class="col">
-              <q-input :filled="true" v-model="fungibleToken.maxSupply" label="Max Supply"></q-input>
-            </div>  
-          </div>
-          <div class="row q-my-lg">
-            <div class="col">
-              <q-input :filled="true" v-model="fungibleToken.bcmrUrl" label="BCMR Url"></q-input>
-            </div>  
-          </div>
-          <div class="row q-my-lg">
-            <div class="col">
-              <q-btn color="primary" @click.stop="createFtTokenGenesis">Create Token Genesis</q-btn>
-            </div>  
-          </div>
-        </div>
-      </q-form>
+        </q-tab-panel>
+        <q-tab-panel name="bcmr">
+          <div class="text-h5 q-mb-md">BCMR</div>
+          <JsonEditor v-model="bcmr" :darkTheme="$q.dark.isActive"/>
+        </q-tab-panel>
+      </q-tab-panels>
     </div>
   </q-page>
 </template>
 
 <script lang="ts">
-
-import { defineComponent } from 'vue';
-import getWalletClass from 'src/utils/getWalletClass';
+import getWalletClass from 'utils/getWalletClass';
 import { useUserStore } from 'src/stores/user';
 import { hexToBin, OpReturnData } from 'mainnet-js'
 import { sha256, utf8ToBin } from '@bitauth/libauth';
-
-const token_category = "369e93d4eb677462b94937d8e6ecc64e8a52872c12f5155ead12700247485876"
-//         token_category_timestamp = "2023-05-19T00:00:00Z"
-//         latestRevision = "2023-05-19T00:00:00Z"
-//         # latestRevision = f"{datetime.now(timezone.utc):%Y-%m-%dT%H:%M:%SZ}"
-const bcmr = {
-          $schema: 'https://cashtokens.org/bcmr-v2.schema.json',
-          version: { 'major': 1, 'minor': 0, 'patch': 0 },
-          latestRevision: '2023-06-26T03:02:34.464Z',
-          registryIdentity: {
-            name: 'BitRon metadata registry',
-            description: 'Metadata for the BitRon Asset',
-            uris: {
-              icon: 'https://bitron.cash/icons/bitron.png',
-              web: 'https://bitron.cash',
-              registry: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json'
-            }
-          },
-          identities: {
-            [token_category]: {
-              '2023-06-26T03:02:34.464Z': {
-                name: 'bitron',
-                description: 'universal currency',
-                token: {
-                  category: token_category,
-                  symbol: 'BRON',
-                  decimals: 18
-                },
-                uris: {
-                  icon: 'https://bitron.cash/icons/bitron.png',
-                  web: 'https://bitron.cash',
-                  chat: 'https://t.me/BitRon',
-                  registry: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json',
-                  support: 'https://t.me/BitRon'
-                }
-              }
-            }
-          },
-          license: 'CC0-1.0'
-        }
-
+import { ref, defineComponent, reactive } from 'vue'
+import JsonEditor from 'vue3-ts-jsoneditor'
+import bcmrTemplate from 'resources/bcmr'
+import { uid } from 'quasar';
+import { useUIStore } from 'src/stores/ui';
 
 export default defineComponent({
-  name: 'FtCreate',
+  name: 'FtNew',
+  components: {JsonEditor},
+  data(){
+    return {
+      bcmr: {},
+      fungibleToken: {
+        ownerAddress: '',
+        name: '',
+        symbol: '',
+        tokenId: '',
+        maxSupply : 0, //arbitrary value
+        bcmrUrl: ''
+      }
+    }
+  },
   setup () {
     const env = process.env.APP_ENV
-    console.log(process.env)
     const user = useUserStore()
-    const fungibleToken = {
+    return {
+      env,
+      user,
+      tab: ref('token'),
+      innerTab: ref('innerFT'),
+      splitterModel: ref(20)
+    }
+  },
+  mounted(){
+    const user = useUserStore()
+    this.fungibleToken = {
       ownerAddress: user.connectedPaytacaAddress,
       name: '',
+      symbol: '',
       tokenId: '',
-      maxSupply : 10000000000000000, //arbitrary value
-      bcmrUrl: 'https://bitron.cash/.well-known/bitcoin-cash-metadata-registry.json'
+      maxSupply : Number('10000000000000000'), //arbitrary value
+      bcmrUrl: bcmrTemplate.registryIdentity.uris.registry
     }
-    return { fungibleToken, env, user};
+    this.bcmr = Object.assign({}, bcmrTemplate)
+  },
+  watch: {
+    'user.connectedPaytacaAddress'(newPaytacaAddress){
+      this.fungibleToken.ownerAddress = newPaytacaAddress
+    },
+    'fungibleToken.name'(newName, oldName){
+      console.log(newName)
+      console.log(oldName)
+    },
+    bcmr: {
+      handler(updatedBcmr){
+        console.log(updatedBcmr)
+      },
+      deep: true
+    }
   },
   methods: {
-    async createFtTokenGenesis() {
+    async createFT() {
+      const ui = useUIStore()
+      ui.busy({text: 'Creating FT', type: 'info'})
       let contentHash;
       // try {
       //   const response = await fetch(this.fungibleToken.bcmrUrl);
@@ -113,12 +140,12 @@ export default defineComponent({
       //   console.log(error)
       //   return;
       // }
-      contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
+      contentHash = sha256.hash(utf8ToBin(JSON.stringify(this.bcmr)));
 
       if (this.fungibleToken.ownerAddress) {
         const WalletClass = getWalletClass()
         const wallet = await WalletClass.watchOnly(this.fungibleToken.ownerAddress)
-        const nonceTx = (await wallet.getAddressUtxos()).filter(val => !val.token && val.vout === 0)[0];
+        const nonceTx = (await wallet.getAddressUtxos()).filter((val: any) => !val.token && val.vout === 0)[0];
         const { unsignedTransaction, sourceOutputs } = await wallet.tokenGenesis({
           // cashaddr: !,      // token UTXO recipient, if not specified will default to sender's address
           amount: this.fungibleToken.maxSupply,                      // fungible token amount
@@ -141,19 +168,24 @@ export default defineComponent({
         });
 
         if (signingResult == undefined) {
+          ui.idle()
           return
         }
         try {
-        const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
-        console.log('TX:', tx)
+          const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
+          ui.isBusy = false
+          ui.message.text = 'Success! ' + tx
+          ui.message.type = 'success'
         } catch (error) {
           console.log('Contract Creation Error: ', error)
           return
+        } finally {
+          // ui.idle()
         }
-
+        
       }
     }
 
   }
-});
+})
 </script>

@@ -54,7 +54,7 @@
         </q-tab-panel>
         <q-tab-panel name="bcmr">
           <div class="text-h5 q-mb-md">BCMR</div>
-          <JsonEditor v-model="bcmr"/>
+          <JsonEditor v-model="bcmr" :darkTheme="$q.dark.isActive"/>
         </q-tab-panel>
       </q-tab-panels>
     </div>
