@@ -4,14 +4,14 @@
       size="md"
       color="accent"
       icon="img:images/paytaca-128x128.png"
-      @click.stop="connected ? disconnect(): connect()"
+      @click.stop="user.connectedPaytacaAddress ? disconnect(): connect()"
       align="center"
       stack
     >
     <div class="row">
       <div class="col">
         <!-- {{ connected ? 'Disconnect': 'Connect' }} -->
-          <q-icon v-if="connected" name="link_off" size="xs"></q-icon>
+          <q-icon v-if="user.connectedPaytacaAddress" name="link_off" size="xs"></q-icon>
           <q-icon v-else name="link" size="xs"></q-icon>
       </div>
     </div>
@@ -19,58 +19,45 @@
   </div>
 </template>
 
-<script lang="ts">
-import { defineComponent } from 'vue';
+<script setup lang="ts">
+import { ref } from 'vue';
 import { useUserStore } from 'stores/user';
 import { useUIStore } from 'stores/ui';
 import formatAddress from 'src/utils/formatAddress';
-import getWalletClass from 'utils/getWalletClass';
+import getWalletClass from 'src/utils/getWalletClass';
 
-export default defineComponent({
-  name: 'PaytacaConnect',
-  data(){
-    return {
-      connected: false
-    }
-  },
-  setup(props){
-    const user = useUserStore()
-    const ui = useUIStore()
-    return {
-      user,
-      ui
-    }
-  },
-  methods: {
-    async connect(){
-      const ui = useUIStore()
-      ui.busy({text: 'Connecting Paytaca', type: 'info'})
-      let paytacaConnection = await window.paytaca!.connect()
-      if(!paytacaConnection.connected) {
-          ui.idle()
-          return
-      }
-      if (!paytacaConnection.address.startsWith('bitcoincash')) {
-        ui.idle()
-        return
-      } 
-      this.user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
-      this.connected = true
-      const WalletClass = getWalletClass()
-      const wallet = await WalletClass.watchOnly(this.user.connectedPaytacaAddress)
+defineOptions({name: 'PaytacaConnect'})
 
-      this.user.connectedPaytacaWalletBchBalance = await wallet.getBalance('sat')
-      console.log(this.user.connectedPaytacaWalletBchBalance)
+const user = useUserStore()
+const ui = useUIStore()
+const connected = ref(false)
+
+const connect = async() => {
+  ui.busy({text: 'Connecting Paytaca', type: 'info'})
+  let paytacaConnection = await window.paytaca!.connect()  
+  if (paytacaConnection.connected) {
+    if (!paytacaConnection.address.startsWith('bitcoincash')) {
+      // TODO error
       ui.idle()
-    },
-    async disconnect(){
-      await window.paytaca!.disconnect()
-      this.user.connectedPaytacaAddress = ''
-      this.connected = false
-    },
-  },
-  
-  
+      return
+    }
+    ui.idle()
+    user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
+    connected.value = true
+    const WalletClass = getWalletClass()
+    const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
 
-})
+    user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
+    console.log(user.connectedPaytacaWalletBchBalance)
+  } else {
+    ui.idle()
+  }
+}
+
+const disconnect = async() => {
+  await window.paytaca!.disconnect()
+  user.connectedPaytacaAddress = ''
+  connected.value = false
+}
+
 </script>
