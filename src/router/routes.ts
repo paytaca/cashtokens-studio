@@ -7,6 +7,16 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
   },
   {
+    path: '/ft/browse',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/ft/Browse.vue') }],
+  },
+  {
+    path: '/ft/view',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [{ path: '', component: () => import('pages/ft/View.vue') }],
+  },
+  {
     path: '/ft/create',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/ft/Create.vue') }],
