@@ -1,7 +1,7 @@
 <template>
   <q-page class="row items-center justify-evenly">
     <div class="col">
-      <div class="row items-center justify-evenly">
+      <div class="row items-center justify-evenly text-h3">
         Welcome to Cashtokens Studio
       </div>
       <div class="row items-center justify-evenly">

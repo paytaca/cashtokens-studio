@@ -1,5 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+    <HeadLess />
     <q-header elevated>
       <q-toolbar>
         <q-btn
@@ -43,10 +44,11 @@
     </q-drawer>
 
     <q-page-container>
-      <div id="status-bar" class="q-ma-sm q-pa-sm full-width row inline no-wrap justify-start items-center content-start" align="right">
+      <!-- <div id="status-bar" class="q-ma-sm q-pa-sm full-width row inline no-wrap justify-start items-center content-start" align="right">
         <q-spinner-pie v-if="ui.isBusy" size="md" color="deep-purple" />
         <div v-if="ui.message?.text != ''" class="q-ml-md"><i>{{ ui.message.text }}</i></div>
-      </div>
+      </div> -->
+      <StatusBar />
       <router-view />
     </q-page-container>
   </q-layout>
@@ -56,10 +58,11 @@
 import { defineComponent, ref } from 'vue';
 import { useUserStore } from 'stores/user';
 import { useUIStore } from 'stores/ui';
-// import EssentialLink from 'components/EssentialLink.vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
+import StatusBar from 'components/StatusBar.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
+import HeadLess from 'components/HeadLess.vue';
 
 const links = [
   {
@@ -86,11 +89,13 @@ export default defineComponent({
   name: 'MainLayout',
 
   components: {
+    HeadLess,
     SidebarMenu,
-    // EssentialLink,
     LightSwitch,
-    PaytacaConnect
-  },
+    PaytacaConnect,
+    StatusBar,
+    
+},
 
   setup () {
     const leftDrawerOpen = ref(false)
@@ -104,13 +109,6 @@ export default defineComponent({
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
       user
-    }
-  },
-  watch: {
-    'ui.message.text'(messageText){
-      if (messageText.length > 0) {
-        window.scrollTo({behavior:'smooth', top:0, left:0 })
-      }
     }
   }
 });
