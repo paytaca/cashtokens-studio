@@ -134,6 +134,7 @@ module.exports = configure(function (/* ctx */) {
         viteConf.resolve.alias.child_process = EMPTY_PATH
         viteConf.resolve.alias.utils = path.resolve('./src/utils')
         viteConf.resolve.alias.resources = path.resolve('./src/resources')
+        viteConf.resolve.alias.interfaces = path.resolve('./src/interfaces')
       },
       // viteVuePluginOptions: {},
 
