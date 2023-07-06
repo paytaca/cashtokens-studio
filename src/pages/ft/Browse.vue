@@ -65,23 +65,17 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
 
   creatorWallet.getTokenDepositAddress()
-  console.log(creatorWallet.getTokenDepositAddress())
-  // console.log(await creatorWallet.getAllTokenBalances())
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
   createdFts.value = creatorFts
 
   const authchainIdentityOutputs = (await autchainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token))
-  console.log(authchainIdentityOutputs)
 
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
   // cross reference our authchainIdentityOutputsSet (txids) from the authheads of the authchains of each of our tokens
-  console.log('AUTH CHAIN IDENTITY OUTPUT SET', authchainIdentityOutputs)
 
-  console.log('LOADING AUTCHAIN')
-
-  const manageableTokens = []
+  const manageableTokens: UtxoI[] = []
 
   creatorFtsTokenIdsSet.forEach(async (tokenId) => {
     console.log('LOADING AUTCHAIN')
@@ -99,14 +93,30 @@ const loadCreatedFts = async (creatorAddress: string) => {
           query: `{transaction(where:{hash:{_eq:\"\\\\x${tokenId}\"},block_inclusions:{block:{accepted_by:{node:{name:{_ilike:\"%chipnet%\"}}}}}}){ hash authchains {authchain_length migrations{transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{transaction:{outputs:{nonfungible_token_commitment:{_neq:\"null\"}}}}){output_index nonfungible_token_commitment}}}}}}`
         })
       })
-    let authchain = await response.json()
-    if (authchain) {
-      authchain.data
+    let responseJson = await response.json()
+    if (responseJson) {
+      const thisTokenIdsAuthChain = responseJson.data?.transaction?.find((tx: any) => tx.hash.toString().replace('\\x', '') == tokenId)
+      if (thisTokenIdsAuthChain) {
+        let authchain = thisTokenIdsAuthChain.authchains[0]
+        let authhead
+        if (authchain.migrations) {
+          authhead = authchain.migrations[authchain.migrations.length - 1]
+          // if the tx of this authhead is in our authchain guards utxo set we can manage it
+          let copy = new Set(authchainIdentityOutputsSet)
+          copy.add(authhead.transaction[0]?.hash?.replace('\\x', ''))
+          if (copy.size > authchainIdentityOutputsSet.size) {
+            // authhead was not made by creatorWallet, so this tokenId is not manageable by creatorWallet
+            return
+          } else {
+            // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+            manageableTokens.push(creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId == tokenId))
+          }
+        }
+      }
+
+
     }
   })
-
-
-
 }
 
 </script>
