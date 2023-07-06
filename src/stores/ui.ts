@@ -1,16 +1,11 @@
 import { defineStore } from 'pinia';
 
-declare type UIMessage = {
-  text: string,
-  type: ''| 'error' | 'warning' | 'info' | 'success',
-  timeout?: number  
-}
-
 export const useUIStore = defineStore('ui', {
   state: () => ({
     paytacaInstalled: false,
     isBusy: false,
-    message: {} as UIMessage
+    message: {} as UIMessage,
+    messages: [] as UIMessage[]
   }),
   getters: {
     // doubleCount: (state) => state.counter * 2,
@@ -20,6 +15,7 @@ export const useUIStore = defineStore('ui', {
       this.isBusy = true
       this.message.text = msg.text
       this.message.type = msg.type
+      this.messages.push(msg)
     },
     idle(){
       this.isBusy = false
@@ -29,11 +25,17 @@ export const useUIStore = defineStore('ui', {
     clearMessage(){
       this.message.text = ''
       this.message.type = ''
-      delete this.message.timeout 
+      delete this.message.timeout
     },
     setMessage(msg: UIMessage) {
       console.log('MESSAGE', msg)
       this.message = msg
+    },
+    addLoaderMessage(msg: UIMessage) {
+      this.messages.push({...msg, withLoader: true})
+    },
+    addMessage(msg: UIMessage) {
+      this.messages.push(msg)
     }
   },
 });
