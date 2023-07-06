@@ -2,48 +2,44 @@
   <q-page class="q-pa-md q-ma-sm" style="min-height: 100vh">
     <div>
       <div class="text-h6 q-mb-md">Create New Fungible Token</div>
-      <q-tabs
-        v-model="tab"
-        dense
-        class="text-grey"
-        active-color="primary"
-        indicator-color="primary"
-        align="justify"
-      >
+      <q-tabs v-model="tab" dense class="text-grey" active-color="primary" indicator-color="primary" align="justify">
         <q-tab name="token" label="Token Details" />
-        <q-tab v-if="bcmr.$schema" name="bcmr" label="BCMR" :disable="!includeBcmrOpReturn"/>
+        <q-tab v-if="bcmr.$schema" name="bcmr" label="BCMR" :disable="!includeBcmrOpReturn" />
       </q-tabs>
 
       <q-separator />
 
       <q-tab-panels v-model="tab" animated>
         <q-tab-panel name="token">
-          
+
           <div class="row q-my-lg">
             <div class="col">
-              <q-select dark:color="lime" :filled="true" standout bottom-slots v-model="token.category" :options="categoryOptions" label=" Token Category" clearable>
+              <q-select dark:color="lime" :filled="true" standout bottom-slots v-model="token.tokenId"
+                :options="tokenIdOptions" label=" Token tokenId" clearable>
                 <template v-slot:prepend>
                   <q-icon name="abc" />
                 </template>
                 <template v-slot:hint>
                   <i>Select suitable TX id from your utxos</i>
                 </template>
-                <q-inner-loading :showing="isPopulatingCategoryOptions">
+                <q-inner-loading :showing="isPopulatingTokenIdOptions">
                   <q-spinner-facebook size="sm" color="primary" />
                 </q-inner-loading>
               </q-select>
-            </div>  
+            </div>
           </div>
           <div class="row q-my-lg">
             <div class="col">
-              <q-input :filled="true" dark:color="lime" v-model="token.ownerAddress" label="Creator's address"></q-input>
-            </div>  
+              <q-input :filled="true" dark:color="lime" v-model="token.creatorAddress"
+                label="Creator's address"></q-input>
+            </div>
           </div>
           <div class="row q-my-lg">
             <div class="col">
-              <q-checkbox :filled="true" dark:color="lime" v-model="includeBcmrOpReturn" label="Include BCMR publication output">
+              <q-checkbox :filled="true" dark:color="lime" v-model="includeBcmrOpReturn"
+                label="Include BCMR publication output">
               </q-checkbox>
-            </div>  
+            </div>
           </div>
           <div v-if="includeBcmrOpReturn" class="row q-my-lg">
             <div class="col">
@@ -60,21 +56,21 @@
                 <!-- <q-btn color="primary" size="xs">Fetch</q-btn>
                 <q-btn color="primary" size="xs">Create New</q-btn> -->
               </div>
-            </div>  
+            </div>
           </div>
           <div class="row q-my-lg">
             <div class="col">
               <q-btn color="primary" size="md" @click.stop="createFT">Create Token Genesis</q-btn>
-            </div>  
+            </div>
           </div>
         </q-tab-panel>
         <q-tab-panel name="bcmr">
           <div class="text-h5 q-mb-md">BCMR</div>
-          <JsonEditor v-model="bcmr" :darkTheme="$q.dark.isActive"/>
+          <JsonEditor v-model="bcmr" :darkTheme="$q.dark.isActive" />
         </q-tab-panel>
       </q-tab-panels>
     </div>
-    <q-dialog v-model="openNewBcmrDialog" >
+    <q-dialog v-model="openNewBcmrDialog">
       <!-- <q-card style="width: 80vw;">
         <q-toolbar>
           <q-icon name="token" size="md"></q-icon>
@@ -86,7 +82,7 @@
               <div class="col">
                 <div class="row q-my-lg">
                   <div class="col">
-                    <q-select color="lime" :filled="true" standout bottom-slots v-model="token.category" label="Token Category" clearable>
+                    <q-select color="lime" :filled="true" standout bottom-slots v-model="token.tokenId" label="Token tokenId" clearable>
                       <template v-slot:prepend>
                         <q-icon name="abc" />
                       </template>
@@ -94,7 +90,7 @@
                         A zeroeth output tx id
                       </template>
                     </q-select>
-                  </div>  
+                  </div>
                 </div>
                 <div class="row q-my-lg">
                   <div class="col">
@@ -106,18 +102,18 @@
                         The name of the token
                       </template>
                     </q-input>
-                  </div>  
+                  </div>
                 </div>
                 <div class="row q-my-lg">
                   <div class="col">
                     <q-input color="lime" :filled="true" v-model="token.maxSupply" label="Max Supply"></q-input>
-                  </div>  
+                  </div>
                 </div>
                 <div class="row q-my-lg">
                   <div class="col">
                     <q-input color="lime" :filled="true" v-model="token.symbol" label="Symbol"></q-input>
-                  </div> 
-                </div> 
+                  </div>
+                </div>
               </div>
           </q-form>
         </q-card-section>
@@ -125,171 +121,175 @@
           <q-btn>OK</q-btn>
         </q-card-actions>
       </q-card> -->
-      <TokenBcmrBasicForm token-type="ft" :category-options="categoryOptions"/>
+      <TokenBcmrBasicForm token-type="ft" :tokenId-options="tokenIdOptions" />
     </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-
-import { sha256, utf8ToBin } from '@bitauth/libauth';
-import { hexToBin, OpReturnData } from 'mainnet-js'
+import { sha256, utf8ToBin, decodeTransaction, binToHex } from '@bitauth/libauth';
+import { hexToBin, TokenGenesisRequest, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, } from 'mainnet-js'
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { ref, watch, onMounted } from 'vue'
 import { UtxoI } from 'mainnet-js'
 
-import { Registry as BcmrRegistry} from 'src/interfaces/bcmr-v2.schema';
+import { Registry as BcmrRegistry } from 'src/interfaces/bcmr-v2.schema';
 import getWalletClass from 'src/utils/getWalletClass';
 import { useUserStore } from 'src/stores/user';
 import bcmrTemplate from 'src/resources/bcmr';
 import { useUIStore } from 'src/stores/ui';
 import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
 import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
+import getByteCount from 'src/utils/getByteCount';
 
 
-defineOptions({name: 'NewFt'})
+defineOptions({ name: 'NewFt' })
 
 const user = useUserStore()
 const ui = useUIStore()
 
 const token = ref<{
-  category: string,
-  ownerAddress: string,
+  creatorAddress: string,
   name: string,
   symbol: string,
   tokenId: string,
-  maxSupply : string, 
-  bcmrUrl: string}>({
-  category: '',
-  ownerAddress: '',
+  maxSupply: string,
+  bcmrUrl: string
+}>({
+  creatorAddress: '',
   name: '',
   symbol: '',
   tokenId: '',
-  maxSupply : '10000000000000000', //arbitrary value
+  maxSupply: '10000000000000000', //arbitrary value
   bcmrUrl: bcmrTemplate.registryIdentity.uris.registry
 })
 
 const includeBcmrOpReturn = ref(false)
 const openNewBcmrDialog = ref(false)
-const categoryOptions = ref<Array<string>>([])
-const isPopulatingCategoryOptions = ref(false)
+const tokenIdOptions = ref<Array<string>>([])
+const isPopulatingTokenIdOptions = ref(false)
 const tab = ref('token')
 const bcmr = ref<BcmrRegistry>(bcmrTemplate)
 
-watch(() => user.connectedPaytacaAddress, async (address: string)=>{
-  token.value.ownerAddress = address
+watch(() => user.connectedPaytacaAddress, async (address: string) => {
+  token.value.creatorAddress = address
   if (address) {
-    isPopulatingCategoryOptions.value = true
+    isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(address)
     const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0);
-    categoryOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0,9)
-    isPopulatingCategoryOptions.value = false
+    tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
+    isPopulatingTokenIdOptions.value = false
   } else {
-    categoryOptions.value = []
+    tokenIdOptions.value = []
   }
 })
 
 onMounted(async () => {
   if (user.connectedPaytacaAddress) {
-    isPopulatingCategoryOptions.value = true
+    token.value.creatorAddress = user.connectedPaytacaAddress
+    isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0);
-    categoryOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0,9)
-    isPopulatingCategoryOptions.value = false
+    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 10000);
+    tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
+    isPopulatingTokenIdOptions.value = false
   }
 })
 
 // methods
 const createFT = async () => {
   const ui = useUIStore()
-  ui.busy({text: 'Creating FT', type: 'info'})
-  let contentHash;
-  // try {
-  //   const response = await fetch(this.token.bcmrUrl);
-  //   console.log(response)
-  //   const text = await response.text();
-  //   contentHash = sha256.hash(utf8ToBin(text));
-  // } catch(error) {
-  //   console.log(error)
-  //   return;
-  // }
+  ui.busy({ text: 'Creating FT', type: 'info' })
   const WalletClass = getWalletClass()
-  const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress!)
+  const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
 
-  const contract = createAuthChainGuardContract({
-    ownerPubKey: creatorWalletPkh,
-    network: creatorWallet.network,
-  })
 
-  contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
 
-  if (token.value.ownerAddress) {
+  if (token.value.creatorAddress) {
     const WalletClass = getWalletClass()
-    const wallet = await WalletClass.watchOnly(token.value.ownerAddress)
-    const nonceTx = (await wallet.getAddressUtxos()).filter((val: any) => !val.token && val.vout === 0 && val.txid === token.value.category)[0];
-    let tokenGenesis;
-    if (includeBcmrOpReturn.value === true) {
-      tokenGenesis = await wallet.tokenGenesis({
-        cashaddr: contract.getDepositAddress(),      // token UTXO recipient, if not specified will default to sender's address
-        // amount: token.value.maxSupply,        // fungible token amount
-        value: 1000,                    // Satoshi value
-      }, [OpReturnData.fromArray([
-        "BCMR",
-        contentHash, // sha256 of the contents from the uri below
-        token.value.bcmrUrl.replace("https://", ""),
-      ])], { buildUnsigned: true, utxoIds: [nonceTx] })
-    } else {
-      console.log('excluding bcmr')
-      tokenGenesis = await wallet.tokenGenesis({
-        cashaddr: contract.getDepositAddress(),      // token UTXO recipient, if not specified will default to sender's address
-        amount: Number('10000000000000000'),        // fungible token amount
-        value: 1000,                    // Satoshi value
-      },[], { buildUnsigned: true, utxoIds: [nonceTx] })
-    }
+    const wallet = await WalletClass.watchOnly(token.value.creatorAddress)
+    const authbaseAndTokenGenesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0];
 
-    const { unsignedTransaction, sourceOutputs, tokenIds} = tokenGenesis
-    // const tokenId = genesisResponse.tokenIds![0];
-    // console.log(tokenId)
-    const signingResult = await window.paytaca!.signTransaction({
-      transaction: unsignedTransaction!,
-      sourceOutputs: sourceOutputs!,
-      broadcast: false,
-      userPrompt: "Create Fungible Token"
-    });
-
-    if (signingResult == undefined) {
-      ui.idle()
-      return
-    }
+    let txSigningResult;
     try {
-      const tx = await wallet.submitTransaction(hexToBin(signingResult.signedTransaction), true);
-      console.log('TOKEN IDS', tokenIds)
-      ui.idle()
-      ui.setMessage({text: 'Success! FT Created', type: 'success', timeout: 10})
+      /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
+      const contract = createAuthChainGuardContract({
+        ownerPubKey: creatorWalletPkh,
+        network: creatorWallet.network,
+      })
+
+      const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
+        new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
+        new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.maxSupply), tokenId: token.value.tokenId })
+      ]
+
+      if (includeBcmrOpReturn.value === true) {
+        let contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
+        tokenGenesisRequest.push(OpReturnData.fromArray(['BCMR', contentHash, token.value.bcmrUrl.replace('https://', '')]))
+      }
+
+      const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(tokenGenesisRequest,
+        true,
+        { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [authbaseAndTokenGenesisInput], ensureUtxos: [authbaseAndTokenGenesisInput] }
+      )
+
+      const transactionHex = binToHex(encodedTransaction);
+
+      let decoded = decodeTransaction(hexToBin(transactionHex));
+
+      if (typeof decoded === 'string') {
+        ui.setMessage({ type: 'error', text: 'decoded' })
+        return;
+      }
+
+      ui.busy({ type: 'info', text: 'Waiting for FT creator\'s signature' })
+      txSigningResult = await window.paytaca.signTransaction({
+        transaction: decoded, sourceOutputs: [...sourceOutputs], broadcast: false, userPrompt: 'Create Token Genesis'
+      })
+
+      if (!txSigningResult) {
+        ui.idle()
+        ui.clearMessage()
+        return
+      }
+
     } catch (error) {
-      console.log('Contract Creation Error: ', error)
+      if (error instanceof Error) {
+        console.log(error)
+        ui.setMessage({ type: 'error', text: 'Error creating FT Token' })
+      }
       return
-    } 
+    }
+
+    // Tx signing success, submitting transaction
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true);
+      ui.idle()
+      ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 10 })
+    } catch (error) {
+      console.log('Error creating FT Token during submission of txn', error)
+      return
+    }
   }
 }
 
 const fetchBcmr = async () => {
   try {
-    ui.busy({text: `Fetching BCMR from ${token.value.bcmrUrl}`, type:'info'})
-    const r = await fetch(token.value.bcmrUrl)  
+    ui.busy({ text: `Fetching BCMR from ${token.value.bcmrUrl}`, type: 'info' })
+    const r = await fetch(token.value.bcmrUrl)
     bcmr.value = await r.json()
-    token.value.category = Object.keys(bcmr.value?.identities)[0]
-    categoryOptions.value = Object.keys(bcmr.value?.identities)
+    token.value.tokenId = Object.keys(bcmr.value?.identities as { o: object })[0]
+    tokenIdOptions.value = Object.keys(bcmr.value?.identities as { o: object })
     ui.idle()
-    ui.setMessage({text: 'BCMR download success, check the BCMR Tab', type: 'success', timeout: 5})
+    ui.setMessage({ text: 'BCMR download success, check the BCMR Tab', type: 'success', timeout: 5 })
   } catch (error) {
     ui.idle()
-    ui.setMessage({text: 'Failed to fetch BCMR, make sure the URL is correct', type: 'error', timeout: 5})
+    ui.setMessage({ text: 'Failed to fetch BCMR, make sure the URL is correct', type: 'error', timeout: 5 })
     console.log(error)
-  } 
+  }
 }
 
 const createNewBcmr = () => {
