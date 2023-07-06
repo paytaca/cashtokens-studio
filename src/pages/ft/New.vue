@@ -6,12 +6,9 @@
         <q-tab name="token" label="Token Details" />
         <q-tab v-if="bcmr.$schema" name="bcmr" label="BCMR" :disable="!includeBcmrOpReturn" />
       </q-tabs>
-
       <q-separator />
-
       <q-tab-panels v-model="tab" animated>
         <q-tab-panel name="token">
-
           <div class="row q-my-lg">
             <div class="col">
               <q-select dark:color="lime" :filled="true" standout bottom-slots v-model="token.tokenId"
@@ -53,8 +50,6 @@
                   <q-btn color="primary" size="sm" @click="fetchBcmr">Fetch</q-btn>
                   <q-btn color="primary" size="sm" @click="createNewBcmr">Create New</q-btn>
                 </div>
-                <!-- <q-btn color="primary" size="xs">Fetch</q-btn>
-                <q-btn color="primary" size="xs">Create New</q-btn> -->
               </div>
             </div>
           </div>
@@ -71,64 +66,14 @@
       </q-tab-panels>
     </div>
     <q-dialog v-model="openNewBcmrDialog">
-      <!-- <q-card style="width: 80vw;">
-        <q-toolbar>
-          <q-icon name="token" size="md"></q-icon>
-          <q-toolbar-title><span class="text-weight-bold">Token</span> Details</q-toolbar-title>
-          <q-btn flat round dense icon="close" v-close-popup />
-        </q-toolbar>
-        <q-card-section>
-          <q-form class="row">
-              <div class="col">
-                <div class="row q-my-lg">
-                  <div class="col">
-                    <q-select color="lime" :filled="true" standout bottom-slots v-model="token.tokenId" label="Token tokenId" clearable>
-                      <template v-slot:prepend>
-                        <q-icon name="abc" />
-                      </template>
-                      <template v-slot:hint>
-                        A zeroeth output tx id
-                      </template>
-                    </q-select>
-                  </div>
-                </div>
-                <div class="row q-my-lg">
-                  <div class="col">
-                    <q-input color="lime" :filled="true" standout bottom-slots v-model="token.name" label="Token Name" clearable>
-                      <template v-slot:prepend>
-                        <q-icon name="abc" />
-                      </template>
-                      <template v-slot:hint>
-                        The name of the token
-                      </template>
-                    </q-input>
-                  </div>
-                </div>
-                <div class="row q-my-lg">
-                  <div class="col">
-                    <q-input color="lime" :filled="true" v-model="token.maxSupply" label="Max Supply"></q-input>
-                  </div>
-                </div>
-                <div class="row q-my-lg">
-                  <div class="col">
-                    <q-input color="lime" :filled="true" v-model="token.symbol" label="Symbol"></q-input>
-                  </div>
-                </div>
-              </div>
-          </q-form>
-        </q-card-section>
-        <q-card-actions>
-          <q-btn>OK</q-btn>
-        </q-card-actions>
-      </q-card> -->
       <TokenBcmrBasicForm token-type="ft" :tokenId-options="tokenIdOptions" />
     </q-dialog>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { sha256, utf8ToBin, decodeTransaction, binToHex } from '@bitauth/libauth';
-import { hexToBin, TokenGenesisRequest, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, } from 'mainnet-js'
+import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth';
+import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, } from 'mainnet-js'
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { ref, watch, onMounted } from 'vue'
 import { UtxoI } from 'mainnet-js'
@@ -142,12 +87,11 @@ import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
 import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
 import getByteCount from 'src/utils/getByteCount';
 
-
 defineOptions({ name: 'NewFt' })
 
 const user = useUserStore()
 const ui = useUIStore()
-
+const fee = ref<number>(Math.floor(Number(getByteCount({ P2PKH: 1 }, { P2PKH: 2, P2SH: 1 })) * 1.1))
 const token = ref<{
   creatorAddress: string,
   name: string,
@@ -191,7 +135,7 @@ onMounted(async () => {
     isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 10000);
+    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > (fee.value + 1000 + 1000 + 1000));
     tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
     isPopulatingTokenIdOptions.value = false
   }
@@ -222,7 +166,7 @@ const createFT = async () => {
 
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
         new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
-        new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.maxSupply), tokenId: token.value.tokenId })
+        new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.maxSupply), tokenId: token.value.tokenId }),
       ]
 
       if (includeBcmrOpReturn.value === true) {
@@ -231,14 +175,15 @@ const createFT = async () => {
       }
 
       const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(tokenGenesisRequest,
-        true,
+        false,
         { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [authbaseAndTokenGenesisInput], ensureUtxos: [authbaseAndTokenGenesisInput] }
       )
 
-      const transactionHex = binToHex(encodedTransaction);
+      // const transactionHex = binToHex(encodedTransaction);
 
-      let decoded = decodeTransaction(hexToBin(transactionHex));
+      // let decoded = decodeTransaction(hexToBin(transactionHex));
 
+      let decoded = decodeTransaction(encodedTransaction)
       if (typeof decoded === 'string') {
         ui.setMessage({ type: 'error', text: 'decoded' })
         return;
@@ -268,7 +213,11 @@ const createFT = async () => {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true);
       ui.idle()
-      ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 10 })
+      ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 5 })
+
+      const authchain = await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
+      console.log(authchain)
+
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
       return
