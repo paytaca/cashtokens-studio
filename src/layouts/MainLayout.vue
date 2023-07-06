@@ -3,14 +3,7 @@
     <HeadLess />
     <q-header elevated>
       <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
 
         <q-toolbar-title>
           Cashtokens Studio
@@ -22,16 +15,29 @@
       </q-toolbar>
     </q-header>
 
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-    >
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label
-          header
-        >
-          {{ user.connectedPaytacaAddress }}
+        <q-item-label header class="q-mx-sm">
+          <div style="position: relative">
+            <svg class="svg" viewBox="0 0 100 100" width="150">
+              <defs>
+                <path id="circle" d="
+                      M 50, 50
+                      m -37, 0
+                      a 37,37 0 1,1 74,0
+                      a 37,37 0 1,1 -74,0" />
+              </defs>
+              <text font-size="12" style="transform: rotate(-55deg);transform-origin: center; fill:white;">
+                <textPath xlink:href="#circle">
+                  {{ user.connectedPaytacaAddress }}
+                </textPath>
+              </text>
+
+            </svg>
+            <!-- <image href="https://bitcatsheroes.club/img/logo.png" height="65" width="65"
+              style="position:absolute; top: 35; left: 50; z-index: ;" /> -->
+          </div>
+
         </q-item-label>
 
         <!-- <EssentialLink
@@ -94,10 +100,10 @@ export default defineComponent({
     LightSwitch,
     PaytacaConnect,
     StatusBar,
-    
-},
 
-  setup () {
+  },
+
+  setup() {
     const leftDrawerOpen = ref(false)
     const user = useUserStore()
     const ui = useUIStore()
@@ -105,7 +111,7 @@ export default defineComponent({
       ui,
       essentialLinks: links,
       leftDrawerOpen,
-      toggleLeftDrawer () {
+      toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
       user
