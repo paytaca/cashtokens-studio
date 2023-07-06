@@ -91,7 +91,7 @@ defineOptions({ name: 'NewFt' })
 
 const user = useUserStore()
 const ui = useUIStore()
-const fee = ref<number>(Math.floor(Number(getByteCount({ P2PKH: 1 }, { P2PKH: 2, P2SH: 1 })) * 1.1))
+const feeEstimate = ref<number>(Math.floor(Number(getByteCount({ P2PKH: 1 }, { P2PKH: 2, P2SH: 1 })) * 1.1))
 const token = ref<{
   creatorAddress: string,
   name: string,
@@ -135,7 +135,7 @@ onMounted(async () => {
     isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > (fee.value + 1000 + 1000 + 1000));
+    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > (feeEstimate.value + 1000 + 1000 + 1000));
     tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
     isPopulatingTokenIdOptions.value = false
   }
@@ -148,8 +148,6 @@ const createFT = async () => {
   const WalletClass = getWalletClass()
   const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
-
-
 
   if (token.value.creatorAddress) {
     const WalletClass = getWalletClass()
@@ -178,10 +176,6 @@ const createFT = async () => {
         false,
         { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [authbaseAndTokenGenesisInput], ensureUtxos: [authbaseAndTokenGenesisInput] }
       )
-
-      // const transactionHex = binToHex(encodedTransaction);
-
-      // let decoded = decodeTransaction(hexToBin(transactionHex));
 
       let decoded = decodeTransaction(encodedTransaction)
       if (typeof decoded === 'string') {
