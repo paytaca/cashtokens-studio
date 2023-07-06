@@ -67,6 +67,7 @@ const loadCreatedFts = async (creatorAddress: string) => {
   creatorWallet.getTokenDepositAddress()
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
+
   createdFts.value = creatorFts
 
   const authchainIdentityOutputs = (await autchainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token))
@@ -75,10 +76,7 @@ const loadCreatedFts = async (creatorAddress: string) => {
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
   // cross reference our authchainIdentityOutputsSet (txids) from the authheads of the authchains of each of our tokens
 
-  const manageableTokens: UtxoI[] = []
-
   creatorFtsTokenIdsSet.forEach(async (tokenId) => {
-    console.log('LOADING AUTCHAIN')
     const response = await fetch(
       'https://gql.chaingraph.pat.mn/v1/graphql',
       {
@@ -109,12 +107,14 @@ const loadCreatedFts = async (creatorAddress: string) => {
             return
           } else {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            manageableTokens.push(creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId == tokenId))
+            let created = creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId == tokenId)
+            if (created) {
+              createdFts.value.push(created)
+            }
           }
         }
+
       }
-
-
     }
   })
 }
