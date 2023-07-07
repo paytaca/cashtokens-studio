@@ -7,6 +7,8 @@ type UIMessage = {
   timeout?: number
 }
 
+type AppEnv = 'development' | 'development-build' | 'production'
+
 type UIStore = {
   paytacaInstalled: boolean,
   isBusy: boolean,
