@@ -1,6 +1,6 @@
 <template>
   <div class="row justify-around q-ma-md">
-    <q-card v-for="ft, i in createdFts" :key="i" class="col-auto"
+    <q-card v-for="ft, i in createdFtsComputed" :key="i" class="col-auto"
       @click="$router.push(`/ft/view?tokenId=${ft.token!.tokenId}&creator=${user.connectedPaytacaAddress}`)">
       <div class="text-h6">Token {{ i }}</div>
       <q-avatar>
@@ -17,7 +17,7 @@
 </template>
 <script setup lang="ts">
 
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 // import { sha256, utf8ToBin } from '@bitauth/libauth';
 // import { hexToBin, OpReturnData } from 'mainnet-js'
 // import JsonEditor from 'vue3-ts-jsoneditor'
@@ -35,6 +35,9 @@ defineOptions({ name: 'BrowseFt' })
 
 const user = useUserStore()
 const createdFts = ref([] as UtxoI[])
+const createdFtsComputed = computed<UtxoI[]>(() => {
+  return createdFts.value
+})
 
 watch(() => user.connectedPaytacaAddress, async (address) => {
   if (address.length > 0) {
@@ -51,7 +54,6 @@ onMounted(async () => {
 })
 
 // methods
-
 const loadCreatedFts = async (creatorAddress: string) => {
   const WalletClass = getWalletClass()
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
@@ -67,14 +69,10 @@ const loadCreatedFts = async (creatorAddress: string) => {
   creatorWallet.getTokenDepositAddress()
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
-
-  createdFts.value = creatorFts
-
   const authchainIdentityOutputs = (await autchainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token))
 
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
-  // cross reference our authchainIdentityOutputsSet (txids) from the authheads of the authchains of each of our tokens
 
   creatorFtsTokenIdsSet.forEach(async (tokenId) => {
     const response = await fetch(
@@ -88,32 +86,33 @@ const loadCreatedFts = async (creatorAddress: string) => {
           operationName: null,
           variables: {},
           // eslint-disable-next-line quotes
-          query: `{transaction(where:{hash:{_eq:\"\\\\x${tokenId}\"},block_inclusions:{block:{accepted_by:{node:{name:{_ilike:\"%chipnet%\"}}}}}}){ hash authchains {authchain_length migrations{transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{transaction:{outputs:{nonfungible_token_commitment:{_neq:\"null\"}}}}){output_index nonfungible_token_commitment}}}}}}`
+          /* chaingraph authhead query*/
+          // eslint-disable-next-line quotes
+          query: `{transaction(where:{hash:{_eq:\"\\\\x${tokenId}\"},node_validation_timeline:{node:{name:{_ilike:\"%chipnet%\"}}}}){hash authchains{authchain_length migrations(where:{transaction:{outputs:{locking_bytecode_pattern:{_like:\"6a04%\"}}}},order_by:{migration_index:desc}limit:1){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{locking_bytecode_pattern:{_like:\"6a04%\"}}){output_index locking_bytecode}}}}}}`
         })
       })
+
     let responseJson = await response.json()
+
     if (responseJson) {
-      const thisTokenIdsAuthChain = responseJson.data?.transaction?.find((tx: any) => tx.hash.toString().replace('\\x', '') == tokenId)
+      const thisTokenIdsAuthChain = responseJson.data?.transaction?.find((tx: any) => tx.hash.toString().replace('\\x', '') === tokenId)
+      console.log('authchain', thisTokenIdsAuthChain)
       if (thisTokenIdsAuthChain) {
         let authchain = thisTokenIdsAuthChain.authchains[0]
         let authhead
-        if (authchain.migrations) {
-          authhead = authchain.migrations[authchain.migrations.length - 1]
+        if (authchain.migrations && authchain.migrations[0]) {
+          authhead = authchain.migrations[0]
           // if the tx of this authhead is in our authchain guards utxo set we can manage it
           let copy = new Set(authchainIdentityOutputsSet)
           copy.add(authhead.transaction[0]?.hash?.replace('\\x', ''))
-          if (copy.size > authchainIdentityOutputsSet.size) {
-            // authhead was not made by creatorWallet, so this tokenId is not manageable by creatorWallet
-            return
-          } else {
+          if (copy.size === authchainIdentityOutputsSet.size) {
             // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-            let created = creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId == tokenId)
+            let created = creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId === tokenId)
             if (created) {
               createdFts.value.push(created)
             }
           }
         }
-
       }
     }
   })
