@@ -1,13 +1,17 @@
-import { defineStore } from 'pinia';
+import { defineStore } from 'pinia'
+import { constants } from 'boot/constants'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    connectedPaytacaAddress: '',
+    connectedPaytacaAddress: '' as string,
     connectedPaytacaWalletBchBalance: '0'
   }),
   getters: {
-    // doubleCount: (state) => state.counter * 2,
-  },
-  actions: {
-  },
+    walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){
+      if (process.env.APP_ENV === constants.AppEnv.DEVELOPMENT || process.env.APP_ENV === constants.AppEnv.DEVELOPMENT || this.connectedPaytacaAddress?.startsWith('bchtest')) {
+        return 'chipnet'
+      }
+      return 'mainnet'
+    }
+  }
 });
