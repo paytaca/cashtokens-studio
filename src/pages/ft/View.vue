@@ -78,24 +78,17 @@
 
 <script setup lang="ts">
 
-import { sha256, utf8ToBin, binToHex, } from '@bitauth/libauth'
-import { UtxoI } from 'mainnet-js'
-// import { hexToBin, OpReturnData } from 'mainnet-js'
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-// import { UtxoI } from 'mainnet-js'
-import { SignatureTemplate } from 'cashscript';
+
 
 import { Registry as Bcmr } from 'src/interfaces/bcmr-v2.schema'
-import getWalletClass from 'src/utils/getWalletClass'
-// import { useUserStore } from 'src/stores/user'
-import bcmrTemplate from 'src/resources/bcmr'
-import { useUIStore } from 'src/stores/ui'
-import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract'
-import toCashScript from 'src/utils/toCashScript'
-import AuthChainGuard from '../../classes/AuthChainGuard'
 import { useUserStore } from 'src/stores/user';
+import { useUIStore } from 'src/stores/ui'
+import getWalletClass from 'src/utils/getWalletClass'
+import bcmrTemplate from 'src/resources/bcmr'
+import AuthChainGuard from '../../classes/AuthChainGuard'
 
 defineOptions({ name: 'ViewFt' })
 const WalletClass = getWalletClass()
@@ -104,7 +97,7 @@ const user = useUserStore()
 const ui = useUIStore()
 
 
-const authChainGuard = ref<AuthChainGuard | null>(null)
+// const authChainGuard = ref<AuthChainGuard | null>(null)
 
 const token = ref<{
   tokenId: string,
@@ -131,16 +124,27 @@ onMounted(async () => {
 
 // methods
 const publishBcmrUpdate = async () => {
-
   ui.busy({ text: 'Updating BCMR', type: 'info' })
-
+  console.log(bcmr.value)
   const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
-  authChainGuard.value = new AuthChainGuard(creatorWalletPkh, creatorWallet.network)
-  const authChainGuardWallet = await WalletClass.watchOnly(authChainGuard.value.createContract().getDepositAddress())
-  const inputs = await authChainGuardWallet.getAddressUtxos()
-  let bcmrText = JSON.stringify(bcmr.value);
-  let contentHash = sha256.hash(utf8ToBin(bcmrText))
+  const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
+  const bcmrRawString = JSON.stringify(bcmr.value);
+  let bcmrUrl = 'https://'
+  if (typeof (bcmr.value.registryIdentity) !== 'string') {
+    bcmrUrl = bcmr.value.registryIdentity.uris?.registry || ''
+  }
+  try {
+    const tx = await authChainGuard.updateBcmr(bcmrRawString, bcmrUrl)
+
+    if (tx) {
+      ui.idle()
+      ui.setMessage({ type: 'success', text: `Bcmr Update Success! tx: ${tx}`, timeout: 5000 })
+    }
+
+  } catch (error) {
+    console.log(error)
+  }
 
 }
 
