@@ -86,6 +86,7 @@ import { useUIStore } from 'src/stores/ui';
 import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
 import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
 import getByteCount from 'src/utils/getByteCount';
+import AuthChainGuard from 'src/classes/AuthChainGuard';
 
 defineOptions({ name: 'NewFt' })
 
@@ -157,11 +158,12 @@ const createFT = async () => {
     let txSigningResult;
     try {
       /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
-      const contract = createAuthChainGuardContract({
-        ownerPubKey: creatorWalletPkh,
-        network: creatorWallet.network,
-      })
-
+      // const contract = createAuthChainGuardContract({
+      //   ownerPubKey: creatorWalletPkh,
+      //   network: creatorWallet.network,
+      // })
+      const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
+      const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
         new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
         new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.maxSupply), tokenId: token.value.tokenId }),

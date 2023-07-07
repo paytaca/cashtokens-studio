@@ -54,6 +54,7 @@ import { useUserStore } from 'src/stores/user';
 // import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
 import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
 import { useUIStore } from 'src/stores/ui';
+import AuthChainGuard from 'src/classes/AuthChainGuard';
 
 defineOptions({ name: 'BrowseFt' })
 
@@ -86,11 +87,14 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
 
-  const authchainGuardContract = createAuthChainGuardContract({
-    ownerPubKey: creatorWalletPkh,
-    network: creatorWallet.network,
-  })
 
+  // const authchainGuardContract = createAuthChainGuardContract({
+  //   ownerPubKey: creatorWalletPkh,
+  //   network: creatorWallet.network,
+  // })
+
+  const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
+  const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
 
   creatorWallet.getTokenDepositAddress()
