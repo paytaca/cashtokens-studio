@@ -209,8 +209,7 @@ const createFT = async () => {
       ui.idle()
       ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 5 })
 
-      const authchain = await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
-      console.log(authchain)
+      await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
 
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
