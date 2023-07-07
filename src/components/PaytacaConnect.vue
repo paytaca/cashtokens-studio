@@ -7,6 +7,8 @@
           <!-- {{ connected ? 'Disconnect': 'Connect' }} -->
           <q-icon v-if="user.connectedPaytacaAddress" name="link_off" size="xs"></q-icon>
           <q-icon v-else name="link" size="xs"></q-icon>
+          <div><code><sup>{{ user.connectedPaytacaAddress.startsWith('bchtest') ? '[chipnet]' : '' }}</sup></code></div>
+
         </div>
       </div>
     </q-btn>
@@ -41,7 +43,6 @@ const connect = async () => {
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
     user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
-
   } else {
     ui.idle()
   }

@@ -1,53 +1,49 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
-    <q-tree
-      :nodes="menu"
-      node-key="href"
-      no-connectors
-      v-model:expanded="expanded"
-      v-model:selected="selected"
-      default-expand-all
-    />
+    <q-tree :nodes="menu" node-key="href" no-connectors v-model:expanded="expanded" v-model:selected="selected"
+      default-expand-all />
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { ref, computed, watch} from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 import { useUserStore } from 'src/stores/user'
 
+
+
+defineOptions({ name: 'SidebarMenu' })
+
 const router = useRouter()
 const user = useUserStore()
-
 const lastSelectedBeforeUnselect = ref(null as any)
 const selected = ref(null as any)
 const expanded = ref([] as any)
 
-defineOptions({name: 'SidebarMenu'})
-
 watch(selected, (currentlySelected, previouslySelected) => {
 
-  /** 
+  /**
    * Toggle Expand / Collapse of menu with children on select
    */
-    if (currentlySelected !== null) {
+  if (currentlySelected !== null) {
     lastSelectedBeforeUnselect.value = currentlySelected
   }
 
   if (currentlySelected && !currentlySelected.startsWith('#')) {
+    console.log('CURRENTLY SELECTED', currentlySelected)
     router.push(currentlySelected)
     return
   }
-  
+
   if (currentlySelected === null) {
     if (previouslySelected === lastSelectedBeforeUnselect.value) {
       let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
       expanded.value.splice(menuIndex, 1)
     }
   } else {
-    let indexOfCurrentlySelected = expanded.value.findIndex((e: string) => e == currentlySelected)
+    let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)
     if (indexOfCurrentlySelected === -1) {
       expanded.value.push(currentlySelected)
     } else {
@@ -56,102 +52,102 @@ watch(selected, (currentlySelected, previouslySelected) => {
   }
 })
 
-const menu = computed(() => {
+const menu = computed<any[]>(() => {
   return [
+    {
+      label: 'Issuer',
+      href: '#Issuer',
+      // avatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
+      icon: 'domain_add',
+      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      children: [
         {
-          label: 'Issuer',
-          href: '#Issuer',
-          // avatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
-          icon: 'domain_add',
-          disabled: Boolean(user.connectedPaytacaAddress) === false,
-          children: [
-            {
-              label: 'New Fungible Token',
-              href: '/ft/new',
-              icon: 'add',
-              // children: [
-              //   { label: 'Quality ingredients' },
-              //   { label: 'Good recipe' }
-              // ],
-            },
-            {
-              label: 'New Non-Fungible Token',
-              href: '/nft/create',
-              icon: 'add',
-            },
-            {
-              label: 'Manage Tokens',
-              href: '#',
-              icon: 'token',
-              children: [
-                {
-                  label: 'View Created FTs',
-                  href: '/ft/browse',
-                  icon: 'token',
-                  // img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
-                },
-                {
-                  label: 'View Created NFTs',
-                  href: '/nft/browse',
-                  icon: 'token',
-                  // img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
-                }
-                
-              ]
-            }
-          ]
+          label: 'New Fungible Token',
+          href: '/ft/new',
+          icon: 'add',
+          // children: [
+          //   { label: 'Quality ingredients' },
+          //   { label: 'Good recipe' }
+          // ],
         },
         {
-          label: 'Wallet Balance',
-          href: '#Balance',
-          // avatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
-          icon: 'account_balance_wallet',
-          disabled: Boolean(user.connectedPaytacaAddress) === false,
+          label: 'New Non-Fungible Token',
+          href: '/nft/create',
+          icon: 'add',
+        },
+        {
+          label: 'Manage Tokens',
+          href: '#',
+          icon: 'token',
           children: [
-            
             {
-              label: 'Coins (FTs)',
-              // icon: 'token',
-              avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
-              // children: [
-              //   { label: 'Quality ingredients' },
-              //   { label: 'Good recipe' }
-              // ]
+              label: 'View Created FTs',
+              href: '/ft/browse',
+              icon: 'token',
+              // img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
             },
             {
-              label: 'Collectibles (NFTs)',
-              avatar: 'https://img.uxwing.com/wp-content/themes/uxwing/download/internet-network-technology/non-fungible-tokens-nft-icon.svg',
-              // icon: 'restaurant_menu',
-              children: [
-                { label: 'Quality ingredients' },
-                { label: 'Good recipe' }
-              ]
-            },
-            {
-              label: user.connectedPaytacaWalletBchBalance / 1e8,
-              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
-              // icon: 'room_service',
-              // disabled: true,
-              // children: [
-              //   { label: 'Prompt attention' },
-              //   { label: 'Professional waiter' }
-              // ]
-            },
-            // {
-            //   label: 'Pleasant surroundings (with icon)',
-            //   icon: 'photo',
-            //   children: [
-            //     {
-            //       label: 'Happy atmosphere (with image)',
-            //       img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
-            //     },
-            //     { label: 'Good table presentation' },
-            //     { label: 'Pleasing decor' }
-            //   ]
-            // }
+              label: 'View Created NFTs',
+              href: '/nft/browse',
+              icon: 'token',
+              // img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
+            }
+
           ]
         }
       ]
+    },
+    {
+      label: 'Wallet Balance',
+      href: '#Balance',
+      // avatar: 'https://cdn.quasar.dev/img/boy-avatar.png',
+      icon: 'account_balance_wallet',
+      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      children: [
+
+        {
+          label: 'Coins (FTs)',
+          // icon: 'token',
+          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+          // children: [
+          //   { label: 'Quality ingredients' },
+          //   { label: 'Good recipe' }
+          // ]
+        },
+        {
+          label: 'Collectibles (NFTs)',
+          avatar: 'https://img.uxwing.com/wp-content/themes/uxwing/download/internet-network-technology/non-fungible-tokens-nft-icon.svg',
+          // icon: 'restaurant_menu',
+          children: [
+            { label: 'Quality ingredients' },
+            { label: 'Good recipe' }
+          ]
+        },
+        {
+          label: Number(user.connectedPaytacaWalletBchBalance) / 1e8,
+          avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
+          // icon: 'room_service',
+          // disabled: true,
+          // children: [
+          //   { label: 'Prompt attention' },
+          //   { label: 'Professional waiter' }
+          // ]
+        },
+        // {
+        //   label: 'Pleasant surroundings (with icon)',
+        //   icon: 'photo',
+        //   children: [
+        //     {
+        //       label: 'Happy atmosphere (with image)',
+        //       img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
+        //     },
+        //     { label: 'Good table presentation' },
+        //     { label: 'Pleasing decor' }
+        //   ]
+        // }
+      ]
+    }
+  ]
 })
 
 // export default {
@@ -200,7 +196,7 @@ const menu = computed(() => {
 //                   icon: 'token',
 //                   // img: 'https://cdn.quasar.dev/img/logo_calendar_128px.png'
 //                 }
-                
+
 //               ]
 //             }
 //           ]
@@ -212,7 +208,7 @@ const menu = computed(() => {
 //           icon: 'account_balance_wallet',
 //           disabled: Boolean(user.connectedPaytacaAddress) === false,
 //           children: [
-            
+
 //             {
 //               label: 'Coins (FTs)',
 //               // icon: 'token',
@@ -271,7 +267,7 @@ const menu = computed(() => {
 //      * @param previouslySelected The node key (value of href in this case)
 //      */
 //     selected(currentlySelected: string, previouslySelected){
-//       /** 
+//       /**
 //        * Toggle Expand / Collapse of menu with children on select
 //        */
 //       if (currentlySelected !== null) {
@@ -282,7 +278,7 @@ const menu = computed(() => {
 //         this.$router.push(currentlySelected)
 //         return
 //       }
-      
+
 //       if (currentlySelected === null) {
 //         if (previouslySelected === this.lastSelectedBeforeUnselect) {
 //           let menuIndex = this.expanded.findIndex((e: string) => e == this.lastSelectedBeforeUnselect)

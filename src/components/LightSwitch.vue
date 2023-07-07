@@ -4,13 +4,13 @@
   </div>
 </template>
 <script lang="ts">
-import { useQuasar } from 'quasar';
+
 import { defineComponent } from 'vue';
 
 export default defineComponent({
   name: 'LightSwitch',
   methods: {
-    toggle(){
+    toggle() {
       this.$q.dark.toggle()
     }
   }
