@@ -196,7 +196,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
       }
     }`
   }
-  script(){
+  scriptUpdateBcmrTested(){
     return `contract AuthchainGuard(bytes20 owner) {
       function updateBcmr(pubkey ownerPubKey, sig ownerSignature) {
         require(hash160(ownerPubKey) == owner);
@@ -204,6 +204,41 @@ export default class AuthChainGuard implements AuthChainGuardI {
         bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
         require(tx.outputs[0].lockingBytecode == spentFrom);
         require(this.activeInputIndex == 0);
+      }
+    }`
+  }
+  script(){
+    return `contract AuthchainGuard(bytes20 owner) {
+
+      function updateBcmr(pubkey ownerPubKey, sig ownerSignature) {
+        require(hash160(ownerPubKey) == owner);
+        require(checkSig(ownerSignature, ownerPubKey));
+        bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
+        require(tx.outputs[0].lockingBytecode == spentFrom);
+        require(this.activeInputIndex == 0);
+      }
+
+      function transferOwner(pubkey ownerPubKey, sig ownerSignature, bytes20 newOwner) {
+        // Self-mutate the covenant to be owned by newOwnerPubKey
+        require(hash160(ownerPubKey) == owner);
+        require(checkSig(ownerSignature, ownerPubKey));
+        bytes oldRedeemTail = this.activeBytecode.split(34)[1];
+        bytes newRedeemScript = 0x21 + bytes(hash160(newOwner)) + oldRedeemTail;
+        require(
+          tx.outputs[0].lockingBytecode
+          == 0xa914 + hash160(newRedeemScript) + 0x87
+        );
+
+        // Require input index 0 so multiple autchains with this contract
+        // can't be accidentially and irreversibly merged.
+        require(this.activeInputIndex == 0);
+      }
+
+      function burn(pubkey ownerPubKey, sig ownerSignature, bytes20 burnerAccount) {
+        require(hash160(ownerPubKey) == owner);
+        require(checkSig(ownerSignature, ownerPubKey));
+        require(tx.outputs[0].lockingBytecode == 0x6a + 0x04 + bytes("BURN") + 0x20 + tx.inputs[this.activeInputIndex].outpointTransactionHash)
+        require(hash160(burnerAccount) == 0x);
       }
     }`
   }
