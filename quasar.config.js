@@ -43,7 +43,8 @@ module.exports = configure(function (/* ctx */) {
     boot: [
       'i18n',
       'axios',
-      'buffer'
+      'buffer',
+      'constants'
     ],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
@@ -72,15 +73,15 @@ module.exports = configure(function (/* ctx */) {
         browser: [ 'esnext' ],
         node: 'node16'
       },
-      extendWebpack (cfg, { isServer, isClient }) {
-        cfg.resolve.alias = {
-          ...cfg.resolve.alias, // This adds the existing alias
+      // extendWebpack (cfg, { isServer, isClient }) {
+      //   cfg.resolve.alias = {
+      //     ...cfg.resolve.alias, // This adds the existing alias
 
-          // Add your own alias like this
-          res: path.resolve(__dirname, './src/res'),
-          utils: path.resolve(__dirname, './src/utils') 
-        }
-      },
+      //     // Add your own alias like this
+      //     res: path.resolve(__dirname, './src/res'),
+      //     utils: path.resolve(__dirname, './src/utils')
+      //   }
+      // },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
@@ -124,7 +125,7 @@ module.exports = configure(function (/* ctx */) {
         //   include: ['buffer', 'process']
 
         // }
-        
+
         viteConf.resolve.alias.pg = EMPTY_PATH
         viteConf.resolve.alias['pg-format'] = EMPTY_PATH
         viteConf.resolve.alias['pg-native'] = EMPTY_PATH
