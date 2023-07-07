@@ -48,11 +48,11 @@ export default class AuthChainGuard implements AuthChainGuardI {
     let transaction
     let decoded
     try {
-      const cUpdateBcmr = this.contract.getContractFunction('TransferOrUpdateOrBurn');
+      const cUpdateBcmr = this.contract.getContractFunction('updateBcmr');
 
       const bcmrHash = sha256.hash(utf8ToBin(bcmrRawString));
       transaction =
-        cUpdateBcmr(Uint8Array.from([]), Uint8Array.from(Array(65)))
+        cUpdateBcmr(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)))
           .from(identityOutput)
           .fromP2PKH(funderInput, sig)
           .to([{
@@ -79,6 +79,8 @@ export default class AuthChainGuard implements AuthChainGuardI {
       console.log(error)
       throw new Error('Error building transaction')
     }
+
+    console.log('transaction', transaction)
 
     // signing request
     let signingResult
@@ -148,7 +150,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     console.log('burning auth chain')
   }
 
- script(){
+  scriptOrig(){
     return `contract AuthchainGuard(pubkey ownerPubKey) {
       function TransferOrUpdateOrBurn(pubkey newOwnerPubKey, sig ownerSignature) {
         // Require owner's signature for all operations
@@ -191,6 +193,17 @@ export default class AuthChainGuard implements AuthChainGuardI {
           // can't be accidentially and irreversibly merged.
           require(this.activeInputIndex == 0);
         }
+      }
+    }`
+  }
+  script(){
+    return `contract AuthchainGuard(bytes20 owner) {
+      function updateBcmr(pubkey ownerPubKey, sig ownerSignature) {
+        require(hash160(ownerPubKey) == owner);
+        require(checkSig(ownerSignature, ownerPubKey));
+        bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
+        require(tx.outputs[0].lockingBytecode == spentFrom);
+        require(this.activeInputIndex == 0);
       }
     }`
   }
