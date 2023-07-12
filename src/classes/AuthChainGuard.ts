@@ -149,96 +149,123 @@ export default class AuthChainGuard implements AuthChainGuardI {
   burn(): void {
     console.log('burning auth chain')
   }
+  script(){
+    return `// AuthchainGuard v1.0.1
 
-  scriptOrig(){
-    return `contract AuthchainGuard(pubkey ownerPubKey) {
-      function TransferOrUpdateOrBurn(pubkey newOwnerPubKey, sig ownerSignature) {
+    // The contract ensures that, when publishing a BCMR, the authchain is
+    // correctly passed on to the next index-0 output.
+
+    // Methods:
+    // - Publish (ownerPubKey, ownerSignature, '0x'): publishes a BCMR and passes the
+    // covenant on to a new index 0 output with the same key.
+    // - Burn (ownerPubKey, ownerSignature, '0x'): burns the authchain.
+    // Requires specific form of burn output to avoid accidental burn.
+    // - Release (ownerPubKey, ownerSignature, '0x01'): Frees the authchain from the covenant.
+    // - Transfer (ownerPubKey, ownerSignature, newOwnerPubKeyHash): Changes the owning key
+    // of the covenant by mutating the covenant locking bytecode.
+
+    pragma cashscript ^0.8.0;
+
+    contract AuthchainGuard(
+      bytes20 ownerPubKeyHash
+    ) {
+      function PublishOrBurnOrReleaseOrTransfer(
+        pubkey ownerPubKey,
+        sig ownerSignature,
+        bytes20 newOwnerPubKeyHash,
+      ) {
+        // Schnorr sig only, because they are of fixed-length so later
+        // checks are simpler as they don't need to check the length, and
+        // the signatures are smaller, and generally it's just better than
+        // ECDSA.
+        bytes sigBytes = bytes(ownerSignature);
+        require(sigBytes.length == 65);
+
         // Require owner's signature for all operations
+        require(hash160(ownerPubKey) == ownerPubKeyHash);
         require(checkSig(ownerSignature, ownerPubKey));
 
-        bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
-        // If locking bytecode is not being changed then this is an update.
-        if (
-          tx.outputs[0].lockingBytecode
-          == spentFrom
-        ) {
-          // Update
-          require(newOwnerPubKey == 0x);
+        // No funny business, require it to be of SIGHASH_ALL type
+        require(sigBytes.split(64)[1] == 0x41);
 
-          // Require input index 0 so multiple autchains with this contract
-          // can't be accidentially and irreversibly merged.
+        // If spender doesn't change the output address then we infer the
+        // intention is to publish, and so we enter the branch where we
+        // verify the publishing transaction.
+        bool isPublishing =
+          tx.outputs[0].lockingBytecode
+          == tx.inputs[this.activeInputIndex].lockingBytecode;
+        if (isPublishing) {
+          // Publish
+
+          // Not used, require 0 so it can't be malleated by 3rd parties.
+          // Contract would work the same if we allowed any value here, but
+          // it is good practice to keep it tight unless there's a reason
+          // FOR allowing malleability by 3rd parties.
+          require(newOwnerPubKeyHash == bytes20(0));
+
+          // Require input index 0, this ensures that 2 instances of the
+          // same contract can't be spent together, and that it can't be
+          // spent together with other similar "guard" contracts that
+          // require input index 0.
+          // This prevents accidentally and irreversibly merging 2
+          // authchains.
+          // We will allow other input index only in case of burning or
+          // releasing.
+          // If we'd remove this check, we'd also have to replace all
+          // instances of inputs[0] with inputs[this.activeInputIndex].
           require(this.activeInputIndex == 0);
         }
-        // Allow only clearly intentional burn form:
-        // OP_RETURN <'BURN'> <this_inputs_outpoint_hash>
+        // If spender sets the output to a particular form, then we infer
+        // the intention is to burn and allow it.
+        // Burn output form: OP_RETURN <'BURN'> <this_inputs_outpoint_hash>
         else if (
           tx.outputs[0].lockingBytecode
-          == 0x6a + 0x04 + bytes("BURN")
-            + 0x20 + tx.inputs[this.activeInputIndex].outpointTransactionHash
+          == 0x6a + 0x04 + bytes("BURN") + 0x20
+          + tx.inputs[this.activeInputIndex].outpointTransactionHash
         ) {
           // Burn
-          require(newOwnerPubKey == 0x);
+
+          // Not used, require 0 so it can't be malleated by 3rd parties.
+          // Contract would work the same if we allowed any value here, but
+          // it is good practice to keep it tight unless there's a reason
+          // FOR allowing malleability by 3rd parties.
+          require(newOwnerPubKeyHash == bytes20(0));
+        }
+        else if (
+          newOwnerPubKeyHash == bytes20(1)
+        ) {
+          // Release
+
+          // Free the authchain from this covenant (to allow later
+          // transition to some other kind of contract).
+          // Note: this seems like it would make the TX 3rd party malleable,
+          // but 3rd parties can't produce a valid signature for the
+          // outputs, and at the top we require owner to use SIGHASH_ALL.
+          // This means that we can enter this branch only if owner signed
+          // a set of outputs which didn't match any of the other branches,
+          // branches which all have other requirements on newOwnerPubKey.
+          // Therefore, this switch can only be flipped by the owner, as an
+          // "are you sure you want to remove all safety checks" mechanism.
         }
         else {
+          // Transfer
+
+          // Require input index 0.
+          // See above note with 1st occurrence of this check as to why.
+          require(this.activeInputIndex == 0);
+
           // Self-mutate the covenant to be owned by newOwnerPubKey
-          require(newOwnerPubKey.length == 33);
-          bytes oldRedeemTail = this.activeBytecode.split(34)[1];
-          bytes newRedeemScript = 0x21 + bytes(newOwnerPubKey) + oldRedeemTail;
+          require(newOwnerPubKeyHash.length == 20);
+          // We split at 21 because we have a push op for the 21-byte key,
+          // i.e. 0x21{20-byte key}.
+          bytes oldRedeemTail = this.activeBytecode.split(21)[1];
+          bytes newRedeemScript = 0x14 + newOwnerPubKeyHash
+            + oldRedeemTail; // key length + key + oldRedeemTail
           require(
             tx.outputs[0].lockingBytecode
             == 0xa914 + hash160(newRedeemScript) + 0x87
           );
-
-          // Require input index 0 so multiple autchains with this contract
-          // can't be accidentially and irreversibly merged.
-          require(this.activeInputIndex == 0);
         }
-      }
-    }`
-  }
-  scriptUpdateBcmrTested(){
-    return `contract AuthchainGuard(bytes20 owner) {
-      function updateBcmr(pubkey ownerPubKey, sig ownerSignature) {
-        require(hash160(ownerPubKey) == owner);
-        require(checkSig(ownerSignature, ownerPubKey));
-        bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
-        require(tx.outputs[0].lockingBytecode == spentFrom);
-        require(this.activeInputIndex == 0);
-      }
-    }`
-  }
-  script(){
-    return `contract AuthchainGuard(bytes20 owner) {
-
-      function updateBcmr(pubkey ownerPubKey, sig ownerSignature) {
-        require(hash160(ownerPubKey) == owner);
-        require(checkSig(ownerSignature, ownerPubKey));
-        bytes spentFrom = tx.inputs[this.activeInputIndex].lockingBytecode;
-        require(tx.outputs[0].lockingBytecode == spentFrom);
-        require(this.activeInputIndex == 0);
-      }
-
-      function transferOwner(pubkey ownerPubKey, sig ownerSignature, bytes20 newOwner) {
-        // Self-mutate the covenant to be owned by newOwnerPubKey
-        require(hash160(ownerPubKey) == owner);
-        require(checkSig(ownerSignature, ownerPubKey));
-        bytes oldRedeemTail = this.activeBytecode.split(34)[1];
-        bytes newRedeemScript = 0x21 + bytes(hash160(newOwner)) + oldRedeemTail;
-        require(
-          tx.outputs[0].lockingBytecode
-          == 0xa914 + hash160(newRedeemScript) + 0x87
-        );
-
-        // Require input index 0 so multiple autchains with this contract
-        // can't be accidentially and irreversibly merged.
-        require(this.activeInputIndex == 0);
-      }
-
-      function burn(pubkey ownerPubKey, sig ownerSignature, bytes20 burnerAccount) {
-        require(hash160(ownerPubKey) == owner);
-        require(checkSig(ownerSignature, ownerPubKey));
-        require(tx.outputs[0].lockingBytecode == 0x6a + 0x04 + bytes("BURN") + 0x20 + tx.inputs[this.activeInputIndex].outpointTransactionHash)
-        require(hash160(burnerAccount) == 0x);
       }
     }`
   }
