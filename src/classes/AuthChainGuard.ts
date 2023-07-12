@@ -2,7 +2,7 @@ import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
 import { hexToBin, Network, UtxoI, binToHex, BCMR } from 'mainnet-js'
-import { Argument, Artifact, SignatureTemplate } from 'cashscript';
+import { Argument, Artifact, SignatureTemplate, Transaction } from 'cashscript';
 
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
@@ -12,6 +12,7 @@ import toCashScript from 'src/utils/toCashScript';
 export default class AuthChainGuard implements AuthChainGuardI {
 
   readonly contract: Contract;
+  private f: (ownerPubKey: any, ownerSig: any, newOwnerPubKeyOrVal: any) => Transaction;
 
   constructor(readonly ownerAddress: string, readonly ownerPubKey: unknown, readonly network: Network) {
     console.log('ownerPubKey', ownerPubKey)
@@ -20,6 +21,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
       [ownerPubKey],
       network
     )
+    this.f = this.contract.getContractFunction('PublishOrBurnOrReleaseOrTransfer')
   }
 
   /**
@@ -48,11 +50,10 @@ export default class AuthChainGuard implements AuthChainGuardI {
     let transaction
     let decoded
     try {
-      const cUpdateBcmr = this.contract.getContractFunction('updateBcmr');
 
       const bcmrHash = sha256.hash(utf8ToBin(bcmrRawString));
       transaction =
-        cUpdateBcmr(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)))
+        this.f(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), '0x')
           .from(identityOutput)
           .fromP2PKH(funderInput, sig)
           .to([{
