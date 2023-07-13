@@ -1,8 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
-import { hexToBin, Network, UtxoI, binToHex, BCMR } from 'mainnet-js'
-import { Argument, Artifact, SignatureTemplate, Transaction } from 'cashscript';
+import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet } from 'mainnet-js'
+import { Argument, Artifact, HashType, SignatureAlgorithm, SignatureTemplate, Transaction } from 'cashscript';
 
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
@@ -12,46 +14,57 @@ import toCashScript from 'src/utils/toCashScript';
 export default class AuthChainGuard implements AuthChainGuardI {
 
   readonly contract: Contract;
+  private ownerWallet: Wallet|null;
+  private contractWallet: Wallet|null;
   private f: (ownerPubKey: any, ownerSig: any, newOwnerPubKeyOrVal: any) => Transaction;
 
-  constructor(readonly ownerAddress: string, readonly ownerPubKey: unknown, readonly network: Network) {
-    console.log('ownerPubKey', ownerPubKey)
+  constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
     this.contract = new Contract(
       this.script(),
-      [ownerPubKey],
+      [ownerPubKeyHash],
       network
     )
+
+    this.ownerWallet = null
+    this.contractWallet = null
     this.f = this.contract.getContractFunction('PublishOrBurnOrReleaseOrTransfer')
+  }
+
+  async initWallets(){
+    const W = getWalletClass()
+    this.ownerWallet = await W.watchOnly(this.ownerAddress)
+    this.contractWallet = await W.watchOnly(this.contract.getDepositAddress())
   }
 
   /**
    * Publishes a BCMR update
-   * @param {string} bcmrRawString - The updated hash of BCMR
+   * @param {string} bcmr - The updated hash of BCMR
    * @param {string} bcmrUrl - The updated url of the BCMR hash
    * @param {string} [tokenId] - If present, will try to build authchain in chaingraph
    * @returns {Promise<string|undefined>} Promise that resolves to tx or undefined if transaction signing request was cancelled
    */
-  async updateBcmr(bcmrRawString: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined> {
+  async updateBcmr(bcmr: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined> {
+    this.contractWallet? null : await this.initWallets()
 
-    const WalletClass = getWalletClass()
-    console.log('pubkey', this.ownerPubKey)
-    console.log('contract address', this.contract.getDepositAddress())
-    const authChainGuardWallet = await WalletClass.watchOnly(this.contract.getDepositAddress())
-    const identityOutput = (await authChainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)[0]
-
+    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
+    console.log('CONTRACT', this.contractWallet?.address)
+    console.log('IDENTITY OUTPUTS', await this.contractWallet!.getAddressUtxos())
+    console.log('IDENTITY OUTPUT', identityOutputs[0])
+    const identityOutput = identityOutputs[0]
     if (!identityOutput) {
       throw new Error('authbase not found')
     }
-    const ownerWallet = await WalletClass.watchOnly(this.ownerAddress)
-    const funderInput = (await ownerWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 3000).map(toCashScript)[0]
-    const minerFee = 1000
 
-    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 3000).map(toCashScript)[0]
+    if (!funderInput) {
+      throw new Error('insufficient balance')
+    }
+
+    const minerFee = 1000
     let transaction
     let decoded
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     try {
-
-      const bcmrHash = sha256.hash(utf8ToBin(bcmrRawString));
       transaction =
         this.f(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), '0x')
           .from(identityOutput)
@@ -62,7 +75,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
           }])
           .withOpReturn([
             'BCMR',
-            binToHex(bcmrHash), // sha256 of the contents from the uri below
+            binToHex(sha256.hash(utf8ToBin(bcmr))), // sha256 of the contents from the uri below
             bcmrUrl.replace('https://', '')
           ])
           .to([{
@@ -70,19 +83,17 @@ export default class AuthChainGuard implements AuthChainGuardI {
             amount: funderInput.satoshis - BigInt(minerFee)
           }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
       decoded = decodeTransaction(hexToBin(await transaction.build()));
+
       if (typeof decoded === 'string') {
         console.log('decoded:', decoded)
         throw new Error('Failed to decode transaction')
-        return;
       }
     } catch (error) {
       console.log(error)
       throw new Error('Error building transaction')
     }
-
-    console.log('transaction', transaction)
-
     // signing request
     let signingResult
     try {
@@ -93,21 +104,26 @@ export default class AuthChainGuard implements AuthChainGuardI {
       delete artifact.bytecode;
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+
+      // console.log('IDENTITY OUTPUT')
+      // console.log('PUBKEY HASH', binToHex(this.ownerPubKeyHash))
+      // console.log('IDENTITY OUTPUT OUTPOINT TX:',binToHex( decoded.inputs[0].outpointTransactionHash))
+      // console.log('IDENTITY OUTPUT UNLOCKING BYTECODE:', binToHex(decoded.inputs[0].unlockingBytecode))
+      // console.log('NEW LOCKING BYTE CODE:', binToHex((cashAddressToLockingBytecode(this.contract.getDepositAddress()) as any).bytecode))
       signingResult = await window.paytaca!.signTransaction({
         transaction: decoded,
         sourceOutputs: [{
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(this.contract.getDepositAddress()) as any).bytecode,
           valueSatoshis: BigInt(identityOutput.satoshis),
-          // token: identityOutput.token && {
-          //   ...identityOutput.token,
-          //   category: hexToBin(identityOutput.token.category),
-          //   nft: identityOutput.token.nft && {
-          //     ...identityOutput.token.nft,
-          //     commitment: hexToBin(identityOutput.token.nft.commitment),
-          //   },
-          // },
+          token: identityOutput.token && {
+            ...identityOutput.token,
+            category: hexToBin(identityOutput.token.category),
+            nft: identityOutput.token.nft && {
+              ...identityOutput.token.nft,
+              commitment: hexToBin(identityOutput.token.nft.commitment),
+            },
+          },
           contract: {
             abiFunction: (transaction as any).abiFunction,
             redeemScript: scriptToBytecode(bytecode),
@@ -125,15 +141,17 @@ export default class AuthChainGuard implements AuthChainGuardI {
     } catch (error) {
       console.log(error)
       throw new Error('Error signing transaction')
-
     }
 
     // Tx signing success, submitting transaction
     try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const tx = await ownerWallet.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      console.log('CONTRACT ADDRESS', this.contract.getDepositAddress())
+      console.log('DECODED SIGNED TX', signingResult!.signedTransaction)
+      console.log('OWNER PUBKEY HASH', binToHex(this.ownerPubKeyHash))
+      // console.log('LOCKING BYTE CODE OUTPUT0', decodedSignedTx.outputs[0])
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       if (tokenId) {
-        await BCMR.buildAuthChain({ transactionHash: tokenId, network: ownerWallet.network })
+        await BCMR.buildAuthChain({ transactionHash: tokenId, network: this.ownerWallet!.network })
       }
       return tx
 
@@ -151,7 +169,8 @@ export default class AuthChainGuard implements AuthChainGuardI {
     console.log('burning auth chain')
   }
   script(){
-    return `// AuthchainGuard v1.0.1
+    return `
+    // AuthchainGuard v1.0.1
 
     // The contract ensures that, when publishing a BCMR, the authchain is
     // correctly passed on to the next index-0 output.
@@ -165,15 +184,16 @@ export default class AuthChainGuard implements AuthChainGuardI {
     // - Transfer (ownerPubKey, ownerSignature, newOwnerPubKeyHash): Changes the owning key
     // of the covenant by mutating the covenant locking bytecode.
 
+
     pragma cashscript ^0.8.0;
 
     contract AuthchainGuard(
-      bytes20 ownerPubKeyHash
+      bytes ownerPubKeyHash
     ) {
       function PublishOrBurnOrReleaseOrTransfer(
         pubkey ownerPubKey,
         sig ownerSignature,
-        bytes20 newOwnerPubKeyHash,
+        bytes newOwnerPubKeyHash,
       ) {
         // Schnorr sig only, because they are of fixed-length so later
         // checks are simpler as they don't need to check the length, and
@@ -187,7 +207,8 @@ export default class AuthChainGuard implements AuthChainGuardI {
         require(checkSig(ownerSignature, ownerPubKey));
 
         // No funny business, require it to be of SIGHASH_ALL type
-        require(sigBytes.split(64)[1] == 0x41);
+        // Ron-added 0x20 SIGHASH_UTXOS (paytaca's default)
+        require(sigBytes.split(64)[1] == 0x61);
 
         // If spender doesn't change the output address then we infer the
         // intention is to publish, and so we enter the branch where we
@@ -202,7 +223,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
           // Contract would work the same if we allowed any value here, but
           // it is good practice to keep it tight unless there's a reason
           // FOR allowing malleability by 3rd parties.
-          require(newOwnerPubKeyHash == bytes20(0));
+          require(newOwnerPubKeyHash == 0x);
 
           // Require input index 0, this ensures that 2 instances of the
           // same contract can't be spent together, and that it can't be
@@ -230,10 +251,10 @@ export default class AuthChainGuard implements AuthChainGuardI {
           // Contract would work the same if we allowed any value here, but
           // it is good practice to keep it tight unless there's a reason
           // FOR allowing malleability by 3rd parties.
-          require(newOwnerPubKeyHash == bytes20(0));
+          require(newOwnerPubKeyHash == 0x);
         }
         else if (
-          newOwnerPubKeyHash == bytes20(1)
+          newOwnerPubKeyHash == 0x01
         ) {
           // Release
 
@@ -257,11 +278,11 @@ export default class AuthChainGuard implements AuthChainGuardI {
 
           // Self-mutate the covenant to be owned by newOwnerPubKey
           require(newOwnerPubKeyHash.length == 20);
-          // We split at 21 because we have a push op for the 21-byte key,
-          // i.e. 0x21{20-byte key}.
+          // We split at 34 because we have a push op for the 33-byte key,
+          // i.e. 0x21{33-byte key}.
           bytes oldRedeemTail = this.activeBytecode.split(21)[1];
           bytes newRedeemScript = 0x14 + newOwnerPubKeyHash
-            + oldRedeemTail; // key length + key + oldRedeemTail
+            + oldRedeemTail;
           require(
             tx.outputs[0].lockingBytecode
             == 0xa914 + hash160(newRedeemScript) + 0x87
