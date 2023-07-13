@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <template>
   <q-page>
     <div class="row justify-left q-gutter-md q-ma-md">
@@ -22,6 +23,16 @@
             @click="$router.push(`/ft/view?tokenId=${ft.token!.tokenId}&creator=${user.connectedPaytacaAddress}`)">View
             Details</q-btn>
         </q-card-actions>
+      </q-card>
+      <q-card class="token-card col-xs-12 col-sm-6 col-md-4 col-lg-2" style="font-size:xx-large;cursor:pointer"
+        @click="router.push('/ft/new')">
+        <q-toolbar>
+          <q-skeleton type="QAvatar" />
+          <q-toolbar-title><q-skeleton type="text" /></q-toolbar-title>
+        </q-toolbar>
+        <q-card-section class="justify-center">
+          + Create New
+        </q-card-section>
       </q-card>
       <!-- {{createdFts}} -->
     </div>
@@ -52,12 +63,15 @@ import { useUserStore } from 'src/stores/user';
 // import bcmrTemplate from 'src/resources/bcmr';
 // import { useUIStore } from 'src/stores/ui';
 // import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
-import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
 import { useUIStore } from 'src/stores/ui';
 import AuthChainGuard from 'src/classes/AuthChainGuard';
+import { Contract, ElectrumNetworkProvider } from 'cashscript';
+import authChainGuardArtifact from 'src/classes/AuthChainGuardPkh.json'
+import { useRouter } from 'vue-router';
 
 defineOptions({ name: 'BrowseFt' })
 
+const router = useRouter()
 const user = useUserStore()
 const ui = useUIStore()
 const createdFts = ref([] as UtxoI[])
@@ -75,6 +89,8 @@ watch(() => user.connectedPaytacaAddress, async (address) => {
 
 onMounted(async () => {
   if (user.connectedPaytacaAddress) {
+    // Load from store, then try to refresh
+    createdFts.value.push(...user.createdFts)
     ui.busy({ type: 'info', text: 'Loading manageable FTs' })
     loadCreatedFts(user.connectedPaytacaAddress)
   }
@@ -87,23 +103,21 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
 
-
-  // const authchainGuardContract = createAuthChainGuardContract({
-  //   ownerPubKey: creatorWalletPkh,
-  //   network: creatorWallet.network,
-  // })
-
   const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
   const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
 
-  creatorWallet.getTokenDepositAddress()
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
+  if (creatorFts.length === 0) {
+    ui.idle()
+    return
+  }
   const authchainIdentityOutputs = (await autchainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token))
-
+  let createdFtsFresh: any[] = []
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
+  console.log(authchainIdentityOutputs)
   let ftsLoaded = new Promise((res) => {
     let counter = 0
     creatorFtsTokenIdsSet.forEach(async (tokenId) => {
@@ -141,7 +155,8 @@ const loadCreatedFts = async (creatorAddress: string) => {
               // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
               let created = creatorFts.find((utxo: UtxoI) => utxo.token!.tokenId === tokenId)
               if (created) {
-                createdFts.value.push(created)
+                createdFtsFresh.push(created)
+                console.log('created fts fresh', createdFtsFresh)
               }
             }
           }
@@ -155,8 +170,15 @@ const loadCreatedFts = async (creatorAddress: string) => {
   })
 
   await ftsLoaded
+  console.log(createdFtsFresh)
+  if (createdFtsFresh.length > 0) {
+
+    createdFts.value.splice(0, createdFts.value.length)
+    createdFts.value.push(...createdFtsFresh)
+  }
+
+  user.createdFts = createdFtsFresh
   ui.idle()
 
 }
-
 </script>
