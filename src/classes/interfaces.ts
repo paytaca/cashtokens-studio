@@ -1,10 +1,15 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Contract } from '@mainnet-cash/contract';
 export interface AuthChainGuardI {
   readonly contract: Contract
   readonly ownerAddress: string
-  readonly ownerPubKey: any
+  readonly ownerPubKeyHash: any
   readonly network: string
-  updateBcmr(bcmrRawString: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined>
+  /**
+   * Initialize an owner wallet
+   */
+  initWallets(): Promise<void>
+  publish(bcmrRawString: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined>
   transfer(): void
   burn(): void
   script(): string

@@ -43,13 +43,9 @@ export default class AuthChainGuard implements AuthChainGuardI {
    * @param {string} [tokenId] - If present, will try to build authchain in chaingraph
    * @returns {Promise<string|undefined>} Promise that resolves to tx or undefined if transaction signing request was cancelled
    */
-  async updateBcmr(bcmr: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined> {
+  async publish(bcmr: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined> {
     this.contractWallet? null : await this.initWallets()
-
     const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
-    console.log('CONTRACT', this.contractWallet?.address)
-    console.log('IDENTITY OUTPUTS', await this.contractWallet!.getAddressUtxos())
-    console.log('IDENTITY OUTPUT', identityOutputs[0])
     const identityOutput = identityOutputs[0]
     if (!identityOutput) {
       throw new Error('authbase not found')
@@ -94,6 +90,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
       console.log(error)
       throw new Error('Error building transaction')
     }
+
     // signing request
     let signingResult
     try {
@@ -104,12 +101,6 @@ export default class AuthChainGuard implements AuthChainGuardI {
       delete artifact.bytecode;
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
-
-      // console.log('IDENTITY OUTPUT')
-      // console.log('PUBKEY HASH', binToHex(this.ownerPubKeyHash))
-      // console.log('IDENTITY OUTPUT OUTPOINT TX:',binToHex( decoded.inputs[0].outpointTransactionHash))
-      // console.log('IDENTITY OUTPUT UNLOCKING BYTECODE:', binToHex(decoded.inputs[0].unlockingBytecode))
-      // console.log('NEW LOCKING BYTE CODE:', binToHex((cashAddressToLockingBytecode(this.contract.getDepositAddress()) as any).bytecode))
       signingResult = await window.paytaca!.signTransaction({
         transaction: decoded,
         sourceOutputs: [{
@@ -145,10 +136,6 @@ export default class AuthChainGuard implements AuthChainGuardI {
 
     // Tx signing success, submitting transaction
     try {
-      console.log('CONTRACT ADDRESS', this.contract.getDepositAddress())
-      console.log('DECODED SIGNED TX', signingResult!.signedTransaction)
-      console.log('OWNER PUBKEY HASH', binToHex(this.ownerPubKeyHash))
-      // console.log('LOCKING BYTE CODE OUTPUT0', decodedSignedTx.outputs[0])
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       if (tokenId) {
         await BCMR.buildAuthChain({ transactionHash: tokenId, network: this.ownerWallet!.network })

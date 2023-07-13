@@ -84,7 +84,6 @@ import { useUserStore } from 'src/stores/user';
 import bcmrTemplate from 'src/resources/bcmr';
 import { useUIStore } from 'src/stores/ui';
 import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
-import createAuthChainGuardContract from 'src/utils/createAuthChainGuardContract';
 import getByteCount from 'src/utils/getByteCount';
 import AuthChainGuard from 'src/classes/AuthChainGuard';
 
@@ -93,6 +92,7 @@ defineOptions({ name: 'NewFt' })
 const user = useUserStore()
 const ui = useUIStore()
 const feeEstimate = ref<number>(Math.floor(Number(getByteCount({ P2PKH: 1 }, { P2PKH: 2, P2SH: 1 })) * 1.1))
+
 const token = ref<{
   creatorAddress: string,
   name: string,
@@ -105,7 +105,7 @@ const token = ref<{
   name: '',
   symbol: '',
   tokenId: '',
-  maxSupply: '10000000000000000', //arbitrary value
+  maxSupply: '100000000000000000', //arbitrary value
   bcmrUrl: bcmrTemplate.registryIdentity.uris.registry
 })
 
@@ -158,11 +158,8 @@ const createFT = async () => {
     let txSigningResult;
     try {
       /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
-      // const contract = createAuthChainGuardContract({
-      //   ownerPubKey: creatorWalletPkh,
-      //   network: creatorWallet.network,
-      // })
       const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
+
       const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
         new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
@@ -186,6 +183,7 @@ const createFT = async () => {
       }
 
       ui.busy({ type: 'info', text: 'Waiting for FT creator\'s signature' })
+
       txSigningResult = await window.paytaca.signTransaction({
         transaction: decoded, sourceOutputs: [...sourceOutputs], broadcast: false, userPrompt: 'Create Token Genesis'
       })
