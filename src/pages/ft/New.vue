@@ -144,11 +144,7 @@ onMounted(async () => {
 
 // methods
 const createFT = async () => {
-  const ui = useUIStore()
   ui.busy({ text: 'Creating FT', type: 'info' })
-  const WalletClass = getWalletClass()
-  const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-  const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
 
   if (token.value.creatorAddress) {
     const WalletClass = getWalletClass()
@@ -158,8 +154,7 @@ const createFT = async () => {
     let txSigningResult;
     try {
       /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
-      const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
-
+      const authChainGuard = new AuthChainGuard(token.value.creatorAddress, wallet.getPublicKeyHash(false), wallet.network)
       const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
         new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
@@ -177,9 +172,9 @@ const createFT = async () => {
       )
 
       let decoded = decodeTransaction(encodedTransaction)
+
       if (typeof decoded === 'string') {
-        ui.setMessage({ type: 'error', text: 'decoded' })
-        return;
+        return ui.setMessage({ type: 'error', text: decoded })
       }
 
       ui.busy({ type: 'info', text: 'Waiting for FT creator\'s signature' })
