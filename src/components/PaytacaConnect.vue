@@ -43,6 +43,7 @@ const connect = async () => {
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
     user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
+    user.wallet = wallet
   } else {
     ui.idle()
   }
