@@ -34,7 +34,7 @@
         </q-checkbox>
       </div>
       <div class="row justify-end">
-        <q-btn color="secondary" size="large" @click="createToken">Create Token</q-btn>
+        <q-btn color="secondary" size="large" @click="submitTokenGenesisTransaction">Create Token</q-btn>
       </div>
     </q-form>
     <!-- Bcmr Create Form Wizard -->
@@ -72,7 +72,7 @@ import { Registry as BcmrRegistry } from 'src/interfaces'
 import useStore from 'src/composables/useStore'
 import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
 
-defineOptions({ name: 'CreateToken' })
+defineOptions({ name: 'submitTokenGenesisTransaction' })
 
 const route = useRoute()
 const { user, ui } = useStore()
@@ -84,15 +84,15 @@ const token = ref<{
   tokenId: string,
   idOptions?: string[],
   amount: number | string,
-  capability: null | 'none' | 'mutable' | 'minting',
-  commitment: null | ''
+  capability: undefined | 'none' | 'mutable' | 'minting',
+  commitment: undefined | string
 }>({
   tokenType: 'fungible',
   tokenId: '',
   idOptions: [],
   amount: '9223372036854700000',
-  capability: null,
-  commitment: null
+  capability: undefined,
+  commitment: undefined
 })
 
 const genesisOptions = ref<{
@@ -157,11 +157,10 @@ const displayRegistryCreateWizard = async () => {
   genesisOptions.value.displayRegistryCreateWizard = true
 }
 
-const createToken = async () => {
+const submitTokenGenesisTransaction = async () => {
   ui.busy({ text: 'Creating FT', type: 'info' })
 
   if (creator.value) {
-    console.log('creator', creator)
     const wallet = await getWalletClass().watchOnly(creator.value)
     const authbaseAndTokenGenesisInput = (await user.wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
 
@@ -172,8 +171,30 @@ const createToken = async () => {
       const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
         new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
-        new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.amount), tokenId: token.value.tokenId }),
       ]
+
+      const requiredFields = { cashaddr: wallet.getTokenDepositAddress(), value: 1000, tokenId: token.value.tokenId }
+      if (token.value.tokenType === 'fungible') {
+        tokenGenesisRequest.push(new TokenSendRequest({
+          ...requiredFields,
+          amount: Number(token.value.amount),
+        }))
+      } else if (token.value.tokenType === 'nonfungible') {
+        tokenGenesisRequest.push(new TokenSendRequest({
+          ...requiredFields,
+          capability: token.value.capability,
+          commitment: token.value.commitment
+        }))
+      } else if (token.value.tokenType === 'hybrid') {
+        tokenGenesisRequest.push(new TokenSendRequest({
+          ...requiredFields,
+          amount: Number(token.value.amount),
+          capability: token.value.capability,
+          commitment: token.value.commitment
+        }))
+      } else {
+        return ui.setMessage({ type: 'error', text: 'Unsupported token type' })
+      }
 
       if (genesisOptions.value.publishIdentityOutput === true) {
         let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
