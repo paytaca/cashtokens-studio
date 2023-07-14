@@ -40,11 +40,13 @@
 </template>
 <style scoped lang="scss">
 .token-id {
-  background-color: $grey-10 border-radius: 25px padding: .5em
+  background-color: $grey-10;
+  border-radius: 25px;
+  padding: .5em;
 }
 
 .token-card {
-  max-width: 20em
+  max-width: 20em;
 }
 </style>
 <script setup lang="ts">
