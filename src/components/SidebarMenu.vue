@@ -9,15 +9,13 @@
 
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-
-import { useUserStore } from 'src/stores/user'
-
+import useStore from 'src/composables/useStore'
 
 
 defineOptions({ name: 'SidebarMenu' })
 
 const router = useRouter()
-const user = useUserStore()
+const { user } = useStore()
 const lastSelectedBeforeUnselect = ref(null as any)
 const selected = ref(null as any)
 const expanded = ref([] as any)
@@ -32,7 +30,6 @@ watch(selected, (currentlySelected, previouslySelected) => {
   }
 
   if (currentlySelected && !currentlySelected.startsWith('#')) {
-    console.log('CURRENTLY SELECTED', currentlySelected)
     router.push(currentlySelected)
     return
   }
@@ -62,17 +59,18 @@ const menu = computed<any[]>(() => {
       disabled: Boolean(user.connectedPaytacaAddress) === false,
       children: [
         {
-          label: 'New Fungible Token',
-          href: '/ft/new',
+          label: 'Create Fungible Token',
+          href: '/token/create/fungible',
           icon: 'add',
-          // children: [
-          //   { label: 'Quality ingredients' },
-          //   { label: 'Good recipe' }
-          // ],
         },
         {
-          label: 'New Non-Fungible Token',
-          href: '/nft/create',
+          label: 'Create Non-Fungible Token',
+          href: '/token/create/nonfungible',
+          icon: 'add',
+        },
+        {
+          label: 'Create FNFT',
+          href: '/token/create/fnft',
           icon: 'add',
         },
         {
