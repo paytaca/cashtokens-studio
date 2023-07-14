@@ -1,100 +1,217 @@
 <template>
-  <template>
-    <div class="q-pa-md">
-      <q-stepper v-model="step" vertical color="primary" animated>
-        <q-step :name="1" title="Registry" icon="settings" :done="step > 1">
-          Registry primary details
-          <div class="row">
-            <q-select color="lime" :filled="true" standout bottom-slots v-model="registry!.$schema" label="Schema Version"
-              clearable>
-              <q-option>https://cashtokens.org/bcmr-v2.schema.json</q-option>
-            </q-select>
-            <q-input color="lime" :filled="true" standout bottom-slots v-model="version" label="Version" clearable>
-              <template v-slot:prepend>
-                <q-icon name="abc" />
-              </template>
-              <template v-slot:hint>
-                The name of the token
-              </template>
+  <div class="q-pa-md">
+    <q-stepper v-model="step" vertical color="secondary" animated>
+      <q-step :name="1" title="Registry Primary Details" icon="settings" :done="step > 1">
+        <q-select color="lime" :filled="true" standout bottom-slots v-model="registry!.$schema" label="Schema Version"
+          :options="registrySchemaOptions" dense>
+        </q-select>
+        <q-input color="lime" :filled="true" standout bottom-slots v-model="version" label="Version" dense>
+          <template v-slot:prepend>
+            <q-icon name="abc" />
+          </template>
+        </q-input>
+        <q-input color="lime" :filled="true" standout bottom-slots v-model="registry.latestRevision"
+          label="Latest Revision" dense>
+        </q-input>
+        <q-stepper-navigation>
+          <q-btn @click="step = 2" color="primary" label="Continue" />
+        </q-stepper-navigation>
+      </q-step>
+
+      <q-step :name="2" title="Registry Identity" icon="create_new_folder" :done="step > 2">
+        The identity information of this particular registry, provided as either an
+        <code>authbase</code> (recommended) or an <code>IdentitySnapshot</code>.
+        <div class="q-pa-lg">
+          <q-option-group v-model="registryIdentitySelector" :options="registryIdentitySelections" color="primary" inline
+            dense />
+        </div>
+        <div>
+          <!-- authbase -->
+          <q-input v-if="registryIdentitySelector == 'authbase'" :filled="true" standout bottom-slots v-model="authbase"
+            label="Enter Authchain Authbase (TX id)" dense>
+          </q-input>
+          <!-- offchain registry -->
+          <div v-else>
+            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.name" label="Name" dense>
+            </q-input>
+            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.description"
+              label="Description" dense>
+            </q-input>
+            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.icon" label="Icon URI"
+              dense>
+            </q-input>
+            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.web" label="Web URI"
+              dense>
+            </q-input>
+            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.registry"
+              label="This registry's URI" dense>
             </q-input>
           </div>
-          <q-stepper-navigation>
-            <q-btn @click="step = 2" color="primary" label="Continue" />
-          </q-stepper-navigation>
-        </q-step>
+        </div>
+        <q-stepper-navigation>
+          <q-btn @click="step = 3" color="primary" label="Continue" />
+          <q-btn flat @click="step = 1" color="primary" label="Back" class="q-ml-sm" />
+        </q-stepper-navigation>
+      </q-step>
 
-        <q-step :name="2" title="Create an ad group" caption="Optional" icon="create_new_folder" :done="step > 2">
-          An ad group contains one or more ads which target a shared set of keywords.
+      <!-- <q-step :name="3" title="Ad template" icon="assignment" disable>
+        This step won't show up because it is disabled.
+      </q-step> -->
 
-          <q-stepper-navigation>
-            <q-btn @click="step = 4" color="primary" label="Continue" />
-            <q-btn flat @click="step = 1" color="primary" label="Back" class="q-ml-sm" />
-          </q-stepper-navigation>
-        </q-step>
+      <q-step :name="3" title="Identities" icon="add_comment">
+        The given <code>authbase</code>'s identity
+        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.name" label="Name" dense>
+        </q-input>
+        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.description" label="Description"
+          dense>
+        </q-input>
+        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.icon" label="Icon URI"
+          dense>
+        </q-input>
+        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.web" label="Web URI" dense>
+        </q-input>
+        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.registry"
+          label="This registry's URI" dense>
+        </q-input>
+        <q-stepper-navigation>
+          <q-btn color="primary" @click="step = 4" label="Continue" />
+          <q-btn flat @click="step = 2" color="primary" label="Back" class="q-ml-sm" />
+        </q-stepper-navigation>
+      </q-step>
 
-        <q-step :name="3" title="Ad template" icon="assignment" disable>
-          This step won't show up because it is disabled.
-        </q-step>
+      <q-step :name="4" title="Token Details" icon="add_comment">
+        The Token's details
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.token.category"
+          label="Category (Token Id)" :rules="[v => v.length == 32 || 'Required 32 characters long']" dense
+          class="q-mb-md">
+          <template v-slot:hint>
+            <div><i>Often, this will be equal to the identity's authbase</i> </div>
+          </template>
+        </q-input>
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.token.symbol"
+          :rules="[v => v.length > 0 || 'Required']" label="Token Symbol" required dense>
+        </q-input>
+        <q-input :filled="true" type="number" standout bottom-slots v-model="identitySnapshot.token.decimals"
+          :rules="[v => (v > 0 && v < 19) || 'Value Must be 0 - 18']" label="Decimals" dense>
+        </q-input>
+        <q-stepper-navigation>
+          <q-btn color="primary" label="Finish" @click="finish" />
+          <q-btn flat @click="step = 3" color="primary" label="Back" class="q-ml-sm" />
+        </q-stepper-navigation>
+      </q-step>
 
-        <q-step :name="4" title="Create an ad" icon="add_comment">
-          Try out different ad text to see what brings in the most customers, and learn how to
-          enhance your ads using features like ad extensions. If you run into any problems with
-          your ads, find out how to tell if they're running and how to resolve approval issues.
-
-          <q-stepper-navigation>
-            <q-btn color="primary" label="Finish" />
-            <q-btn flat @click="step = 2" color="primary" label="Back" class="q-ml-sm" />
-          </q-stepper-navigation>
-        </q-step>
-      </q-stepper>
-    </div>
-  </template>
+    </q-stepper>
+  </div>
 </template>
 
 <script setup lang="ts">
 
-import { ref, onMounted } from 'vue';
-import { Registry as BcmrRegistry } from 'src/interfaces/bcmr-v2.schema';
-import { watch } from 'fs';
-defineOptions({ name: 'TokenBcmrBasicForm' })
+import { ref, onMounted, watch, computed } from 'vue';
+import { Registry as BcmrRegistry, OffChainRegistryIdentity, IdentitySnapshot, IdentityHistory, TokenCategory } from 'src/interfaces/bcmr-v2.schema';
+import { BcmrBasic, RequireOptional } from 'src/types'
+
+defineOptions({ name: 'BcmrBasicFormWizard' })
 
 const props = defineProps<{
+  type: 'fungible' | 'nonfungible' | 'hybrid',
   tokenIdOptions?: Array<string>,
-  default: BcmrRegistry,
+  bcmr: BcmrRegistry | null,
 }>()
 
 const step = ref(1)
 
 const emit = defineEmits<{
-  confirm: [token: BcmrBasic],
-  cancel: []
+  finish: [registry: any]
 }>()
 
 const version = ref('1.0.0')
 
-const registry = ref<BcmrRegistry>({
-  version: { 'major': 1, 'minor': 0, 'patch': 0 },
-  latestRevision: new Date().toISOString(),
-  registryIdentity: {
-    name: 'Example Metadata Registry Name',
-    description: 'Example metadata description',
-    uris: {
-      icon: 'https://example.com/icons/example.png',
-      web: 'https://example.com',
-      registry: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
-    }
+// registryIdentity
+const authbase = ref<string>(typeof (props.bcmr?.registryIdentity) == 'string' ? props.bcmr.registryIdentity : '')
+const offchainRegistryIdentity = ref<OffChainRegistryIdentity>(typeof (props.bcmr?.registryIdentity) == 'object' ? props.bcmr.registryIdentity : {
+  name: 'Example Metadata Registry Name',
+  description: 'Example metadata description',
+  uris: {
+    icon: 'https://example.com/icons/example.png',
+    web: 'https://example.com',
+    registry: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
   }
 })
 
-watch('version', (newVersion) => {
+const token = ref<TokenCategory>({
+  category: '',
+  symbol: '',
+  decimals: 8
+})
+
+const identitySnapshot = ref<RequireOptional<IdentitySnapshot, 'token'>>({
+  name: '',
+  description: '',
+  uris: {
+    icon: 'https://example.com/icons/example.png',
+    web: 'https://example.com',
+    registry: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
+  },
+  token: token.value,
+})
+
+// Flat model of identities so it's easier to work with
+// const identity = ref<{
+//   authbase: string,
+//   identityHistoryTimestamp: string,
+//   // IdentitySnapshot
+//   identitySnapshot?: IdentitySnapshot,
+// }>({
+//   authbase: authbase.value,
+//   identityHistoryTimestamp: '',
+//   identitySnapshot: identitySnapshot.value
+// })
+
+const registryIdentity = computed(() => authbase.value ? authbase.value : offchainRegistryIdentity.value)
+
+// const identities = computed(() => {
+//   let identityHistory = {
+//     [identity.value.identityHistoryTimestamp]: identity.value.identitySnapshot
+//   } as IdentityHistory
+//   return {
+//     [identity.value.authbase]: identityHistory
+//   }
+// })
+
+const registry = ref<BcmrRegistry>({
+  version: { 'major': 1, 'minor': 0, 'patch': 0 },
+  latestRevision: new Date().toISOString(),
+  registryIdentity: registryIdentity.value,
+})
+
+const registryIdentitySelector = ref<'authbase' | 'offchain'>('authbase')
+const registryIdentitySelections = ref<{ label: string, value: string }[]>([
+  { label: 'Offchain Registry Identity', value: 'offchain' },
+  { label: 'Authbase (recommended)', value: 'authbase' }
+])
+
+const registrySchemaOptions = ref<string[]>([
+  'https://cashtokens.org/bcmr-v2.schema.json'
+])
+
+watch(version, (newVersion) => {
   let v = newVersion.split('.').map(vv => Number(vv))
   registry.value.version = { major: v[0], minor: v[1], patch: v[2] }
 })
 
 onMounted(() => {
-  if (props.default) {
-    registry.value = props.default
+  if (props.bcmr) {
+    registry.value = props.bcmr
     version.value = registry.value.version ? Object.values(registry.value.version).join('.') : '1.1.0'
   }
 })
+
+const finish = () => {
+  registry.value.identities = {
+    [authbase.value]: {
+      [registry.value.latestRevision]: identitySnapshot.value
+    }
+  }
+  emit('finish', registry.value)
+}
 </script>
