@@ -1,24 +1,27 @@
-<template><span></span></template>
+<template>
+  <span></span>
+</template>
 
 <script setup lang="ts">
+
 import { onMounted } from 'vue';
 import detectPaytaca from 'src/utils/detectPaytaca';
 import formatAddress from 'src/utils/formatAddress';
-import { useUserStore } from 'src/stores/user';
-
+import useStore from 'src/composables/useStore'
 
 defineOptions({ name: 'HeadLess' })
-const user = useUserStore()
+
+const { user } = useStore()
 
 onMounted(async () => {
-  
-  if(detectPaytaca()) {
+
+  if (detectPaytaca()) {
     const connected = await window.paytaca.connected()
     if (connected) {
       let connectedAddress = await window.paytaca.address('bch')
       connectedAddress = formatAddress(connectedAddress)
       user.connectedPaytacaAddress = connectedAddress
-      
+
     }
   }
 })

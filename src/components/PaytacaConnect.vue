@@ -21,11 +21,14 @@ import { useUserStore } from 'stores/user';
 import { useUIStore } from 'stores/ui';
 import formatAddress from 'src/utils/formatAddress';
 import getWalletClass from 'src/utils/getWalletClass';
-
+import { useRouter } from 'vue-router';
+import useStore from 'src/composables/useStore';
 defineOptions({ name: 'PaytacaConnect' })
-const user = useUserStore()
-const ui = useUIStore()
+
+const router = useRouter()
+const { user, ui } = useStore()
 const connected = ref(false)
+
 
 const connect = async () => {
   ui.busy({ text: 'Connecting Paytaca', type: 'info' })
@@ -54,6 +57,7 @@ const disconnect = async () => {
   await window.paytaca!.disconnect()
   user.connectedPaytacaAddress = ''
   connected.value = false
+  router.push('/')
 }
 
 </script>
