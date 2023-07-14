@@ -45,13 +45,12 @@
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
-import { useUserStore } from 'stores/user';
-import { useUIStore } from 'stores/ui';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import StatusBar from 'components/StatusBar.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import HeadLess from 'components/HeadLess.vue';
+import useStore from 'src/composables/useStore'
 
 const links = [
   {
@@ -87,8 +86,7 @@ export default defineComponent({
 
   setup() {
     const leftDrawerOpen = ref(false)
-    const user = useUserStore()
-    const ui = useUIStore()
+    const { user, ui } = useStore()
     return {
       ui,
       leftDrawerOpen,
