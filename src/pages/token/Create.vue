@@ -16,7 +16,7 @@
         </q-select>
       </div>
       <q-input v-if="token.tokenType === 'fungible' || token.tokenType === 'hybrid'" class="row" :filled="true"
-        dark:color="lime" v-model="token.amount" min="1" max="9223372036854775807" label="Max Supply" aria-disabled="true"
+        dark:color="lime" v-model="token.amount" min="1" max="9223372036854700000" label="Max Supply" aria-disabled="true"
         dense square />
       <q-select v-if="token.tokenType === 'nonfungible' || token.tokenType === 'hybrid'" class="col q-mb-sm"
         :filled="true" bottom-slots v-model="token.capability" :options="['minting', 'mutable', 'none']"
@@ -49,7 +49,7 @@
           <q-toolbar-title><span class="text-weight-bold">Fetch</span> or Create?</q-toolbar-title>
           <q-btn flat round dense icon="close" v-close-popup />
         </q-toolbar>
-        <q-input :filled="true" v-model="registryFetchUrl" label="Registry URL"></q-input>
+        <q-input :filled="true" v-model="registryUrl" label="Registry URL"></q-input>
         <div class="row justify-end q-ma-sm q-gutter-sm">
           <q-btn color="primary" size="md" @click="fetchRegistry">Fetch</q-btn>
           <q-btn color="primary" size="md" @click="displayRegistryCreateWizard">Create New</q-btn>
@@ -63,7 +63,11 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
-import { UtxoI } from 'mainnet-js';
+import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
+import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI } from 'mainnet-js'
+
+import AuthChainGuard from 'src/classes/AuthChainGuard'
+import getWalletClass from 'src/utils/getWalletClass'
 import { Registry as BcmrRegistry } from 'src/interfaces'
 import useStore from 'src/composables/useStore'
 import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
@@ -86,7 +90,7 @@ const token = ref<{
   tokenType: 'fungible',
   tokenId: '',
   idOptions: [],
-  amount: '9223372036854775807',
+  amount: '9223372036854700000',
   capability: null,
   commitment: null
 })
@@ -102,7 +106,7 @@ const genesisOptions = ref<{
 })
 
 const registry = ref<BcmrRegistry | null>(null)
-const registryFetchUrl = ref<string>('https://example.com/.well-known/bitcoin-cash-metadata-registry.json')
+const registryUrl = ref<string>('https://example.com/.well-known/bitcoin-cash-metadata-registry.json')
 const registryObtainedFrom = ref<'fetch' | 'create' | null>(null)
 const isPopulatingTokenIdOptions = ref<boolean>(false)
 
@@ -119,18 +123,23 @@ watch(() => route.params.tokenType, (tokenType) => {
   token.value.tokenType = tokenType as string
 })
 
+watch(() => user.connectedPaytacaAddress, async (address) => {
+  if (address) {
+    const txIds = (await user.wallet?.getAddressUtxos())?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
+    token.value.idOptions = txIds?.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
+  }
+})
 onMounted(async () => {
-  const txIds = (await user.wallet?.getAddressUtxos())?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
   token.value.tokenType = route.params?.tokenType as string
-  console.log(route.params.tokenType)
+  const txIds = (await user.wallet?.getAddressUtxos())?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
   token.value.idOptions = txIds?.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
 })
 
 // methods
 const fetchRegistry = async () => {
   try {
-    ui.busy({ text: `Fetching registry from ${registryFetchUrl.value}`, type: 'info' })
-    const r = await fetch(registryFetchUrl.value)
+    ui.busy({ text: `Fetching registry from ${registryUrl.value}`, type: 'info' })
+    const r = await fetch(registryUrl.value)
     registry.value = await r.json()
     registryObtainedFrom.value = 'fetch'
     // TODO:Check if this token.tokenId's identity is in the registry
@@ -149,7 +158,74 @@ const displayRegistryCreateWizard = async () => {
 }
 
 const createToken = async () => {
-  console.log('CREATING TOKEN')
+  ui.busy({ text: 'Creating FT', type: 'info' })
+
+  if (creator.value) {
+    console.log('creator', creator)
+    const wallet = await getWalletClass().watchOnly(creator.value)
+    const authbaseAndTokenGenesisInput = (await user.wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
+
+    let txSigningResult
+    try {
+      /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
+      const authChainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
+      const contract = authChainGuard.contract
+      const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
+        new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
+        new TokenSendRequest({ cashaddr: wallet.getTokenDepositAddress(), value: 1000, amount: Number(token.value.amount), tokenId: token.value.tokenId }),
+      ]
+
+      if (genesisOptions.value.publishIdentityOutput === true) {
+        let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
+        tokenGenesisRequest.push(OpReturnData.fromArray(['BCMR', contentHash, registryUrl.value.replace('https://', '')]))
+      }
+
+      const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(tokenGenesisRequest,
+        false,
+        { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [authbaseAndTokenGenesisInput], ensureUtxos: [authbaseAndTokenGenesisInput] }
+      )
+
+      let decoded = decodeTransaction(encodedTransaction)
+
+      if (typeof decoded === 'string') {
+        return ui.setMessage({ type: 'error', text: decoded })
+      }
+
+      ui.busy({ type: 'info', text: 'Waiting for FT creator\'s signature' })
+
+      txSigningResult = await window.paytaca.signTransaction({
+        transaction: decoded, sourceOutputs: [...sourceOutputs], broadcast: false, userPrompt: 'Create Token Genesis'
+      })
+
+      if (!txSigningResult) {
+        ui.idle()
+        ui.clearMessage()
+        return
+      }
+
+    } catch (error) {
+      console.log(error)
+      if (error instanceof Error) {
+        console.log(error)
+        ui.setMessage({ type: 'error', text: 'Error creating FT Token' })
+      }
+      return
+    }
+
+    // Tx signing success, submitting transaction
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true)
+      ui.idle()
+      ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 5 })
+
+      await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
+
+    } catch (error) {
+      console.log('Error creating FT Token during submission of txn', error)
+      return
+    }
+  }
 }
 
 </script>
