@@ -1,14 +1,15 @@
 import { defineStore } from 'pinia'
-import { Wallet } from 'mainnet-js';
 import { constants } from 'boot/constants'
+import { UserState } from 'src/types'
 
-export const useUserStore = defineStore('user', {
-  state: () => ({
-    connectedPaytacaAddress: '' as string,
+export const useUser = defineStore('user', {
+  state: (): UserState => ({
+    connectedPaytacaAddress: '',
     connectedPaytacaWalletBchBalance: '0',
-    createdFts: <any>[],
+    createdFts: [],
     wallet: null
   }),
+
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){
       if (process.env.APP_ENV === constants.AppEnv.DEVELOPMENT || process.env.APP_ENV === constants.AppEnv.DEVELOPMENT || this.connectedPaytacaAddress?.startsWith('bchtest')) {
