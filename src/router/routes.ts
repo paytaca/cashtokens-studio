@@ -17,6 +17,15 @@ const routes: RouteRecordRaw[] = [
     ],
   },
   {
+    path: '/token',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'browse', component: defineAsyncComponent(() => import('pages/token/Browse.vue')) },
+      { path: 'view', component: () => import('pages/token/View.vue') },
+      { path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') }
+    ],
+  },
+  {
     path: '/nft',
     component: () => import('layouts/MainLayout.vue'),
     children: [
