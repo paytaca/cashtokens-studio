@@ -126,16 +126,19 @@ module.exports = configure(function (/* ctx */) {
 
         // }
 
-        viteConf.resolve.alias.pg = EMPTY_PATH
-        viteConf.resolve.alias['pg-format'] = EMPTY_PATH
-        viteConf.resolve.alias['pg-native'] = EMPTY_PATH
-        viteConf.resolve.alias.stream = require.resolve('stream-browserify')
-        // viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
-        viteConf.resolve.alias.bufferutil = EMPTY_PATH
-        viteConf.resolve.alias.child_process = EMPTY_PATH
-        viteConf.resolve.alias.utils = path.resolve('./src/utils')
-        viteConf.resolve.alias.resources = path.resolve('./src/resources')
-        viteConf.resolve.alias.interfaces = path.resolve('./src/interfaces')
+        // // viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
+        viteConf.resolve.alias = {
+          ...viteConf.resolve.alias,
+          pg: EMPTY_PATH,
+          'pg-format': EMPTY_PATH,
+          'pg-native': EMPTY_PATH,
+          stream: require.resolve('stream-browserify'),
+          bufferutil: EMPTY_PATH,
+          child_process: EMPTY_PATH,
+          utils: path.resolve('./src/utils'),
+          interfaces: path.resolve('./src/interfaces'),
+          composables: path.resolve('./src/composables')
+        }
       },
       // viteVuePluginOptions: {},
 
