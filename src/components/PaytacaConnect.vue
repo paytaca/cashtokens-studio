@@ -17,11 +17,9 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useUserStore } from 'stores/user';
-import { useUIStore } from 'stores/ui';
+import { useRouter } from 'vue-router';
 import formatAddress from 'src/utils/formatAddress';
 import getWalletClass from 'src/utils/getWalletClass';
-import { useRouter } from 'vue-router';
 import useStore from 'src/composables/useStore';
 defineOptions({ name: 'PaytacaConnect' })
 

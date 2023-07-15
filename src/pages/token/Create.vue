@@ -1,7 +1,17 @@
 <template>
-  <q-page class="q-pa-md q-ma-sm" style="min-height: 100vh">
-    <q-form v-if="!genesisOptions.displayRegistryCreateWizard" class="q-gutter-md">
-      <span class="text-h5"><i>Create Token</i></span>
+  <q-page class="q-pa-sm" style="min-height: 100vh">
+    <div class="row justify-between items-end q-mb-lg q-px-sm">
+      <i class="col-6 text-h5">Create Token</i>
+      <div v-if="registry" class="col-6 row justify-end items-center q-gutter-sm">
+        <div class="text-weight-thin">{BCMR}</div>
+        <q-btn type="a" :href="`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`"
+          download="bitcoin-cash-metadata-registy.json" icon="download" size="xs" round></q-btn>
+        <q-btn icon="edit" size="xs" round></q-btn>
+        <q-btn icon="delete" size="xs" color="red" round></q-btn>
+      </div>
+    </div>
+
+    <q-form v-if="!genesisOptions.displayRegistryCreateWizard" class="q-gutter-md q-mx-sm">
       <q-input class="row" :filled="true" dark:color="lime" v-model="creator" label="Creator's address"
         aria-disabled="true" disable dense square />
       <div class="row">
