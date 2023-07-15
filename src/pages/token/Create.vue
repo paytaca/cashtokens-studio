@@ -49,7 +49,7 @@
     </q-form>
     <!-- Bcmr Create Form Wizard -->
     <BcmrBasicFormWizard v-if="genesisOptions.displayRegistryCreateWizard" type="fungible"
-      :token-id-options="token.idOptions" :bcmr="registry"
+      :token-id-options="token.idOptions" :bcmr="registry" :authbase="token.tokenId"
       @finish="(r) => { genesisOptions.displayRegistryCreateWizard = false; registry = r }" />
     <!-- Fetch Or Create Dialog -->
     <q-dialog :model-value="genesisOptions.displayFetchOrCreateDialog" full-width>
@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
-import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
+import { sha256, utf8ToBin, decodeTransaction, binToUtf8 } from '@bitauth/libauth'
 import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI } from 'mainnet-js'
 
 import AuthChainGuard from 'src/classes/AuthChainGuard'
@@ -81,7 +81,7 @@ import getWalletClass from 'src/utils/getWalletClass'
 import { Registry as BcmrRegistry } from 'src/interfaces'
 import useStore from 'src/composables/useStore'
 import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
-
+import { TokenType } from 'src/types'
 defineOptions({ name: 'submitTokenGenesisTransaction' })
 
 const route = useRoute()
@@ -130,7 +130,7 @@ watch(() => genesisOptions.value.publishIdentityOutput, (yes) => {
 })
 
 watch(() => route.params.tokenType, (tokenType) => {
-  token.value.tokenType = tokenType as string
+  token.value.tokenType = tokenType as TokenType
 })
 
 watch(() => user.connectedPaytacaAddress, async (address) => {
@@ -140,8 +140,13 @@ watch(() => user.connectedPaytacaAddress, async (address) => {
   }
 })
 onMounted(async () => {
-  token.value.tokenType = route.params?.tokenType as string
+  // let b = hexToBin('0x6578616d706c652e636f6d2f2e77656c6c2d6b6e6f776e2f626974636f696e2d636173682d6d657461646174612d72656769737472792e6a736f6e')
+  // console.log(hexToBin('0x6578616d706c652e636f6d2f2e77656c6c2d6b6e6f776e2f626974636f696e2d636173682d6d657461646174612d72656769737472792e6a736f6e'))
+  // console.log(binToUtf8(b))
+  token.value.tokenType = route.params?.tokenType as TokenType
+  console.log('user wallet', user.wallet)
   const txIds = (await user.wallet?.getAddressUtxos())?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
+  console.log(txIds)
   token.value.idOptions = txIds?.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
 })
 
@@ -172,7 +177,7 @@ const submitTokenGenesisTransaction = async () => {
 
   if (creator.value) {
     const wallet = await getWalletClass().watchOnly(creator.value)
-    const authbaseAndTokenGenesisInput = (await user.wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
+    const authbaseAndTokenGenesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
 
     let txSigningResult
     try {
