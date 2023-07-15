@@ -1,6 +1,7 @@
 <template>
-  <div class="q-pa-md">
+  <div>
     <q-stepper v-model="step" vertical color="secondary" animated>
+      <div class="text-weight-thin q-ml-lg">{BCMR}</div>
       <q-step :name="1" title="Registry Primary Details" icon="settings" :done="step > 1">
         <q-select color="lime" :filled="true" standout bottom-slots v-model="registry!.$schema" label="Schema Version"
           :options="registrySchemaOptions" dense>
