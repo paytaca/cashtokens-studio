@@ -138,7 +138,7 @@ onMounted(async () => {
   token.value.tokenId = String(tokenId)
   bcmrCreationOption.value.fetchURL = 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
   try {
-    let authheadResponse: Response = await fetchAuthhead(token.value.tokenId)
+    let authheadResponse: Response = await fetchAuthhead(token.value.tokenId, user.walletNetworkType)
     console.log(authheadResponse)
     let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
     let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs?.find(o => Number(o.output_index) == 1)
@@ -148,7 +148,8 @@ onMounted(async () => {
       if (tokenRegistryUri) {
         // dirty, assumes uri is valid, and only assumes https://
         // TODO: improve, handle other URI protocol
-        let url = 'https://' + tokenRegistryUri.split(' ')
+        let url = 'https://' + tokenRegistryUri.split(' ')[0]
+        // TODO: add check if url is valid or check pre-flight stats
         let registry = await fetch(url)
         registry = await registry.json()
         // TODO: Update token page, based on this loaded registry, added error handled

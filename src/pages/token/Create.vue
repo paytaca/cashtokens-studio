@@ -73,7 +73,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute } from 'vue-router';
-import { sha256, utf8ToBin, decodeTransaction, binToUtf8 } from '@bitauth/libauth'
+import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
 import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI } from 'mainnet-js'
 
 import AuthChainGuard from 'src/classes/AuthChainGuard'
