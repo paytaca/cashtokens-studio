@@ -1,8 +1,27 @@
 <!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <template>
-  <q-page class="q-pa-md q-ma-sm" style="min-height: 100vh">
-    <div>
-      <div class="text-h6 q-mb-md">Viewing FT</div>
+  <q-page class="justify-center q-mx-xs" style="min-height:100vh; max-width:100vw">
+    <div class="row items-center q-gutter-lg">
+      <div>
+        <q-skeleton v-if="!token.icon" type="QAvatar" size="8em"></q-skeleton>
+        <q-avatar v-else class="col" size="8em">
+          <img :src="token.icon" alt="">
+        </q-avatar>
+      </div>
+      <div>
+        <div>Token Name</div>
+        <div class="ellipsis-2-lines">{{ token.tokenId?.replace(token.tokenId.substring(15, 45), '...') }}</div>
+        <div class="ellipsis-2-lines">Managed by: {{
+          token.creatorAddress.replace(token.creatorAddress.substring(15, 35), '...') }}</div>
+      </div>
+    </div>
+    <q-separator></q-separator>
+    <div class="row q-my-xs justify-end">
+      <q-btn color="primary" size="md" @click.stop="openBcmrFetchOrCreateDialog = true">Update Bcmr</q-btn>
+      <q-btn color="primary" size="md" @click.stop="authchainTransfer">Transfer Ownership</q-btn>
+      <q-btn color="primary" size="md" @click.stop="authchainBurn">Burn</q-btn>
+    </div>
+    <!-- <div>
       <q-tabs v-model="tab" dense class="text-grey" active-color="primary" indicator-color="primary" align="justify">
         <q-tab name="token" label="Token Details" />
         <q-tab v-if="enableBcmrEditor" name="bcmr" label="BCMR" />
@@ -71,7 +90,7 @@
           </div>
         </q-card-section>
       </q-card>
-    </q-dialog>
+    </q-dialog> -->
   </q-page>
 </template>
 
@@ -80,25 +99,29 @@
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { hexToBin } from 'mainnet-js'
+import { binToUtf8 } from '@bitauth/libauth'
 import { Registry as Bcmr } from 'src/interfaces/bcmr-v2.schema'
-import { useUserStore } from 'src/stores/user';
-import { useUIStore } from 'src/stores/ui'
+import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import bcmrTemplate from 'src/resources/bcmr'
 import AuthChainGuard from 'src/classes/AuthChainGuard'
+import fetchAuthhead from 'src/utils/fetchAuthhead'
+
 
 defineOptions({ name: 'ViewFt' })
 
 const WalletClass = getWalletClass()
-const user = useUserStore()
+const { user, ui } = useStore()
 const route = useRoute()
-const ui = useUIStore()
 const authChainGuard = ref<AuthChainGuard | null>(null)
 
 const token = ref<{
+  icon: string,
   tokenId: string,
   creatorAddress: string,
 }>({
+  icon: '',
   tokenId: '',
   creatorAddress: '',
 })
@@ -114,6 +137,29 @@ onMounted(async () => {
   token.value.creatorAddress = String(creator)
   token.value.tokenId = String(tokenId)
   bcmrCreationOption.value.fetchURL = 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
+  try {
+    let authheadResponse: Response = await fetchAuthhead(token.value.tokenId)
+    console.log(authheadResponse)
+    let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
+    let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs?.find(o => Number(o.output_index) == 1)
+    if (authhead) {
+      let tokenRegistryUri = binToUtf8(hexToBin(authhead.locking_bytecode).slice(73)) // 73 start index of URI's
+      console.log(tokenRegistryUri)
+      if (tokenRegistryUri) {
+        // dirty, assumes uri is valid, and only assumes https://
+        // TODO: improve, handle other URI protocol
+        let url = 'https://' + tokenRegistryUri.split(' ')
+        let registry = await fetch(url)
+        registry = await registry.json()
+        // TODO: Update token page, based on this loaded registry, added error handled
+        console.log('REGISTRY', registry)
+
+      }
+    }
+  } catch (error) {
+    console.log('Error fetching authhead from chaingraph', error)
+  }
+
   await initAuthChainGuard()
 })
 
@@ -122,10 +168,12 @@ onMounted(async () => {
  */
 const initAuthChainGuard = async () => {
   if (!authChainGuard.value) {
-    const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    authChainGuard.value = new AuthChainGuard(user.connectedPaytacaAddress, creatorWallet.getPublicKeyHash(false), creatorWallet.network)
+    const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress as string)
+    authChainGuard.value = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWallet.getPublicKeyHash(false), creatorWallet.network)
   }
 }
+
+
 
 // methods
 
