@@ -20,12 +20,12 @@
         </q-card-section>
         <q-card-actions>
           <q-btn color="primary"
-            @click="$router.push(`/ft/view?tokenId=${ft.token!.tokenId}&creator=${user.connectedPaytacaAddress}`)">View
+            @click="$router.push(`/token/view?tokenId=${ft.token!.tokenId}&creator=${user.connectedPaytacaAddress}`)">View
             Details</q-btn>
         </q-card-actions>
       </q-card>
       <q-card class="token-card col-xs-12 col-sm-6 col-md-4 col-lg-2" style="font-size:xx-large;cursor:pointer"
-        @click="router.push('/ft/new')">
+        @click="router.push('/token/create')">
         <q-toolbar>
           <q-skeleton type="QAvatar" />
           <q-toolbar-title><q-skeleton type="text" /></q-toolbar-title>

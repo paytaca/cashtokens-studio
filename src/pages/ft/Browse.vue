@@ -42,38 +42,27 @@
 .token-id {
   background-color: $grey-10;
   border-radius: 25px;
-  padding: .5em;
+  padding: .5em
 }
 
 .token-card {
-  max-width: 20em;
+  max-width: 20em
 }
 </style>
 <script setup lang="ts">
 
 import { ref, onMounted, watch, computed } from 'vue'
-// import { sha256, utf8ToBin } from '@bitauth/libauth';
-// import { hexToBin, OpReturnData } from 'mainnet-js'
-// import JsonEditor from 'vue3-ts-jsoneditor'
-import { UtxoI, BCMR } from 'mainnet-js'
+import { UtxoI } from 'mainnet-js'
 
-// import { Registry as BcmrRegistry} from 'src/interfaces/bcmr-v2.schema';
-import getWalletClass from 'src/utils/getWalletClass';
-import { useUserStore } from 'src/stores/user';
-// import bcmrTemplate from 'src/resources/bcmr';
-// import { useUIStore } from 'src/stores/ui';
-// import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
-import { useUIStore } from 'src/stores/ui';
-import AuthChainGuard from 'src/classes/AuthChainGuard';
-import { Contract, ElectrumNetworkProvider } from 'cashscript';
-import authChainGuardArtifact from 'src/classes/AuthChainGuardPkh.json'
-import { useRouter } from 'vue-router';
+import getWalletClass from 'src/utils/getWalletClass'
+import AuthChainGuard from 'src/classes/AuthChainGuard'
+import { useRouter } from 'vue-router'
+import useStore from 'src/composables/useStore'
 
 defineOptions({ name: 'BrowseFt' })
 
 const router = useRouter()
-const user = useUserStore()
-const ui = useUIStore()
+const { user, ui } = useStore()
 const createdFts = ref([] as UtxoI[])
 const createdFtsComputed = computed<UtxoI[]>(() => {
   return createdFts.value
