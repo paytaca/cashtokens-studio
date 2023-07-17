@@ -1,6 +1,11 @@
 <template>
   <div>
     <q-stepper v-model="step" vertical color="secondary" animated>
+      <q-toolbar>
+        <q-icon name="token" size="md"></q-icon>
+        <q-toolbar-title><span class="text-weight-bold">BCMR</span></q-toolbar-title>
+        <q-btn flat round dense icon="close" @click="emit('cancel')" />
+      </q-toolbar>
       <div class="text-weight-thin q-ml-lg">{BCMR}</div>
       <q-step :name="1" title="Registry Primary Details" icon="settings" :done="step > 1">
         <q-select color="lime" :filled="true" standout bottom-slots v-model="registry!.$schema" label="Schema Version"
@@ -18,7 +23,6 @@
           <q-btn @click="step = 2" color="primary" label="Continue" />
         </q-stepper-navigation>
       </q-step>
-
       <q-step :name="2" title="Registry Identity" icon="create_new_folder" :done="step > 2">
         The identity information of this particular registry, provided as either an
         <code>authbase</code> (recommended) or an <code>IdentitySnapshot</code>.
@@ -79,11 +83,10 @@
           <q-btn flat @click="step = 2" color="primary" label="Back" class="q-ml-sm" />
         </q-stepper-navigation>
       </q-step>
-
       <q-step :name="4" title="Token Details" icon="add_comment">
         The Token's details
         <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.token.category"
-          label="Category (Token Id)" :rules="[v => v.length == 32 || 'Required 32 characters long']" dense
+          label="Category (Token Id)" :rules="[v => v.length == 64 || 'Required 64 characters long']" dense
           class="q-mb-md">
           <template v-slot:hint>
             <div><i>Often, this will be equal to the identity's authbase</i> </div>
@@ -100,7 +103,6 @@
           <q-btn flat @click="step = 3" color="primary" label="Back" class="q-ml-sm" />
         </q-stepper-navigation>
       </q-step>
-
     </q-stepper>
   </div>
 </template>
@@ -108,21 +110,22 @@
 <script setup lang="ts">
 
 import { ref, onMounted, watch, computed } from 'vue';
-import { Registry as BcmrRegistry, OffChainRegistryIdentity, IdentitySnapshot, IdentityHistory, TokenCategory } from 'src/interfaces/bcmr-v2.schema';
-import { BcmrBasic, RequireOptional } from 'src/types'
+import { Registry as BcmrRegistry, OffChainRegistryIdentity, IdentitySnapshot, TokenCategory } from 'src/interfaces/bcmr-v2.schema';
+import { RequireOptional } from 'src/types'
 
 defineOptions({ name: 'BcmrBasicFormWizard' })
 
 const props = defineProps<{
   type: 'fungible' | 'nonfungible' | 'hybrid',
-  tokenIdOptions?: Array<string>,
-  bcmr: BcmrRegistry | null,
+  bcmr?: BcmrRegistry | undefined | null,
+  authbase?: string | undefined// Can just pass the authbase, ignored if bcmr has value
 }>()
 
 const step = ref(1)
 
 const emit = defineEmits<{
-  finish: [registry: any]
+  finish: [registry: any],
+  cancel: []
 }>()
 
 const version = ref('1.0.0')
@@ -205,6 +208,11 @@ onMounted(() => {
     registry.value = props.bcmr
     version.value = registry.value.version ? Object.values(registry.value.version).join('.') : '1.1.0'
   }
+  if (props.authbase) {
+    authbase.value = props.authbase
+    identitySnapshot.value.token.category = props.authbase
+  }
+
 })
 
 const finish = () => {
