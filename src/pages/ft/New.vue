@@ -72,25 +72,23 @@
 </template>
 
 <script setup lang="ts">
-import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth';
+import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
 import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, } from 'mainnet-js'
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { ref, watch, onMounted } from 'vue'
 import { UtxoI } from 'mainnet-js'
 
-import { Registry as BcmrRegistry } from 'src/interfaces/bcmr-v2.schema';
-import getWalletClass from 'src/utils/getWalletClass';
-import { useUserStore } from 'src/stores/user';
-import bcmrTemplate from 'src/resources/bcmr';
-import { useUIStore } from 'src/stores/ui';
+import { Registry as BcmrRegistry } from 'src/interfaces/bcmr-v2.schema'
+import getWalletClass from 'src/utils/getWalletClass'
+import bcmrTemplate from 'src/resources/bcmr'
 import TokenBcmrBasicForm from 'components/TokenBcmrBasicForm.vue'
-import getByteCount from 'src/utils/getByteCount';
-import AuthChainGuard from 'src/classes/AuthChainGuard';
+import getByteCount from 'src/utils/getByteCount'
+import AuthChainGuard from 'src/classes/AuthChainGuard'
+import useStore from 'src/composables/useStore'
 
 defineOptions({ name: 'NewFt' })
 
-const user = useUserStore()
-const ui = useUIStore()
+const { user, ui } = useStore()
 const feeEstimate = ref<number>(Math.floor(Number(getByteCount({ P2PKH: 1 }, { P2PKH: 2, P2SH: 1 })) * 1.1))
 
 const token = ref<{
@@ -122,7 +120,7 @@ watch(() => user.connectedPaytacaAddress, async (address: string) => {
     isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(address)
-    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0);
+    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
     tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
     isPopulatingTokenIdOptions.value = false
   } else {
@@ -136,7 +134,7 @@ onMounted(async () => {
     isPopulatingTokenIdOptions.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > (feeEstimate.value + 1000 + 1000 + 1000));
+    const txIds = (await wallet.getAddressUtxos()).filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > (feeEstimate.value + 1000 + 1000 + 1000))
     tokenIdOptions.value = txIds.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
     isPopulatingTokenIdOptions.value = false
   }
@@ -149,9 +147,9 @@ const createFT = async () => {
   if (token.value.creatorAddress) {
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(token.value.creatorAddress)
-    const authbaseAndTokenGenesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0];
+    const authbaseAndTokenGenesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
 
-    let txSigningResult;
+    let txSigningResult
     try {
       /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
       const authChainGuard = new AuthChainGuard(token.value.creatorAddress, wallet.getPublicKeyHash(false), wallet.network)
@@ -162,7 +160,7 @@ const createFT = async () => {
       ]
 
       if (includeBcmrOpReturn.value === true) {
-        let contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)));
+        let contentHash = sha256.hash(utf8ToBin(JSON.stringify(bcmr)))
         tokenGenesisRequest.push(OpReturnData.fromArray(['BCMR', contentHash, token.value.bcmrUrl.replace('https://', '')]))
       }
 
@@ -200,7 +198,7 @@ const createFT = async () => {
     // Tx signing success, submitting transaction
     try {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true);
+      const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true)
       ui.idle()
       ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 5 })
 
