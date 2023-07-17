@@ -48,9 +48,6 @@
             <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.web" label="Web URI"
               dense>
             </q-input>
-            <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.registry"
-              label="This registry's URI" dense>
-            </q-input>
           </div>
         </div>
         <q-stepper-navigation>
@@ -75,9 +72,7 @@
         </q-input>
         <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.web" label="Web URI" dense>
         </q-input>
-        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.registry"
-          label="This registry's URI" dense>
-        </q-input>
+
         <q-stepper-navigation>
           <q-btn color="primary" @click="step = 4" label="Continue" />
           <q-btn flat @click="step = 2" color="primary" label="Back" class="q-ml-sm" />
@@ -138,7 +133,6 @@ const offchainRegistryIdentity = ref<OffChainRegistryIdentity>(typeof (props.bcm
   uris: {
     icon: 'https://example.com/icons/example.png',
     web: 'https://example.com',
-    registry: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
   }
 })
 
@@ -154,7 +148,6 @@ const identitySnapshot = ref<RequireOptional<IdentitySnapshot, 'token'>>({
   uris: {
     icon: 'https://example.com/icons/example.png',
     web: 'https://example.com',
-    registry: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json'
   },
   token: token.value,
 })
