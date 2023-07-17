@@ -1,14 +1,13 @@
 <template>
   <div class="q-my-sm q-mx-sm">
-    <q-btn size="md" color="accent" icon="img:images/paytaca-128x128.png"
+    <q-btn size="md" color="primary" icon="img:images/paytaca-128x128.png"
       @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()" align="center" stack>
       <div class="row">
         <div class="col">
           <!-- {{ connected ? 'Disconnect': 'Connect' }} -->
           <q-icon v-if="user.connectedPaytacaAddress" name="link_off" size="xs"></q-icon>
           <q-icon v-else name="link" size="xs"></q-icon>
-          <div><code><sup>{{ user.connectedPaytacaAddress.startsWith('bchtest') ? '[chipnet]' : '' }}</sup></code></div>
-
+          <div><code><sup>{{ user.connectedPaytacaAddress?.startsWith('bchtest') ? '[chipnet]' : '' }}</sup></code></div>
         </div>
       </div>
     </q-btn>
