@@ -77,13 +77,18 @@ const menu = computed<any[]>(() => {
           icon: 'token',
           children: [
             {
-              label: 'View Created FTs',
-              href: '/ft/browse',
+              label: 'Manage FTs',
+              href: '/token/browse/fungible',
               icon: 'token',
             },
             {
-              label: 'View Created NFTs',
-              href: '/nft/browse',
+              label: 'Manage NFTs',
+              href: '/token/browse/nonfungible',
+              icon: 'token',
+            },
+            {
+              label: 'Manage FNFTs',
+              href: '/token/browse/hybrid',
               icon: 'token',
             }
 
