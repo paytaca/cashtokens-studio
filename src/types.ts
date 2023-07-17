@@ -2,22 +2,22 @@
 
 import { Wallet } from 'mainnet-js';
 
-type UIMessage = {
+export type UIMessage = {
   text: string,
   type: ''| 'error' | 'warning' | 'info' | 'success',
   withLoader?: boolean,
   timeout?: number
 }
 
-type AppEnv = 'development' | 'development-build' | 'production'
+export type AppEnv = 'development' | 'development-build' | 'production'
 
-type UIStore = {
+export type UIStore = {
   paytacaInstalled: boolean,
   isBusy: boolean,
   message: UIMessage
 }
 
-type BcmrBasic = {
+export type BcmrBasic = {
   tokenId: string,
   name: string,
   symbol: string,
@@ -25,10 +25,10 @@ type BcmrBasic = {
   bcmrUrl: string
 }
 
-type updateBcmr =  (contractOwnerAddress:string, contractAddress:string, tokenId:string, paramMintCost:number, paramMaxSupply:number,  paramTokenValue:number, newBcmrUri: string) => Promise<void>
+export type updateBcmr =  (contractOwnerAddress:string, contractAddress:string, tokenId:string, paramMintCost:number, paramMaxSupply:number,  paramTokenValue:number, newBcmrUri: string) => Promise<void>
 
 // stores
-type UserState = {
+export type UserState = {
   connectedPaytacaAddress: string | undefined,
   connectedPaytacaWalletBchBalance: string | number,
   createdFts: any[],
@@ -36,8 +36,12 @@ type UserState = {
 }
 
 
-type RequireOptional<Type, Key extends keyof Type> = Type & {
+export type RequireOptional<Type, Key extends keyof Type> = Type & {
   [Property in Key]-?: Type[Property];
 };
 
-type TokenType = 'fungible' | 'nonfungible' | 'hybrid'
+export type TokenType = 'fungible' | 'nonfungible' | 'hybrid'
+
+declare global {
+  interface Window { paytaca: any; }
+}
