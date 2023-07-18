@@ -2,18 +2,34 @@
 <template>
   <q-page class="justify-center q-mx-lg q-gutter-sm" style="min-height:100vh; max-width:100vw">
     <div class="row items-center q-gutter-lg">
-      <div class="col">
+      <div class="col items-center">
         <q-skeleton v-if="!token.identity?.uris?.icon" type="QAvatar" size="8em"></q-skeleton>
         <q-avatar v-else class="col" size="8em">
           <img :src="token.identity?.uris?.icon" alt="">
         </q-avatar>
       </div>
       <div class="col">
-        <div>Token: {{ token.identity?.name || 'Unknown' }}</div>
-        <div>Symbol: {{ token.identity?.token?.symbol }}</div>
-        <div class="ellipsis-2-lines">Id: {{ token.id?.replace(token.id.substring(15, 45), '...') }}</div>
-        <div class="ellipsis-2-lines">Manager: {{
-          token.creator?.replace(token.creator.substring(15, 35), '...') }}
+        <div>
+          <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
+          <span v-else>Token: {{ token.identity?.name || 'Unknown' }}</span>
+        </div>
+        <div>
+          <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
+          <span v-else>Symbol: {{ token.identity?.token?.symbol }}</span>
+        </div>
+        <div>
+          <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
+          <span v-else>Decimals: {{ token.identity?.token?.decimals }}</span>
+        </div>
+        <div class="ellipsis-2-lines">
+          <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
+          <span v-else>
+            Category (Token Id): {{ token.id?.replace(token.id.substring(15, 45), '...') }}
+          </span>
+        </div>
+        <div class="ellipsis-2-lines">
+          Manager: {{
+            token.creator?.replace(token.creator.substring(15, 35), '...') }}
         </div>
         <div v-if="token.identity?.uris">
           <div v-for="k, i in Object.keys(token.identity?.uris)" :key="i">
@@ -55,7 +71,8 @@
         </q-btn>
       </div>
       <div class="row col-12 justify-end">
-        <q-btn size="lg" color="primary" :disable="!registry" @click="authchainPublishRegistry">Publish Update</q-btn>
+        <q-btn size="lg" color="primary" :disable="!registry || !registryUrl" @click="authchainPublishRegistry">Publish
+          Update</q-btn>
       </div>
     </div>
   </q-page>
@@ -72,6 +89,7 @@ import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/classes/AuthChainGuard'
 import fetchAuthhead from 'src/utils/fetchAuthhead'
+import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
 
 defineOptions({ name: 'ViewFt' })
 
@@ -83,6 +101,8 @@ const authChainGuard = ref<AuthChainGuard | null>(null)
 const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
 const menu = ref<'authchain-publish' | 'authchain-transfer' | 'authchain-burn'>('authchain-publish')
+
+const loading = ref<boolean>(true)
 
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
   const { creator, tokenId } = route.query
@@ -110,28 +130,37 @@ onMounted(async () => {
 
   try {
     if (token.value.id) {
+      ui.busy({ text: 'Loading token details from registry...', type: 'info' })
       // const authchain = await BCMR.fetchAuthChainFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
-      let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
-      let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
-      let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs[0]
-      // \x6a0442434d52 + 40 + <32 bytes = 64 chars>
-      let uris: string[] | string = binToUtf8(hexToBin(authhead.locking_bytecode).slice(8 + 2 + 64))
-      uris = uris.split(' ')
-      if (authhead) {
-        let tokenRegistryUri = uris[0] // 73 start index of URI's
-        if (tokenRegistryUri) {
-          console.log(tokenRegistryUri)
-          // dirty, assumes uri is valid, and only assumes https://
-          // TODO: improve, handle other URI protocol
-          let url = 'https://' + tokenRegistryUri
-          // TODO: add check if url is valid or check pre-flight stats
-          let registryFetchResponse = await fetch(url)
-          registry.value = await registryFetchResponse.json()
-          // TODO: Update token page, based on this loaded registry, added error handled
-        }
+      const authhead = await fetchAuthChainAuthheadFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
+      // console.log(authchain) // TODO USE THIS, IT'S ALREADY PARSED
+      // let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
+      // let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, locktime: string, version: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
+      // let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs[0]
+      // console.log('AUTHHEAD', authheadJson)
+      // // \x6a0442434d52 + 40 + <32 bytes = 64 chars>
+      // let uris: string[] | string = binToUtf8(hexToBin(authhead.locking_bytecode).slice(8 + 2 + 64))
+      // uris = uris.split(' ')
+      // if (authhead) {
+      //   let tokenRegistryUri = uris[0] // 73 start index of URI's
+      //   if (tokenRegistryUri) {
+      //     console.log(tokenRegistryUri)
+      //     // dirty, assumes uri is valid, and only assumes https://
+      //     // TODO: improve, handle other URI protocol
+      //     let url = 'https://' + tokenRegistryUri
+      //     // TODO: add check if url is valid or check pre-flight stats
+      //     let registryFetchResponse = await fetch(url)
+      //     registry.value = await registryFetchResponse.json()
+      //     // TODO: Update token page, based on this loaded registry, added error handled
+      //   }
+      // }
+      if (authhead[0] && authhead[0].httpsUrl) {
+        let registryReqResp = await fetch(authhead[0].httpsUrl)
+        registry.value = await registryReqResp.json()
       }
     }
-
+    loading.value = false
+    ui.idle()
   } catch (error) {
     console.log('Error fetching authhead from chaingraph', error)
   }
