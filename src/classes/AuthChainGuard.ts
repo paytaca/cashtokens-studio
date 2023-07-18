@@ -3,9 +3,8 @@
 import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
-import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet} from 'mainnet-js'
+import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet, TestNetWallet} from 'mainnet-js'
 import { Argument, Artifact, HashType, SignatureAlgorithm, SignatureTemplate, Transaction } from 'cashscript';
-
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
@@ -13,21 +12,25 @@ import toCashScript from 'src/utils/toCashScript';
 
 export default class AuthChainGuard implements AuthChainGuardI {
 
+  contractWallet: Wallet|null;
   readonly contract: Contract;
   private ownerWallet: Wallet|null;
-  readonly contractWallet: Wallet|null;
   private f: (ownerPubKey: any, ownerSig: any, newOwnerPubKeyOrVal: any) => Transaction;
 
+
   constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
-    this.contract = new Contract(
+    this.contract = this.newContractInstance(ownerPubKeyHash, network)
+    this.ownerWallet = null
+    this.contractWallet = null
+    this.f = this.contract.getContractFunction('PublishOrBurnOrReleaseOrTransfer')
+  }
+
+  newContractInstance(ownerPubKeyHash:any, network: Network): Contract {
+    return new Contract(
       this.script(),
       [ownerPubKeyHash],
       network
     )
-
-    this.ownerWallet = null
-    this.contractWallet = null
-    this.f = this.contract.getContractFunction('PublishOrBurnOrReleaseOrTransfer')
   }
 
   async initWallets(){
@@ -35,6 +38,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     this.ownerWallet = await W.watchOnly(this.ownerAddress)
     this.contractWallet = await W.watchOnly(this.contract.getDepositAddress())
   }
+
 
   /**
    * Publishes a BCMR update
@@ -148,8 +152,102 @@ export default class AuthChainGuard implements AuthChainGuardI {
     }
   }
 
-  transfer(): void {
-    console.log('transfering ownership')
+  async transfer(newOwnerAddress: string): Promise<string|undefined> {
+    this.contractWallet? null : await this.initWallets()
+    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
+    const identityOutput = identityOutputs[0]
+    if (!identityOutput) {
+      throw new Error('authbase not found')
+    }
+
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 3000).map(toCashScript)[0]
+    if (!funderInput) {
+      throw new Error('insufficient balance')
+    }
+
+    const minerFee = 1000
+    let transaction
+    let decoded
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const newOwnerWallet = await (getWalletClass()).watchOnly(newOwnerAddress)
+    const newOwnerAuthchainGuardContract = this.newContractInstance(newOwnerWallet.getPublicKeyHash(false), newOwnerWallet.network)
+    try {
+      transaction =
+        this.f(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), newOwnerWallet.getPublicKeyHash(false))
+          .from(identityOutput)
+          .fromP2PKH(funderInput, sig)
+          .to([{
+            to: newOwnerAuthchainGuardContract.getDepositAddress(),
+            amount: identityOutput.satoshis
+          }])
+          .to([{
+            to: this.ownerAddress,
+            amount: funderInput.satoshis - BigInt(minerFee)
+          }])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        console.log('decoded:', decoded)
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      throw new Error('Error building transaction')
+    }
+
+    // signing request
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...this.contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      signingResult = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [{
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(this.contract.getDepositAddress()) as any).bytecode,
+          valueSatoshis: BigInt(identityOutput.satoshis),
+          token: identityOutput.token && {
+            ...identityOutput.token,
+            category: hexToBin(identityOutput.token.category),
+            nft: identityOutput.token.nft && {
+              ...identityOutput.token.nft,
+              commitment: hexToBin(identityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        }, {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(this.ownerAddress) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis),
+        }],
+        broadcast: false,
+        userPrompt: 'Sign transaction to update BCMR'
+      });
+
+    } catch (error) {
+      console.log(error)
+      throw new Error('Error signing transaction')
+    }
+
+    // Tx signing success, submitting transaction
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      return tx
+    } catch (error) {
+      console.log('Error creating FT Token during submission of txn', error)
+      return
+    }
   }
 
   burn(): void {

@@ -68,7 +68,7 @@ const createdFtsComputed = computed<UtxoI[]>(() => {
   return createdFts.value
 })
 
-watch(() => user.connectedPaytacaAddress, async (address) => {
+watch(() => user.connectedPaytacaAddress as string, (address: string) => {
   if (address.length > 0) {
     loadCreatedFts(address)
   } else {
@@ -92,7 +92,7 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
 
-  const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress, creatorWalletPkh, creatorWallet.network)
+  const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWalletPkh, creatorWallet.network)
   const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
 
@@ -106,6 +106,7 @@ const loadCreatedFts = async (creatorAddress: string) => {
   let createdFtsFresh: any[] = []
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
+  console.log(creatorFtsTokenIdsSet)
   console.log(authchainIdentityOutputs)
   let ftsLoaded = new Promise((res) => {
     let counter = 0
