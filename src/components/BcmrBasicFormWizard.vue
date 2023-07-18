@@ -214,6 +214,7 @@ const finish = () => {
       [registry.value.latestRevision]: identitySnapshot.value
     }
   }
+  registry.value.registryIdentity = authbase.value ? authbase.value : offchainRegistryIdentity.value
   emit('finish', registry.value)
 }
 </script>
