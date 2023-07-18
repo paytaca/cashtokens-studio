@@ -58,20 +58,14 @@
         <q-btn size="lg" color="primary" :disable="!registry" @click="authchainPublishRegistry">Publish Update</q-btn>
       </div>
     </div>
-    <!-- <div class="row q-my-xs justify-end">
-      <q-btn icon="settings"></q-btn>
-      <q-btn color="primary" size="md" @click.stop="authchainPublishRegistry">Update Registry</q-btn>
-      <q-btn color="primary" size="md" @click.stop="authchainTransfer">Transfer Ownership</q-btn>
-      <q-btn color="primary" size="md" @click.stop="authchainBurn">Burn</q-btn>
-    </div> -->
   </q-page>
 </template>
 
 <script setup lang="ts">
 
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { hexToBin } from 'mainnet-js'
+import { BCMR, Network, hexToBin } from 'mainnet-js'
 import { binToUtf8 } from '@bitauth/libauth'
 import { Registry as Bcmr, IdentitySnapshot, URIs } from 'src/interfaces/bcmr-v2.schema'
 import useStore from 'src/composables/useStore'
@@ -86,24 +80,27 @@ const { user, ui } = useStore()
 const route = useRoute()
 const authChainGuard = ref<AuthChainGuard | null>(null)
 
-const token = ref<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>({})
 const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
 const menu = ref<'authchain-publish' | 'authchain-transfer' | 'authchain-burn'>('authchain-publish')
 
-watch(() => registry.value, (r) => {
-  if (r) {
-    // parse registry and populate page
-    console.log('REGISTRY', r)
-    let identityHistory
-    if (token.value?.id && r.identities) {
-      identityHistory = r.identities[token.value.id]
-      if (identityHistory) {
-        let identityHistories = Object.keys(identityHistory)
-        token.value.identity = r.identities[token.value.id][identityHistories[identityHistories.length - 1]] // always get the last history
-      }
+const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
+  const { creator, tokenId } = route.query
+  let _token: { id: string, creator: string, identity?: IdentitySnapshot | null } = {
+    id: tokenId as string,
+    creator: creator as string
+  }
+  if (tokenId && registry.value) {
+    if (registry.value.identities) {
+      console.log('tokenId', tokenId)
+      console.log('TOKEN', registry.value.identities)
+      let identityHistory = registry.value.identities[_token.id]
+      let identityHistories = Object.keys(identityHistory)
+      _token.identity = registry.value.identities[_token.id][identityHistories[identityHistories.length - 1]]
     }
   }
+
+  return _token
 })
 
 onMounted(async () => {
@@ -113,17 +110,17 @@ onMounted(async () => {
 
   try {
     if (token.value.id) {
+      // const authchain = await BCMR.fetchAuthChainFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
       let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
       let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
       let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs[0]
-      const op_returnAndBCMR = '\\x6a0442434d5220'
-      const registryHash = authhead.locking_bytecode.replace(op_returnAndBCMR, '').slice(0, 64)
-      let uris: string[] | string = authhead.locking_bytecode.replace(op_returnAndBCMR + registryHash, '')
-      uris = uris.substring(4, uris.length) // Remove the first 2 bytes, this is just the length of the uris
-      uris = uris.split('20') // split by spaces(20 = byte representation of space)
+      // \x6a0442434d52 + 40 + <32 bytes = 64 chars>
+      let uris: string[] | string = binToUtf8(hexToBin(authhead.locking_bytecode).slice(8 + 2 + 64))
+      uris = uris.split(' ')
       if (authhead) {
-        let tokenRegistryUri = binToUtf8(hexToBin(uris[0])) // 73 start index of URI's
+        let tokenRegistryUri = uris[0] // 73 start index of URI's
         if (tokenRegistryUri) {
+          console.log(tokenRegistryUri)
           // dirty, assumes uri is valid, and only assumes https://
           // TODO: improve, handle other URI protocol
           let url = 'https://' + tokenRegistryUri
@@ -138,7 +135,6 @@ onMounted(async () => {
   } catch (error) {
     console.log('Error fetching authhead from chaingraph', error)
   }
-
   await initAuthChainGuard()
 })
 
@@ -162,6 +158,8 @@ const authchainPublishRegistry = async () => {
   try {
     ui.busy({ text: 'Publishing registry', type: 'info' })
     const tx = await authChainGuard.value?.publish(JSON.stringify(registry.value), registryUrl.value)
+    await BCMR.buildAuthChain({ transactionHash: token.value.id as string, network: authChainGuard.value?.contractWallet?.network })
+
     ui.idle()
     ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
   } catch (error) {
