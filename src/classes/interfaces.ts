@@ -10,7 +10,7 @@ export interface AuthChainGuardI {
    */
   initWallets(): Promise<void>
   publish(bcmrRawString: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined>
-  transfer(): void
+  transfer(newOwnerAddress: string): Promise<string|undefined>
   burn(): void
   script(): string
 }
