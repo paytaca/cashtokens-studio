@@ -3,7 +3,7 @@
 import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
-import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet } from 'mainnet-js'
+import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet} from 'mainnet-js'
 import { Argument, Artifact, HashType, SignatureAlgorithm, SignatureTemplate, Transaction } from 'cashscript';
 
 import getWalletClass from 'src/utils/getWalletClass';
@@ -15,7 +15,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
 
   readonly contract: Contract;
   private ownerWallet: Wallet|null;
-  private contractWallet: Wallet|null;
+  readonly contractWallet: Wallet|null;
   private f: (ownerPubKey: any, ownerSig: any, newOwnerPubKeyOrVal: any) => Transaction;
 
   constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
