@@ -131,6 +131,7 @@ import { TokenType } from 'src/types'
 defineOptions({ name: 'TokenCreate' })
 
 const route = useRoute()
+const router = useRouter()
 const { user, ui } = useStore()
 
 const creator = computed(() => user.connectedPaytacaAddress)
@@ -310,7 +311,7 @@ const submitTokenGenesisTransaction = async () => {
       ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 5 })
 
       await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
-      const router = useRouter()
+
       router.push(`/token/view?tokenId=${token.value.tokenId}&creator=${creator.value}`)
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
