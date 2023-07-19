@@ -55,7 +55,7 @@ import { ref, onMounted, watch, computed } from 'vue'
 import { UtxoI } from 'mainnet-js'
 
 import getWalletClass from 'src/utils/getWalletClass'
-import AuthChainGuard from 'src/classes/AuthChainGuard'
+import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import { useRouter } from 'vue-router'
 import useStore from 'src/composables/useStore'
 
@@ -77,6 +77,7 @@ watch(() => user.connectedPaytacaAddress as string, (address: string) => {
 })
 
 onMounted(async () => {
+  console.log('USER', user.connectedPaytacaAddress)
   if (user.connectedPaytacaAddress) {
     // Load from store, then try to refresh
     createdFts.value.push(...user.createdFts)
@@ -95,7 +96,8 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWalletPkh, creatorWallet.network)
   const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
-
+  console.log('ADDRESS', authchainGuardContract.getDepositAddress())
+  console.log('UTXOS', await autchainGuardWallet.getAddressUtxos())
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
   if (creatorFts.length === 0) {
@@ -106,6 +108,7 @@ const loadCreatedFts = async (creatorAddress: string) => {
   let createdFtsFresh: any[] = []
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
   let authchainIdentityOutputsSet = new Set(authchainIdentityOutputs.map((utxo: UtxoI) => utxo.txid))
+
   console.log(creatorFtsTokenIdsSet)
   console.log(authchainIdentityOutputs)
   let ftsLoaded = new Promise((res) => {
@@ -171,4 +174,5 @@ const loadCreatedFts = async (creatorAddress: string) => {
   ui.idle()
 
 }
+
 </script>

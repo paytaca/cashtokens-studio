@@ -1,27 +1,27 @@
 <!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <template>
   <q-page class="justify-center q-mx-lg q-gutter-sm" style="min-height:100vh; max-width:100vw">
-    <div class="row items-center q-gutter-lg">
-      <div class="col items-center">
+    <div class="row inline items-center q-gutter-lg">
+      <div class="items-center justify-center q-px-xl">
         <q-skeleton v-if="!token.identity?.uris?.icon" type="QAvatar" size="8em"></q-skeleton>
-        <q-avatar v-else class="col" size="8em">
+        <q-avatar v-else size="8em">
           <img :src="token.identity?.uris?.icon" alt="">
         </q-avatar>
       </div>
-      <div class="col">
+      <div>
         <div>
           <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
           <span v-else>Token: {{ token.identity?.name || 'Unknown' }}</span>
         </div>
         <div>
           <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
-          <span v-else>Symbol: {{ token.identity?.token?.symbol }}</span>
+          <span v-else>Symbol: <q-badge outline color="orange" :label="token.identity?.token?.symbol" /></span>
         </div>
         <div>
           <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
           <span v-else>Decimals: {{ token.identity?.token?.decimals }}</span>
         </div>
-        <div class="ellipsis-2-lines">
+        <div>
           <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
           <span v-else>
             Category (Token Id): {{ token.id?.replace(token.id.substring(15, 45), '...') }}
@@ -33,21 +33,30 @@
         </div>
         <div v-if="token.identity?.uris">
           <div v-for="k, i in Object.keys(token.identity?.uris)" :key="i">
-            {{ k }}: {{ token.identity?.uris[k] }}
+            <div v-if="k === 'icon'">
+              Icon: <q-avatar size="sm">
+                <img :src="token.identity?.uris[k]" />
+              </q-avatar>
+            </div>
+            <span v-else>
+              {{ k }}: {{ token.identity?.uris[k] }}
+            </span>
           </div>
         </div>
       </div>
     </div>
     <div v-if="token.identity?.description">
-      <p>{{ token.identity.description }}</p>
+      <q-banner rounded dense>
+        <p>{{ token.identity.description }}</p>
+      </q-banner>
     </div>
     <div class="row justify-end">
       <q-btn icon="settings" size="md">
         <q-menu>
           <q-list>
-            <q-item clickable v-close-popup>Publish Registry Update</q-item>
-            <q-item clickable v-close-popup>Transfer Ownership</q-item>
-            <q-item clickable v-close-popup>Burn Identity</q-item>
+            <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry Update</q-item>
+            <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
+            <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity</q-item>
           </q-list>
         </q-menu>
       </q-btn>
@@ -57,7 +66,6 @@
       <div class="col-12 justify-start q-my-sm">
         <i class="text-h6">Publish Registry</i>
       </div>
-
       <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
         label="Registry URL" class="col-12" dense square></q-input>
       <div class="row col-12">
@@ -71,8 +79,35 @@
         </q-btn>
       </div>
       <div class="row col-12 justify-end">
-        <q-btn size="lg" color="primary" :disable="!registry || !registryUrl" @click="authchainPublishRegistry">Publish
-          Update</q-btn>
+        <q-btn size="lg" color="primary" :disable="!registry || !registryUrl" @click="authchainPublishRegistry">
+          Confirm Publish
+        </q-btn>
+      </div>
+    </div>
+    <div v-if="menu == 'authchain-transfer'" class="row justify-center">
+      <div class="col-12 justify-start q-my-sm">
+        <i class="text-h6">Transfer Authchain Ownership</i>
+      </div>
+      <q-input :filled="true" v-model="newOwnerAddress" type="url" :rules="[v => v.length > 49 || 'Invalid Address']"
+        label="New owner's address" class="col-12" dense square></q-input>
+      <div class="row col-12 justify-end">
+        <q-btn size="lg" color="primary" :disable="!newOwnerAddress" @click="authchainTransfer">
+          Confirm Transfer
+        </q-btn>
+      </div>
+    </div>
+    <div v-if="menu == 'authchain-burn'" class="row justify-center">
+      <div class="col-12 justify-start q-my-sm">
+        <i class="text-h6">Are you sure you want to burn this token's authchain?</i>
+      </div>
+
+      <div class="row col-12 justify-end q-gutter-sm">
+        <q-btn size="lg" color="negative" @click="() => { menu = '' }">
+          No
+        </q-btn>
+        <q-btn size="lg" color="secondary" @click="authchainBurn">
+          Yes
+        </q-btn>
       </div>
     </div>
   </q-page>
@@ -87,7 +122,7 @@ import { binToUtf8 } from '@bitauth/libauth'
 import { Registry as Bcmr, IdentitySnapshot, URIs } from 'src/interfaces/bcmr-v2.schema'
 import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
-import AuthChainGuard from 'src/classes/AuthChainGuard'
+import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import fetchAuthhead from 'src/utils/fetchAuthhead'
 import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
 
@@ -100,8 +135,9 @@ const authChainGuard = ref<AuthChainGuard | null>(null)
 
 const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
-const menu = ref<'authchain-publish' | 'authchain-transfer' | 'authchain-burn'>('authchain-publish')
+const newOwnerAddress = ref<string>('')
 
+const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn'>('authchain-publish')
 const loading = ref<boolean>(true)
 
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
@@ -112,14 +148,11 @@ const token = computed<{ id?: string, creator?: string, identity?: IdentitySnaps
   }
   if (tokenId && registry.value) {
     if (registry.value.identities) {
-      console.log('tokenId', tokenId)
-      console.log('TOKEN', registry.value.identities)
       let identityHistory = registry.value.identities[_token.id]
       let identityHistories = Object.keys(identityHistory)
       _token.identity = registry.value.identities[_token.id][identityHistories[identityHistories.length - 1]]
     }
   }
-
   return _token
 })
 
@@ -179,16 +212,12 @@ const initAuthChainGuard = async () => {
 
 // methods
 const authchainPublishRegistry = async () => {
-  console.log('Publishing registry')
-  authChainGuard.value
   if (!registry.value) {
     return ui.setMessage({ text: 'Invalid BCMR', type: 'error', timeout: 10 })
   }
   try {
     ui.busy({ text: 'Publishing registry', type: 'info' })
     const tx = await authChainGuard.value?.publish(JSON.stringify(registry.value), registryUrl.value)
-    await BCMR.buildAuthChain({ transactionHash: token.value.id as string, network: authChainGuard.value?.contractWallet?.network })
-
     ui.idle()
     ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
   } catch (error) {
@@ -199,7 +228,22 @@ const authchainPublishRegistry = async () => {
 
 }
 
-const authchainTransfer = async () => { console.log('TODO') }
+const authchainTransfer = async () => {
+  if (!registry.value) {
+    return ui.setMessage({ text: 'Invalid BCMR', type: 'error', timeout: 10 })
+  }
+  try {
+    ui.busy({ text: 'Publishing registry', type: 'info' })
+    console.log(authChainGuard.value)
+    const tx = await authChainGuard.value?.transfer(newOwnerAddress.value)
+    ui.idle()
+    ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
+  } catch (error) {
+    ui.idle()
+    console.log(error)
+    ui.setMessage({ text: 'Error publishing registry', type: 'error', timeout: 10 })
+  }
+}
 const authchainBurn = async () => { console.log('TODO') }
 
 const fetchRegistry = async () => {

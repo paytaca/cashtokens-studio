@@ -104,9 +104,11 @@ module.exports = configure(function (/* ctx */) {
       extendViteConf (viteConf) {
         const inject = require('@rollup/plugin-inject')
         viteConf.build = {
+          ...viteConf.build,
           target: 'esnext',
           rollupOptions: {
-            plugins: [inject({ Buffer: ['buffer', 'Buffer'] })]
+            ...viteConf.build.rollupOptions,
+            plugins: [...viteConf.build.rollupOptions.plugins, inject({ Buffer: ['buffer', 'Buffer'] })]
           }
         }
         // viteConf.resolve.alias = stdLibBrowser
