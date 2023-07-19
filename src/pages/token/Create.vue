@@ -299,7 +299,7 @@ const submitTokenGenesisTransaction = async () => {
       const authChainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
       const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
-        new TokenSendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, tokenId: token.value.tokenId, commitment: token.value.tokenId }),
+        new TokenSendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, tokenId: token.value.tokenId, commitment: 'identity' }),
       ]
 
       const requiredFields = { cashaddr: wallet.getTokenDepositAddress(), value: 1000, tokenId: token.value.tokenId }
