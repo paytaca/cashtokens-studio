@@ -6,14 +6,14 @@
         <div class="text-weight-thin">{BCMR}</div>
         <q-btn type="a" :href="`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`"
           download="bitcoin-cash-metadata-registy.json" icon="download" size="xs" round></q-btn>
-        <q-btn icon="edit" size="xs" round @click="genesisOptions.currentView = 'bcmr-editor'"></q-btn>
+        <q-btn icon="edit" size="xs" round @click="options.currentView = 'bcmr-editor'"></q-btn>
         <q-btn icon="delete" size="xs" color="red" round
-          @click="() => { registry = null; genesisOptions.publishIdentityOutput = false; genesisOptions.currentView = 'create-token' }"></q-btn>
+          @click="() => { registry = null; options.publishIdentityOutput = false; options.currentView = 'create-token' }"></q-btn>
       </div>
     </div>
     <q-separator :dark="$q.dark.isActive" class="q-mx-lg q-mb-lg" />
 
-    <q-form v-if="genesisOptions.currentView === 'create-token'" class="q-gutter-md q-mx-lg q-pa-sm">
+    <q-form v-if="options.currentView === 'create-token'" class="q-gutter-md q-mx-lg q-pa-sm">
       <i class="row text-h6 q-mb-sm">Token Details</i>
       <q-input class="row" :filled="true" dark:color="lime" v-model="creator" label="Creator's address"
         aria-disabled="true" disable dense square />
@@ -45,19 +45,20 @@
         dark:color="lime" v-model="token.commitment" type="text" label="Commitment" dense square>
       </q-input>
       <div v-if="token.tokenId" class="row">
-        <q-checkbox :filled="true" dark:color="lime" v-model="genesisOptions.publishIdentityOutput"
-          label="Publish Registry">
+        <q-checkbox :filled="true" dark:color="lime" v-model="options.publishIdentityOutput" label="Publish Registry">
         </q-checkbox>
-        <div v-if="registry" class="row justify-end items-center q-gutter-sm">
+        <!-- <div v-if="registry" class="row justify-end items-center q-gutter-sm">
           <div class="text-weight-thin">{BCMR}</div>
           <q-btn type="a" :href="`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`"
             download="bitcoin-cash-metadata-registy.json" icon="download" size="xs" round></q-btn>
-          <q-btn icon="edit" size="xs" round @click="genesisOptions.currentView = 'bcmr-editor'"></q-btn>
+          <q-btn icon="edit" size="xs" round @click="options.currentView = 'bcmr-editor'"></q-btn>
           <q-btn icon="delete" size="xs" color="red" round
-            @click="() => { registry = null; genesisOptions.publishIdentityOutput = false; genesisOptions.currentView = 'create-token' }"></q-btn>
-        </div>
+            @click="() => { registry = null; options.publishIdentityOutput = false; options.currentView = 'create-token' }"></q-btn>
+        </div> -->
+        <q-checkbox :filled="true" dark:color="lime" v-model="options.useMintingBaton" label="Use Minting Baton">
+        </q-checkbox>
       </div>
-      <div v-if="genesisOptions.publishIdentityOutput" class="row">
+      <div v-if="options.publishIdentityOutput" class="row">
         <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
           label="Registry URL" class="col-12" dense square></q-input>
         <div class="col-12 justify-end q-gutter-sm q-py-sm">
@@ -77,17 +78,17 @@
       </div>
     </q-form>
     <!-- Bcmr Create Form Wizard -->
-    <div v-if="genesisOptions.currentView === 'bcmr-wizard'" class="q-mx-lg q-pa-sm">
+    <div v-if="options.currentView === 'bcmr-wizard'" class="q-mx-lg q-pa-sm">
       <i class="row text-h6 q-mb-sm">
         Create BCMR
       </i>
       <BcmrBasicFormWizard type="fungible" :token-id-options="token.idOptions" :bcmr="registry" :authbase="token.tokenId"
-        @finish="(r) => { genesisOptions.currentView = 'create-token'; registry = r }"
-        @cancel="() => genesisOptions.currentView = 'create-token'" />
+        @finish="(r) => { options.currentView = 'create-token'; registry = r }"
+        @cancel="() => options.currentView = 'create-token'" />
     </div>
 
     <!-- Fetch Or Create Dialog -->
-    <!-- <q-dialog :model-value="genesisOptions.displayFetchOrCreateDialog" full-width>
+    <!-- <q-dialog :model-value="options.displayFetchOrCreateDialog" full-width>
       <q-card class="q-pa-xs">
         <q-toolbar>
           <q-icon name="token" size="md"></q-icon>
@@ -102,12 +103,11 @@
       </q-card>
     </q-dialog> -->
     <!-- Bcmr editor -->
-    <div v-if="genesisOptions.currentView === 'bcmr-editor'" class="q-mx-lg q-pa-sm">
+    <div v-if="options.currentView === 'bcmr-editor'" class="q-mx-lg q-pa-sm">
       <div class="row justify-between">
         <i class="text-h6 q-mb-sm">Review BCMR</i>
-        <q-btn icon="close" flat rounded size="sm" @click="genesisOptions.currentView = 'create-token'"></q-btn>
+        <q-btn icon="close" flat rounded size="sm" @click="options.currentView = 'create-token'"></q-btn>
       </div>
-
       <JsonEditor v-model="registry" :darkTheme="$q.dark.isActive" />
     </div>
   </q-page>
@@ -119,9 +119,10 @@ import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import JsonEditor from 'vue3-ts-jsoneditor'
 import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
-import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI } from 'mainnet-js'
+import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI, NFTCapability, TokenI } from 'mainnet-js'
 
-import AuthChainGuard from 'src/classes/AuthChainGuard'
+import AuthChainGuard from 'src/contracts/AuthChainGuard'
+import MintingCovenant from 'src/contracts/MintingCovenant'
 import getWalletClass from 'src/utils/getWalletClass'
 import { Registry as BcmrRegistry } from 'src/interfaces'
 import useStore from 'src/composables/useStore'
@@ -135,6 +136,13 @@ const router = useRouter()
 const { user, ui } = useStore()
 
 const creator = computed(() => user.connectedPaytacaAddress)
+// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+const tokenIdInputHint = computed(() => token.value.idOptions!.length > 0 ? 'Select token id from suitable UTXOs' : 'No suitable UTXO, please consolidate your UTXOs and try again.')
+
+const registry = ref<BcmrRegistry | null>(null)
+const registryUrl = ref<string>('https://example.com/.well-known/bitcoin-cash-metadata-registry.json')
+const registryObtainedFrom = ref<'fetch' | 'create' | null>(null)
+const isPopulatingTokenIdOptions = ref<boolean>(false)
 
 const token = ref<{
   tokenType: TokenType,
@@ -152,33 +160,31 @@ const token = ref<{
   commitment: undefined
 })
 
-const genesisOptions = ref<{
-  publishIdentityOutput: boolean,
+const options = ref<{
   currentView: 'create-token' | 'bcmr-wizard' | 'bcmr-editor',
   displayRegistryCreateWizard: boolean,
   displayFetchOrCreateDialog: boolean,
-  displayBcmrEditor: boolean
+  displayBcmrEditor: boolean,
+  publishIdentityOutput: boolean,
+  useAuthChainGuard: boolean,
+  useMintingBaton: boolean
 }>({
   currentView: 'create-token',
-  publishIdentityOutput: false,
   displayRegistryCreateWizard: false,
   displayFetchOrCreateDialog: false,
-  displayBcmrEditor: false
+  displayBcmrEditor: false,
+  publishIdentityOutput: false,
+  useAuthChainGuard: true,
+  useMintingBaton: false
 })
 
-const registry = ref<BcmrRegistry | null>(null)
-const registryUrl = ref<string>('https://example.com/.well-known/bitcoin-cash-metadata-registry.json')
-const registryObtainedFrom = ref<'fetch' | 'create' | null>(null)
-const isPopulatingTokenIdOptions = ref<boolean>(false)
-// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-const tokenIdInputHint = computed(() => token.value.idOptions!.length > 0 ? 'Select token id from suitable UTXOs' : 'No suitable UTXO, please consolidate your UTXOs and try again.')
 
-watch(() => genesisOptions.value.publishIdentityOutput, (yes) => {
+watch(() => options.value.publishIdentityOutput, (yes) => {
   if (yes && !registryObtainedFrom.value) {
-    genesisOptions.value.displayFetchOrCreateDialog = true
+    options.value.displayFetchOrCreateDialog = true
   } else {
     registryObtainedFrom.value = null
-    genesisOptions.value.displayFetchOrCreateDialog = false
+    options.value.displayFetchOrCreateDialog = false
   }
 })
 
@@ -212,7 +218,7 @@ const fetchRegistry = async () => {
     const r = await fetch(registryUrl.value)
     registry.value = await r.json()
     registryObtainedFrom.value = 'fetch'
-    genesisOptions.value.displayFetchOrCreateDialog = false
+    options.value.displayFetchOrCreateDialog = false
     // TODO:Check if this token.tokenId's identity is in the registry
     ui.idle()
     ui.setMessage({ text: 'Registry download success', type: 'success', timeout: 5 })
@@ -223,8 +229,61 @@ const fetchRegistry = async () => {
 }
 
 const displayRegistryCreateWizard = async () => {
-  genesisOptions.value.displayFetchOrCreateDialog = false
-  genesisOptions.value.currentView = 'bcmr-wizard'
+  options.value.displayFetchOrCreateDialog = false
+  options.value.currentView = 'bcmr-wizard'
+}
+
+const prepareGenesisRequest = async (): Promise<(SendRequest | TokenSendRequest | OpReturnData)[] | undefined> => {
+  const requests = []
+  let authchainGuard = null
+  if (!creator.value) {
+    return
+  }
+  let authchainIdentityOutputRecepient = creator.value
+  const wallet = await getWalletClass().watchOnly(creator.value)
+  if (options.value.useAuthChainGuard) {
+    authchainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
+    authchainIdentityOutputRecepient = authchainGuard.contract.getDepositAddress()
+  }
+
+  requests.push(
+    new TokenSendRequest({ cashaddr: authchainIdentityOutputRecepient, value: 1000, tokenId: token.value.tokenId, commitment: token.value.tokenId }),
+  )
+
+  let genesisTokenFields: TokenI = { tokenId: token.value.tokenId, amount: 0 }
+
+  if (token.value.tokenType === 'fungible') {
+    genesisTokenFields.amount = Number(token.value.amount)
+  }
+
+  if (token.value.tokenType === 'nonfungible') {
+    genesisTokenFields.capability = token.value.capability
+    genesisTokenFields.commitment = token.value.commitment
+  }
+
+  if (token.value.tokenType === 'hybrid') {
+    genesisTokenFields.amount = Number(token.value.amount)
+    genesisTokenFields.capability = token.value.capability
+    genesisTokenFields.commitment = token.value.commitment
+  }
+
+  let genesisTokenRecepient = creator.value
+  let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecepient, value: 1000, ...genesisTokenFields })]
+  if (token.value.tokenType === 'fungible' && token.value.amount && options.value.useMintingBaton) {
+    const mintingCovenant = new MintingCovenant(token.value.tokenId, wallet.network)
+    genesisTokenRecepient = mintingCovenant.contract.getDepositAddress()
+    genesisTokenRequest = [
+      new TokenSendRequest({ cashaddr: genesisTokenRecepient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
+      new TokenSendRequest({ cashaddr: creator.value, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 })
+    ]
+  }
+  requests.push(...genesisTokenRequest)
+  if (options.value.publishIdentityOutput === true) {
+    let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
+    requests.push(OpReturnData.fromArray(['BCMR', contentHash, registryUrl.value.replace('https://', '')]))
+  }
+
+  return requests
 }
 
 const submitTokenGenesisTransaction = async () => {
@@ -240,10 +299,11 @@ const submitTokenGenesisTransaction = async () => {
       const authChainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
       const contract = authChainGuard.contract
       const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
-        new SendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, unit: UnitEnum.SATOSHIS }),
+        new TokenSendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, tokenId: token.value.tokenId, commitment: token.value.tokenId }),
       ]
 
       const requiredFields = { cashaddr: wallet.getTokenDepositAddress(), value: 1000, tokenId: token.value.tokenId }
+
       if (token.value.tokenType === 'fungible') {
         tokenGenesisRequest.push(new TokenSendRequest({
           ...requiredFields,
@@ -266,7 +326,7 @@ const submitTokenGenesisTransaction = async () => {
         return ui.setMessage({ type: 'error', text: 'Unsupported token type' })
       }
 
-      if (genesisOptions.value.publishIdentityOutput === true) {
+      if (options.value.publishIdentityOutput === true) {
         let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
         tokenGenesisRequest.push(OpReturnData.fromArray(['BCMR', contentHash, registryUrl.value.replace('https://', '')]))
       }
