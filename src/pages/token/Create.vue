@@ -118,8 +118,8 @@
 import { onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router';
 import JsonEditor from 'vue3-ts-jsoneditor'
-import { sha256, utf8ToBin, decodeTransaction } from '@bitauth/libauth'
-import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI, NFTCapability, TokenI } from 'mainnet-js'
+import { sha256, utf8ToBin, decodeTransaction, binToHex } from '@bitauth/libauth'
+import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI, NFTCapability, TokenI, Wallet } from 'mainnet-js'
 
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import MintingCovenant from 'src/contracts/MintingCovenant'
@@ -233,21 +233,21 @@ const displayRegistryCreateWizard = async () => {
   options.value.currentView = 'bcmr-wizard'
 }
 
-const prepareGenesisRequest = async (): Promise<(SendRequest | TokenSendRequest | OpReturnData)[] | undefined> => {
+/**
+ * Prepare genesis request based on available options
+ */
+const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | TokenSendRequest | OpReturnData)[]> => {
   const requests = []
+  let owner: string = creator.value as string
+  let authchainIdentityOutputRecepient = owner
   let authchainGuard = null
-  if (!creator.value) {
-    return
-  }
-  let authchainIdentityOutputRecepient = creator.value
-  const wallet = await getWalletClass().watchOnly(creator.value)
   if (options.value.useAuthChainGuard) {
-    authchainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
+    authchainGuard = new AuthChainGuard(owner, wallet.getPublicKeyHash(false), wallet.network)
     authchainIdentityOutputRecepient = authchainGuard.contract.getDepositAddress()
   }
 
   requests.push(
-    new TokenSendRequest({ cashaddr: authchainIdentityOutputRecepient, value: 1000, tokenId: token.value.tokenId, commitment: token.value.tokenId }),
+    new TokenSendRequest({ cashaddr: authchainIdentityOutputRecepient, value: 1000, tokenId: token.value.tokenId, commitment: binToHex(utf8ToBin('identity')) }),
   )
 
   let genesisTokenFields: TokenI = { tokenId: token.value.tokenId, amount: 0 }
@@ -267,14 +267,14 @@ const prepareGenesisRequest = async (): Promise<(SendRequest | TokenSendRequest 
     genesisTokenFields.commitment = token.value.commitment
   }
 
-  let genesisTokenRecepient = creator.value
+  let genesisTokenRecepient = owner
   let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecepient, value: 1000, ...genesisTokenFields })]
   if (token.value.tokenType === 'fungible' && token.value.amount && options.value.useMintingBaton) {
     const mintingCovenant = new MintingCovenant(token.value.tokenId, wallet.network)
     genesisTokenRecepient = mintingCovenant.contract.getDepositAddress()
     genesisTokenRequest = [
       new TokenSendRequest({ cashaddr: genesisTokenRecepient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
-      new TokenSendRequest({ cashaddr: creator.value, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 })
+      new TokenSendRequest({ cashaddr: owner, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 })
     ]
   }
   requests.push(...genesisTokenRequest)
@@ -286,54 +286,24 @@ const prepareGenesisRequest = async (): Promise<(SendRequest | TokenSendRequest 
   return requests
 }
 
+/**
+ * Send the token genesis request
+ */
 const submitTokenGenesisTransaction = async () => {
   ui.busy({ text: 'Creating FT', type: 'info' })
 
   if (creator.value) {
+
     const wallet = await getWalletClass().watchOnly(creator.value)
-    const authbaseAndTokenGenesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
+
+    const tokenGenesisRequest = await prepareGenesisRequest(wallet)
 
     let txSigningResult
     try {
-      /* Locking authchain to the AuthchainGuard, TODO: Make this optional, allow sending to P2PKH address*/
-      const authChainGuard = new AuthChainGuard(creator.value, wallet.getPublicKeyHash(false), wallet.network)
-      const contract = authChainGuard.contract
-      const tokenGenesisRequest: (SendRequest | TokenSendRequest | OpReturnData)[] = [
-        new TokenSendRequest({ cashaddr: contract.getDepositAddress(), value: 1000 /**/, tokenId: token.value.tokenId, commitment: 'identity' }),
-      ]
-
-      const requiredFields = { cashaddr: wallet.getTokenDepositAddress(), value: 1000, tokenId: token.value.tokenId }
-
-      if (token.value.tokenType === 'fungible') {
-        tokenGenesisRequest.push(new TokenSendRequest({
-          ...requiredFields,
-          amount: Number(token.value.amount),
-        }))
-      } else if (token.value.tokenType === 'nonfungible') {
-        tokenGenesisRequest.push(new TokenSendRequest({
-          ...requiredFields,
-          capability: token.value.capability,
-          commitment: token.value.commitment
-        }))
-      } else if (token.value.tokenType === 'hybrid') {
-        tokenGenesisRequest.push(new TokenSendRequest({
-          ...requiredFields,
-          amount: Number(token.value.amount),
-          capability: token.value.capability,
-          commitment: token.value.commitment
-        }))
-      } else {
-        return ui.setMessage({ type: 'error', text: 'Unsupported token type' })
-      }
-
-      if (options.value.publishIdentityOutput === true) {
-        let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
-        tokenGenesisRequest.push(OpReturnData.fromArray(['BCMR', contentHash, registryUrl.value.replace('https://', '')]))
-      }
-
+      const genesisInput = (await wallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
       const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(tokenGenesisRequest,
         false,
-        { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [authbaseAndTokenGenesisInput], ensureUtxos: [authbaseAndTokenGenesisInput] }
+        { tokenOperation: 'genesis', checkTokenQuantities: false, buildUnsigned: true, utxoIds: [genesisInput], ensureUtxos: [genesisInput] }
       )
 
       let decoded = decodeTransaction(encodedTransaction)
@@ -377,6 +347,8 @@ const submitTokenGenesisTransaction = async () => {
       console.log('Error creating FT Token during submission of txn', error)
       return
     }
+  } else {
+    ui.setMessage({ type: 'error', text: 'Invalid owner address', timeout: 8 })
   }
 }
 
