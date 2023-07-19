@@ -9,7 +9,6 @@ import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
 
-
 export default class AuthChainGuard implements AuthChainGuardI {
 
   contractWallet: Wallet|null;

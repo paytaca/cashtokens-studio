@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Contract } from '@mainnet-cash/contract';
+
 export interface AuthChainGuardI {
   readonly contract: Contract
   readonly ownerAddress: string
@@ -14,3 +15,12 @@ export interface AuthChainGuardI {
   burn(): void
   script(): string
 }
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+export interface MintingCovenantI {
+  readonly tokenId: string|Uint8Array;
+  readonly contract: Contract
+  unlockWithNft: ()=>Promise<string|undefined>
+  script(): string
+}
+
