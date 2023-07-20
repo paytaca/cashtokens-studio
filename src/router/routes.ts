@@ -16,6 +16,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') }
     ],
   },
+  {
+    path: '/balances',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'fungibles', component: () => import('pages/balances/Fungibles.vue') }
+    ],
+  },
   // Always leave this as last one,
   // but you can also remove it
   {

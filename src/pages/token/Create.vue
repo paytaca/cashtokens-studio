@@ -239,15 +239,15 @@ const displayRegistryCreateWizard = async () => {
 const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | TokenSendRequest | OpReturnData)[]> => {
   const requests = []
   let owner: string = creator.value as string
-  let authchainIdentityOutputRecepient = owner
+  let authchainIdentityOutputRecipient = owner
   let authchainGuard = null
   if (options.value.useAuthChainGuard) {
     authchainGuard = new AuthChainGuard(owner, wallet.getPublicKeyHash(false), wallet.network)
-    authchainIdentityOutputRecepient = authchainGuard.contract.getDepositAddress()
+    authchainIdentityOutputRecipient = authchainGuard.contract.getDepositAddress()
   }
 
   requests.push(
-    new TokenSendRequest({ cashaddr: authchainIdentityOutputRecepient, value: 1000, tokenId: token.value.tokenId, commitment: binToHex(utf8ToBin('identity')) }),
+    new TokenSendRequest({ cashaddr: authchainIdentityOutputRecipient, value: 1000, tokenId: token.value.tokenId, commitment: binToHex(utf8ToBin('identity')) }),
   )
 
   let genesisTokenFields: TokenI = { tokenId: token.value.tokenId, amount: 0 }
@@ -267,13 +267,13 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
     genesisTokenFields.commitment = token.value.commitment
   }
 
-  let genesisTokenRecepient = owner
-  let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecepient, value: 1000, ...genesisTokenFields })]
+  let genesisTokenRecipient = owner
+  let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecipient, value: 1000, ...genesisTokenFields })]
   if (token.value.tokenType === 'fungible' && token.value.amount && options.value.useMintingBaton) {
     const mintingCovenant = new MintingCovenant(token.value.tokenId, wallet.network)
-    genesisTokenRecepient = mintingCovenant.contract.getDepositAddress()
+    genesisTokenRecipient = mintingCovenant.contract.getDepositAddress()
     genesisTokenRequest = [
-      new TokenSendRequest({ cashaddr: genesisTokenRecepient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
+      new TokenSendRequest({ cashaddr: genesisTokenRecipient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
       new TokenSendRequest({ cashaddr: owner, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 })
     ]
   }
