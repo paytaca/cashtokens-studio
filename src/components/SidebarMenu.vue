@@ -105,6 +105,7 @@ const menu = computed<any[]>(() => {
 
         {
           label: 'Coins (FTs)',
+          href: '/balances/fungibles',
           avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },
         {
