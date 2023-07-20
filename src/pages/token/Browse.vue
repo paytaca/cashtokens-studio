@@ -1,3 +1,4 @@
+<!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <template>
   <q-page>
@@ -24,12 +25,11 @@
             Details</q-btn>
         </q-card-actions>
       </q-card>
+      {{ tokenThumbnails }}
+      <TokenThumbnail v-for="r, i in tokenThumbnails" :icon="r.icon" :key="i"></TokenThumbnail>
+      <TokenThumbnailSkeleton v-if="loadingRegistries" />
       <q-card class="token-card col-xs-12 col-sm-6 col-md-4 col-lg-2" style="font-size:xx-large;cursor:pointer"
         @click="router.push('/token/create')">
-        <q-toolbar>
-          <q-skeleton type="QAvatar" />
-          <q-toolbar-title><q-skeleton type="text" /></q-toolbar-title>
-        </q-toolbar>
         <q-card-section class="justify-center">
           + Create New
         </q-card-section>
@@ -38,6 +38,7 @@
     </div>
   </q-page>
 </template>
+
 <style scoped lang="scss">
 .token-id {
   background-color: $grey-10;
@@ -49,23 +50,54 @@
   max-width: 20em;
 }
 </style>
+
 <script setup lang="ts">
 
 import { ref, onMounted, watch, computed } from 'vue'
-import { UtxoI } from 'mainnet-js'
-
+import { useRouter } from 'vue-router'
+import { AuthChainElement, UtxoI } from 'mainnet-js'
+import { Registry as Bcmr } from 'src/interfaces/bcmr-v2.schema'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
-import { useRouter } from 'vue-router'
 import useStore from 'src/composables/useStore'
+import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
+import TokenThumbnailSkeleton from 'src/components/skeletons/TokenThumbnail.vue'
 
-defineOptions({ name: 'BrowseFt' })
+defineOptions({ name: 'BrowseTokens' })
 
 const router = useRouter()
 const { user, ui } = useStore()
+const loadingRegistries = ref<boolean>(false)
+const tokenIdentities = ref<AuthChainElement[]>([])
+const tokenRegistries = ref<Bcmr[]>([])
 const createdFts = ref([] as UtxoI[])
 const createdFtsComputed = computed<UtxoI[]>(() => {
   return createdFts.value
+})
+
+const tokenThumbnails = computed(() => {
+  type t = { icon?: string, name: string, symbol?: string }
+  let thumbs: t[] = []
+  tokenRegistries.value.forEach((r: Bcmr) => {
+    let tt: t = { name: '' }
+    let identity: any = r.registryIdentity
+    if (typeof (r.registryIdentity) === 'string') { // is authbase
+      if (r.identities) {
+        let identitySnapshot = r.identities[r.registryIdentity]
+        if (identitySnapshot) {
+          let identityHistory = Object.keys(identity)[0]
+          if (identityHistory) {
+            identity = r.identities[r.registryIdentity][identityHistory]
+          }
+        }
+      }
+    }
+    tt.name = identity.name
+    tt.symbol = identity.token?.symbol
+    tt.icon = identity.uris?.icon
+    thumbs.push(tt)
+  })
+  return thumbs
 })
 
 watch(() => user.connectedPaytacaAddress as string, (address: string) => {
@@ -82,7 +114,8 @@ onMounted(async () => {
     // Load from store, then try to refresh
     createdFts.value.push(...user.createdFts)
     ui.busy({ type: 'info', text: 'Loading manageable FTs' })
-    loadCreatedFts(user.connectedPaytacaAddress)
+    loadTokenIdentityOutputs(user.connectedPaytacaAddress)
+    // loadCreatedFts(user.connectedPaytacaAddress)
   }
 })
 
@@ -96,14 +129,15 @@ const loadCreatedFts = async (creatorAddress: string) => {
   const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWalletPkh, creatorWallet.network)
   const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
-  console.log('ADDRESS', authchainGuardContract.getDepositAddress())
-  console.log('UTXOS', await autchainGuardWallet.getAddressUtxos())
   // eslint-disable-next-line @typescript-eslint/no-non-null-asserted-optional-chain, @typescript-eslint/no-non-null-assertion
   const creatorFts = (await creatorWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.amount! > 0)
   if (creatorFts.length === 0) {
     ui.idle()
     return
   }
+
+  console.log('A', await autchainGuardWallet.getAddressUtxos())
+
   const authchainIdentityOutputs = (await autchainGuardWallet.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token))
   let createdFtsFresh: any[] = []
   let creatorFtsTokenIdsSet = new Set(creatorFts.map((utxo: UtxoI) => utxo.token?.tokenId))
@@ -172,6 +206,57 @@ const loadCreatedFts = async (creatorAddress: string) => {
 
   user.createdFts = createdFtsFresh
   ui.idle()
+
+}
+
+const loadTokenIdentityOutputs = async (creatorAddress: string) => {
+  loadingRegistries.value = true
+  const IDENTITY = '6964656e74697479'
+  const WalletClass = getWalletClass()
+  const creatorWallet = await WalletClass.watchOnly(creatorAddress)
+  const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
+  const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWalletPkh, creatorWallet.network)
+  const authchainGuardContract = authChainGuard.contract
+  const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
+  const identities = (await autchainGuardWallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.tokenId) && u.token?.commitment == IDENTITY)
+  console.log(identities)
+  const tokenIdentitiesLoaded = new Promise((res) => {
+    let counter = 0
+    identities.forEach(async (i: UtxoI) => {
+      let authchain: AuthChainElement[] = await fetchAuthChainAuthheadFromChaingraph({
+        chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql',
+        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+        transactionHash: i.token!.tokenId!,
+        network: user.walletNetworkType
+      })
+      console.log(authchain)
+      if (authchain) {
+        tokenIdentities.value.push(authchain[0])
+      }
+      counter++
+      if (counter >= identities.length) {
+        res(true)
+      }
+    })
+  })
+
+  await tokenIdentitiesLoaded
+  console.log(tokenRegistries)
+  const tokenRegistriesLoaded = new Promise((res) => {
+    let counter = 0
+    tokenIdentities.value.forEach(async (i: AuthChainElement) => {
+      let resp = await fetch(i.httpsUrl)
+      let reg: Bcmr = await resp.json()
+      tokenRegistries.value?.push(reg)
+      counter++
+      if (counter >= tokenIdentities.value.length) {
+        res(true)
+      }
+    })
+  })
+
+  await tokenRegistriesLoaded
+  loadingRegistries.value = false
 
 }
 
