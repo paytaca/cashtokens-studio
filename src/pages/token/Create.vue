@@ -83,7 +83,7 @@
         Create BCMR
       </i>
       <BcmrBasicFormWizard type="fungible" :token-id-options="token.idOptions" :bcmr="registry" :authbase="token.tokenId"
-        @finish="(r) => { options.currentView = 'create-token'; registry = r }"
+        @finish="(r) => { options.currentView = 'create-token'; registry = r; console.log(registry) }"
         @cancel="() => options.currentView = 'create-token'" />
     </div>
 
@@ -315,7 +315,10 @@ const submitTokenGenesisTransaction = async () => {
       ui.busy({ type: 'info', text: 'Waiting for FT creator\'s signature' })
 
       txSigningResult = await window.paytaca.signTransaction({
-        transaction: decoded, sourceOutputs: [...sourceOutputs], broadcast: false, userPrompt: 'Create Token Genesis'
+        transaction: decoded,
+        sourceOutputs: [...sourceOutputs],
+        broadcast: false,
+        userPrompt: `Create token genesis ${options.value.publishIdentityOutput ? '(With Baton)' : ''}`
       })
 
       if (!txSigningResult) {
