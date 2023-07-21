@@ -86,7 +86,8 @@
           </template>
         </q-input>
         <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.token.symbol"
-          :rules="[v => v.length > 0 || 'Required']" label="Token Symbol" required dense>
+          :rules="[v => (v.length > 0 && /^[-A-Z0-9]+$/.test(v)) || 'Required & A-Z|0-9|-']" label="Token Symbol" required
+          dense>
         </q-input>
         <q-input :filled="true" type="number" standout bottom-slots v-model="identitySnapshot.token.decimals"
           :rules="[v => (v > 0 && v < 19) || 'Value Must be 0 - 18']" label="Decimals" dense>
@@ -117,7 +118,7 @@ const props = defineProps<{
 const step = ref(1)
 
 const emit = defineEmits<{
-  finish: [registry: any],
+  finish: [registry: BcmrRegistry],
   cancel: []
 }>()
 
@@ -127,6 +128,7 @@ const version = ref('1.0.0')
  * registryIdentity can be an authbase(string) or OffchainRegistryIdentity(object)
  */
 const authbase = ref<string>(typeof (props.bcmr?.registryIdentity) == 'string' ? props.bcmr.registryIdentity : '')
+
 const offchainRegistryIdentity = ref<OffChainRegistryIdentity>(typeof (props.bcmr?.registryIdentity) == 'object' ? props.bcmr.registryIdentity : {
   name: 'Example Metadata Registry Name',
   description: 'Example metadata description',
@@ -152,28 +154,7 @@ const identitySnapshot = ref<RequireOptional<IdentitySnapshot, 'token'>>({
   token: token.value,
 })
 
-// Flat model of identities so it's easier to work with
-// const identity = ref<{
-//   authbase: string,
-//   identityHistoryTimestamp: string,
-//   // IdentitySnapshot
-//   identitySnapshot?: IdentitySnapshot,
-// }>({
-//   authbase: authbase.value,
-//   identityHistoryTimestamp: '',
-//   identitySnapshot: identitySnapshot.value
-// })
-
 const registryIdentity = computed(() => authbase.value ? authbase.value : offchainRegistryIdentity.value)
-
-// const identities = computed(() => {
-//   let identityHistory = {
-//     [identity.value.identityHistoryTimestamp]: identity.value.identitySnapshot
-//   } as IdentityHistory
-//   return {
-//     [identity.value.authbase]: identityHistory
-//   }
-// })
 
 const registry = ref<BcmrRegistry>({
   version: { 'major': 1, 'minor': 0, 'patch': 0 },
@@ -182,6 +163,7 @@ const registry = ref<BcmrRegistry>({
 })
 
 const registryIdentitySelector = ref<'authbase' | 'offchain'>('authbase')
+
 const registryIdentitySelections = ref<{ label: string, value: string }[]>([
   { label: 'Offchain Registry Identity', value: 'offchain' },
   { label: 'Authbase (recommended)', value: 'authbase' }
@@ -205,7 +187,6 @@ onMounted(() => {
     authbase.value = props.authbase
     identitySnapshot.value.token.category = props.authbase
   }
-
 })
 
 const finish = () => {
