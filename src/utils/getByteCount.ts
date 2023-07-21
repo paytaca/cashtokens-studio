@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // bch-js
 export default (inputs:any, outputs:any) => {
   let totalWeight = 0
