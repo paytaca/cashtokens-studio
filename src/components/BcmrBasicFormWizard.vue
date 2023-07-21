@@ -62,15 +62,13 @@
 
       <q-step :name="3" title="Identities" icon="add_comment">
         The given <code>authbase</code>'s identity
-        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.name" label="Name" dense>
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.name" label="Name" dense>
         </q-input>
-        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.description" label="Description"
-          dense>
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.description" label="Description" dense>
         </q-input>
-        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.icon" label="Icon URI"
-          dense>
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.uris!.icon" label="Icon URI" dense>
         </q-input>
-        <q-input :filled="true" standout bottom-slots v-model="offchainRegistryIdentity.uris!.web" label="Web URI" dense>
+        <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.uris!.web" label="Web URI" dense>
         </q-input>
 
         <q-stepper-navigation>
@@ -125,7 +123,9 @@ const emit = defineEmits<{
 
 const version = ref('1.0.0')
 
-// registryIdentity
+/**
+ * registryIdentity can be an authbase(string) or OffchainRegistryIdentity(object)
+ */
 const authbase = ref<string>(typeof (props.bcmr?.registryIdentity) == 'string' ? props.bcmr.registryIdentity : '')
 const offchainRegistryIdentity = ref<OffChainRegistryIdentity>(typeof (props.bcmr?.registryIdentity) == 'object' ? props.bcmr.registryIdentity : {
   name: 'Example Metadata Registry Name',
