@@ -11,9 +11,16 @@ const routes: RouteRecordRaw[] = [
     path: '/token',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'browse/:tokenType?', component: defineAsyncComponent(() => import('pages/token/Browse.vue')) },
-      { path: 'view', component: () => import('pages/token/View.vue') },
-      { path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') }
+      { name: 'token-browse', path: 'browse/:tokenType?', component: defineAsyncComponent(() => import('pages/token/Browse.vue')) },
+      { name: 'token-view', path: 'view', component: () => import('pages/token/View.vue') },
+      { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') }
+    ],
+  },
+  {
+    path: '/registry',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { name: 'registry-edit', path: 'edit', component: () => import('pages/registry/Edit.vue') }
     ],
   },
   {
