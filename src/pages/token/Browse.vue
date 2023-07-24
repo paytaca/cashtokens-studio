@@ -23,6 +23,7 @@ import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthhe
 import TokenThumbnail from 'src/components/TokenThumbnail.vue'
 import TokenCreateThumbnail from 'src/components/TokenCreateThumbnail.vue'
 import TokenThumbnailSkeleton from 'src/components/skeletons/TokenThumbnail.vue'
+import unresolvedBcmrTemplate from 'src/bcmr/unresolved.js'
 
 defineOptions({ name: 'BrowseTokens' })
 
@@ -86,7 +87,6 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   const authchainGuardContract = authChainGuard.contract
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
   const identities = (await autchainGuardWallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.tokenId) && u.token?.commitment == IDENTITY)
-  console.log(identities)
   const tokenIdentitiesLoaded = new Promise((res) => {
     let counter = 0
     identities.forEach(async (i: UtxoI) => {
@@ -96,7 +96,6 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
         transactionHash: i.token!.tokenId!,
         network: user.walletNetworkType
       })
-      console.log(authchain)
       if (authchain) {
         tokenIdentities.value.push(authchain[0])
       }
@@ -108,13 +107,31 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   })
 
   await tokenIdentitiesLoaded
-  console.log(tokenRegistries)
   const tokenRegistriesLoaded = new Promise((res) => {
     let counter = 0
     tokenIdentities.value.forEach(async (i: AuthChainElement) => {
-      let resp = await fetch(i.httpsUrl)
-      let reg: Bcmr = await resp.json()
-      tokenRegistries.value?.push(reg)
+      console.log('WORKING ON', i.httpsUrl)
+      try {
+        let resp = await fetch(i.httpsUrl)
+        let reg: Bcmr = await resp.json()
+        tokenRegistries.value?.push(reg)
+      } catch (error) {
+        console.log(error)
+        let id = identities.find(id => id.txid === i.txHash)
+        let fillerTokenId = 'na'
+        if (id?.token?.tokenId) {
+          fillerTokenId = id.token.tokenId
+        }
+        let filler: Bcmr = unresolvedBcmrTemplate
+        filler.registryIdentity = fillerTokenId as string
+        if (filler.identities && fillerTokenId !== 'na') {
+          // filling token id
+          filler.identities[fillerTokenId] = filler.identities['na']
+          filler.identities[fillerTokenId][new Date().toISOString()] = filler.identities['na']['latestRevision']
+          delete filler.identities['na']['latestRevision']
+        }
+        tokenRegistries.value?.push(filler)
+      }
       counter++
       if (counter >= tokenIdentities.value.length) {
         res(true)
@@ -125,7 +142,6 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   await tokenRegistriesLoaded
   loadingRegistries.value = false
   ui.idle()
-
 }
 
 </script>
