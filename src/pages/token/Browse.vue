@@ -31,7 +31,6 @@ const { user, ui } = useStore()
 const loadingRegistries = ref<boolean>(false)
 const tokenIdentities = ref<AuthChainElement[]>([])
 const tokenRegistries = ref<Bcmr[]>([])
-const createdFts = ref([] as UtxoI[])
 const tokenThumbnails = computed(() => {
   type t = { tokenId: string, icon?: string, name: string, symbol?: string }
   let thumbs: t[] = []
@@ -58,20 +57,9 @@ const tokenThumbnails = computed(() => {
   return thumbs
 })
 
-watch(() => user.connectedPaytacaAddress as string, (address: string) => {
-  // if (address.length > 0) {
-  //   loadCreatedFts(address)
-  // } else {
-  //   createdFts.value = [] as UtxoI[]
-  // }
-})
-
 onMounted(async () => {
-  console.log('USER', user.connectedPaytacaAddress)
   if (user.connectedPaytacaAddress) {
     // Load from store, then try to refresh
-    createdFts.value.push(...user.createdFts)
-
     loadTokenIdentityOutputs(user.connectedPaytacaAddress)
   }
 })
@@ -110,7 +98,6 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   const tokenRegistriesLoaded = new Promise((res) => {
     let counter = 0
     tokenIdentities.value.forEach(async (i: AuthChainElement) => {
-      console.log('WORKING ON', i.httpsUrl)
       try {
         let resp = await fetch(i.httpsUrl)
         let reg: Bcmr = await resp.json()
