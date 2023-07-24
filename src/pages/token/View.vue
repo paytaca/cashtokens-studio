@@ -58,7 +58,8 @@
               <q-list>
                 <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry Update</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity</q-item>
+                <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity Output</q-item>
+                <q-item clickable v-close-popup @click="menu = 'authchain-release'">Release Identity Output</q-item>
               </q-list>
             </q-menu>
           </q-btn>
@@ -125,6 +126,24 @@
             </q-btn>
           </div>
         </div>
+        <div v-if="menu == 'authchain-release'" class="row justify-center">
+          <div class="col-12 justify-start q-my-sm">
+            <p>All tokens created in Cashtokens Studio uses an <code>AuthChainGuard</code> for the token's authchain
+              identity outputs. This is to avoid accidental usage of the identity output(utxo) thereby breaking the
+              token's authchain</p>
+            <i class="text-h6">
+              Are you sure you want to release the token's identity output from the <code>AuthChainGuard</code>
+              contract?</i>
+          </div>
+          <div class="row col-12 justify-end q-gutter-sm">
+            <q-btn size="lg" color="negative" @click="() => { menu = '' }">
+              No
+            </q-btn>
+            <q-btn size="lg" color="secondary" @click="authchainRelease">
+              Yes
+            </q-btn>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -157,7 +176,7 @@ const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
 const newOwnerAddress = ref<string>('')
 
-const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn'>('authchain-publish')
+const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release'>('authchain-publish')
 const loading = ref<boolean>(true)
 
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
@@ -303,8 +322,24 @@ const authchainTransfer = async () => {
 
 const authchainBurn = async () => {
   try {
-
     const dismiss = $q.notify({ spinner: true, message: 'Burning token\'s identity output...', color: 'info', timeout: 0 })
+    const tx = await authChainGuard.value?.burn(token.value.id as string)
+    dismiss()
+    if (tx) {
+      $q.notify({ color: 'positive', message: 'Token identity output burned! ' + tx })
+      router.push('/token/browse')
+    }
+  } catch (error) {
+    $q.notify({ color: 'negative', message: 'Error burning identity output!' })
+    console.log(error)
+  }
+
+}
+
+const authchainRelease = async () => {
+  try {
+
+    const dismiss = $q.notify({ spinner: true, message: 'Releasing token\'s identity output from authchain guard...', color: 'info', timeout: 0 })
     const tx = await authChainGuard.value?.burn(token.value.id as string)
     dismiss()
     if (tx) {

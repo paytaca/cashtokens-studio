@@ -5,3 +5,16 @@ form {
   justify-items: center;
   // border: 1px solid rgb(69, 71, 69);
 }
+
+p {
+  text-indent: 2em;
+}
+
+code {
+  font-family: Monaco, monospace;
+  background-color: $grey-9;
+  color: $orange-10;
+  padding: 0.2em;
+  word-break: normal;
+  border-radius: 5px;
+}
