@@ -29,10 +29,10 @@
                 Category (Token Id): {{ token.id?.replace(token.id.substring(15, 45), '...') }}
               </span>
             </div>
-            <div class="ellipsis-2-lines">
+            <!-- <div class="ellipsis-2-lines">
               Manager: {{
                 token.creator?.replace(token.creator.substring(15, 35), '...') }}
-            </div>
+            </div> -->
             <div v-if="token.identity?.uris">
               <div v-for="k, i in Object.keys(token.identity?.uris)" :key="i">
                 <div v-if="k === 'icon'">
@@ -68,21 +68,35 @@
           <div class="col-12 justify-start q-my-sm">
             <i class="text-h6">Publish Registry</i>
           </div>
+          <div class="col-12 justify-start">Current Registry</div>
           <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
             label="Registry URL" class="col-12" dense square></q-input>
+          <q-input v-if="registry" :filled="true"
+            :model-value="binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))" type="url" label="Content Hash"
+            class="col-12" dense square disable></q-input>
+          <div v-if="registryModified" class="col-12 justify-start q-mt-lg">Registry Modified (New Value)</div>
+          <q-input v-if="registryModified" :filled="true"
+            :model-value="binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value))))" type="url"
+            label="New Content Hash" class="col-12" dense square disable></q-input>
           <div class="row col-12">
-            <q-btn color="primary" size="xs" class="q-mr-xs" outline @click="fetchRegistry">
-              Fetch Registry
-              <q-tooltip>Fetch an existing registry from the above URL</q-tooltip>
+            <q-btn size="xs" icon="cloud_download" round @click="fetchRegistry">
+              <q-tooltip>Fetch and load a new or updated registry from the above remote URL</q-tooltip>
             </q-btn>
-            <q-btn color="primary" size="xs" outline @click="() => { console.log('TODO') }">
-              Create New Registry
-              <q-tooltip>Create a new registry and publish the above URL </q-tooltip>
+            <q-btn v-if="registry" icon="edit" size="xs" round @click="editRegistry">
+              <q-tooltip>Edit the currently loaded registry</q-tooltip>
+            </q-btn>
+            <q-btn v-if="registry" icon="delete" size="xs" color="red" round @click="registry = null">
+              <q-tooltip>Delete the loaded registry</q-tooltip>
+            </q-btn>
+            <q-btn type="a" :href="registryDownloadHref" download="bitcoin-cash-metadata-registy.json" icon="download"
+              size="xs" round>
+              <q-tooltip>Download the currently loaded registry to your computer so you can upload it to a
+                server</q-tooltip>
             </q-btn>
           </div>
           <div class="row col-12 justify-end">
             <q-btn size="lg" color="primary" :disable="!registry || !registryUrl" @click="authchainPublishRegistry">
-              Confirm Publish
+              Publish
             </q-btn>
           </div>
         </div>
@@ -119,22 +133,24 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, watch, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { ref, onMounted, watch, computed, toValue } from 'vue'
+import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { BCMR, Network, hexToBin } from 'mainnet-js'
-import { binToUtf8 } from '@bitauth/libauth'
-import { Registry as Bcmr, IdentitySnapshot, URIs } from 'src/interfaces/bcmr-v2.schema'
+import { utf8ToBin, binToHex, sha256 } from '@bitauth/libauth'
+import { Registry as Bcmr, IdentitySnapshot } from 'src/interfaces/bcmr-v2.schema'
 import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
-import fetchAuthhead from 'src/utils/fetchAuthhead'
 import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
 
 defineOptions({ name: 'ViewFt' })
 
 const WalletClass = getWalletClass()
-const { user, ui } = useStore()
+const $q = useQuasar()
+const { user, ui, bcmr: bcmrStore } = useStore()
 const route = useRoute()
+const router = useRouter()
 const authChainGuard = ref<AuthChainGuard | null>(null)
 
 const registry = ref<Bcmr | null>(null)
@@ -160,7 +176,29 @@ const token = computed<{ id?: string, creator?: string, identity?: IdentitySnaps
   return _token
 })
 
+
+const registryDownloadHref = computed(() => {
+  if (bcmrStore.value) {
+    return `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(bcmrStore.value))}`
+  }
+  return `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`
+})
+
+const registryModified = computed(() => {
+  return bcmrStore.value && binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value)))) != binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))
+})
+
 onMounted(async () => {
+
+  // if (ui.loadedRegistry && ui.loadedRegistryUpdated) {
+  //   console.log('UI', ui.loadedRegistry)
+  //   // registry.value = Object.assign({}, ui.loadedRegistry)
+  //   let r = Object.assign({}, JSON.parse(JSON.stringify(ui.loadedRegistry)))
+  //   console.log(r)
+  //   registry.value = r
+  //   return
+  // }
+
   const { creator, tokenId } = route.query
   token.value.id = tokenId as string
   token.value.creator = creator as string
@@ -168,7 +206,6 @@ onMounted(async () => {
   try {
     if (token.value.id) {
       ui.busy({ text: 'Loading token details from registry...', type: 'info' })
-      // const authchain = await BCMR.fetchAuthChainFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
       const authhead = await fetchAuthChainAuthheadFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
       // console.log(authchain) // TODO USE THIS, IT'S ALREADY PARSED
       // let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
@@ -194,6 +231,8 @@ onMounted(async () => {
       if (authhead[0] && authhead[0].httpsUrl) {
         let registryReqResp = await fetch(authhead[0].httpsUrl)
         registry.value = await registryReqResp.json()
+        registryUrl.value = authhead[0].httpsUrl
+        console.log('authhead', authhead[0])
       }
     }
     loading.value = false
@@ -204,6 +243,13 @@ onMounted(async () => {
   await initAuthChainGuard()
 })
 
+onBeforeRouteLeave((to) => {
+  if (!String(to.name).startsWith('registry')) {
+    delete ui.loadedRegistry
+    delete ui.loadedRegistryUpdated
+    bcmrStore.value = null
+  }
+})
 /**
  * Create an instance of AuthChainGuard
  */
@@ -215,6 +261,13 @@ const initAuthChainGuard = async () => {
 }
 
 // methods
+const editRegistry = () => {
+  if (registry.value) {
+    bcmrStore.value = registry.value
+    router.push({ name: 'registry-edit', query: { callback: String(route.name), tokenId: token.value.id } })
+  }
+}
+
 const authchainPublishRegistry = async () => {
   if (!registry.value) {
     return ui.setMessage({ text: 'Invalid BCMR', type: 'error', timeout: 10 })
@@ -229,7 +282,6 @@ const authchainPublishRegistry = async () => {
     console.log(error)
     ui.setMessage({ text: 'Error publishing registry', type: 'error', timeout: 10 })
   }
-
 }
 
 const authchainTransfer = async () => {
@@ -248,7 +300,23 @@ const authchainTransfer = async () => {
     ui.setMessage({ text: 'Error publishing registry', type: 'error', timeout: 10 })
   }
 }
-const authchainBurn = async () => { console.log('TODO') }
+
+const authchainBurn = async () => {
+  try {
+
+    const dismiss = $q.notify({ spinner: true, message: 'Burning token\'s identity output...', color: 'info', timeout: 0 })
+    const tx = await authChainGuard.value?.burn(token.value.id as string)
+    dismiss()
+    if (tx) {
+      $q.notify({ color: 'positive', message: 'Token identity output burned! ' + tx })
+      router.push('/token/browse')
+    }
+  } catch (error) {
+    $q.notify({ color: 'negative', message: 'Error burning identity output!' })
+    console.log(error)
+  }
+
+}
 
 const fetchRegistry = async () => {
   try {
