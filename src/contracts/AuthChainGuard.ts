@@ -3,8 +3,8 @@
 import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
-import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet, TestNetWallet} from 'mainnet-js'
-import { Argument, Artifact, HashType, SignatureAlgorithm, SignatureTemplate, Transaction } from 'cashscript';
+import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet, OpReturnData} from 'mainnet-js'
+import { Argument, Artifact, ContractFunction, HashType, SignatureAlgorithm, SignatureTemplate, Transaction, Utxo } from 'cashscript';
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
@@ -14,7 +14,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
   contractWallet: Wallet|null;
   readonly contract: Contract;
   private ownerWallet: Wallet|null;
-  private f: (ownerPubKey: any, ownerSig: any, newOwnerPubKeyOrVal: any) => Transaction;
+  private f: any
 
 
   constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
@@ -197,7 +197,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     }
 
     // signing request
-    let signingResult
+    let signed
     try {
 
       const bytecode = (transaction as any).redeemScript;
@@ -206,7 +206,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
       delete artifact.bytecode;
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
+      signed = await window.paytaca!.signTransaction({
         transaction: decoded,
         sourceOutputs: [{
           ...decoded.inputs[0],
@@ -239,9 +239,12 @@ export default class AuthChainGuard implements AuthChainGuardI {
       throw new Error('Error signing transaction')
     }
 
+    if (!signed) {
+      return
+    }
     // Tx signing success, submitting transaction
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signed!.signedTransaction), true);
       return tx
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
@@ -249,8 +252,82 @@ export default class AuthChainGuard implements AuthChainGuardI {
     }
   }
 
-  burn(): void {
-    console.log('burning auth chain')
+  async burn(tokenId:string): Promise<string|undefined> {
+    this.contractWallet? null : await this.initWallets()
+
+    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((u: UtxoI)=> u.token?.tokenId == tokenId).map(toCashScript)
+    const identityOutput: Utxo = identityOutputs[0]
+    if (!identityOutput) {
+      throw new Error('authbase not found')
+    }
+    let transaction
+    let decoded
+    try {
+      transaction = this.f(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), '0x')
+          .from(identityOutput)
+          .withOpReturn([
+            'BURN',
+            `0x${identityOutput.txid.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`
+          ])
+          .withoutChange().withoutTokenChange()
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+    } catch (error) {
+      console.log(error)
+    }
+
+    if (typeof decoded === 'string') {
+      throw new Error('Failed to decode transaction')
+    }
+
+    const bytecode = (transaction as any).redeemScript;
+    const artifact = {...this.contract.artifact} as Partial<Artifact>;
+    delete artifact.source;
+    delete artifact.bytecode;
+
+    let signed
+    try {
+      signed = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [{
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(this.contract.getDepositAddress()) as any).bytecode,
+          valueSatoshis: BigInt(identityOutput.satoshis),
+          token: identityOutput.token && {
+            ...identityOutput.token,
+            category: hexToBin(identityOutput.token.category),
+            nft: identityOutput.token.nft && {
+              ...identityOutput.token.nft,
+              commitment: hexToBin(identityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        }],
+        broadcast: false,
+        userPrompt: 'Burning Identity Output'
+      });
+    } catch (error) {
+      console.log('SIGNING ERROR', error)
+    }
+
+    if (!signed) {
+      return ''
+    }
+    // Tx signing success, submitting transaction
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signed!.signedTransaction), true);
+      return tx
+    } catch (error) {
+      console.log('Error creating FT Token during submission of txn', error)
+      return
+    }
+    return ''
+
   }
   script(){
     return `
