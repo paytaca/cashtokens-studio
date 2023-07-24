@@ -1,6 +1,6 @@
 <template>
   <div class="row justify-center">
-    <div class="col-xs-12 col-md-10 col-lg-8 q-pa-md">
+    <div class="col-xs-12  q-px-lg q-my-md row items-center">
       <q-spinner-pie v-if="ui.isBusy" size="md" color="primary" />
       <div v-if="ui.message?.text != ''" class="q-ml-md"><i>{{ ui.message.text }}</i></div>
     </div>
