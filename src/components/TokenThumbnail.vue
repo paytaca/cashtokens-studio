@@ -14,7 +14,7 @@
           </q-avatar>
         </div>
         <div class="col-12 justify-center row">
-          <q-chip :color="symbol ? 'orange' : 'grey'" outline>
+          <q-chip :color="symbol && symbol !== 'UNKNOWN' ? 'orange' : 'grey'" outline>
             {{ symbol ? symbol.toUpperCase() : 'NO-SYM' }}
           </q-chip>
         </div>
