@@ -1,8 +1,10 @@
 import { useUIStore } from 'src/stores/ui'
 import { useUser } from 'src/stores/user'
+import { useBcmr } from 'src/stores/bcmr'
 
 export default  () => {
   const user = useUser()
   const ui = useUIStore()
-  return { user, ui }
+  const bcmr = useBcmr()
+  return { user, ui, bcmr }
 }
