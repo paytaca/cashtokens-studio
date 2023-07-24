@@ -51,7 +51,8 @@
           </div>
         </div>
         <q-stepper-navigation>
-          <q-btn @click="step = 3" color="primary" label="Continue" />
+          <q-btn @click="() => registryIdentitySelector == 'offchain' ? step = 4 : step = 3" color="primary"
+            label="Continue" />
           <q-btn flat @click="step = 1" color="primary" label="Back" class="q-ml-sm" />
         </q-stepper-navigation>
       </q-step>
@@ -60,8 +61,8 @@
         This step won't show up because it is disabled.
       </q-step> -->
 
-      <q-step :name="3" title="Identities" icon="add_comment">
-        The given <code>authbase</code>'s identity
+      <q-step :name="3" title="Identities" icon="add_comment" :disable="registryIdentitySelector == 'offchain'">
+        Registry details
         <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.name" label="Name" dense>
         </q-input>
         <q-input :filled="true" standout bottom-slots v-model="identitySnapshot.description" label="Description" dense>
@@ -165,8 +166,9 @@ const registry = ref<BcmrRegistry>({
 const registryIdentitySelector = ref<'authbase' | 'offchain'>('authbase')
 
 const registryIdentitySelections = ref<{ label: string, value: string }[]>([
-  { label: 'Offchain Registry Identity', value: 'offchain' },
-  { label: 'Authbase (recommended)', value: 'authbase' }
+  { label: 'Onchain Registry Identity(recommended)', value: 'authbase' },
+  { label: 'Offchain Registry Identity', value: 'offchain' }
+
 ])
 
 const registrySchemaOptions = ref<string[]>([
