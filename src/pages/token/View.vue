@@ -127,26 +127,30 @@
           </div>
         </div>
         <div v-if="menu == 'authchain-release'" class="row justify-center">
-          <div class="col-12 justify-start q-my-sm">
-            <p>All tokens created in Cashtokens Studio uses an <code>AuthChainGuard</code> for the token's authchain
-              identity outputs. This is to avoid accidental usage of the identity output(utxo) thereby breaking the
-              token's authchain</p>
-            <i class="text-h6">
-              Are you sure you want to release the token's identity output from the <code>AuthChainGuard</code>
-              contract?</i>
+          <div class="col-12 justify-start q-my-lg">
+            <p>All tokens created in Cashtokens Studio creates an authchain identity output locked with an
+              <code>AuthChainGuard</code> contract. This is to avoid accidental misuse of the identity output(utxo)
+              thereby breaking the
+              token's authchain.
+            </p>
+            <i>
+              If you are sure you want to release the token's identity output from the <code>AuthChainGuard</code>
+              contract, enter a recipient address to "release" it to, then click 'Release'.
+            </i>
           </div>
+          <q-input :filled="true" v-model="newOwnerAddress" type="url" :rules="[v => v.length > 49 || 'Invalid Address']"
+            label="Recipient token address" class="col-12" dense square></q-input>
           <div class="row col-12 justify-end q-gutter-sm">
             <q-btn size="lg" color="negative" @click="() => { menu = '' }">
-              No
+              Cancel
             </q-btn>
             <q-btn size="lg" color="secondary" @click="authchainRelease">
-              Yes
+              Release
             </q-btn>
           </div>
         </div>
       </div>
     </div>
-
   </q-page>
 </template>
 
@@ -179,6 +183,7 @@ const newOwnerAddress = ref<string>('')
 const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release'>('authchain-publish')
 const loading = ref<boolean>(true)
 
+
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
   const { creator, tokenId } = route.query
   let _token: { id: string, creator: string, identity?: IdentitySnapshot | null } = {
@@ -207,6 +212,14 @@ const registryModified = computed(() => {
   return bcmrStore.value && binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value)))) != binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))
 })
 
+
+watch(menu, (selectedMenu) => {
+  if (selectedMenu === 'authchain-release' && user.connectedPaytacaAddress) {
+    // make the connected user the default recipient, when releasing authchain
+    newOwnerAddress.value = user.connectedPaytacaAddress
+  }
+})
+
 onMounted(async () => {
 
   // if (ui.loadedRegistry && ui.loadedRegistryUpdated) {
@@ -224,7 +237,8 @@ onMounted(async () => {
 
   try {
     if (token.value.id) {
-      ui.busy({ text: 'Loading token details from registry...', type: 'info' })
+      // ui.busy({ text: 'Loading token details from registry...', type: 'info' })
+      $q.notify({ message: 'Loading token details...', color: 'info', spinner: true })
       const authhead = await fetchAuthChainAuthheadFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
       // console.log(authchain) // TODO USE THIS, IT'S ALREADY PARSED
       // let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
@@ -337,18 +351,28 @@ const authchainBurn = async () => {
 }
 
 const authchainRelease = async () => {
+  console.log('Releasing')
+  let dismiss
   try {
+    if (!newOwnerAddress.value) {
+      return $q.notify({ message: 'Recipient required!', color: 'negative', timeout: 2000 })
+    }
+    const recipientWallet = await getWalletClass().watchOnly(newOwnerAddress.value)
 
-    const dismiss = $q.notify({ spinner: true, message: 'Releasing token\'s identity output from authchain guard...', color: 'info', timeout: 0 })
-    const tx = await authChainGuard.value?.burn(token.value.id as string)
-    dismiss()
+    dismiss = $q.notify({ spinner: true, message: 'Releasing token\'s identity output from authchain guard...', color: 'info', timeout: 0 })
+    const tx = await authChainGuard.value?.release(token.value.id as string, recipientWallet.tokenaddr as string)
     if (tx) {
-      $q.notify({ color: 'positive', message: 'Token identity output burned! ' + tx })
+      $q.notify({ color: 'positive', message: 'Authchain identity output released to: ' + newOwnerAddress.value })
+      $q.notify({ color: 'info', message: 'Tx: ' + tx })
       router.push('/token/browse')
     }
   } catch (error) {
-    $q.notify({ color: 'negative', message: 'Error burning identity output!' })
+    $q.notify({ color: 'negative', message: 'Error releasing identity output!' })
     console.log(error)
+  } finally {
+    if (dismiss) {
+      dismiss()
+    }
   }
 
 }
