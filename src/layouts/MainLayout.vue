@@ -27,7 +27,6 @@
       <SidebarMenu />
     </q-drawer>
     <q-page-container>
-      <StatusBar />
       <router-view />
     </q-page-container>
   </q-layout>
@@ -49,8 +48,7 @@ export default defineComponent({
     HeadLess,
     SidebarMenu,
     LightSwitch,
-    PaytacaConnect,
-    StatusBar,
+    PaytacaConnect
   },
 
   setup() {
