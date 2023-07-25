@@ -1,20 +1,17 @@
 <template>
-  <div class="q-my-sm q-mx-sm">
-    <q-btn size="md" color="primary" icon="img:images/paytaca-128x128.png"
-      @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()" align="center" stack>
-      <div class="row">
-        <div class="col">
-          <!-- {{ connected ? 'Disconnect': 'Connect' }} -->
-          <q-icon v-if="user.connectedPaytacaAddress" name="link_off" size="xs"></q-icon>
-          <q-icon v-else name="link" size="xs"></q-icon>
-          <div><code><sup>{{ user.connectedPaytacaAddress?.startsWith('bchtest') ? '[chipnet]' : '' }}</sup></code></div>
-        </div>
-      </div>
+  <div class="row q-my-sm q-mx-sm">
+    <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md"
+      @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()" align="center" stack dense rounded>
+      <q-icon v-if="user.connectedPaytacaAddress" name="link" color="positive" size="xs" round
+        style="width:.15em;height:.10em"></q-icon>
+      <q-icon v-else name="link_off" color="negative" size="xs"></q-icon>
     </q-btn>
+
   </div>
 </template>
 
 <script setup lang="ts">
+import { useQuasar } from 'quasar'
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import formatAddress from 'src/utils/formatAddress';
@@ -22,31 +19,30 @@ import getWalletClass from 'src/utils/getWalletClass';
 import useStore from 'src/composables/useStore';
 defineOptions({ name: 'PaytacaConnect' })
 
+const $q = useQuasar()
 const router = useRouter()
-const { user, ui } = useStore()
+const { user } = useStore()
 const connected = ref(false)
 
-
 const connect = async () => {
-  ui.busy({ text: 'Connecting Paytaca', type: 'info' })
+  const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   let paytacaConnection = await window.paytaca!.connect()
   if (paytacaConnection.connected) {
     if (!paytacaConnection.address.startsWith('bitcoincash')) {
-      // TODO error
-      ui.idle()
+      $q.notify({ message: 'Please select a bitcoin cash address', color: 'negative', timeout: 1500 })
+      dismiss()
       return
     }
-    ui.idle()
+
     user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
     connected.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
     user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
     user.wallet = wallet
-  } else {
-    ui.idle()
   }
+  dismiss()
 }
 
 const disconnect = async () => {
@@ -56,5 +52,7 @@ const disconnect = async () => {
   connected.value = false
   router.push('/')
 }
+
+
 
 </script>
