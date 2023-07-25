@@ -7,46 +7,16 @@
 
 <script setup lang="ts">
 
-import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { ref, computed, watch } from 'vue'
 import useStore from 'src/composables/useStore'
 
-
 defineOptions({ name: 'SidebarMenu' })
-
 const router = useRouter()
 const { user } = useStore()
 const lastSelectedBeforeUnselect = ref<string | null>(null)
 const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
-
-watch(selected, (currentlySelected, previouslySelected) => {
-  /**
-   * Toggle Expand / Collapse of menu with children on select
-   */
-  if (currentlySelected !== null) {
-    lastSelectedBeforeUnselect.value = currentlySelected
-  }
-
-  if (currentlySelected && !currentlySelected.startsWith('#')) {
-    router.push(currentlySelected)
-    return
-  }
-
-  if (currentlySelected === null) {
-    if (previouslySelected === lastSelectedBeforeUnselect.value) {
-      let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
-      expanded.value.splice(menuIndex, 1)
-    }
-  } else {
-    let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)
-    if (indexOfCurrentlySelected === -1) {
-      expanded.value.push(currentlySelected)
-    } else {
-      expanded.value.splice(indexOfCurrentlySelected, 1)
-    }
-  }
-})
 
 const menu = computed<any[]>(() => {
   return [
@@ -124,4 +94,34 @@ const menu = computed<any[]>(() => {
     }
   ]
 })
+
+watch(selected, (currentlySelected, previouslySelected) => {
+  /**
+   * Toggle Expand / Collapse of menu with children on select
+   */
+  if (currentlySelected !== null) {
+    lastSelectedBeforeUnselect.value = currentlySelected
+  }
+
+  if (currentlySelected && !currentlySelected.startsWith('#')) {
+    router.push(currentlySelected)
+    return
+  }
+
+  if (currentlySelected === null) {
+    if (previouslySelected === lastSelectedBeforeUnselect.value) {
+      let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
+      expanded.value.splice(menuIndex, 1)
+    }
+  } else {
+    let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)
+    if (indexOfCurrentlySelected === -1) {
+      expanded.value.push(currentlySelected)
+    } else {
+      expanded.value.splice(indexOfCurrentlySelected, 1)
+    }
+  }
+})
+
+
 </script>
