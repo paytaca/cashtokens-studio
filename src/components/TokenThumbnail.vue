@@ -1,5 +1,5 @@
 <template>
-  <q-card bordered class="token-thumbnail" @click="router.push('/token/view')">
+  <q-card bordered class="token-thumbnail" @click="router.push('/token/view?tokenId=' + tokenId)">
     <q-card-title class="ellipsis justify-center row text-caption q-my-xs" bordered>
       <code v-if="tokenId"> {{ tokenId.replace(tokenId.substring(5, 60), '...') }} </code>
       <code v-else>no id</code>
