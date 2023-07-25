@@ -242,7 +242,7 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
   let authchainGuard = null
   if (options.value.useAuthChainGuard) {
     authchainGuard = new AuthChainGuard(owner, wallet.getPublicKeyHash(false), wallet.network)
-    authchainIdentityOutputRecipient = authchainGuard.contract.getDepositAddress()
+    authchainIdentityOutputRecipient = authchainGuard.contract.getTokenDepositAddress()
   }
 
   requests.push(
