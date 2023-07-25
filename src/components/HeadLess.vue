@@ -34,8 +34,17 @@ onMounted(async () => {
 watch(() => user.connectedPaytacaAddress, async (address) => {
   if (address) {
     user.wallet = await getWalletClass().watchOnly(address)
+  } else {
+    router.push('/')
   }
 })
+
+onMounted(() => {
+  if (!user.connectedPaytacaAddress) {
+    router.push('/')
+  }
+})
+
 
 
 </script>
