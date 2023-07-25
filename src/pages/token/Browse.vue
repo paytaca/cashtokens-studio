@@ -13,6 +13,7 @@
 </template>
 
 <script setup lang="ts">
+import { useQuasar } from 'quasar'
 import { ref, onMounted, watch, computed } from 'vue'
 import { AuthChainElement, UtxoI } from 'mainnet-js'
 import { Registry as Bcmr } from 'src/interfaces/bcmr-v2.schema'
@@ -27,7 +28,8 @@ import unresolvedBcmrTemplate from 'src/bcmr/unresolved.js'
 
 defineOptions({ name: 'BrowseTokens' })
 
-const { user, ui } = useStore()
+const { user } = useStore()
+const $q = useQuasar()
 const loadingRegistries = ref<boolean>(false)
 const tokenIdentities = ref<AuthChainElement[]>([])
 const tokenRegistries = ref<Bcmr[]>([])
@@ -65,7 +67,7 @@ onMounted(async () => {
 })
 
 const loadTokenIdentityOutputs = async (creatorAddress: string) => {
-  ui.busy({ type: 'info', text: 'Loading tokens...' })
+  $q.notify({ message: 'Loading token identities', spinner: true, color: 'info' })
   loadingRegistries.value = true
   const IDENTITY = '6964656e74697479'
   const WalletClass = getWalletClass()
@@ -73,7 +75,8 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   const creatorWalletPkh = creatorWallet.getPublicKeyHash(false)
   const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWalletPkh, creatorWallet.network)
   const authchainGuardContract = authChainGuard.contract
-  const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getDepositAddress())
+  const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getTokenDepositAddress())
+
   const identities = (await autchainGuardWallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.tokenId) && u.token?.commitment == IDENTITY)
   const tokenIdentitiesLoaded = new Promise((res) => {
     let counter = 0
@@ -128,7 +131,6 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
 
   await tokenRegistriesLoaded
   loadingRegistries.value = false
-  ui.idle()
 }
 
 </script>
