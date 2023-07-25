@@ -8,6 +8,9 @@ import { Argument, Artifact, ContractFunction, HashType, SignatureAlgorithm, Sig
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
+import constants from 'src/constants';
+import getByteCount from 'src/utils/getByteCount';
+import assert from 'assert';
 
 export default class AuthChainGuard implements AuthChainGuardI {
 
@@ -153,13 +156,15 @@ export default class AuthChainGuard implements AuthChainGuardI {
 
   async transfer(newOwnerAddress: string): Promise<string|undefined> {
     this.contractWallet? null : await this.initWallets()
-    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
+    const identityOutputs
+      = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
     const identityOutput = identityOutputs[0]
     if (!identityOutput) {
       throw new Error('authbase not found')
     }
 
-    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 3000).map(toCashScript)[0]
+    const funderInput
+      = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 3000).map(toCashScript)[0]
     if (!funderInput) {
       throw new Error('insufficient balance')
     }
@@ -254,7 +259,6 @@ export default class AuthChainGuard implements AuthChainGuardI {
 
   async burn(tokenId:string): Promise<string|undefined> {
     this.contractWallet? null : await this.initWallets()
-
     const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((u: UtxoI)=> u.token?.tokenId == tokenId).map(toCashScript)
     const identityOutput: Utxo = identityOutputs[0]
     if (!identityOutput) {
@@ -286,6 +290,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     delete artifact.source;
     delete artifact.bytecode;
 
+    assert(decoded)
     let signed
     try {
       signed = await window.paytaca!.signTransaction({
@@ -324,10 +329,93 @@ export default class AuthChainGuard implements AuthChainGuardI {
       return tx
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
-      return
     }
-    return ''
+  }
 
+  async release(tokenId: string, recipient: string): Promise<string|undefined> {
+    this.contractWallet? null : await this.initWallets()
+    const byteCount = getByteCount({'P2SH-P2WPKH':1, P2PKH:1}, {P2WSH:1, P2PKH:1}) // generous
+    const minerFee = Math.ceil(byteCount * 1.1) + 400
+    const funderInput = (await this.ownerWallet?.getAddressUtxos())?.filter(u=>Boolean(!u.token) && u.satoshis > minerFee).map(toCashScript)
+    if (!funderInput) {
+      throw new Error('insufficient balance')
+    }
+    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((u: UtxoI)=> u.token?.tokenId == tokenId).map(toCashScript)
+    const identityOutput: Utxo = identityOutputs[0]
+    if (!identityOutput) {
+      throw new Error('identity output not found')
+    }
+
+    let transaction
+    let decoded
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    try {
+      transaction = this.f(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), '0x01')
+          .from(identityOutput)
+          .fromP2PKH(funderInput[0], sig)
+          .to([{to: recipient, amount: identityOutput.satoshis, token: identityOutput.token}])
+          .to([{to: this.ownerAddress, amount:funderInput[0].satoshis - BigInt(minerFee)}])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+    } catch (error) {
+      console.log(error)
+    }
+
+    if (typeof decoded === 'string') {
+      throw new Error('Failed to decode transaction')
+    }
+
+    const bytecode = (transaction as any).redeemScript;
+    const artifact = {...this.contract.artifact} as Partial<Artifact>;
+    delete artifact.source;
+    delete artifact.bytecode;
+    assert(decoded)
+    let signed
+    try {
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      signed = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [{
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(this.contract.getTokenDepositAddress()) as any).bytecode,
+          valueSatoshis: identityOutput.satoshis,
+          token: identityOutput.token && {
+            ...identityOutput.token,
+            category: hexToBin(identityOutput.token.category),
+            nft: identityOutput.token.nft && {
+              ...identityOutput.token.nft,
+              commitment: hexToBin(identityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(this.ownerAddress) as any).bytecode,
+          valueSatoshis: funderInput[0].satoshis,
+        }
+        ],
+        broadcast: false,
+        userPrompt: 'Release Identity Output'
+      });
+    } catch (error) {
+      console.log('Paytaca signing error', error)
+    }
+
+    if (!signed) {
+      return ''
+    }
+    // Tx signing success, submitting transaction
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signed!.signedTransaction), true);
+      return tx
+    } catch (error) {
+      console.log('Error on submission of transaction', error)
+    }
   }
   script(){
     return `
