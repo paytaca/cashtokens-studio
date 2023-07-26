@@ -44,15 +44,20 @@
           </div>
         </div>
         <div class="row justify-end">
-          <q-btn icon="more_vert" size="sm" round flat>
+          <q-btn size="md" color="primary" flat dense no-caps @click="menu = 'main'">View BCMR</q-btn>
+          <q-btn icon="more_vert" size="md" round flat dense>
             <q-menu>
               <q-list>
-                <q-item clickable v-close-popup @click="menu = 'authchain-last-publication'">Last Published
-                  Registry</q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry Update</q-item>
+                <q-item clickable v-close-popup @click="menu = 'authchain-last-publication'">
+                  Last Published Registry
+                </q-item>
+                <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity Output</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-release'">Release Identity Output</q-item>
+                <q-item clickable v-close-popup @click="menu = 'main'">
+                  View BCMR
+                </q-item>
               </q-list>
             </q-menu>
           </q-btn>
@@ -75,38 +80,45 @@
           <q-input :filled="true" :model-value="authhead.contentHash" type="url" label="Content Hash" class="col-12" dense
             square disable></q-input>
         </div>
-        <div v-if="menu == 'authchain-publish'" class="row justify-center">
-          <div class="col-12 justify-start q-my-sm">
+        <div v-if="menu == 'authchain-publish'" class="row justify-center q-gutter-sm">
+          <div class="col-xs-12 justify-start q-my-sm">
             <i class="text-h6">Publish Registry</i>
           </div>
-          <div class="col-12 justify-start">Current Registry</div>
-          <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
-            label="Registry URL" class="col-12" dense square></q-input>
-          <q-input v-if="registry" :filled="true"
-            :model-value="binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))" type="url" label="Content Hash"
-            class="col-12" dense square disable></q-input>
-          <div v-if="registryModified" class="col-12 justify-start q-mt-lg">Registry Modified (New Value)</div>
-          <q-input v-if="registryModified" :filled="true"
-            :model-value="binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value))))" type="url"
-            label="New Content Hash" class="col-12" dense square disable></q-input>
-          <div class="row col-12">
-            <q-btn size="xs" icon="cloud_download" round @click="fetchRegistry">
-              <q-tooltip>Fetch and load a new or updated registry from the above remote URL</q-tooltip>
-            </q-btn>
-            <q-btn v-if="registry" icon="edit" size="xs" round @click="editRegistry">
-              <q-tooltip>Edit the currently loaded registry</q-tooltip>
-            </q-btn>
-            <q-btn v-if="registry" icon="delete" size="xs" color="red" round @click="registry = null">
-              <q-tooltip>Delete the loaded registry</q-tooltip>
-            </q-btn>
-            <q-btn type="a" :href="registryDownloadHref" download="bitcoin-cash-metadata-registy.json" icon="download"
-              size="xs" round>
-              <q-tooltip>Download the currently loaded registry to your computer so you can upload it to a
-                server</q-tooltip>
-            </q-btn>
+          <div class="col-xs-12 justify-start q-my-md">
+            Last Publication Details
+            <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
+              label="Registry URL" dense square disable></q-input>
+            <q-input v-if="registry" :filled="true"
+              :model-value="binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))" type="url" label="Content Hash"
+              dense square disable></q-input>
+          </div>
+          <div class="col-xs-12 q-my-md">
+            New Publication Details
+            <div class="row items-top q-col-gutter-none q-mb-md">
+              <div class="col-xs-12">
+                <q-input :filled="true" v-model="newRegistryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
+                  label="Entry Registry URL" dense square standout hide-bottom-space></q-input>
+              </div>
+              <div class="col-xs-12 q-my-xs">
+                <q-checkbox dense v-model="newRegistryUrlSameAsOld" label="Same as last publication URL"
+                  color="primary" />
+              </div>
+            </div>
+            <div class="row items-top q-col-gutter-none q-my-md">
+              <div class="col-xs-12">
+                <q-input :filled="true" v-model="newRegistryUrlContentHash" type="url" label="New Content Hash" dense
+                  square></q-input>
+              </div>
+              <div class="col-xs-12">
+                <q-btn color="primary" class="q-my-xs" size="md" icon="cloud_download" label="Fetch contents from URL"
+                  no-caps flat dense @click="fetchContentFromNewRegistryUrl"></q-btn>
+              </div>
+            </div>
+
           </div>
           <div class="row col-12 justify-end">
-            <q-btn size="lg" color="primary" :disable="!registry || !registryUrl" @click="authchainPublishRegistry">
+            <q-btn size="lg" color="primary" :disable="!newRegistryUrl || !newRegistryUrlContentHash"
+              @click="authchainPublishRegistry">
               Publish
             </q-btn>
           </div>
@@ -137,6 +149,9 @@
           </div>
         </div>
         <div v-if="menu == 'authchain-release'" class="row justify-center">
+          <div class="col-12 justify-start q-my-sm">
+            <i class="text-h6">Release Authchain</i>
+          </div>
           <div class="col-12 justify-start q-my-lg">
             <p>All tokens created in Cashtokens Studio creates an authchain identity output locked with an
               <code>AuthChainGuard</code> contract. This is to avoid accidental misuse of the identity output(utxo)
@@ -151,7 +166,7 @@
           <q-input :filled="true" v-model="newOwnerAddress" type="url" :rules="[v => v.length > 49 || 'Invalid Address']"
             label="Recipient token address" class="col-12" dense square></q-input>
           <div class="row col-12 justify-end q-gutter-sm">
-            <q-btn size="lg" color="negative" @click="() => { menu = '' }">
+            <q-btn size="lg" color="negative" @click="() => { menu = 'main' }">
               Cancel
             </q-btn>
             <q-btn size="lg" color="secondary" @click="authchainRelease">
@@ -192,6 +207,9 @@ const authChainGuard = ref<AuthChainGuard | null>(null)
 
 const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
+const newRegistryUrl = ref<string>()
+const newRegistryUrlContentHash = ref<string>()
+const newRegistryUrlSameAsOld = ref<boolean>(false)
 const newOwnerAddress = ref<string>('')
 
 const menu = ref<TokenViewMenu>('main')
@@ -255,7 +273,16 @@ const registryModified = computed(() => {
   return bcmrStore.value && binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value)))) != binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))
 })
 
-
+/**
+ * Use same value for new registry url
+ */
+watch(() => newRegistryUrlSameAsOld.value, (yes) => {
+  if (yes) {
+    newRegistryUrl.value = registryUrl.value
+  } else {
+    newRegistryUrl.value = ''
+  }
+})
 watch(menu, (selectedMenu) => {
   if (selectedMenu === 'authchain-release' && user.connectedPaytacaAddress) {
     // make the connected user the default recipient, when releasing authchain
@@ -313,12 +340,12 @@ const editRegistry = () => {
 }
 
 const authchainPublishRegistry = async () => {
-  if (!registry.value) {
-    return ui.setMessage({ text: 'Invalid BCMR', type: 'error', timeout: 10 })
+  if (!newRegistryUrl.value || !newRegistryUrlContentHash.value) {
+    return $q.notify({ message: 'Please provide values for new publication details', type: 'warning', timeout: 1000 })
   }
   try {
     ui.busy({ text: 'Publishing registry', type: 'info' })
-    const tx = await authChainGuard.value?.publish(JSON.stringify(registry.value), registryUrl.value)
+    const tx = await authChainGuard.value?.publish(newRegistryUrlContentHash.value, newRegistryUrl.value)
     ui.idle()
     ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
   } catch (error) {
@@ -402,6 +429,24 @@ const fetchRegistry = async () => {
     console.log(error)
   }
 }
+
+/**
+ * Fetch content from newRegistryUrl and compute the hash
+ */
+const fetchContentFromNewRegistryUrl = async () => {
+  if (!newRegistryUrl.value) {
+    // TODO: notify validation error
+    return
+  }
+  try {
+    const r = await fetch(newRegistryUrl.value)
+    const content = await r.json()
+    newRegistryUrlContentHash.value = binToHex(sha256.hash(utf8ToBin(JSON.stringify(content))))
+  } catch (error) {
+    console.log(error)
+  }
+}
+
 </script>
 
 <style lang="scss" scoped>
