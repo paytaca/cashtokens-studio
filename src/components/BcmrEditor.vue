@@ -23,12 +23,12 @@
       </div>
       <q-markup-table class="col-xs-12" flat bordered>
         <thead>
-          <tr>
+          <tr class="q-tr--no-hover">
             <th class="text-left" colspan="2">Registry</th>
           </tr>
         </thead>
         <tbody>
-          <tr>
+          <tr class="q-tr--no-hover">
             <td>
               Schema
             </td>
@@ -38,7 +38,7 @@
               <q-input v-else v-model="r.$schema" filled dense></q-input>
             </td>
           </tr>
-          <tr>
+          <tr class="q-tr--no-hover">
             <td>
               Version
             </td>
@@ -52,7 +52,7 @@
               </div>
             </td>
           </tr>
-          <tr>
+          <tr class="q-tr--no-hover">
             <td>
               Latest Revision
             </td>
@@ -64,7 +64,7 @@
               </div>
             </td>
           </tr>
-          <tr>
+          <tr class="q-tr--no-hover">
             <td>
               License
             </td>
@@ -78,143 +78,152 @@
           </tr>
         </tbody>
       </q-markup-table>
-      <q-markup-table v-if="typeof (r.registryIdentity) === 'string'" class="col-xs-12" flat bordered>
-        <thead>
-          <tr>
-            <th class="text-left" colspan="2">Registry.RegistryIdentity</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td class="text-left" colspan="2">
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ registryIdentity + 'x' }}</span>
-              <q-input v-else :model-value="(registryIdentity as string)"
-                @update:model-value="(v) => registryIdentity = (v as string)" filled dense></q-input>
-            </td>
-          </tr>
-        </tbody>
-      </q-markup-table>
-      <q-markup-table v-else>
-        TODO: Offchain Registry Identity
-      </q-markup-table>
-      <q-markup-table class="col-xs-12" flat bordered>
-        <thead>
-          <tr>
-            <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Timestamp</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshotHistoryTimestamp }}</span>
-              <q-input v-else :model-value="(identitySnapshotHistoryTimestamp as string)"
-                @update:model-value="(v) => identitySnapshotHistoryTimestamp = (v as string)" filled dense></q-input>
-            </td>
+      <q-expansion-item v-if="typeof (r.registryIdentity) === 'string'" class="col-xs-12"
+        label="Onchain Identity (authbase)" :model-value="mode === 'write'">
+        <q-markup-table flat bordered>
+          <thead>
+            <tr class="q-tr--no-hover">
+              <th class="text-left" colspan="2">Registry.RegistryIdentity</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="q-tr--no-hover">
+              <td class="text-left" colspan="2">
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ registryIdentity }}</span>
+                <q-input v-else :model-value="(registryIdentity as string)"
+                  @update:model-value="(v) => registryIdentity = (v as string)" filled dense></q-input>
+              </td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-expansion-item>
+      <q-expansion-item v-else class="col-xs-12" label="Offchain Identity" :model-value="mode === 'write'">
+        <q-markup-table>
+          TODO: Offchain Registry Identity
+        </q-markup-table>
+      </q-expansion-item>
+      <q-expansion-item class="col-xs-12" label="Identity Snapshot" :model-value="mode === 'write'">
+        <q-markup-table flat bordered>
+          <thead>
+            <tr class="q-tr--no-hover">
+              <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="q-tr--no-hover">
+              <td>Timestamp</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshotHistoryTimestamp }}</span>
+                <q-input v-else :model-value="(identitySnapshotHistoryTimestamp as string)"
+                  @update:model-value="(v) => identitySnapshotHistoryTimestamp = (v as string)" filled dense></q-input>
+              </td>
 
-          </tr>
-          <tr>
-            <td>Name</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshot?.name }}</span>
-              <q-input v-else v-model="identitySnapshot.name" filled dense></q-input>
-            </td>
-          </tr>
-          <tr>
-            <td>Description</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshot?.description }}</span>
-              <q-input v-else v-model="identitySnapshot.description" filled dense></q-input>
-            </td>
-          </tr>
-          <tr v-if="identitySnapshot?.uris">
-            <td>URIs</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <div v-if="mode === 'readonly'">
-                <a v-for="uriName, i in Object.keys(identitySnapshotUris || {})" :href="identitySnapshot?.uris[uriName]"
-                  target="_blank" :key="'uri-name-' + i" class="q-mr-sm">
-                  {{ uriName }}
-                </a>
-              </div>
-              <div v-else>
-                <q-input v-for="uriName in [...Object.keys(identitySnapshotUris)]"
-                  :model-value="identitySnapshotUris[uriName]" :key="'bcmr-editor-' + uriName" :label="uriName"
-                  @update:model-value="(v) => identitySnapshotUris[uriName] = (v as string)">
-                </q-input>
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td>Status</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshot?.status || 'active' }}</span>
-              <q-input v-else v-model="identitySnapshot.status" filled dense></q-input>
-            </td>
-          </tr>
-        </tbody>
-      </q-markup-table>
-      <q-markup-table class="col-xs-12" flat bordered>
-        <thead>
-          <tr>
-            <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot.Token Category</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Category</td>
-            <td>
-              {{ mode }}
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshotToken.category }}</span>
-              <q-input v-else v-model="identitySnapshotToken.category" filled dense></q-input>
-            </td>
+            </tr>
+            <tr class="q-tr--no-hover">
+              <td>Name</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshot?.name }}</span>
+                <q-input v-else v-model="identitySnapshot.name" filled dense></q-input>
+              </td>
+            </tr>
+            <tr class="q-tr--no-hover">
+              <td>Description</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshot?.description }}</span>
+                <q-input v-else v-model="identitySnapshot.description" filled dense></q-input>
+              </td>
+            </tr>
+            <tr v-if="identitySnapshot?.uris">
+              <td>URIs</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <div v-if="mode === 'readonly'">
+                  <a v-for="uriName, i in Object.keys(identitySnapshotUris || {})" :href="identitySnapshot?.uris[uriName]"
+                    target="_blank" :key="'uri-name-' + i" class="q-mr-sm">
+                    {{ uriName }}
+                  </a>
+                </div>
+                <div v-else>
+                  <q-input v-for="uriName in [...Object.keys(identitySnapshotUris)]"
+                    :model-value="identitySnapshotUris[uriName]" :key="'bcmr-editor-' + uriName" :label="uriName"
+                    @update:model-value="(v) => identitySnapshotUris[uriName] = (v as string)">
+                  </q-input>
+                </div>
+              </td>
+            </tr>
+            <tr class="q-tr--no-hover">
+              <td>Status</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshot?.status || 'active' }}</span>
+                <q-input v-else v-model="identitySnapshot.status" filled dense></q-input>
+              </td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-expansion-item>
+      <q-expansion-item class="col-xs-12" label="Token" :model-value="mode === 'write'">
+        <q-markup-table flat bordered>
+          <thead>
+            <tr class="q-tr--no-hover">
+              <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot.Token Category</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="q-tr--no-hover">
+              <td>Category</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshotToken.category }}</span>
+                <q-input v-else v-model="identitySnapshotToken.category" filled dense></q-input>
+              </td>
 
-          </tr>
-          <tr>
-            <td>Symbol</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshotToken.symbol }}</span>
-              <q-input v-else v-model="identitySnapshotToken.symbol" filled dense></q-input>
-            </td>
-          </tr>
-          <tr>
-            <td>Decimals</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshotToken.decimals || 0 }}</span>
-              <q-input v-else v-model="identitySnapshotToken.decimals" filled dense></q-input>
-            </td>
-          </tr>
-        </tbody>
-      </q-markup-table>
+            </tr>
+            <tr class="q-tr--no-hover">
+              <td>Symbol</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshotToken.symbol }}</span>
+                <q-input v-else v-model="identitySnapshotToken.symbol" filled dense></q-input>
+              </td>
+            </tr>
+            <tr class="q-tr--no-hover">
+              <td>Decimals</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshotToken.decimals || 0 }}</span>
+                <q-input v-else v-model="identitySnapshotToken.decimals" filled dense></q-input>
+              </td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-expansion-item>
       <!-- nfts -->
-      <q-markup-table class="col-xs-12" flat bordered>
-        <thead>
-          <tr>
-            <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot.Token Category.Nfts
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td>Description</td>
-            <td>
-              <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-              <span v-if="mode === 'readonly'">{{ identitySnapshotTokenNfts.description }}</span>
-              <q-input v-else v-model="identitySnapshotTokenNfts.description" filled dense></q-input>
-            </td>
-          </tr>
-        </tbody>
-      </q-markup-table>
+      <q-expansion-item class="col-xs-12" label="Nfts" :model-value="mode === 'write'">
+        <q-markup-table class="col-xs-12" flat bordered>
+          <thead>
+            <tr class="q-tr--no-hover">
+              <th class="text-left" aria-colspan="2" colspan="2">Registry.Identities.Identity Snapshot.Token Category.Nfts
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="q-tr--no-hover">
+              <td>Description</td>
+              <td>
+                <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                <span v-if="mode === 'readonly'">{{ identitySnapshotTokenNfts.description }}</span>
+                <q-input v-else v-model="identitySnapshotTokenNfts.description" filled dense></q-input>
+              </td>
+            </tr>
+          </tbody>
+        </q-markup-table>
+      </q-expansion-item>
     </div>
-
   </div>
 </template>
 <script setup lang="ts">
