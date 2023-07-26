@@ -26,16 +26,17 @@
       </div>
       <SidebarMenu />
     </q-drawer>
-    <q-page-container>
-      <router-view />
-    </q-page-container>
+    <q-scroll-area style="height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }" :thumb-style="{ width: '0px' }">
+      <q-page-container>
+        <router-view />
+      </q-page-container>
+    </q-scroll-area>
   </q-layout>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
-import StatusBar from 'components/StatusBar.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import HeadLess from 'components/HeadLess.vue';
