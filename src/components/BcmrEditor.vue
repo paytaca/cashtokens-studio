@@ -203,30 +203,21 @@
   </div>
 </template>
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { Registry, OffChainRegistryIdentity, IdentitySnapshot, URIs } from 'src/bcmr/bcmr-v2.schema'
+import RegistrySample from 'src/bcmr/bcmr-v2.sample'
 import { NftCategory, TokenCategory } from 'src/interfaces';
 defineOptions({ name: 'BcmrEditor' })
-const props = defineProps<{ bcmr: Registry }>()
+const props = defineProps<{ bcmr?: Registry }>()
 const editorMode = ref<'readonly' | 'write'>()
 const mode = computed(() => editorMode.value)
 const loading = ref<boolean>(false)
-const r = ref<Registry>(props.bcmr)
+const r = ref<Registry>()
 /**
  * Butcher registry so it's easier to work with
  */
 const registryIdentity = ref<OffChainRegistryIdentity | string>()
-
-/**
- * This might be too expensive we should only concern ourselves with the IdentitySnapshot of the registryIdentity
- */
-const identities = computed<Registry['identities'] | null>(() => {
-  if (typeof (registryIdentity.value) === 'string' && r.value?.identities) {
-    return r.value.identities
-  }
-  return null
-})
-
+const identities = ref<Registry['identities']>({} as Registry['identities'])
 const identitySnapshotHistoryTimestamp = ref<string | null>()
 const identitySnapshot = ref<IdentitySnapshot>({} as IdentitySnapshot)
 const identitySnapshotUris = ref<URIs>({
@@ -235,38 +226,29 @@ const identitySnapshotUris = ref<URIs>({
   }, ...identitySnapshot?.value?.uris
 })
 const identitySnapshotToken = ref<TokenCategory>({} as TokenCategory)
-const identitySnapshotTokenNfts = ref<NftCategory>({} as NftCategory)
+const identitySnapshotTokenNfts = ref<NftCategory>({ description: '' } as NftCategory)
 
-/**
- * Mutate identitySnapshotHistoryTimestamp when registryIdentity changes
- */
-watch(registryIdentity, (v) => {
-  console.log('REGISTRY IDENTITY', v)
-  if (identities.value && v && typeof (v) === 'string') {
-    identitySnapshotHistoryTimestamp.value = Object.keys(identities.value[v])[0]
+onMounted(() => {
+  r.value = props.bcmr || RegistrySample as Registry
+  // init registryIdentity
+  registryIdentity.value = r.value.registryIdentity
+  if (r.value && registryIdentity.value && typeof (registryIdentity.value) === 'string') {
+    identities.value = r.value.identities
+  }
+  // init identitySnapshotHistoryTimestamp
+  if (identities.value && typeof (registryIdentity.value) === 'string') {
+    identitySnapshotHistoryTimestamp.value = Object.keys(identities.value[registryIdentity.value])[0]
   } else {
     identitySnapshotHistoryTimestamp.value = null
   }
-})
-
-/**
- * Mutate identitySnapshot when identitySnapshotHistoryTimestamp changes
- */
-watch(() => identitySnapshotHistoryTimestamp.value, (v) => {
-  if (v && typeof (v) === 'string' && identities.value && typeof (registryIdentity.value) === 'string') {
-    identitySnapshot.value = identities.value[registryIdentity.value][v]
-    identitySnapshotUris.value = { ...identitySnapshotUris.value, ...identities.value[registryIdentity.value][v].uris }
-    identitySnapshotToken.value = identities.value[registryIdentity.value][v].token || {} as TokenCategory
-    identitySnapshotTokenNfts.value = identities.value[registryIdentity.value][v].token?.nfts as NftCategory
-  } else {
-    identitySnapshot.value = {} as IdentitySnapshot
+  // init identitySnapshot, identitySnapshotUris, identitySnapshotToken, identitySnapshotTokenNfts
+  if (identities.value && typeof (registryIdentity.value) === 'string' && identitySnapshotHistoryTimestamp.value) {
+    identitySnapshot.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value]
+    identitySnapshotUris.value = { ...identitySnapshotUris.value, ...identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].uris }
+    identitySnapshotToken.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].token || {} as TokenCategory
+    identitySnapshotTokenNfts.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].token?.nfts || {} as NftCategory
   }
-})
 
-onMounted(() => {
-  r.value = props.bcmr
-  registryIdentity.value = props.bcmr.registryIdentity
-  console.log(r.value)
 })
 
 const changeEditorMode = (m: 'readonly' | 'write') => {
