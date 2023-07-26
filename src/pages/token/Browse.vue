@@ -1,20 +1,39 @@
 <!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <!-- eslint-disable @typescript-eslint/no-explicit-any -->
 <template>
-  <q-page>
-    <div class="row justify-center q-gutter-md q-mx-sm q-pa-sm">
-      <TokenThumbnail v-for="t, i in tokenThumbnails" :token-id="t.tokenId" :icon="t.icon" :name="t.name"
-        :symbol="t.symbol" :key="i" class="col-xs-12 col-sm-3 col-md-2">
-      </TokenThumbnail>
-      <TokenThumbnailSkeleton v-if="loadingRegistries" class="col-xs-12 col-md-2 col-lg-2" />
-      <TokenCreateThumbnail path="/token/create" class="col-xs-12 col-md-2 col-lg-2" />
+  <q-page class="q-pa-lg">
+    <div class="row justify-center">
+      <div class="col-xs-12 col-md-10 col-lg-8">
+        <div class="row justify-center q-gutter-md q-mx-sm q-mb-lg">
+          <q-btn v-for="f, i in ['fungible', 'nonfungible', 'hybrid']" :key="'browser-filter-' + i"
+            :outline="filter == f ? false : true" color="primary" size="sm" rounded @click="() => onFilter(f)">
+            {{ f }}
+          </q-btn>
+        </div>
+        <div v-if="loadingRegistries" class="row justify-center items-center q-gutter-md q-mx-sm">
+          <div class="col-xs-12 justify-center row">
+            <q-spinner-grid size="4em"></q-spinner-grid>
+          </div>
+          <div class="col-xs-12 justify-center row">
+            Loading token registries...
+          </div>
+        </div>
+        <div v-else class="row justify-center q-gutter-md q-mx-sm">
+          <TokenThumbnail v-for="t, i in tokenThumbnails" :token-id="t.tokenId" :icon="t.icon" :name="t.name"
+            :symbol="t.symbol" :key="i" class="col-xs-12 col-sm-3 col-md-2">
+          </TokenThumbnail>
+          <TokenCreateThumbnail path="/token/create" class="col-xs-12 col-md-2 col-lg-2" />
+        </div>
+      </div>
     </div>
+
   </q-page>
 </template>
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
 import { ref, onMounted, watch, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { AuthChainElement, UtxoI } from 'mainnet-js'
 import { Registry as Bcmr } from 'src/interfaces/bcmr-v2.schema'
 import getWalletClass from 'src/utils/getWalletClass'
@@ -25,11 +44,15 @@ import TokenThumbnail from 'src/components/TokenThumbnail.vue'
 import TokenCreateThumbnail from 'src/components/TokenCreateThumbnail.vue'
 import TokenThumbnailSkeleton from 'src/components/skeletons/TokenThumbnail.vue'
 import unresolvedBcmrTemplate from 'src/bcmr/unresolved.js'
+import { TokenType } from 'src/types'
 
 defineOptions({ name: 'BrowseTokens' })
 
 const { user } = useStore()
 const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
+const filter = ref<TokenType>(route.params.tokenType as TokenType)
 const loadingRegistries = ref<boolean>(false)
 const tokenIdentities = ref<AuthChainElement[]>([])
 const tokenRegistries = ref<Bcmr[]>([])
@@ -66,9 +89,9 @@ onMounted(async () => {
   }
 })
 
-const loadTokenIdentityOutputs = async (creatorAddress: string) => {
-  $q.notify({ message: 'Loading token identities', spinner: true, color: 'info' })
+const loadTokenIdentityOutputs = async (creatorAddress: string, tokenType?: TokenType) => {
   loadingRegistries.value = true
+  $q.notify({ message: 'Loading token identities', spinner: true, color: 'info' })
   const IDENTITY = '6964656e74697479'
   const WalletClass = getWalletClass()
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
@@ -78,6 +101,7 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   const autchainGuardWallet = await WalletClass.watchOnly(authchainGuardContract.getTokenDepositAddress())
 
   const identities = (await autchainGuardWallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.tokenId) && u.token?.commitment == IDENTITY)
+  console.log(identities)
   const tokenIdentitiesLoaded = new Promise((res) => {
     let counter = 0
     identities.forEach(async (i: UtxoI) => {
@@ -133,4 +157,8 @@ const loadTokenIdentityOutputs = async (creatorAddress: string) => {
   loadingRegistries.value = false
 }
 
+const onFilter = (f: TokenType) => {
+  filter.value = f
+  router.push(`/token/browse/${f}`)
+}
 </script>
