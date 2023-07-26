@@ -1,10 +1,25 @@
 
 <template>
   <div class="row">
-    <div class="col q-gutter-sm">
-      <div>
-        <q-btn @click="changeEditorMode('write')">Edit</q-btn>
-        <q-btn @click="changeEditorMode('readonly')">Read</q-btn>
+    <div class="col q-gutter-sm row">
+      <div class="col-xs-12 row justify-between">
+        <div>{ BCMR }</div>
+        <div>
+          <q-btn @click="changeEditorMode('readonly')" round flat dense size="xs" icon="format_clear">
+            <q-tooltip>Read Only</q-tooltip>
+          </q-btn>
+          <q-btn @click="changeEditorMode('write')" round flat dense size="xs" icon="edit">
+            <q-tooltip>Edit</q-tooltip>
+          </q-btn>
+          <q-btn @click="initRegistry" round flat dense size="xs" icon="restart_alt">
+            <q-tooltip>Clear Changes</q-tooltip>
+          </q-btn>
+          <q-btn @click="changeEditorMode('readonly')" round flat dense size="xs" hint="Advance">
+            {}
+            <q-tooltip>Advance</q-tooltip>
+          </q-btn>
+        </div>
+
       </div>
       <q-markup-table class="col-xs-12" flat bordered>
         <thead>
@@ -31,9 +46,9 @@
               <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
               <span v-if="mode === 'readonly'">{{ Object.values(r.version).join('.') }}</span>
               <div v-else class="row q-gutter-sm">
-                <q-input class="col" v-model="r.version.major" label="Major" filled dense></q-input>
-                <q-input class="col" v-model="r.version.minor" label="Minor" filled dense></q-input>
-                <q-input class="col" v-model="r.version.patch" label="Patch" filled dense></q-input>
+                <q-input class="col registry-version" v-model="r.version.major" label="Major" filled dense></q-input>
+                <q-input class="col registry-version" v-model="r.version.minor" label="Minor" filled dense></q-input>
+                <q-input class="col registry-version" v-model="r.version.patch" label="Patch" filled dense></q-input>
               </div>
             </td>
           </tr>
@@ -212,7 +227,7 @@ const props = defineProps<{ bcmr?: Registry }>()
 const editorMode = ref<'readonly' | 'write'>()
 const mode = computed(() => editorMode.value)
 const loading = ref<boolean>(false)
-const r = ref<Registry>()
+const r = ref<Registry>(Object.assign({}, props.bcmr || RegistrySample as Registry))
 /**
  * Butcher registry so it's easier to work with
  */
@@ -229,29 +244,56 @@ const identitySnapshotToken = ref<TokenCategory>({} as TokenCategory)
 const identitySnapshotTokenNfts = ref<NftCategory>({ description: '' } as NftCategory)
 
 onMounted(() => {
-  r.value = props.bcmr || RegistrySample as Registry
+  initRegistry()
+})
+
+const changeEditorMode = (m: 'readonly' | 'write') => {
+  editorMode.value = m
+}
+
+const initRegistry = () => {
+  r.value = Object.assign({}, props.bcmr || RegistrySample)
+  console.log(props.bcmr)
   // init registryIdentity
   registryIdentity.value = r.value.registryIdentity
+  initIdentities()
+  initIdentitySnapshotHistoryTimestamp()
+  initIdentitySnapshot()
+}
+
+const initIdentities = () => {
   if (r.value && registryIdentity.value && typeof (registryIdentity.value) === 'string') {
     identities.value = r.value.identities
   }
-  // init identitySnapshotHistoryTimestamp
+}
+
+const initIdentitySnapshotHistoryTimestamp = () => {
   if (identities.value && typeof (registryIdentity.value) === 'string') {
     identitySnapshotHistoryTimestamp.value = Object.keys(identities.value[registryIdentity.value])[0]
   } else {
     identitySnapshotHistoryTimestamp.value = null
   }
-  // init identitySnapshot, identitySnapshotUris, identitySnapshotToken, identitySnapshotTokenNfts
+}
+
+const initIdentitySnapshot = () => {
   if (identities.value && typeof (registryIdentity.value) === 'string' && identitySnapshotHistoryTimestamp.value) {
     identitySnapshot.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value]
     identitySnapshotUris.value = { ...identitySnapshotUris.value, ...identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].uris }
     identitySnapshotToken.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].token || {} as TokenCategory
     identitySnapshotTokenNfts.value = identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value].token?.nfts || {} as NftCategory
   }
-
-})
-
-const changeEditorMode = (m: 'readonly' | 'write') => {
-  editorMode.value = m
 }
+
 </script>
+
+<!-- <style lang="scss" scoped>
+.q-field--dense .q-field__control,
+.q-field--dense .q-field__marginal {
+  height: 25px;
+}
+
+
+.q-field__label {
+  left: unset;
+}
+</style> -->

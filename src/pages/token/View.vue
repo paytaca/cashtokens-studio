@@ -1,8 +1,8 @@
 <!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <template>
-  <q-page class="q-pt-xl">
+  <q-page class="q-py-xl">
     <div class="row justify-center">
-      <div class="col-xs-12 col-md-10 col-lg-8">
+      <div class="col-xs-11 col-sm-10">
         <div class="row items-center q-gutter-lg">
           <div class="col">
             <!-- if offchain registry identity -->
@@ -47,6 +47,8 @@
           <q-btn icon="more_vert" size="sm" round flat>
             <q-menu>
               <q-list>
+                <q-item clickable v-close-popup @click="menu = 'authchain-last-publication'">Last Published
+                  Registry</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry Update</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
                 <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity Output</q-item>
@@ -57,69 +59,22 @@
         </div>
         <q-separator></q-separator>
         <!-- Token Registry Action Pane -->
-        <div v-if="menu == ''" class="row justify-center q-gutter-sm">
-          <!-- display complete registry details -->
-          <div class="col-xs-12 text-left q-py-sm">{ BCMR }</div>
-          <q-markup-table class="col-xs-12" flat bordered dense>
-            <thead>
-              <tr>
-                <th class="text-left">Registry Identity</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>
-                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                  {{ registryIdentity }}
-                </td>
-              </tr>
-            </tbody>
-          </q-markup-table>
-          <q-markup-table class="col-xs-12" flat bordered dense>
-            <thead>
-              <tr>
-                <th class="text-left" aria-colspan="2" colspan="2">Identity Snapshot</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>Timestamp</td>
-                <td>
-                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                  {{ identitySnapshotHistoryTimestamp }}
-                </td>
-
-              </tr>
-              <tr>
-                <td>Name</td>
-                <td>
-                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                  {{ identitySnapshot?.name }}
-                </td>
-              </tr>
-              <tr>
-                <td>Description</td>
-                <td>
-                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                  {{ identitySnapshot?.description }}
-                </td>
-
-              </tr>
-              <tr v-if="identitySnapshot?.uris">
-                <td>URIs</td>
-                <td>
-                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                  <a v-for="uriName, i in Object.keys(identitySnapshot?.uris || {})"
-                    :href="identitySnapshot?.uris[uriName]" target="_blank" :key="'uri-name-' + i" class="q-mr-sm">
-                    {{ uriName }}
-                  </a>
-
-                </td>
-              </tr>
-            </tbody>
-          </q-markup-table>
+        <div v-if="menu == 'main'" class="row justify-center q-gutter-sm">
+          <div class="col-xs-12 q-pt-sm">
+            <BcmrEditor v-if="registry" :bcmr="(registry as Bcmr)" />
+          </div>
         </div>
-
+        <div v-if="menu == 'authchain-last-publication' && authhead" class="row justify-center">
+          <div class="col-12 justify-start q-my-sm">
+            <i class="text-h6">Last Published Registry</i>
+          </div>
+          <q-input :filled="true" v-model="authhead.txHash" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
+            label="Tx" class="col-12" dense square disable></q-input>
+          <q-input :filled="true" v-model="authhead.httpsUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
+            label="Registry URL" class="col-12" dense square disable></q-input>
+          <q-input :filled="true" :model-value="authhead.contentHash" type="url" label="Content Hash" class="col-12" dense
+            square disable></q-input>
+        </div>
         <div v-if="menu == 'authchain-publish'" class="row justify-center">
           <div class="col-12 justify-start q-my-sm">
             <i class="text-h6">Publish Registry</i>
@@ -206,6 +161,7 @@
         </div>
       </div>
     </div>
+
   </q-page>
 </template>
 
@@ -214,13 +170,16 @@
 import { useQuasar } from 'quasar'
 import { ref, onMounted, watch, computed, toValue } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
-import { BCMR, Network, hexToBin } from 'mainnet-js'
+import { AuthChainElement, BCMR, Network, hexToBin } from 'mainnet-js'
 import { utf8ToBin, binToHex, sha256 } from '@bitauth/libauth'
 import { Registry as Bcmr, IdentitySnapshot, OffChainRegistryIdentity, URIs } from 'src/interfaces/bcmr-v2.schema'
 import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
+import BcmrEditor from 'src/components/BcmrEditor.vue'
 import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
+
+type TokenViewMenu = 'main' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release' | 'authchain-last-publication'
 
 defineOptions({ name: 'ViewFt' })
 
@@ -235,11 +194,10 @@ const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
 const newOwnerAddress = ref<string>('')
 
-const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release'>('')
+const menu = ref<TokenViewMenu>('main')
 const loading = ref<boolean>(true)
 
 const registryIdentity = computed<OffChainRegistryIdentity | string | undefined>(() => registry.value?.registryIdentity)
-
 /**
  * This might be too expensive we should only concern ourselves with the IdentitySnapshot of the registryIdentity
  */
@@ -264,6 +222,8 @@ const identitySnapshot = computed<IdentitySnapshot | null>(() => {
   return null
 })
 
+const authhead = ref<AuthChainElement | null>()
+
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
   const { creator, tokenId } = route.query
   let _token: { id: string, creator: string, identity?: IdentitySnapshot | null } = {
@@ -280,7 +240,6 @@ const token = computed<{ id?: string, creator?: string, identity?: IdentitySnaps
   return _token
 })
 
-
 const registryDownloadHref = computed(() => {
   if (bcmrStore.value) {
     return `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(bcmrStore.value))}`
@@ -288,6 +247,10 @@ const registryDownloadHref = computed(() => {
   return `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`
 })
 
+/**
+ * True if the content hash of the resolved bcmr from the registryUrl matches the content hash
+ * of the last publication output(last OP_RETURN)
+ */
 const registryModified = computed(() => {
   return bcmrStore.value && binToHex(sha256.hash(utf8ToBin(JSON.stringify(bcmrStore.value)))) != binToHex(sha256.hash(utf8ToBin(JSON.stringify(registry))))
 })
@@ -301,55 +264,23 @@ watch(menu, (selectedMenu) => {
 })
 
 onMounted(async () => {
-
-  // if (ui.loadedRegistry && ui.loadedRegistryUpdated) {
-  //   console.log('UI', ui.loadedRegistry)
-  //   // registry.value = Object.assign({}, ui.loadedRegistry)
-  //   let r = Object.assign({}, JSON.parse(JSON.stringify(ui.loadedRegistry)))
-  //   console.log(r)
-  //   registry.value = r
-  //   return
-  // }
-
   const { creator, tokenId } = route.query
   token.value.id = tokenId as string
   token.value.creator = creator as string
 
   try {
-    if (token.value.id) {
-      // ui.busy({ text: 'Loading token details from registry...', type: 'info' })
+    if (tokenId) {
+      loading.value = true
       $q.notify({ message: 'Loading token details...', color: 'info', spinner: true })
-      const authhead = await fetchAuthChainAuthheadFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
-      // console.log(authchain) // TODO USE THIS, IT'S ALREADY PARSED
-      // let authheadResponse: Response = await fetchAuthhead(token.value.id, user.walletNetworkType)
-      // let authheadJson: { data: { transaction: [{ authchains: [{ migrations: [{ transaction: [{ hash: string, locktime: string, version: string, inputs: [any], outputs: [{ output_index: string, locking_bytecode: string }] }] }] }] }] } } = await authheadResponse.json()
-      // let authhead = authheadJson.data?.transaction[0].authchains[0].migrations[0].transaction[0].outputs[0]
-      // console.log('AUTHHEAD', authheadJson)
-      // // \x6a0442434d52 + 40 + <32 bytes = 64 chars>
-      // let uris: string[] | string = binToUtf8(hexToBin(authhead.locking_bytecode).slice(8 + 2 + 64))
-      // uris = uris.split(' ')
-      // if (authhead) {
-      //   let tokenRegistryUri = uris[0] // 73 start index of URI's
-      //   if (tokenRegistryUri) {
-      //     console.log(tokenRegistryUri)
-      //     // dirty, assumes uri is valid, and only assumes https://
-      //     // TODO: improve, handle other URI protocol
-      //     let url = 'https://' + tokenRegistryUri
-      //     // TODO: add check if url is valid or check pre-flight stats
-      //     let registryFetchResponse = await fetch(url)
-      //     registry.value = await registryFetchResponse.json()
-      //     // TODO: Update token page, based on this loaded registry, added error handled
-      //   }
-      // }
-      if (authhead[0] && authhead[0].httpsUrl) {
-        let registryReqResp = await fetch(authhead[0].httpsUrl)
+      const authChainElement = await fetchAuthChainAuthheadFromChaingraph({ chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql', transactionHash: tokenId as string, network: 'chipnet' })
+      authhead.value = authChainElement[0]
+      if (authhead.value && authhead.value.httpsUrl) {
+        let registryReqResp = await fetch(authhead.value.httpsUrl)
         registry.value = await registryReqResp.json()
-        registryUrl.value = authhead[0].httpsUrl
-        console.log('authhead', authhead[0])
+        registryUrl.value = authhead.value.httpsUrl
       }
     }
     loading.value = false
-    ui.idle()
   } catch (error) {
     console.log('Error fetching authhead from chaingraph', error)
   }
@@ -472,4 +403,26 @@ const fetchRegistry = async () => {
   }
 }
 </script>
+
+<style lang="scss" scoped>
+tr td {
+  text-align: left;
+}
+
+td {
+  text-align: left;
+}
+
+.identity-snapshot-status {
+  color: $positive;
+}
+
+.identity-snapshot-status.inactive {
+  color: $grey-8;
+}
+
+.identity-snapshot-status.burned {
+  color: $negative;
+}
+</style>
 
