@@ -1,59 +1,50 @@
 <!-- eslint-disable @typescript-eslint/no-non-null-assertion -->
 <template>
-  <q-page>
+  <q-page class="q-pt-xl">
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10 col-lg-8">
-        <div class="row inline items-center q-gutter-lg">
-          <div class="items-center justify-center q-px-xl">
-            <q-skeleton v-if="!token.identity?.uris?.icon" type="QAvatar" size="8em"></q-skeleton>
-            <q-avatar v-else size="8em">
-              <img :src="token.identity?.uris?.icon" alt="">
-            </q-avatar>
-          </div>
-          <div>
-            <div>
-              <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
-              <span v-else>Token: {{ token.identity?.name || 'Unknown' }}</span>
-            </div>
-            <div>
-              <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
-              <span v-else>Symbol: <q-badge outline color="orange" :label="token.identity?.token?.symbol" /></span>
-            </div>
-            <div>
-              <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
-              <span v-else>Decimals: {{ token.identity?.token?.decimals }}</span>
-            </div>
-            <div>
-              <q-skeleton v-if="loading" type="text" height="3em"></q-skeleton>
-              <span v-else>
-                Category (Token Id): {{ token.id?.replace(token.id.substring(15, 45), '...') }}
-              </span>
-            </div>
-            <!-- <div class="ellipsis-2-lines">
-              Manager: {{
-                token.creator?.replace(token.creator.substring(15, 35), '...') }}
-            </div> -->
-            <div v-if="token.identity?.uris">
-              <div v-for="k, i in Object.keys(token.identity?.uris)" :key="i">
-                <div v-if="k === 'icon'">
-                  Icon: <q-avatar size="sm">
-                    <img :src="token.identity?.uris[k]" />
+        <div class="row items-center q-gutter-lg">
+          <div class="col">
+            <!-- if offchain registry identity -->
+            <!-- if onchain registry identity-->
+            <div v-if="typeof (registryIdentity) === 'string' || loading" class="row">
+              <div class="col-xs-12 col-sm-2 row items-center justify-center">
+                <q-card v-if="identitySnapshot?.uris?.icon || loading">
+                  <q-skeleton v-if="loading" size="6em" type="QAvatar" round>
+                  </q-skeleton>
+                  <q-avatar v-else size="6em">
+                    <img :src="identitySnapshot?.uris?.icon" alt="">
                   </q-avatar>
+                </q-card>
+              </div>
+
+              <!-- TokenCategory -->
+              <div v-if="identitySnapshot?.token" class="col-xs-12 col-sm-10 q-pa-sm q-pl-xl items-center">
+                <div>
+                  Category:
+                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
+                  <code>{{ identitySnapshot.token.category.replace(identitySnapshot.token.category.substring(5, 59), '...') }}</code>
+                  <q-btn icon="content_copy" size="xs" @click.stop="() => console.log('copying')" rounded flat dense>
+                  </q-btn>
                 </div>
-                <span v-else>
-                  {{ k }}: {{ token.identity?.uris[k] }}
-                </span>
+                <div>
+                  Symbol:
+                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
+                  <q-chip color="orange" outline>
+                    <strong>{{ identitySnapshot.token.symbol }}</strong>
+                  </q-chip>
+                </div>
+                <div>
+                  Decimals:
+                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
+                  {{ identitySnapshot.token.decimals || 0 }}
+                </div>
               </div>
             </div>
           </div>
         </div>
-        <div v-if="token.identity?.description">
-          <q-banner rounded dense>
-            <p>{{ token.identity.description }}</p>
-          </q-banner>
-        </div>
         <div class="row justify-end">
-          <q-btn icon="settings" size="md">
+          <q-btn icon="more_vert" size="sm" round flat>
             <q-menu>
               <q-list>
                 <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry Update</q-item>
@@ -65,6 +56,70 @@
           </q-btn>
         </div>
         <q-separator></q-separator>
+        <!-- Token Registry Action Pane -->
+        <div v-if="menu == ''" class="row justify-center q-gutter-sm">
+          <!-- display complete registry details -->
+          <div class="col-xs-12 text-left q-py-sm">{ BCMR }</div>
+          <q-markup-table class="col-xs-12" flat bordered dense>
+            <thead>
+              <tr>
+                <th class="text-left">Registry Identity</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                  {{ registryIdentity }}
+                </td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+          <q-markup-table class="col-xs-12" flat bordered dense>
+            <thead>
+              <tr>
+                <th class="text-left" aria-colspan="2" colspan="2">Identity Snapshot</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Timestamp</td>
+                <td>
+                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                  {{ identitySnapshotHistoryTimestamp }}
+                </td>
+
+              </tr>
+              <tr>
+                <td>Name</td>
+                <td>
+                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                  {{ identitySnapshot?.name }}
+                </td>
+              </tr>
+              <tr>
+                <td>Description</td>
+                <td>
+                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                  {{ identitySnapshot?.description }}
+                </td>
+
+              </tr>
+              <tr v-if="identitySnapshot?.uris">
+                <td>URIs</td>
+                <td>
+                  <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
+                  <a v-for="uriName, i in Object.keys(identitySnapshot?.uris || {})"
+                    :href="identitySnapshot?.uris[uriName]" target="_blank" :key="'uri-name-' + i" class="q-mr-sm">
+                    {{ uriName }}
+                  </a>
+
+                </td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+        </div>
+
         <div v-if="menu == 'authchain-publish'" class="row justify-center">
           <div class="col-12 justify-start q-my-sm">
             <i class="text-h6">Publish Registry</i>
@@ -161,7 +216,7 @@ import { ref, onMounted, watch, computed, toValue } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { BCMR, Network, hexToBin } from 'mainnet-js'
 import { utf8ToBin, binToHex, sha256 } from '@bitauth/libauth'
-import { Registry as Bcmr, IdentitySnapshot } from 'src/interfaces/bcmr-v2.schema'
+import { Registry as Bcmr, IdentitySnapshot, OffChainRegistryIdentity, URIs } from 'src/interfaces/bcmr-v2.schema'
 import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
@@ -180,9 +235,34 @@ const registry = ref<Bcmr | null>(null)
 const registryUrl = ref<string>('')
 const newOwnerAddress = ref<string>('')
 
-const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release'>('authchain-publish')
+const menu = ref<'' | 'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release'>('')
 const loading = ref<boolean>(true)
 
+const registryIdentity = computed<OffChainRegistryIdentity | string | undefined>(() => registry.value?.registryIdentity)
+
+/**
+ * This might be too expensive we should only concern ourselves with the IdentitySnapshot of the registryIdentity
+ */
+const identities = computed<Bcmr['identities'] | null>(() => {
+  if (typeof (registryIdentity.value) === 'string' && registry.value?.identities) {
+    return registry.value.identities
+  }
+  return null
+})
+
+const identitySnapshotHistoryTimestamp = computed<string | null>(() => {
+  if (identities.value && typeof (registryIdentity.value) === 'string') {
+    return Object.keys(identities.value[registryIdentity.value])[0]
+  }
+  return null
+})
+
+const identitySnapshot = computed<IdentitySnapshot | null>(() => {
+  if (identities.value && identitySnapshotHistoryTimestamp.value && typeof (registryIdentity.value) === 'string') {
+    return identities.value[registryIdentity.value][identitySnapshotHistoryTimestamp.value]
+  }
+  return null
+})
 
 const token = computed<{ id?: string, creator?: string, identity?: IdentitySnapshot | null }>(() => {
   const { creator, tokenId } = route.query
