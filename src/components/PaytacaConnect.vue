@@ -23,7 +23,7 @@ const $q = useQuasar()
 const router = useRouter()
 const { user } = useStore()
 const connected = ref(false)
-
+const canceller = ref()
 const connect = async () => {
   const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -34,15 +34,19 @@ const connect = async () => {
       dismiss()
       return
     }
-
+    dismiss()
+    $q.notify({ message: 'Connected', color: 'positive', timeout: 500 })
     user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
     connected.value = true
     const WalletClass = getWalletClass()
     const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
     user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
     user.wallet = wallet
+    canceller.value = wallet.watchAddress(async () => {
+      user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
+    })
   }
-  dismiss()
+
 }
 
 const disconnect = async () => {
@@ -51,6 +55,7 @@ const disconnect = async () => {
   user.connectedPaytacaAddress = ''
   connected.value = false
   router.push('/')
+  canceller.value()
 }
 
 
