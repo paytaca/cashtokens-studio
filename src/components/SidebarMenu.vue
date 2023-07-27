@@ -47,21 +47,10 @@ const menu = computed<any[]>(() => {
           icon: 'token',
           children: [
             {
-              label: 'Manage FTs',
-              href: '/token/browse/fungible',
-              icon: 'token',
-            },
-            {
-              label: 'Manage NFTs',
-              href: '/token/browse/nonfungible',
-              icon: 'token',
-            },
-            {
-              label: 'Manage FNFTs',
-              href: '/token/browse/hybrid',
+              label: 'View Owned Identities',
+              href: '/token/identities',
               icon: 'token',
             }
-
           ]
         }
       ]
