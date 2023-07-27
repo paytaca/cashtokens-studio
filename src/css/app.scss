@@ -18,3 +18,31 @@ code {
   word-break: normal;
   border-radius: 5px;
 }
+
+.token-thumbnail {
+  cursor: pointer;
+  width: 12em;
+  height: 12em;
+}
+
+.token-thumbnail:hover {
+  background-color: lighten($primary, 50);
+}
+
+.q-dark.token-thumbnail:hover {
+  background-color: lighten($dark, 5);
+}
+
+@media (max-width: $breakpoint-xs-max) {
+  .token-thumbnail {
+    min-width: 12em;
+    min-height: 12em;
+  }
+}
+
+@media (max-width: $breakpoint-sm-max) {
+  .token-thumbnail {
+    min-width: 13em;
+    min-height: 13em;
+  }
+}
