@@ -2,24 +2,28 @@
 <template>
   <div class="row">
     <div class="col q-gutter-sm row">
-      <div class="col-xs-12 row justify-between">
-        <div>{ BCMR }</div>
-        <div>
-          <q-btn @click="changeEditorMode('readonly')" round flat dense size="xs" icon="format_clear">
+      <div class="col-xs-12 row justify-start items-center q-gutter-sm">
+        <div class="q-my-sm">
+          <i class="text-h6">BCMR</i>
+        </div>
+        <div class="q-gutter-sm">
+          <q-btn @click="changeEditorMode('readonly')" size="sm" icon="auto_stories" color="cyan-6" round dense>
             <q-tooltip>Read Only</q-tooltip>
           </q-btn>
-          <q-btn @click="changeEditorMode('write')" round flat dense size="xs" icon="edit">
-            <q-tooltip>Edit</q-tooltip>
-          </q-btn>
-          <q-btn @click="initRegistry" round flat dense size="xs" icon="restart_alt">
+          <q-btn @click="initRegistry" size="sm" icon="restart_alt" color="cyan-7" round dense>
             <q-tooltip>Clear Changes</q-tooltip>
           </q-btn>
-          <q-btn @click="changeEditorMode('readonly')" round flat dense size="xs" hint="Advance">
-            {}
-            <q-tooltip>Advance</q-tooltip>
+          <q-btn @click="changeEditorMode('write')" size="sm" icon="edit" color="cyan-8" round dense>
+            <q-tooltip>Edit</q-tooltip>
+          </q-btn>
+          <q-btn @click="changeEditorMode('readonly')" size="sm" color="cyan-9" round dense>
+            {<q-icon name="edit"></q-icon>}
+            <q-tooltip>Edit raw bcmr</q-tooltip>
+          </q-btn>
+          <q-btn @click="() => console.log('DOWNLOADING')" size="sm" color="cyan-9" icon="download" round dense>
+            <q-tooltip>Download</q-tooltip>
           </q-btn>
         </div>
-
       </div>
       <q-markup-table class="col-xs-12" flat bordered>
         <thead>
@@ -159,7 +163,8 @@
               <td>Status</td>
               <td>
                 <q-skeleton v-if="loading" type="text" width="100%"></q-skeleton>
-                <span v-if="mode === 'readonly'">{{ identitySnapshot?.status || 'active' }}</span>
+                <span v-if="mode === 'readonly'" class="identity-snapshot-status"
+                  :class="identitySnapshot?.status || 'active'">{{ identitySnapshot?.status || 'active' }}</span>
                 <q-input v-else v-model="identitySnapshot.status" filled dense></q-input>
               </td>
             </tr>
@@ -262,7 +267,6 @@ const changeEditorMode = (m: 'readonly' | 'write') => {
 
 const initRegistry = () => {
   r.value = Object.assign({}, props.bcmr || RegistrySample)
-  console.log(props.bcmr)
   // init registryIdentity
   registryIdentity.value = r.value.registryIdentity
   initIdentities()
@@ -295,14 +299,26 @@ const initIdentitySnapshot = () => {
 
 </script>
 
-<!-- <style lang="scss" scoped>
-.q-field--dense .q-field__control,
-.q-field--dense .q-field__marginal {
-  height: 25px;
+<style lang="scss" scoped>
+.identity-snapshot-status.active {
+  color: $positive;
 }
 
-
-.q-field__label {
-  left: unset;
+.identity-snapshot-status.inactive {
+  color: $negative;
 }
-</style> -->
+
+.identity-snapshot-status.burned {
+  color: $grey-10;
+}
+
+// .q-field--dense .q-field__control,
+// .q-field--dense .q-field__marginal {
+//   height: 25px;
+// }
+
+
+// .q-field__label {
+//   left: unset;
+// }
+</style>
