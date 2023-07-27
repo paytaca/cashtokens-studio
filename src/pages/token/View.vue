@@ -100,8 +100,7 @@
                   label="Entry Registry URL" dense square standout hide-bottom-space></q-input>
               </div>
               <div class="col-xs-12 q-my-xs">
-                <q-checkbox dense v-model="newRegistryUrlSameAsOld" label="Same as last publication URL"
-                  color="primary" />
+                <q-checkbox dense v-model="newRegistryUrlSameAsOld" label="Same as last publication" color="primary" />
               </div>
             </div>
             <div class="row items-top q-col-gutter-none q-my-md">
