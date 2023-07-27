@@ -4,26 +4,26 @@
   </q-btn>
 </template>
 <style lang="scss" scoped>
-.token-thumbnail {
-  cursor: pointer;
-  width: 10em;
-  height: 10em;
-}
+// .token-thumbnail {
+//   cursor: pointer;
+//   width: 10em;
+//   height: 10em;
+// }
 
-.token-thumbnail:hover {
-  background-color: lighten($primary, 50);
-}
+// .token-thumbnail:hover {
+//   background-color: lighten($primary, 50);
+// }
 
-.q-dark.token-thumbnail:hover {
-  background-color: lighten($dark, 5);
-}
+// .q-dark.token-thumbnail:hover {
+//   background-color: lighten($dark, 5);
+// }
 
-@media (max-width: $breakpoint-xs-max) {
-  .token-thumbnail {
-    min-width: 10em;
-    min-height: 10em;
-  }
-}
+// @media (max-width: $breakpoint-xs-max) {
+//   .token-thumbnail {
+//     min-width: 10em;
+//     min-height: 10em;
+//   }
+// }
 </style>
 
 
