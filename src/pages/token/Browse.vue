@@ -91,7 +91,6 @@ onMounted(async () => {
 
 const loadTokenIdentityOutputs = async (creatorAddress: string, tokenType?: TokenType) => {
   loadingRegistries.value = true
-  $q.notify({ message: 'Loading token identities', spinner: true, color: 'info' })
   const IDENTITY = '6964656e74697479'
   const WalletClass = getWalletClass()
   const creatorWallet = await WalletClass.watchOnly(creatorAddress)
