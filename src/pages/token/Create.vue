@@ -15,24 +15,23 @@
         </div>
         <q-separator :dark="$q.dark.isActive" class="q-mb-lg" />
         <q-form v-if="options.currentView === 'create-token'" class="q-gutter-md q-pa-sm">
-          <i class="row text-h6 q-mb-sm">Token Details</i>
-          <q-input class="row" :filled="true" dark:color="lime" v-model="creator" label="Creator's address"
-            aria-disabled="true" disable dense square />
+          <q-input class="row" :filled="true" dark:color="lime" v-model="creator" label="Recipient" aria-disabled="true"
+            disable dense square />
           <div class="row">
-            <q-select class="col q-mb-sm ellipsis" :filled="true" bottom-slots v-model="token.tokenId"
+            <q-select class="col-12 ellipsis " :filled="true" bottom-slots v-model="token.tokenId"
               :options="token.idOptions" label="Token ID" :disable="!token.idOptions || token.idOptions.length === 0"
-              dense square>
-              <template v-slot:hint>
-                <i v-if="!token.tokenId">{{ tokenIdInputHint }}</i>
-                <q-btn v-else size="xs" dense @click="copyTokenId">copy</q-btn>
-              </template>
+              dense square hide-bottom-space>
               <q-inner-loading :showing="isPopulatingTokenIdOptions">
                 <q-spinner-facebook size="sm" color="primary" />
               </q-inner-loading>
             </q-select>
+            <div class="col-12">
+              <i class="text-caption">{{ tokenIdInputHint }}</i><q-btn size="xs" class="q-mx-sm text-caption"
+                @click.stop="copyText(token.tokenId)" flat dense>COPY</q-btn>
+            </div>
           </div>
           <q-input v-if="token.tokenType === 'fungible' || token.tokenType === 'hybrid'" class="row" :filled="true"
-            dark:color="lime" v-model="token.amount" min="1" max="9223372036854700000" label="Genesis Supply"
+            dark:color="lime" v-model="token.amount" min="1" :max="constants.MAX_FUNGIBLE_AMOUNT" label="Genesis Supply"
             aria-disabled="true" dense square>
             <template v-slot:prepend>
               <q-icon name="pin"></q-icon>
@@ -40,7 +39,7 @@
           </q-input>
           <q-select v-if="token.tokenType === 'nonfungible' || token.tokenType === 'hybrid'" class="q-mb-sm"
             :filled="true" bottom-slots v-model="token.capability" :options="['minting', 'mutable', 'none']"
-            label="Capability" dense square>
+            label="Capability" dense square hide-bottom-space>
             <q-inner-loading :showing="isPopulatingTokenIdOptions">
               <q-spinner-facebook size="sm" color="primary" />
             </q-inner-loading>
@@ -58,7 +57,7 @@
           </div>
           <div v-if="options.publishIdentityOutput" class="row q-pa-md"
             style="border-style: solid; border-width: 1px; border-radius: 5px;">
-            <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
+            <!-- <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
               label="Registry URL" class="col-12" dense square></q-input>
             <div class="col-12 justify-end q-gutter-sm">
               <q-btn color="primary" size="xs" @click="fetchRegistry">
@@ -69,8 +68,32 @@
                 Create New Registry
                 <q-tooltip>Create a new registry and use the registry URL as value </q-tooltip>
               </q-btn>
+            </div> -->
+            <div class="col-12 row justify-center">
+              <div class="col-xs-12">
+                <div class="row items-top q-col-gutter-none">
+                  <div class="col-xs-12">
+                    <q-input :filled="true" v-model="options.data.publishIdentityOutput.registryUrl" type="url"
+                      :rules="[v => v.length > 7 || 'Invalid URL']" label="The BCMR's URL" dense square standout
+                      hide-bottom-space></q-input>
+                  </div>
+                </div>
+                <div class="row items-top q-col-gutter-none q-my-md">
+                  <div class="col-xs-12">
+                    <q-input :filled="true" v-model="options.data.publishIdentityOutput.contentHash" type="url"
+                      label="The BCMR's content hash" dense square>
+                    </q-input>
+                  </div>
+                  <div v-if="options.data.publishIdentityOutput.registryUrl" class="col-xs-12">
+                    <q-btn color="primary" size="md" icon="cloud_download"
+                      label="Compute hash of the contents from the provided URL" no-caps flat dense
+                      @click="() => initBcmrContentHashFromRemote(options.data.publishIdentityOutput.registryUrl)"></q-btn>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
           <div v-if="token.tokenId" class="row items-center">
             <q-checkbox :filled="true" dark:color="lime" v-model="options.useMintingBaton" size="xs"
               label="Use Minting Baton">
@@ -87,21 +110,21 @@
           </div>
         </q-form>
         <!-- Bcmr Create Form Wizard -->
-        <div v-if="options.currentView === 'bcmr-wizard'" class="q-pa-sm">
+        <!-- <div v-if="options.currentView === 'bcmr-wizard'" class="q-pa-sm">
           <i class="row text-h6 q-mb-sm">
             Create BCMR
           </i>
           <BcmrBasicFormWizard type="fungible" :token-id-options="token.idOptions" :bcmr="registry"
             :authbase="token.tokenId" @finish="onBcmrCreationFinish"
             @cancel="() => options.currentView = 'create-token'" />
-        </div>
-        <div v-if="options.currentView === 'bcmr-editor'" class="q-pa-sm">
+        </div> -->
+        <!-- <div v-if="options.currentView === 'bcmr-editor'" class="q-pa-sm">
           <div class="row justify-between">
             <i class="text-h6 q-mb-sm">Review BCMR</i>
             <q-btn icon="close" flat rounded size="sm" @click="options.currentView = 'create-token'"></q-btn>
           </div>
           <JsonEditor v-model="registry" :darkTheme="$q.dark.isActive" />
-        </div>
+        </div> -->
       </div>
     </div>
   </q-page>
@@ -109,7 +132,7 @@
 
 <script setup lang="ts">
 import { useRoute, useRouter } from 'vue-router';
-import JsonEditor from 'vue3-ts-jsoneditor'
+// import JsonEditor from 'vue3-ts-jsoneditor'
 import { onMounted, ref, computed, watch } from 'vue'
 import { sha256, utf8ToBin, decodeTransaction, binToHex } from '@bitauth/libauth'
 import { hexToBin, BCMR, OpReturnData, SendRequest, TokenSendRequest, UtxoI, TokenI, Wallet } from 'mainnet-js'
@@ -120,9 +143,14 @@ import getWalletClass from 'src/utils/getWalletClass'
 import { Registry as BcmrRegistry } from 'src/interfaces'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import MintingCovenant from 'src/contracts/MintingCovenant'
-import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
+// import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
+import { useQuasar } from 'quasar';
+import fetchBcmrContentHash from 'src/utils/fetchBcmrContentHash';
+import copyText from 'src/utils/copyText';
+import constants from 'src/constants'
 
 defineOptions({ name: 'TokenCreate' })
+const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const { user, ui } = useStore()
@@ -145,10 +173,12 @@ const token = ref<{
   tokenType: 'fungible',
   tokenId: '',
   idOptions: [],
-  amount: '9223372036854700000',
+  amount: constants.MAX_FUNGIBLE_AMOUNT,
   capability: undefined,
   commitment: undefined
 })
+
+
 
 const options = ref<{
   currentView: 'create-token' | 'bcmr-wizard' | 'bcmr-editor',
@@ -157,15 +187,27 @@ const options = ref<{
   displayBcmrEditor: boolean,
   publishIdentityOutput: boolean,
   useAuthChainGuard: boolean,
-  useMintingBaton: boolean
+  useMintingBaton: boolean,
+  data: {
+    publishIdentityOutput: {
+      registryUrl: string,
+      contentHash: string
+    }
+  }
 }>({
   currentView: 'create-token',
   displayRegistryCreateWizard: false,
   displayFetchOrCreateDialog: false,
   displayBcmrEditor: false,
-  publishIdentityOutput: false,
+  publishIdentityOutput: true,
   useAuthChainGuard: true,
-  useMintingBaton: false
+  useMintingBaton: true,
+  data: {
+    publishIdentityOutput: {
+      registryUrl: '',
+      contentHash: ''
+    }
+  }
 })
 
 watch(() => options.value.publishIdentityOutput, (yes) => {
@@ -196,41 +238,49 @@ onMounted(async () => {
     const txIds = (await creatorWallet.getAddressUtxos())?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
     if (txIds.length > 0) {
       token.value.idOptions = txIds?.map((utxo: UtxoI) => utxo.txid).slice(0, 9)
+      token.value.tokenId = token.value.idOptions[0]
     }
   }
 })
 
-const copyTokenId = () => {
-  navigator?.clipboard.writeText(token.value.tokenId)
-}
-// methods
-const fetchRegistry = async () => {
+/**
+ * Get's the content
+ */
+const initBcmrContentHashFromRemote = async (url: string) => {
   try {
-    ui.busy({ text: `Fetching registry from ${registryUrl.value}`, type: 'info' })
-    const r = await fetch(registryUrl.value)
-    registry.value = await r.json()
-    registryObtainedFrom.value = 'fetch'
-    options.value.displayFetchOrCreateDialog = false
-    // TODO:Check if this token.tokenId's identity is in the registry
-    ui.idle()
-    ui.setMessage({ text: 'Registry download success', type: 'success', timeout: 5 })
+    options.value.data.publishIdentityOutput.contentHash = await fetchBcmrContentHash(url) || ''
   } catch (error) {
-    ui.setMessage({ text: 'Failed to fetch registry, make sure the URI is correct', type: 'error', timeout: 5 })
     console.log(error)
   }
 }
+// methods
+// const fetchRegistry = async () => {
+//   try {
+//     ui.busy({ text: `Fetching registry from ${registryUrl.value}`, type: 'info' })
+//     const r = await fetch(registryUrl.value)
+//     registry.value = await r.json()
+//     registryObtainedFrom.value = 'fetch'
+//     options.value.displayFetchOrCreateDialog = false
+//     // TODO:Check if this token.tokenId's identity is in the registry
+//     ui.idle()
+//     ui.setMessage({ text: 'Registry download success', type: 'success', timeout: 5 })
+//   } catch (error) {
+//     ui.setMessage({ text: 'Failed to fetch registry, make sure the URI is correct', type: 'error', timeout: 5 })
+//     console.log(error)
+//   }
+// }
 
-const displayRegistryCreateWizard = async () => {
-  options.value.displayFetchOrCreateDialog = false
-  options.value.currentView = 'bcmr-wizard'
-}
+// const displayRegistryCreateWizard = async () => {
+//   options.value.displayFetchOrCreateDialog = false
+//   options.value.currentView = 'bcmr-wizard'
+// }
 
-const onBcmrCreationFinish = (r: BcmrRegistry) => {
-  options.value.currentView = 'create-token'
-  registry.value = r;
-  registryObtainedFrom.value = 'create'
-  console.log(registry.value)
-}
+// const onBcmrCreationFinish = (r: BcmrRegistry) => {
+//   options.value.currentView = 'create-token'
+//   registry.value = r;
+//   registryObtainedFrom.value = 'create'
+//   console.log(registry.value)
+// }
 
 /**
  * Prepare genesis request based on some selected options
@@ -290,84 +340,92 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
  */
 const submitTokenGenesisTransaction = async () => {
 
-  if (options.value.publishIdentityOutput && !registry.value) {
-    return ui.setMessage({ type: 'error', text: 'Missing registry value. Did you forgot to load or create registry?', timeout: 5 })
+  if (options.value.publishIdentityOutput
+    && (!options.value.data.publishIdentityOutput.registryUrl
+      || !options.value.data.publishIdentityOutput.contentHash)) {
+    return $q.notify({ message: 'Error!Registry URL and content hash required when publishing identity output', color: 'negative', timeout: 1000 })
   }
 
-  ui.busy({ text: `Creating ${token.value.tokenType} token`, type: 'info' })
-  if (creator.value) {
+  if (!creator.value) {
+    return $q.notify({ message: 'Not a valid creator address', color: 'negative', timeout: 1000 })
+  }
 
-    const wallet = await getWalletClass().watchOnly(creator.value)
+  let closeNotif = $q.notify({ message: `Creating new ${token.value.tokenType} token`, color: 'info', timeout: 0 })
 
-    // Prepare transaction and request signature
-    let txSigningResult
-    try {
-      const tokenGenesisRequest = await prepareGenesisRequest(wallet)
-      // use the selected utxo as genesis input
-      const genesisInput = (await wallet.getAddressUtxos())
-        .filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
+  const wallet = await getWalletClass().watchOnly(creator.value)
+  // Prepare transaction and request signature
+  let txSigningResult
+  try {
+    const tokenGenesisRequest = await prepareGenesisRequest(wallet)
+    // use the selected utxo as genesis input
+    const genesisInput = (await wallet.getAddressUtxos())
+      .filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === token.value.tokenId)[0]
 
-      const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(
-        tokenGenesisRequest,
-        false,
-        {
-          tokenOperation: 'genesis',
-          checkTokenQuantities: false,
-          buildUnsigned: true,
-          utxoIds: [genesisInput],
-          ensureUtxos: [genesisInput]
-        }
-      )
-
-      let decoded = decodeTransaction(encodedTransaction)
-
-      if (typeof decoded === 'string') {
-        return ui.setMessage({ type: 'error', text: decoded })
+    const { encodedTransaction, sourceOutputs } = await wallet.encodeTransaction(
+      tokenGenesisRequest,
+      false,
+      {
+        tokenOperation: 'genesis',
+        checkTokenQuantities: false,
+        buildUnsigned: true,
+        utxoIds: [genesisInput],
+        ensureUtxos: [genesisInput]
       }
+    )
 
-      ui.busy({ type: 'info', text: 'Waiting for creator\'s signature' })
+    let decoded = decodeTransaction(encodedTransaction)
 
-      txSigningResult = await window.paytaca.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [...sourceOutputs],
-        broadcast: false,
-        userPrompt: `Create token genesis ${options.value.publishIdentityOutput ? '(With Baton)' : ''}`
-      })
+    if (typeof decoded === 'string') {
+      return ui.setMessage({ type: 'error', text: decoded })
+    }
 
-      if (!txSigningResult) {
-        // User rejected(did not sign) do nothing
-        ui.idle()
-        ui.clearMessage()
-        return
-      }
 
-    } catch (error) {
+    closeNotif()
+    closeNotif = $q.notify({ message: 'Waiting for signature', color: 'info', timeout: 0 })
+    txSigningResult = await window.paytaca.signTransaction({
+      transaction: decoded,
+      sourceOutputs: [...sourceOutputs],
+      broadcast: false,
+      userPrompt: `Create token genesis ${options.value.publishIdentityOutput ? '(With Baton)' : ''}`
+    })
+
+    if (!txSigningResult) {
+      // User rejected(did not sign) do nothing
+      closeNotif()
+      return
+    }
+
+  } catch (error) {
+    console.log(error)
+    if (error instanceof Error) {
       console.log(error)
-      if (error instanceof Error) {
-        console.log(error)
-        ui.setMessage({ type: 'error', text: 'Error creating FT Token' })
-      }
-      return
+      ui.setMessage({ type: 'error', text: 'Error creating FT Token' })
+      closeNotif()
+      $q.notify({ message: 'Error signing request', color: 'negative', timeout: 2000 })
     }
+    return
+  }
 
-    // User signed, submit transaction
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-      const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true)
-      ui.idle()
-      ui.setMessage({ text: `Success! FT Created Tx = ${tx}`, type: 'success', timeout: 20 })
-
-      await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
-
-      router.push(`/token/view?tokenId=${token.value.tokenId}&creator=${creator.value}`)
-    } catch (error) {
-      console.log('Error creating FT Token during submission of txn', error)
-      return
+  // User signed, submit transaction
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true)
+    $q.notify({ message: `Success! Token Created. Tx = ${tx}`, type: 'success', timeout: 2000 })
+    const ac = await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
+    router.push(`/token/view?tokenId=${token.value.tokenId}&creator=${creator.value}`)
+    closeNotif = $q.notify({ message: 'Trying to build authchain for this token', type: 'info', timeout: 0 })
+    if (ac) {
+      $q.notify({ message: 'Authchain successfully built for this token', type: 'success', timeout: 1000 })
     }
+  } catch (error) {
+    console.log('Error creating FT Token during submission of txn', error)
+  } finally {
+    closeNotif()
+  }
 
-  } else {
-    ui.idle()
-    ui.setMessage({ type: 'error', text: 'Invalid owner address', timeout: 8 })
+
+  if (closeNotif) {
+    closeNotif()
   }
 }
 
