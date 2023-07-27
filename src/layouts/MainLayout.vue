@@ -26,9 +26,12 @@
       </div>
       <SidebarMenu />
     </q-drawer>
-    <q-scroll-area style="height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }" :thumb-style="{ width: '0px' }">
+    <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }"
+      :thumb-style="{ width: '0px' }">
       <q-page-container>
         <router-view />
+        <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
+          label-style="font-size: 1.1em" />
       </q-page-container>
     </q-scroll-area>
   </q-layout>
