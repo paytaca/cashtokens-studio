@@ -1,0 +1,4 @@
+export default {
+  MIN_TOKEN_VALUE: 800,
+  IDENTITY: '6964656e74697479'
+}
