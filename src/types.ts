@@ -32,7 +32,11 @@ export type UserState = {
   connectedPaytacaAddress: string | undefined,
   connectedPaytacaWalletBchBalance: string | number,
   createdFts: any[],
-  wallet: Wallet|null
+  wallet: Wallet|null,
+  /**
+   * Utxos acceptable as authchain authbases, zeroeth decendant outputs
+   */
+  genesisInputs: []
 }
 
 

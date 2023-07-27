@@ -7,7 +7,8 @@ export const useUser = defineStore('user', {
     connectedPaytacaAddress: '',
     connectedPaytacaWalletBchBalance: '0',
     createdFts: [],
-    wallet: null
+    wallet: null,
+    genesisInputs: []
   }),
 
   getters: {
