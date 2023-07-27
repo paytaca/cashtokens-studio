@@ -37,8 +37,8 @@ const menu = computed<any[]>(() => {
           icon: 'add',
         },
         {
-          label: 'Create FNFT',
-          href: '/token/create/fnft',
+          label: 'Create FNFT hybrid',
+          href: '/token/create/hybrid',
           icon: 'add',
         },
         {
