@@ -1,4 +1,4 @@
-export default async (url: string):Promise<JSON|undefined> => {
+export default async (url: string):Promise<string|undefined> => {
   try {
     const r = await fetch(url)
     return await r.json()
