@@ -3,65 +3,56 @@
   <q-page class="q-py-xl">
     <div class="row justify-center">
       <div class="col-xs-11 col-sm-10">
-        <div class="row items-center q-gutter-lg">
-          <div class="col">
-            <!-- if offchain registry identity -->
-            <!-- if onchain registry identity-->
-            <div v-if="typeof (registryIdentity) === 'string' || loading" class="row">
-              <div class="col-xs-12 col-sm-2 row items-center justify-center">
-                <q-card v-if="identitySnapshot?.uris?.icon || loading">
-                  <q-skeleton v-if="loading" size="6em" type="QAvatar" round>
-                  </q-skeleton>
-                  <q-avatar v-else size="6em">
-                    <img :src="identitySnapshot?.uris?.icon" alt="">
-                  </q-avatar>
-                </q-card>
+        <q-banner v-if="identitySnapshot?.token" class="row q-mb-lg" rounded
+          :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+          <template v-slot:avatar>
+            <img :src="identitySnapshot?.uris?.icon" style="width: 100px; height: 100px">
+          </template>
+          <q-list dense>
+            <q-item class="row items-center justify-left">
+              <span class="col-2">Category:</span>
+              <div class="col-10">
+                <TokenCategory :token-id="identitySnapshot.token.category" />
               </div>
 
-              <!-- TokenCategory -->
-              <div v-if="identitySnapshot?.token" class="col-xs-12 col-sm-10 q-pa-sm q-pl-xl items-center">
-                <div>
-                  Category:
-                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
-                  <code>{{ identitySnapshot.token.category.replace(identitySnapshot.token.category.substring(5, 59), '...') }}</code>
-                  <q-btn icon="content_copy" size="xs" @click.stop="() => console.log('copying')" rounded flat dense>
-                  </q-btn>
-                </div>
-                <div>
-                  Symbol:
-                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
-                  <q-chip color="orange" outline>
-                    <strong>{{ identitySnapshot.token.symbol }}</strong>
-                  </q-chip>
-                </div>
-                <div>
-                  Decimals:
-                  <q-skeleton v-if="loading" type="text" width="60%"></q-skeleton>
-                  {{ identitySnapshot.token.decimals || 0 }}
-                </div>
+            </q-item>
+            <q-item class="row items-center">
+              <span class="col-2">Symbol:</span>
+              <div class="col-10">
+                <q-chip color="orange" outline>
+                  <strong>{{ identitySnapshot.token.symbol }}</strong>
+                </q-chip>
               </div>
+            </q-item>
+            <q-item class="row items-center">
+              <span class="col-2">Decimals:</span>
+              <span class="col-10" color="orange" outline>
+                <strong>{{ identitySnapshot.token.decimals }}</strong>
+              </span>
+            </q-item>
+          </q-list>
+          <template v-slot:action>
+            <div class="row justify-end">
+              <q-btn size="md" color="primary" flat dense no-caps @click="menu = 'main'">View BCMR</q-btn>
+              <q-btn icon="more_vert" size="md" round flat dense>
+                <q-menu>
+                  <q-list>
+                    <q-item clickable v-close-popup @click="menu = 'authchain-last-publication'">
+                      Last Published Registry
+                    </q-item>
+                    <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry</q-item>
+                    <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
+                    <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity Output</q-item>
+                    <q-item clickable v-close-popup @click="menu = 'authchain-release'">Release Identity Output</q-item>
+                    <q-item clickable v-close-popup @click="menu = 'main'">
+                      View BCMR
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
             </div>
-          </div>
-        </div>
-        <div class="row justify-end">
-          <q-btn size="md" color="primary" flat dense no-caps @click="menu = 'main'">View BCMR</q-btn>
-          <q-btn icon="more_vert" size="md" round flat dense>
-            <q-menu>
-              <q-list>
-                <q-item clickable v-close-popup @click="menu = 'authchain-last-publication'">
-                  Last Published Registry
-                </q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-publish'">Publish Registry</q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-transfer'">Transfer Ownership</q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-burn'">Burn Identity Output</q-item>
-                <q-item clickable v-close-popup @click="menu = 'authchain-release'">Release Identity Output</q-item>
-                <q-item clickable v-close-popup @click="menu = 'main'">
-                  View BCMR
-                </q-item>
-              </q-list>
-            </q-menu>
-          </q-btn>
-        </div>
+          </template>
+        </q-banner>
         <q-separator></q-separator>
         <!-- Token Registry Action Pane -->
         <div v-if="menu == 'main'" class="row justify-center q-gutter-sm">
@@ -190,6 +181,7 @@ import { Registry as Bcmr, IdentitySnapshot, OffChainRegistryIdentity, URIs } fr
 import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
+import TokenCategory from 'src/components/TokenCategory.vue'
 import BcmrEditor from 'src/components/BcmrEditor.vue'
 import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
 
