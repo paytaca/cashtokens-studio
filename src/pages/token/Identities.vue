@@ -96,6 +96,7 @@ const downloadAuthheads = async () => {
     })
   })
   await authHeadPromise
+  console.log(authheads.value)
 }
 
 /**
@@ -153,8 +154,10 @@ const scanUserWalletForIdentityOutputs = async () => {
     const authChainGuard = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorPkh, user.wallet.network)
     const autchainGuardWallet = await getWalletClass().watchOnly(authChainGuard.contract.getTokenDepositAddress())
     identityOutputs.value = (await autchainGuardWallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.tokenId) && u.token?.commitment == constants.IDENTITY)
+    console.log('IDENTITY OUTPUTS', identityOutputs.value)
     if (identityOutputs.value.length === 0) {
-      return $q.notify({ message: 'No token identity output found on your address!', color: 'warning', timeout: 0 })
+      ui.hideInnerLoader()
+      return $q.notify({ message: 'No token identity output found on your address!', color: 'warning', timeout: 1000 })
     }
     createIdentityOutputThumbnails(identityOutputs.value)
   }
