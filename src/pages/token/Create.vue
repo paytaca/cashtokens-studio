@@ -3,7 +3,18 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10 col-lg-8">
         <div class="row justify-between items-end q-mb-sm">
-          <span class="col-6 text-h5"><q-icon name="token" /> Create Token</span>
+          <q-toolbar>
+            <q-icon name="token" size="md" flat round dense />
+            <q-toolbar-title :class="$q.dark.isActive ? 'text-grey-4' : ''">
+              Create Token
+            </q-toolbar-title>
+            <q-btn label="FT" color="warning" class="q-mr-sm" no-caps :outline="route.params.tokenType === 'fungible'"
+              :flat="route.params.tokenType !== 'fungible'" dense @click="router.push('/token/create/fungible')" />
+            <q-btn label="NFT" color="warning" class="q-mr-sm" no-caps :outline="route.params.tokenType === 'nonfungible'"
+              :flat="route.params.tokenType !== 'nonfungible'" dense @click="router.push('/token/create/nonfungible')" />
+            <q-btn label="FNFT" color="warning" no-caps :outline="route.params.tokenType === 'hybrid'"
+              :flat="route.params.tokenType !== 'hybrid'" dense @click="router.push('/token/create/hybrid')" />
+          </q-toolbar>
           <div v-if="registry" class="col-6 row justify-end items-center q-gutter-sm">
             <div class="text-weight-thin">{BCMR}</div>
             <q-btn type="a" :href="`data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(registry))}`"
@@ -85,7 +96,7 @@
                     </q-input>
                   </div>
                   <div v-if="options.data.publishIdentityOutput.registryUrl" class="col-xs-12">
-                    <q-btn color="primary" size="md" icon="cloud_download"
+                    <q-btn color="primary" size="sm" icon="cloud_download"
                       label="Compute hash of the contents from the provided URL" no-caps flat dense
                       @click="() => initBcmrContentHashFromRemote(options.data.publishIdentityOutput.registryUrl)"></q-btn>
                   </div>
@@ -145,7 +156,7 @@ import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import MintingCovenant from 'src/contracts/MintingCovenant'
 // import BcmrBasicFormWizard from 'src/components/BcmrBasicFormWizard.vue'
 import { useQuasar } from 'quasar';
-import fetchBcmrContentHash from 'src/utils/fetchBcmrContentHash';
+import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
 import copyText from 'src/utils/copyText';
 import constants from 'src/constants'
 
@@ -328,8 +339,7 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
   }
   requests.push(...genesisTokenRequest)
   if (options.value.publishIdentityOutput === true) {
-    let contentHash = sha256.hash(utf8ToBin(JSON.stringify(registry.value)))
-    requests.push(OpReturnData.fromArray(['BCMR', contentHash, registryUrl.value.replace('https://', '')]))
+    requests.push(OpReturnData.fromArray(['BCMR', options.value.data.publishIdentityOutput.contentHash, options.value.data.publishIdentityOutput.contentHash.replace('https://', '')]))
   }
 
   return requests
@@ -376,7 +386,7 @@ const submitTokenGenesisTransaction = async () => {
     let decoded = decodeTransaction(encodedTransaction)
 
     if (typeof decoded === 'string') {
-      return ui.setMessage({ type: 'error', text: decoded })
+      return $q.notify({ message: 'Error!' + decoded, color: 'error', timeout: 3000 })
     }
 
 
