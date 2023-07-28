@@ -41,6 +41,7 @@
                 @click.stop="copyText(token.tokenId)" flat dense>COPY</q-btn>
             </div>
           </div>
+
           <q-input v-if="token.tokenType === 'fungible' || token.tokenType === 'hybrid'" class="row" :filled="true"
             dark:color="lime" v-model="token.amount" min="1" :max="constants.MAX_FUNGIBLE_AMOUNT" label="Genesis Supply"
             aria-disabled="true" dense square>
@@ -66,7 +67,7 @@
               <q-tooltip>Include a BCMR publication output</q-tooltip>
             </q-btn>
           </div>
-          <div v-if="options.publishIdentityOutput" class="row q-pa-md"
+          <div v-if="token.tokenId && options.publishIdentityOutput" class="row q-pa-md"
             style="border-style: solid; border-width: 1px; border-radius: 5px;">
             <!-- <q-input :filled="true" v-model="registryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
               label="Registry URL" class="col-12" dense square></q-input>
@@ -80,7 +81,7 @@
                 <q-tooltip>Create a new registry and use the registry URL as value </q-tooltip>
               </q-btn>
             </div> -->
-            <div class="col-12 row justify-center">
+            <div v-if="options.publishIdentityOutput" class="col-12 row justify-center">
               <div class="col-xs-12">
                 <div class="row items-top q-col-gutter-none">
                   <div class="col-xs-12">
@@ -98,7 +99,7 @@
                   <div v-if="options.data.publishIdentityOutput.registryUrl" class="col-xs-12">
                     <q-btn color="primary" size="sm" icon="cloud_download"
                       label="Compute hash of the contents from the provided URL" no-caps flat dense
-                      @click="() => initBcmrContentHashFromRemote(options.data.publishIdentityOutput.registryUrl)"></q-btn>
+                      @click="() => computeBcmrHashFromRemote(options.data.publishIdentityOutput.registryUrl)"></q-btn>
                   </div>
                 </div>
               </div>
@@ -189,8 +190,6 @@ const token = ref<{
   commitment: undefined
 })
 
-
-
 const options = ref<{
   currentView: 'create-token' | 'bcmr-wizard' | 'bcmr-editor',
   displayRegistryCreateWizard: boolean,
@@ -264,6 +263,11 @@ const initBcmrContentHashFromRemote = async (url: string) => {
     console.log(error)
   }
 }
+
+const computeBcmrHashFromRemote = (url: string) => {
+  const end = $q.notify({ message: 'Checking contents of BCMR from URL', timeout: 0, color: 'info' })
+  initBcmrContentHashFromRemote(url).then(() => { end() }).catch(() => { end() })
+}
 // methods
 // const fetchRegistry = async () => {
 //   try {
@@ -301,6 +305,7 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
   let owner: string = creator.value as string
   let authchainIdentityOutputRecipient = owner
   let authchainGuard = null
+  console.log('OPTIONS', options.value.data)
   if (options.value.useAuthChainGuard) {
     authchainGuard = new AuthChainGuard(owner, wallet.getPublicKeyHash(false), wallet.network)
     authchainIdentityOutputRecipient = authchainGuard.contract.getTokenDepositAddress()
@@ -327,6 +332,7 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
     genesisTokenFields.commitment = token.value.commitment
   }
 
+  console.log('GENESIS TOKEN FIELDS', genesisTokenFields)
   let genesisTokenRecipient = owner
   let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecipient, value: 1000, ...genesisTokenFields })]
   if (token.value.tokenType === 'fungible' && token.value.amount && options.value.useMintingBaton) {
@@ -334,12 +340,12 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
     genesisTokenRecipient = mintingCovenant.contract.getDepositAddress()
     genesisTokenRequest = [
       new TokenSendRequest({ cashaddr: genesisTokenRecipient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
-      new TokenSendRequest({ cashaddr: owner, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 })
+      new TokenSendRequest({ cashaddr: owner, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 }) // BATON
     ]
   }
   requests.push(...genesisTokenRequest)
   if (options.value.publishIdentityOutput === true) {
-    requests.push(OpReturnData.fromArray(['BCMR', options.value.data.publishIdentityOutput.contentHash, options.value.data.publishIdentityOutput.contentHash.replace('https://', '')]))
+    requests.push(OpReturnData.fromArray(['BCMR', options.value.data.publishIdentityOutput.contentHash, options.value.data.publishIdentityOutput.registryUrl.replace('https://', '')]))
   }
 
   return requests
@@ -409,21 +415,21 @@ const submitTokenGenesisTransaction = async () => {
     console.log(error)
     if (error instanceof Error) {
       console.log(error)
-      ui.setMessage({ type: 'error', text: 'Error creating FT Token' })
       closeNotif()
       $q.notify({ message: 'Error signing request', color: 'negative', timeout: 2000 })
     }
     return
   }
+  closeNotif()
 
   // User signed, submit transaction
   try {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     const tx = await wallet.submitTransaction(hexToBin(txSigningResult!.signedTransaction), true)
-    $q.notify({ message: `Success! Token Created. Tx = ${tx}`, type: 'success', timeout: 2000 })
-    const ac = await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
-    router.push(`/token/view?tokenId=${token.value.tokenId}&creator=${creator.value}`)
+    $q.notify({ message: `Success! Token Created. Tx = ${tx}`, type: 'success', timeout: 15000 })
     closeNotif = $q.notify({ message: 'Trying to build authchain for this token', type: 'info', timeout: 0 })
+    const ac = await BCMR.buildAuthChain({ transactionHash: token.value.tokenId, network: wallet.network })
+    // router.push(`/token/view?tokenId=${token.value.tokenId}&creator=${creator.value}`)
     if (ac) {
       $q.notify({ message: 'Authchain successfully built for this token', type: 'success', timeout: 1000 })
     }
