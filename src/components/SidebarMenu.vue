@@ -61,19 +61,19 @@ const menu = computed<any[]>(() => {
       icon: 'account_balance_wallet',
       disabled: Boolean(user.connectedPaytacaAddress) === false,
       children: [
-
         {
-          label: 'Coins (FTs)',
+          label: 'Fungibles (FTs) ' + `${user.fts?.length || 0}`,
           href: '/balances/fungibles',
           avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },
         {
           label: 'Collectibles (NFTs)',
-          icon: 'token',
-          children: [
-            { label: 'Quality ingredients' },
-            { label: 'Good recipe' }
-          ]
+          icon: 'token'
+        },
+        {
+          label: 'Hybrids (FNFTs',
+          href: '/balances/nonfungibles',
+          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },
         {
           label: Number(user.connectedPaytacaWalletBchBalance) / 1e8,
