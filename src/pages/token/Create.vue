@@ -1,6 +1,5 @@
 <template>
   <q-page class="q-pa-lg" style="min-height: 100vh">
-    UPDATING BALANCES: {{ user.updatingBalances }}
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10 col-lg-8">
         <div class="row justify-between items-end q-mb-sm">
@@ -159,7 +158,7 @@ const creator = computed(() => user.connectedPaytacaAddress)
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 
 const registry = ref<BcmrRegistry | null>(null)
-const tokenIdOptions = computed(() => user.genesisInputs?.filter((u: UtxoI) => !u.token && u.vout === 0).map((u: UtxoI) => u.txid))
+const tokenIdOptions = computed(() => user.genesisInputs?.filter((u: UtxoI) => !u.token && u.vout === 0).map((u: UtxoI) => u.txid).slice(0, 5))
 const tokenIdInputHint = computed(() => tokenIdOptions.value && tokenIdOptions.value.length > 0 ? 'Select token id from suitable UTXOs' : 'No suitable UTXO, please consolidate your UTXOs and try again.')
 const token = ref<{
   tokenType: TokenType,
