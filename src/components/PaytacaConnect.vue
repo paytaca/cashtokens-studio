@@ -12,18 +12,56 @@
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { ref } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import formatAddress from 'src/utils/formatAddress';
 import getWalletClass from 'src/utils/getWalletClass';
 import useStore from 'src/composables/useStore';
+import { UtxoI } from 'mainnet-js';
+import detectPaytaca from 'src/utils/detectPaytaca';
 defineOptions({ name: 'PaytacaConnect' })
 
 const $q = useQuasar()
 const router = useRouter()
 const { user } = useStore()
-const connected = ref(false)
-const canceller = ref()
+const cancelAddressWatch = ref()
+
+onMounted(async () => {
+  if (detectPaytaca()) {
+    const connected = await window.paytaca.connected()
+    if (connected) {
+      let connectedAddress = await window.paytaca.address('bch')
+      connectedAddress = formatAddress(connectedAddress)
+      user.connectedPaytacaAddress = connectedAddress
+      user.wallet = await getWalletClass().watchOnly(connectedAddress)
+      return
+    }
+  }
+  router.push('/')
+})
+
+watch(() => user.connectedPaytacaAddress, async (address) => {
+  if (address) {
+    const WalletClass = getWalletClass()
+    user.wallet = await WalletClass.watchOnly(address)
+    user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
+    const userUtxos = await user.wallet.getAddressUtxos()
+    storeBalances(userUtxos)
+    cancelAddressWatch.value = user.wallet.watchAddress(async () => {
+      user.updatingBalances = true
+      user.connectedPaytacaWalletBchBalance = await user.wallet?.getBalance('sat') as string
+      const userUtxos = await user.wallet?.getAddressUtxos()
+      if (userUtxos) {
+        storeBalances(userUtxos)
+      }
+      user.updatingBalances = false
+    })
+  } else {
+    cancelAddressWatch.value()
+    router.push('/')
+  }
+})
+
 const connect = async () => {
   const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -37,26 +75,24 @@ const connect = async () => {
     dismiss()
     $q.notify({ message: 'Connected', color: 'positive', timeout: 500 })
     user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
-    connected.value = true
-    const WalletClass = getWalletClass()
-    const wallet = await WalletClass.watchOnly(user.connectedPaytacaAddress)
-    user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
-    user.wallet = wallet
-    canceller.value = wallet.watchAddress(async () => {
-      user.connectedPaytacaWalletBchBalance = String(await wallet.getBalance('sat'))
-    })
   }
+}
 
+const storeBalances = (userUtxos: UtxoI[]) => {
+  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0)
+  user.fts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.amount > 0)
+  user.nfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && !utxo.token.amount)
+  user.fnfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && utxo.token.amount)
 }
 
 const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   await window.paytaca!.disconnect()
   user.connectedPaytacaAddress = ''
-  connected.value = false
   router.push('/')
-  canceller.value()
+  cancelAddressWatch.value()
 }
+
 
 
 
