@@ -1,6 +1,5 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <HeadLess />
     <q-header elevated>
       <q-toolbar class="bg-teal-10">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
@@ -20,7 +19,10 @@
         </div>
         <div class="col-12 text-center">
           <q-chip color="grey">
-            {{ user.connectedPaytacaAddress?.replace(user.connectedPaytacaAddress.substring(11, 40), '...') }}
+            {{
+              user.connectedPaytacaAddress?.replace(user.connectedPaytacaAddress.substring(11, 40), '...') ||
+              'disconnected'
+            }}
           </q-chip>
         </div>
       </div>
@@ -42,14 +44,12 @@ import { defineComponent, ref } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
-import HeadLess from 'components/HeadLess.vue';
 import useStore from 'src/composables/useStore'
 
 export default defineComponent({
   name: 'MainLayout',
 
   components: {
-    HeadLess,
     SidebarMenu,
     LightSwitch,
     PaytacaConnect
