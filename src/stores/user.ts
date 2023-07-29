@@ -4,10 +4,7 @@ import { UserState } from 'src/types'
 
 export const useUser = defineStore('user', {
   state: (): UserState => ({
-    connectedPaytacaAddress: '',
-    connectedPaytacaWalletBchBalance: '0',
-    createdFts: [],
-    wallet: null,
+    updatingBalances: false,
     genesisInputs: []
   }),
 
