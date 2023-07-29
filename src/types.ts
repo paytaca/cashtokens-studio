@@ -1,6 +1,6 @@
 
 
-import { Wallet } from 'mainnet-js';
+import { UtxoI, Wallet } from 'mainnet-js';
 
 export type UIMessage = {
   text: string,
@@ -29,14 +29,21 @@ export type updateBcmr =  (contractOwnerAddress:string, contractAddress:string, 
 
 // stores
 export type UserState = {
-  connectedPaytacaAddress: string | undefined,
-  connectedPaytacaWalletBchBalance: string | number,
-  createdFts: any[],
-  wallet: Wallet|null,
+  connectedPaytacaAddress?: string,
+  connectedPaytacaWalletBchBalance?: string | number,
+  fts?: UtxoI[],
+  nfts?: UtxoI[],
+  fnfts?: UtxoI[],
+  wallet?: Wallet,
+  /**
+   * True if wallet is being watched
+   */
+  walletWatched?: boolean,
   /**
    * Utxos acceptable as authchain authbases, zeroeth decendant outputs
    */
-  genesisInputs: []
+  genesisInputs?: UtxoI[],
+  updatingBalances: boolean
 }
 
 
