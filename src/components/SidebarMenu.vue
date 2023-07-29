@@ -71,12 +71,12 @@ const menu = computed<any[]>(() => {
           icon: 'token'
         },
         {
-          label: 'Hybrids (FNFTs',
+          label: 'Hybrids (FNFTs)',
           href: '/balances/nonfungibles',
           avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },
         {
-          label: Number(user.connectedPaytacaWalletBchBalance) / 1e8,
+          label: user.connectedPaytacaWalletBchBalance ? Number(user.connectedPaytacaWalletBchBalance) / 1e8 : '',
           avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
         },
       ]
