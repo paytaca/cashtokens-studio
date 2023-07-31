@@ -6,7 +6,7 @@ import { Contract } from '@mainnet-cash/contract'
 import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet, OpReturnData} from 'mainnet-js'
 import { Argument, Artifact, ContractFunction, HashType, SignatureAlgorithm, SignatureTemplate, Transaction, Utxo } from 'cashscript';
 import getWalletClass from 'src/utils/getWalletClass';
-import { AuthChainGuardI } from './interfaces'
+import { AuthChainGuardI, QuasarNotify } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
 import constants from 'src/constants';
 import getByteCount from 'src/utils/getByteCount';
@@ -20,7 +20,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
   private f: any
 
 
-  constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
+  constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network, readonly notify: QuasarNotify) {
     this.contract = this.newContractInstance(ownerPubKeyHash, network)
     this.ownerWallet = null
     this.contractWallet = null
@@ -51,7 +51,8 @@ export default class AuthChainGuard implements AuthChainGuardI {
    */
   async publish(bcmr: string, bcmrUrl: string, tokenId?: string): Promise<string|undefined> {
     this.contractWallet? null : await this.initWallets()
-    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token)).map(toCashScript)
+    const identityOutputs = (await this.contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(utxo.token) && utxo.token?.tokenId === tokenId && utxo.token?.commitment === constants.IDENTITY).map(toCashScript)
+
     const identityOutput = identityOutputs[0]
     if (!identityOutput) {
       throw new Error('authbase not found')
@@ -61,6 +62,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     if (!funderInput) {
       throw new Error('insufficient balance')
     }
+
 
     const minerFee = 1000
     let transaction
@@ -72,8 +74,9 @@ export default class AuthChainGuard implements AuthChainGuardI {
           .from(identityOutput)
           .fromP2PKH(funderInput, sig)
           .to([{
-            to: this.contract.getDepositAddress(),
-            amount: identityOutput.satoshis
+            to: this.contract.getTokenDepositAddress(),
+            amount: identityOutput.satoshis,
+            token: identityOutput.token
           }])
           .withOpReturn([
             'BCMR',
@@ -98,6 +101,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     }
 
     // signing request
+    let endNotif = this.notify({spinner:true, message: 'Waiting for signature', type: 'info', timeout: 0})
     let signingResult
     try {
 
@@ -139,18 +143,23 @@ export default class AuthChainGuard implements AuthChainGuardI {
       console.log(error)
       throw new Error('Error signing transaction')
     }
-
+    endNotif()
+    endNotif = this.notify({spinner: true, message: 'Submitting transaction...', color: 'info', timeout: 0})
     // Tx signing success, submitting transaction
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      endNotif()
+      await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      this.notify({message: 'Success! Registry published!', color: 'success', timeout: 5000})
       if (tokenId) {
         await BCMR.buildAuthChain({ transactionHash: tokenId, network: this.ownerWallet!.network })
       }
-      return tx
 
     } catch (error) {
-      console.log('Error creating FT Token during submission of txn', error)
-      return
+      endNotif()
+      this.notify({spinner: true, message: 'Error:Transaction Failed!', color: 'negative', timeout: 5000})
+      console.log('Error:AuthChainGuard@publish', error)
+    } finally {
+      endNotif()
     }
   }
 
@@ -181,8 +190,9 @@ export default class AuthChainGuard implements AuthChainGuardI {
           .from(identityOutput)
           .fromP2PKH(funderInput, sig)
           .to([{
-            to: newOwnerAuthchainGuardContract.getDepositAddress(),
-            amount: identityOutput.satoshis
+            to: newOwnerAuthchainGuardContract.getTokenDepositAddress(),
+            amount: identityOutput.satoshis,
+            token: identityOutput.token
           }])
           .to([{
             to: this.ownerAddress,
