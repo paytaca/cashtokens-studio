@@ -47,8 +47,13 @@ const menu = computed<any[]>(() => {
           icon: 'token',
           children: [
             {
-              label: 'View Owned Identities',
+              label: 'Authchain Identities',
               href: '/token/identities',
+              icon: 'token',
+            },
+            {
+              label: 'Fungible Reserves',
+              href: '/token/fungibles',
               icon: 'token',
             }
           ]
