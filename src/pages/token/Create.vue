@@ -269,11 +269,12 @@ const prepareGenesisRequest = async (wallet: Wallet): Promise<(SendRequest | Tok
   let genesisTokenRecipient = owner
   let genesisTokenRequest: (SendRequest | TokenSendRequest)[] = [new TokenSendRequest({ cashaddr: genesisTokenRecipient, value: 1000, ...genesisTokenFields })]
   if (token.value.tokenType === 'fungible' && token.value.amount && options.value.useMintingBaton) {
-    const mintingCovenant = new MintingCovenant(token.value.tokenId, wallet.network)
-    genesisTokenRecipient = mintingCovenant.contract.getDepositAddress()
+
+    const mintingCovenant = new MintingCovenant(token.value.tokenId, wallet.network, $q.notify)
+    genesisTokenRecipient = mintingCovenant.contract.getTokenDepositAddress()
     genesisTokenRequest = [
       new TokenSendRequest({ cashaddr: genesisTokenRecipient, tokenId: token.value.tokenId, value: 1000, amount: Number(token.value.amount) }),
-      new TokenSendRequest({ cashaddr: owner, tokenId: token.value.tokenId, value: 1000, commitment: '0x00', amount: 0 }) // BATON
+      new TokenSendRequest({ cashaddr: user.wallet!.getTokenDepositAddress(), tokenId: token.value.tokenId, value: 1000, commitment: '00', amount: 0 }) // BATON
     ]
   }
   requests.push(...genesisTokenRequest)
