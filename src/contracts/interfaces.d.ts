@@ -4,11 +4,19 @@ import { Utxo } from 'cashscript';
 import { Wallet } from 'mainnet-js';
 import { QNotifyCreateOptions, QNotifyUpdateOptions } from 'quasar';
 
+export type QuasarNotify = (
+  opts: QNotifyCreateOptions | string
+) => (props?: QNotifyUpdateOptions) => void
+
 export interface AuthChainGuardI {
   readonly contract: Contract
   readonly ownerAddress: string
   readonly ownerPubKeyHash: any
   readonly network: string
+  /**
+   * Borrowing quasar's notify function
+   */
+  readonly notify: QuasarNotify
   /**
    * Initialize an owner wallet
    */
@@ -20,9 +28,7 @@ export interface AuthChainGuardI {
   script(): string
 }
 
-export type QuasarNotify = (
-  opts: QNotifyCreateOptions | string
-) => (props?: QNotifyUpdateOptions) => void
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface MintingCovenantI {
   readonly tokenId: string
