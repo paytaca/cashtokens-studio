@@ -1,5 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Contract } from '@mainnet-cash/contract';
+import { Utxo } from 'cashscript';
+import { Wallet } from 'mainnet-js';
+import { QNotifyCreateOptions, QNotifyUpdateOptions } from 'quasar';
 
 export interface AuthChainGuardI {
   readonly contract: Contract
@@ -17,11 +20,24 @@ export interface AuthChainGuardI {
   script(): string
 }
 
+export type QuasarNotify = (
+  opts: QNotifyCreateOptions | string
+) => (props?: QNotifyUpdateOptions) => void
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export interface MintingCovenantI {
-  readonly tokenId: string|Uint8Array;
+  readonly tokenId: string
   readonly contract: Contract
-  unlockWithNft: ()=>Promise<string|undefined>
+  /**
+   * Borrowing quasar's notify function
+   */
+  readonly notify: QuasarNotify
+
+  unlockWithNft: (
+    param: {
+      contractOwner:string,
+      to: string,
+      ftAmountToUnlock: bigint|string|number}
+  )=>Promise<string|undefined>
   script(): string
 }
 
