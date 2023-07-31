@@ -17,6 +17,9 @@
           <div class="row justify-left items-center q-gutter-md">
             <span>Token Amount: </span><span>{{ ft.token?.amount }}</span>
           </div>
+          <div class="row justify-left items-center q-gutter-md">
+            <span>Source: </span><span>{{ ft.source }}</span>
+          </div>
         </q-card-section>
         <q-card-actions>
           <q-btn color="primary"
@@ -56,23 +59,43 @@ import { UtxoI } from 'mainnet-js'
 
 import { useRouter } from 'vue-router'
 import useStore from 'src/composables/useStore'
+import MintingCovenant from 'src/contracts/MintingCovenant'
+import getWalletClass from 'src/utils/getWalletClass'
 
 defineOptions({ name: 'FungiblesBalance' })
 
 const router = useRouter()
-const { user, ui } = useStore()
-const fungibles = ref([] as UtxoI[])
-
+const { user } = useStore()
+const fungibles = ref()
 onMounted(async () => {
-  if (user.connectedPaytacaAddress) {
-    // Load from store, then try to refresh
-
-    ui.busy({ type: 'info', text: 'Loading Fungibles' })
-    const utxos = (await user.wallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token?.amount))
-    console.log('', utxos)
-    // fungibles.value.push(...user.createdFts)
-  }
+  // console.log(user.wallet)
+  console.log(user.wallet)
+  fungibles.value = []
+  await loadFtsFromUserWallet()
+  await loadFtReservesFromMintingCovenant()
 })
 
+const loadFtsFromUserWallet = async () => {
+
+  if (user.wallet) {
+    let utxos = (await user.wallet.getAddressUtxos()).filter((u: UtxoI) => Boolean(u.token) && u.token !== undefined).map((u: UtxoI) => ({ ...u, source: 'wallet' }))
+    console.log(utxos)
+    fungibles.value.push(
+      ...utxos
+    )
+  }
+}
+
+const loadFtReservesFromMintingCovenant = async () => {
+  if (fungibles.value && fungibles.value.length > 0) {
+    fungibles.value.forEach(async (t: UtxoI) => {
+      const mintingCovenant = new MintingCovenant(t.token!.tokenId, user.wallet!.network)
+      let mcWallet = await getWalletClass().watchOnly(mintingCovenant.contract.getTokenDepositAddress())
+      let r = await mcWallet.getAddressUtxos()
+      console.log('R', r)
+      fungibles.value.push(...r.map((u: UtxoI) => ({ ...u, source: 'minting-covenant' })))
+    })
+  }
+}
 
 </script>
