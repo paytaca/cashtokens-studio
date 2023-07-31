@@ -21,7 +21,6 @@
       </q-dialog>
       <q-card v-for="ft, i in fungibles" :key="i" class="token-card col-xs-12 col-sm-4 col-md-4 col-lg-3">
         <q-toolbar>
-          {{ ft.token.commitment }}
           <q-icon name="token" size="md"></q-icon>
           <q-toolbar-title><span><strong>Token </strong></span>{{ i }}</q-toolbar-title>
           <q-btn icon="more_vert" size="md" round flat dense>
@@ -142,6 +141,7 @@ const loadFtReservesFromMintingCovenant = async () => {
 }
 
 const confirmTokenIssuance = async (tokenId: string) => {
+  options.value.issueTokens = false
   const baton = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token.tokenId === tokenId && u.token.commitment === '00')[0]
   if (!baton) {
     return $q.notify({ message: 'You don\'t own the minting baton for this token', type: 'negative', timeout: 3000 })
@@ -154,7 +154,8 @@ const confirmTokenIssuance = async (tokenId: string) => {
       ftAmountToUnlock: options.value.data!.issueTokens.amount!,
     })
     if (tx) {
-      $q.notify({ message: `Success! Tx=${tx}`, type: 'positive', timeout: 10000 })
+      $q.notify({ message: 'Success! Token transferred to recipient', type: 'positive', timeout: 5000 })
+      $q.notify({ message: `Tx:${tx}`, type: 'positive', timeout: 10000 })
     }
   } catch (error: any) {
     if (error.message) {
