@@ -3,37 +3,42 @@
   <q-page class="q-py-xl">
     <div class="row justify-center">
       <div class="col-xs-11 col-sm-10">
-        <q-banner v-if="identitySnapshot?.token" class="row q-mb-lg" rounded
-          :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+        <q-banner class="row q-mb-lg" rounded :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           <template v-slot:avatar>
-            <img :src="identitySnapshot?.uris?.icon" style="width: 100px; height: 100px">
+            <img v-if="identitySnapshot?.uris?.icon" :src="identitySnapshot?.uris?.icon"
+              style="width: 100px; height: 100px">
+            <TokenUnresolvedAvatar v-else />
           </template>
           <q-list dense>
             <q-item class="row items-center justify-left">
-              <span class="col-2">Category:</span>
-              <div class="col-10">
-                <TokenCategory :token-id="identitySnapshot.token.category" />
+              <span class="col-3">Category:</span>
+              <div class="col-9">
+                <TokenCategory v-if="route.query?.tokenId" :token-id="(route.query?.tokenId as string)" />
               </div>
-
             </q-item>
             <q-item class="row items-center">
-              <span class="col-2">Symbol:</span>
-              <div class="col-10">
-                <q-chip color="orange" outline>
-                  <strong>{{ identitySnapshot.token.symbol }}</strong>
+              <span class="col-3">Symbol:</span>
+              <div class="col-9">
+                <q-chip v-if="identitySnapshot?.token?.symbol" color="orange" outline>
+                  <strong>
+                    {{ identitySnapshot.token.symbol }}
+                  </strong>
                 </q-chip>
+                <TokenUnresolvedField v-else field-name="symbol" />
               </div>
             </q-item>
             <q-item class="row items-center">
-              <span class="col-2">Decimals:</span>
-              <span class="col-10" color="orange" outline>
-                <strong>{{ identitySnapshot.token.decimals }}</strong>
+              <span class="col-3">Decimals:</span>
+              <span v-if="identitySnapshot?.token?.decimals" class="col-9" color="orange" outline>
+                {{ identitySnapshot.token.decimals }}
               </span>
+              <TokenUnresolvedField v-else field-name="decimals" />
             </q-item>
           </q-list>
           <template v-slot:action>
             <div class="row justify-end">
-              <q-btn size="md" color="primary" flat dense no-caps @click="menu = 'main'">View BCMR</q-btn>
+              <q-btn size="md" color="primary" flat dense no-caps @click="menu = 'main'" :disable="!registry">View
+                BCMR</q-btn>
               <q-btn icon="more_vert" size="md" round flat dense>
                 <q-menu>
                   <q-list>
@@ -84,11 +89,13 @@
               dense square disable></q-input>
           </div>
           <div class="col-xs-12 q-my-md">
+            {{ newRegistryUrl }}
+            {{ newRegistryUrlContentHash }}
             New Publication Details
             <div class="row items-top q-col-gutter-none q-mb-md">
               <div class="col-xs-12">
-                <q-input :filled="true" v-model="newRegistryUrl" type="url" :rules="[v => v.length > 7 || 'Invalid URL']"
-                  label="Entry Registry URL" dense square standout hide-bottom-space></q-input>
+                <q-input :filled="true" v-model="newRegistryUrl" type="url" label="Entry Registry URL" dense square
+                  standout hide-bottom-space></q-input>
               </div>
               <div class="col-xs-12 q-my-xs">
                 <q-checkbox dense v-model="newRegistryUrlSameAsOld" label="Same as last publication" color="primary" />
@@ -182,6 +189,8 @@ import useStore from 'src/composables/useStore'
 import getWalletClass from 'src/utils/getWalletClass'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import TokenCategory from 'src/components/TokenCategory.vue'
+import TokenUnresolvedAvatar from 'src/components/TokenUnresolvedAvatar.vue'
+import TokenUnresolvedField from 'src/components/TokenUnresolvedField.vue'
 import BcmrEditor from 'src/components/BcmrEditor.vue'
 import fetchAuthChainAuthheadFromChaingraph from 'src/utils/fetchAuthChainAuthheadFromChaingraph'
 
@@ -318,7 +327,7 @@ onBeforeRouteLeave((to) => {
 const initAuthChainGuard = async () => {
   if (!authChainGuard.value) {
     const creatorWallet = await WalletClass.watchOnly(user.connectedPaytacaAddress as string)
-    authChainGuard.value = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWallet.getPublicKeyHash(false), creatorWallet.network)
+    authChainGuard.value = new AuthChainGuard(user.connectedPaytacaAddress as string, creatorWallet.getPublicKeyHash(false), creatorWallet.network, $q.notify)
   }
 }
 
@@ -332,78 +341,46 @@ const editRegistry = () => {
 
 const authchainPublishRegistry = async () => {
   if (!newRegistryUrl.value || !newRegistryUrlContentHash.value) {
-    return $q.notify({ message: 'Please provide values for new publication details', type: 'warning', timeout: 1000 })
+    return $q.notify({ message: 'Please provide values for new publication details', type: 'error', timeout: 1000 })
   }
   try {
-    ui.busy({ text: 'Publishing registry', type: 'info' })
-    const tx = await authChainGuard.value?.publish(newRegistryUrlContentHash.value, newRegistryUrl.value)
-    ui.idle()
-    ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
+    await authChainGuard.value?.publish(newRegistryUrlContentHash.value, newRegistryUrl.value, token.value.id)
   } catch (error) {
-    ui.idle()
     console.log(error)
-    ui.setMessage({ text: 'Error publishing registry', type: 'error', timeout: 10 })
+    $q.notify({ message: 'Error! Transaction failed', type: 'negative', timeout: 3000 })
   }
 }
 
 const authchainTransfer = async () => {
-  if (!registry.value) {
-    return ui.setMessage({ text: 'Invalid BCMR', type: 'error', timeout: 10 })
-  }
   try {
-    ui.busy({ text: 'Publishing registry', type: 'info' })
-    console.log(authChainGuard.value)
-    const tx = await authChainGuard.value?.transfer(newOwnerAddress.value)
-    ui.idle()
-    ui.setMessage({ text: 'Registry publication success, tx:' + tx, type: 'success', timeout: 5 })
+    await authChainGuard.value?.transfer(newOwnerAddress.value)
   } catch (error) {
-    ui.idle()
     console.log(error)
-    ui.setMessage({ text: 'Error publishing registry', type: 'error', timeout: 10 })
+    $q.notify({ message: 'Error transferring authchain', type: 'negative', timeout: 3000 })
   }
 }
 
 const authchainBurn = async () => {
   try {
-    const dismiss = $q.notify({ spinner: true, message: 'Burning token\'s identity output...', color: 'info', timeout: 0 })
-    const tx = await authChainGuard.value?.burn(token.value.id as string)
-    dismiss()
-    if (tx) {
-      $q.notify({ color: 'positive', message: 'Token identity output burned! ' + tx })
-      router.push('/token/browse')
-    }
+    await authChainGuard.value?.burn(token.value.id as string)
   } catch (error) {
-    $q.notify({ color: 'negative', message: 'Error burning identity output!' })
     console.log(error)
+    $q.notify({ color: 'negative', message: 'Error burning identity output!' })
   }
 
 }
 
 const authchainRelease = async () => {
-  console.log('Releasing')
-  let dismiss
   try {
     if (!newOwnerAddress.value) {
       return $q.notify({ message: 'Recipient required!', color: 'negative', timeout: 2000 })
     }
     const recipientWallet = await getWalletClass().watchOnly(newOwnerAddress.value)
-
-    dismiss = $q.notify({ spinner: true, message: 'Releasing token\'s identity output from authchain guard...', color: 'info', timeout: 0 })
-    const tx = await authChainGuard.value?.release(token.value.id as string, recipientWallet.tokenaddr as string)
-    if (tx) {
-      $q.notify({ color: 'positive', message: 'Authchain identity output released to: ' + newOwnerAddress.value })
-      $q.notify({ color: 'info', message: 'Tx: ' + tx })
-      router.push('/token/browse')
-    }
+    await authChainGuard.value?.release(token.value.id as string, recipientWallet.tokenaddr as string)
   } catch (error) {
-    $q.notify({ color: 'negative', message: 'Error releasing identity output!' })
     console.log(error)
-  } finally {
-    if (dismiss) {
-      dismiss()
-    }
+    $q.notify({ color: 'negative', message: 'Error releasing identity output!' })
   }
-
 }
 
 const fetchRegistry = async () => {
