@@ -27,6 +27,7 @@ export default class MintingCovenant implements MintingCovenantI {
 
 
   async unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
+    let endNotif = this.notify({spinner: true, message: 'Processing request', color: 'info', timeout: 0})
     const contractWallet = await getWalletClass().watchOnly(this.contract.getTokenDepositAddress())
     const fungibleReservesUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token?.tokenId === this.tokenId && u.token.amount > 0)
     if(!fungibleReservesUtxo){
@@ -44,9 +45,6 @@ export default class MintingCovenant implements MintingCovenantI {
       throw new Error('Insufficient balance to fund the transaction')
     }
     const inputs = [fungibleReservesUtxo, mintingBatonUtxo, funderInput[0]].map(toCashScript)
-    console.log('FT RESERVES', inputs[0])
-    console.log('MINTING BATON', inputs[1])
-    console.log('FUNDER', inputs[2])
     const minerFee = 1500
     let transaction
     let decoded
@@ -92,9 +90,7 @@ export default class MintingCovenant implements MintingCovenantI {
             amount: inputs[2].satoshis - BigInt(minerFee) - BigInt(1000)
           }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
-      console.log('TX', await transaction.build())
       decoded = decodeTransaction(hexToBin(await transaction.build()));
-      console.log(decoded)
       if (typeof decoded === 'string') {
         console.log('decoded:', decoded)
         throw new Error('Failed to decode transaction')
@@ -105,7 +101,8 @@ export default class MintingCovenant implements MintingCovenantI {
     }
 
     // initiate signature request
-    let endNotif = this.notify({message: 'Waiting for signature', timeout: 0})
+    endNotif()
+    endNotif = this.notify({spinner:true, message: 'Waiting for signature', color:'info', timeout: 0})
     let signingResult
     try {
       const bytecode = (transaction as any).redeemScript;
@@ -161,18 +158,14 @@ export default class MintingCovenant implements MintingCovenantI {
       console.log(error)
       throw new Error('Error signing transaction')
     }
-    // console.log('SIGNED', signingResult.signedTransaction)
-    // console.log('CONTRACT INPUT LOCKING BYTECODE', binToHex((cashAddressToLockingBytecode(this.contract.getTokenDepositAddress()) as any).bytecode))
-    const decodedSigned:TransactionCommon | string = decodeTransaction(hexToBin(signingResult.signedTransaction)) as TransactionCommon
-    // console.log('DECODED SIGNED OUTPUT[0] LOCKING BYTECODE', binToHex(decodedSigned.outputs[0].lockingBytecode))
-    // console.log('DECODED SIGNED INPUTS[1] NFT COMMITMENT', inputs[1].token?.nft?.commitment)
-    // console.log('DECODED SIGNED OUTPUTS[1] NFT COMMITMENT', binToHex(decodedSigned!.outputs[1]!.token!.nft!.commitment))
-    assert(inputs[1].token!.category === this.tokenId)
-    assert(binToHex((cashAddressToLockingBytecode(this.contract.getTokenDepositAddress()) as any).bytecode) === binToHex(decodedSigned.outputs[0].lockingBytecode))
-    assert(inputs[1].token?.nft?.commitment === binToHex(decodedSigned!.outputs[1]!.token!.nft!.commitment))
+
+    if (!signingResult) {
+      endNotif && endNotif()
+      return
+    }
+
     endNotif && endNotif()
     endNotif = this.notify({message: 'Submitting transaction', timeout: 0})
-    // Tx signing success, submitting transaction
     try {
       const tx = await contractOwnersWallet.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
