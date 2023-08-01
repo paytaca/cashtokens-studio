@@ -4,8 +4,8 @@
       <TokenCategory :token-id="tokenId" />
     </q-card-title>
     <q-card-section>
-      <div class="row items-end justify-left">
-        <div class="col-12">
+      <div class="row items-end justify-center">
+        <div class="col-12 justify-center row q-mt-xs">
           <q-skeleton v-if="!icon && loading" type="QAvatar"></q-skeleton>
           <q-avatar v-if="icon" square rounded>
             <img :src="icon" alt="NA" onerror="this.src='images/token.png'">
@@ -14,9 +14,9 @@
             <q-icon name="token" size="lg"></q-icon>
           </q-avatar>
         </div>
-        <div class="col-12 justify-center row q-mt-xs">
+        <div class="col-12 justify-center row q-mt-sm">
           <q-skeleton v-if="!symbol && loading" type="QChip"></q-skeleton>
-          <q-chip v-if="symbol" color="orange" outline>
+          <q-chip class="token-symbol" v-if="symbol" outline>
             {{ symbol }}
           </q-chip>
         </div>

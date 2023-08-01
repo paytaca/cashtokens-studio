@@ -32,7 +32,7 @@ const menu = computed<any[]>(() => {
           icon: 'add',
         },
         {
-          label: 'Create Non-Fungible Token',
+          label: 'Create NFT',
           href: '/token/create/nonfungible',
           icon: 'add',
         },
