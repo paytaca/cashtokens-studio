@@ -13,7 +13,7 @@ export default class MintingCovenant implements MintingCovenantI {
 
   readonly contract: Contract
 
-  constructor(readonly tokenId: string, readonly network: Network = Network.MAINNET, readonly notify: QuasarNotify) {
+  constructor(readonly tokenId: string, readonly network: Network = Network.MAINNET) {
     this.contract = new Contract(
       this.script(),
       [`0x${tokenId.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`],
@@ -21,13 +21,12 @@ export default class MintingCovenant implements MintingCovenantI {
     )
   }
 
-  static getInstance(tokenId: string, network: Network = Network.MAINNET, notify: QuasarNotify): MintingCovenantI {
-    return new MintingCovenant(tokenId, network, notify)
+  static getInstance(tokenId: string, network: Network = Network.MAINNET): MintingCovenantI {
+    return new MintingCovenant(tokenId, network)
   }
 
 
   async unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
-    let endNotif = this.notify({spinner: true, message: 'Processing request', color: 'info', timeout: 0})
     const contractWallet = await getWalletClass().watchOnly(this.contract.getTokenDepositAddress())
     const fungibleReservesUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token?.tokenId === this.tokenId && u.token.amount > 0)
     if(!fungibleReservesUtxo){
@@ -101,8 +100,6 @@ export default class MintingCovenant implements MintingCovenantI {
     }
 
     // initiate signature request
-    endNotif()
-    endNotif = this.notify({spinner:true, message: 'Waiting for signature', color:'info', timeout: 0})
     let signingResult
     try {
       const bytecode = (transaction as any).redeemScript;
@@ -160,19 +157,14 @@ export default class MintingCovenant implements MintingCovenantI {
     }
 
     if (!signingResult) {
-      endNotif && endNotif()
       return
     }
 
-    endNotif && endNotif()
-    endNotif = this.notify({message: 'Submitting transaction', timeout: 0})
     try {
       const tx = await contractOwnersWallet.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
-    } finally{
-      endNotif && endNotif()
     }
   }
 

@@ -16,7 +16,7 @@ export interface AuthChainGuardI {
   /**
    * Borrowing quasar's notify function
    */
-  readonly notify: QuasarNotify
+  // readonly notify: QuasarNotify
   /**
    * Initialize an owner wallet
    */
@@ -36,7 +36,7 @@ export interface MintingCovenantI {
   /**
    * Borrowing quasar's notify function
    */
-  readonly notify: QuasarNotify
+  // readonly notify: QuasarNotify
 
   unlockWithNft: (
     param: {

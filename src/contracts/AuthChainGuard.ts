@@ -4,7 +4,7 @@ import { scriptToBytecode } from '@cashscript/utils';
 import { cashAddressToLockingBytecode, decodeTransaction, sha256, utf8ToBin } from '@bitauth/libauth';
 import { Contract } from '@mainnet-cash/contract'
 import { hexToBin, Network, UtxoI, binToHex, BCMR, Wallet, OpReturnData} from 'mainnet-js'
-import { Argument, Artifact, ContractFunction, HashType, SignatureAlgorithm, SignatureTemplate, Transaction, Utxo } from 'cashscript';
+import { Argument, Artifact, SignatureTemplate, Transaction, Utxo } from 'cashscript';
 import getWalletClass from 'src/utils/getWalletClass';
 import { AuthChainGuardI, QuasarNotify } from './interfaces'
 import toCashScript from 'src/utils/toCashScript';
@@ -20,7 +20,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
   private f: any
 
 
-  constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network, readonly notify: QuasarNotify) {
+  constructor(readonly ownerAddress:string, readonly ownerPubKeyHash: any, readonly network: Network) {
     this.contract = this.newContractInstance(ownerPubKeyHash, network)
     this.ownerWallet = null
     this.contractWallet = null
@@ -101,7 +101,7 @@ export default class AuthChainGuard implements AuthChainGuardI {
     }
 
     // signing request
-    let endNotif = this.notify({spinner:true, message: 'Waiting for signature', type: 'info', timeout: 0})
+    // let endNotif = this.notify({spinner:true, message: 'Waiting for signature', type: 'info', timeout: 0})
     let signingResult
     try {
 
@@ -143,23 +143,23 @@ export default class AuthChainGuard implements AuthChainGuardI {
       console.log(error)
       throw new Error('Error signing transaction')
     }
-    endNotif()
-    endNotif = this.notify({spinner: true, message: 'Submitting transaction...', color: 'info', timeout: 0})
+    // endNotif()
+    // endNotif = this.notify({spinner: true, message: 'Submitting transaction...', color: 'info', timeout: 0})
     // Tx signing success, submitting transaction
     try {
-      endNotif()
-      await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      this.notify({message: 'Success! Registry published!', color: 'success', timeout: 5000})
+      // endNotif()
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      // this.notify({message: 'Success! Registry published!', color: 'success', timeout: 5000})
       if (tokenId) {
         await BCMR.buildAuthChain({ transactionHash: tokenId, network: this.ownerWallet!.network })
       }
-
+      return tx
     } catch (error) {
-      endNotif()
-      this.notify({spinner: true, message: 'Error:Transaction Failed!', color: 'negative', timeout: 5000})
+      // endNotif()
+      // this.notify({spinner: true, message: 'Error:Transaction Failed!', color: 'negative', timeout: 5000})
       console.log('Error:AuthChainGuard@publish', error)
     } finally {
-      endNotif()
+      // endNotif()
     }
   }
 

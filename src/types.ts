@@ -52,6 +52,7 @@ export type RequireOptional<Type, Key extends keyof Type> = Type & {
 };
 
 export type TokenType = 'fungible' | 'nonfungible' | 'hybrid'
+export type TokenAction = 'genesis' | ''
 
 declare global {
   interface Window { paytaca: any; }
