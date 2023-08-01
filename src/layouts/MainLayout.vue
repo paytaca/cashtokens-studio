@@ -11,22 +11,24 @@
       </q-toolbar>
     </q-header>
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
-      <div class="row justify-center q-gutter-sm q-pt-lg">
-        <div class="col-12 text-center">
-          <q-avatar>
-            <q-img src="images/bch-logo.png"></q-img>
-          </q-avatar>
+      <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
+        <div class="row justify-center q-gutter-sm q-pt-lg">
+          <div class="col-12 text-center">
+            <q-avatar>
+              <q-img src="images/bch-logo.png"></q-img>
+            </q-avatar>
+          </div>
+          <div class="col-12 text-center">
+            <q-chip color="grey">
+              {{
+                user.connectedPaytacaAddress?.replace(user.connectedPaytacaAddress.substring(11, 40), '...') ||
+                'disconnected'
+              }}
+            </q-chip>
+          </div>
         </div>
-        <div class="col-12 text-center">
-          <q-chip color="grey">
-            {{
-              user.connectedPaytacaAddress?.replace(user.connectedPaytacaAddress.substring(11, 40), '...') ||
-              'disconnected'
-            }}
-          </q-chip>
-        </div>
-      </div>
-      <SidebarMenu />
+        <SidebarMenu />
+      </q-scroll-area>
     </q-drawer>
     <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }">
