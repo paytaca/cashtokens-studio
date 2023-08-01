@@ -1,4 +1,4 @@
-import { NFTCapability, OpReturnData, TokenSendRequest, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, NFTCapability, OpReturnData, TokenSendRequest, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
 
@@ -11,6 +11,9 @@ export default class FungibleToken extends CashStudioToken{
     console.log('CREATING GENESIS', this)
     if (!this.tokenId) {
       throw new Error('The tokenId is not set')
+    }
+    if (!this.ownerWallet) {
+      throw new Error('The ownerWallet is not set')
     }
     const requests:(TokenSendRequest|OpReturnData)[] = []
     requests.push(this.prepareIdentityOutputRequest(opt.storeAmountIn === 'authchain'))
@@ -43,6 +46,9 @@ export default class FungibleToken extends CashStudioToken{
     console.log('Submitting Transaction')
     const tx = await this.submitTransaction(signResult)
     console.log('TX', tx)
+    if(tx) {
+      await BCMR.buildAuthChain({ transactionHash: this.tokenId, network: this.ownerWallet!.network })
+    }
 
   }
 }
