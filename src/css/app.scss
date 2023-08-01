@@ -1,5 +1,45 @@
 // app global css in SCSS form
 
+@font-face {
+  font-family: montserrat-regular;
+  src: url(../public/fonts/montserrat/Montserrat-Regular.woff2);
+}
+
+@font-face {
+  font-family: montserrat-italic;
+  src: url(../public/fonts/montserrat/Montserrat-Regular-Italic.woff2);
+}
+
+@font-face {
+  font-family: montserrat-thin;
+  src: url(../public/fonts/montserrat/Montserrat-Thin.woff2);
+}
+
+@font-face {
+  font-family: montserrat-thin-italic;
+  src: url(../public/fonts/montserrat/Montserrat-Thin-Italic.woff2);
+}
+
+@font-face {
+  font-family: montserrat-bold;
+  src: url(../public/fonts/montserrat/Montserrat-Bold.woff2);
+}
+
+@font-face {
+  font-family: montserrat-bold-italic;
+  src: url(../public/fonts/montserrat/Montserrat-Bold-Italic.woff2);
+}
+
+@font-face {
+  font-family: cutive-mono;
+  src: url(../public/fonts/montserrat/Cutive-Mono.woff2);
+}
+
+body {
+  font-family: 'montserrat-regular';
+  font-size: .8em;
+}
+
 form {
   // padding: 1em;
   justify-items: center;
@@ -17,6 +57,10 @@ code {
   padding: 0.2em;
   word-break: normal;
   border-radius: 5px;
+}
+
+.token-symbol {
+  color: rgb(134, 218, 8);
 }
 
 .token-thumbnail {

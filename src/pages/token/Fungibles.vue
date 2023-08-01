@@ -2,15 +2,15 @@
 <template>
   <q-page>
     <div class="row justify-left q-gutter-md q-ma-md">
-      <q-dialog class="col-xs-12 col-sm-4" size="sm" v-model="options.issueTokens">
-        <q-card class="q-pa-sm">
+      <q-dialog class="col-xs-12 row" v-model="options.issueTokens">
+        <q-card class="q-pa-sm col-xs-12">
           <q-toolbar>
             <q-toolbar-title>
               Issue Tokens
             </q-toolbar-title>
             <q-btn size="sm" icon="close" dense flat @click="options.issueTokens = false"></q-btn>
           </q-toolbar>
-          <q-card-section class="q-gutter-sm">
+          <q-card-section class="q-gutter-sm row">
             <q-input v-model="options.data.issueTokens.to" dense filled label="To"></q-input>
             <q-input v-model="options.data.issueTokens.amount" dense filled label="Amount"></q-input>
           </q-card-section>
@@ -53,7 +53,6 @@
           </div>
         </q-card-section>
       </q-card>
-
     </div>
   </q-page>
 </template>
