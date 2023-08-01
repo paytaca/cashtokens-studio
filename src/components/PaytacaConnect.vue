@@ -1,12 +1,10 @@
 <template>
-  <div class="row q-my-sm q-mx-sm">
-    <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md"
-      @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()" align="center" stack dense rounded>
-      <q-icon v-if="user.connectedPaytacaAddress" name="link" color="positive" size="xs" round
+  <div class="row q-my-sm q-mx-sm" @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()">
+    <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md" align="center" stack dense>
+      <q-icon v-if="user.connectedPaytacaAddress" name="link" color="positive" size="xs" class="q-py-sm"
         style="width:.15em;height:.10em"></q-icon>
-      <q-icon v-else name="link_off" color="negative" size="xs"></q-icon>
+      <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
     </q-btn>
-
   </div>
 </template>
 
@@ -42,15 +40,18 @@ onMounted(async () => {
 
 watch(() => user.connectedPaytacaAddress, async (address) => {
   if (address) {
+    console.log('initializing wallet')
     const WalletClass = getWalletClass()
     user.wallet = await WalletClass.watchOnly(address)
     user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
     const userUtxos = await user.wallet.getAddressUtxos()
+
     storeBalances(userUtxos)
     cancelAddressWatch.value = user.wallet.watchAddress(async () => {
       user.updatingBalances = true
       user.connectedPaytacaWalletBchBalance = await user.wallet?.getBalance('sat') as string
       const userUtxos = await user.wallet?.getAddressUtxos()
+
       if (userUtxos) {
         storeBalances(userUtxos)
       }
@@ -79,7 +80,8 @@ const connect = async () => {
 }
 
 const storeBalances = (userUtxos: UtxoI[]) => {
-  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 2500)
+  console.log(userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 0).slice(0, 5))
+  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 2500).slice(0, 5)
   user.fts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.amount > 0)
   user.nfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && !utxo.token.amount)
   user.fnfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && utxo.token.amount)
@@ -87,8 +89,8 @@ const storeBalances = (userUtxos: UtxoI[]) => {
 
 const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  await window.paytaca!.disconnect()
   user.connectedPaytacaAddress = ''
+  await window.paytaca!.disconnect()
   router.push('/')
   cancelAddressWatch.value()
 }
