@@ -7,6 +7,9 @@
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
+          <q-input :model-value="currentFtReserves" label="Current supply (in reserves)" filled dense disable></q-input>
+          <q-input v-if="amount && Number(amount) > 0" :model-value="Number(currentFtReserves) - Number(amount)"
+            label="New supply (in reserves)" filled dense disable></q-input>
           <q-input v-model="recipient" label="Recipient's Address" filled dense></q-input>
           <q-input v-model="amount" label="Token amount or qty" filled dense></q-input>
         </q-form>
@@ -20,7 +23,7 @@
 
 <script setup lang="ts">
 import AuthchainIdentity from 'src/models/AuthchainIdentity';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import TokenCategory from './TokenCategory.vue';
 import { useQuasar } from 'quasar';
 
@@ -32,13 +35,11 @@ const $q = useQuasar()
 const props = defineProps<{ identityOutput: AuthchainIdentity }>()
 const recipient = ref<string>()
 const amount = ref<string>()
-
 const registry = ref<UrlContent>({ url: props.identityOutput?.registry?.url || '', contentHash: props.identityOutput?.registry?.contentHash || '' })
-
 const newIdentityOutput = ref<AuthchainIdentity>(
   new AuthchainIdentity({ ...props.identityOutput })
 )
-
+const currentFtReserves = computed(() => newIdentityOutput.value.amount)
 const publish = async () => {
   newIdentityOutput.value.registry = registry.value
   // const tx = await newIdentityOutput.value.issueFromReserve()
