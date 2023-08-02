@@ -10,6 +10,7 @@
               <th>Fungible Reserves</th>
               <th>Capability</th>
               <th>Commitment</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -19,6 +20,19 @@
               <td>{{ ai.amount }}</td>
               <td>{{ ai.capability }}</td>
               <td>{{ ai.commitment }}</td>
+              <td>
+                <q-btn icon="more_vert" size="md" round flat dense>
+                  <q-menu>
+                    <q-list>
+                      <q-item clickable v-close-popup @click="dialog = 'authchain-publish'">Publish Registry</q-item>
+                      <q-item clickable v-close-popup @click="dialog = 'authchain-transfer'">Transfer Ownership</q-item>
+                      <q-item clickable v-close-popup @click="dialog = 'authchain-burn'">Burn Identity Output</q-item>
+                      <q-item clickable v-close-popup @click="dialog = 'authchain-release'">Release Identity
+                        Output</q-item>
+                    </q-list>
+                  </q-menu>
+                </q-btn>
+              </td>
             </tr>
           </tbody>
         </q-markup-table>
@@ -35,6 +49,7 @@ import { Wallet } from 'mainnet-js';
 defineOptions({ name: 'AuthchainsPage' })
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
+const dialog = ref<'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release' | undefined>()
 onMounted(async () => {
   if (user.wallet) {
     const authchain = new AuthchainIdentity({ ownerWallet: user.wallet as Wallet })
