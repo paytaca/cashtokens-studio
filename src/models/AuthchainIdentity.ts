@@ -17,6 +17,8 @@ export default class AuthchainIdentity implements CashStudioTokenI {
   commitment?: string
   registry?: Registry
   ownerWallet?: Wallet
+  satoshis: string
+
   protected _processing?: string
   protected _message?: Message
   private _contract?: Contract
@@ -25,12 +27,13 @@ export default class AuthchainIdentity implements CashStudioTokenI {
    * Invoking publish will try to build an authchain in chaingraph.
    */
   lastRegistry?: Registry
-  constructor(p: {tokenId?:string, amount?:string, capability?: NFTCapability, commitment?:string, registry?: Registry, ownerWallet?: Wallet}) {
+  constructor(p: {tokenId?:string, amount?:string, capability?: NFTCapability, commitment?:string, registry?: Registry, satoshis?:string, ownerWallet?: Wallet}) {
     this.tokenId = p.tokenId
     this.amount = p.amount
     this.capability = p.capability
     this.commitment = p.commitment
     this.registry = p.registry
+    this.satoshis = p.satoshis?.toString() || ''
     this.ownerWallet = p.ownerWallet
     this.createContract()
   }
@@ -206,6 +209,22 @@ export default class AuthchainIdentity implements CashStudioTokenI {
     }`
   }
 
+  async getIdentities(): Promise<AuthchainIdentity[]>{
+    this.ensureOwnerWallet()
+    this.ensureContract()
+    const contractWallet = await getWalletClass().watchOnly(this.contract!.getDepositAddress())
+    const identityOutputs = (await contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => utxo.token?.commitment === constants.IDENTITY)
+    return identityOutputs.map((u:UtxoI) => {
+      return new AuthchainIdentity({
+        tokenId: u.token?.tokenId,
+        commitment: u.token?.commitment,
+        capability: u.token?.capability,
+        amount: u.token?.amount.toString(),
+        satoshis: u.satoshis?.toString(),
+        ownerWallet: this.ownerWallet
+      })
+    })
+  }
   /**
    * Publishes registry on chain
    * @returns {Promise<string|undefined>} Promise that resolves to tx or undefined if transaction signing request was cancelled

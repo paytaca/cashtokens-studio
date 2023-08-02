@@ -55,7 +55,12 @@ const menu = computed<any[]>(() => {
               label: 'Fungible Reserves',
               href: '/token/fungibles',
               icon: 'token',
-            }
+            },
+            {
+              label: 'Authchains',
+              href: '/token/authchains',
+              icon: 'token',
+            },
           ]
         }
       ]
