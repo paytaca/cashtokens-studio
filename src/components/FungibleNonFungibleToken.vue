@@ -14,6 +14,8 @@
     <q-input v-else v-model="token.tokenId" label="Token ID" :filled="true" dense square />
     <template v-if="token.tokenId">
       <q-input v-model="token.amount" label="Amount" :filled="true" dense square />
+      <q-input v-model="token.commitment" label="Commitment" :filled="true" dense square />
+      <q-input v-model="token.capability" label="Capability" :filled="true" dense square />
       <q-select :filled="true" bottom-slots v-model="storeFtGenesisSupplyIn" :options="ftGenesisSupplyStoreOpts"
         label="Store FT Genesis Supply In" dense square hide-bottom-space>
         <template v-slot:option="scope">
@@ -65,17 +67,10 @@
           </div>
         </div>
       </template>
-      <div class="row justify-end q-my-lg">
-        <template v-if="token.processing">
-          <q-btn disable>
-            <q-spinner :thickness="10" color="primary" size="sm" /> {{ token.processing }}
-          </q-btn>
-        </template>
 
-        <template v-else>
-          <q-btn v-if="action === 'genesis'"
-            @click="token.createGenesis({ storeAmountIn: storeFtGenesisSupplyIn.value })">Create Token</q-btn>
-        </template>
+      <div class="row justify-end q-my-lg">
+        <q-btn v-if="action === 'genesis'"
+          @click="token.createGenesis({ storeAmountIn: storeFtGenesisSupplyIn.value })">Create Token</q-btn>
       </div>
     </template>
   </q-form>
@@ -86,19 +81,22 @@ import { useQuasar } from 'quasar'
 import { watch, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { TokenAction } from 'src/types'
-import FungibleTokenModel from 'src/models/FungibleToken'
+import FungibleNonFungibleToken from 'src/models/FungibleNonFungibleToken'
 import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
 import constants from 'src/constants'
 import { useUser } from 'src/stores/user'
-defineOptions({ name: 'FungibleToken' })
+import { NFTCapability } from 'mainnet-js'
+defineOptions({ name: 'FungibleNonFungibleToken' })
 const $q = useQuasar()
 const user = useUser()
 const route = useRoute()
 const props = defineProps<{ owner?: string, action?: TokenAction, genesisTokenIdOptions?: string[] }>()
 // const token = ref<{ amount: string, tokenId: string }>({ amount: '', tokenId: '' })
-const token = ref<FungibleTokenModel>(new FungibleTokenModel({
+const token = ref<FungibleNonFungibleToken>(new FungibleNonFungibleToken({
   tokenId: props.genesisTokenIdOptions && props.genesisTokenIdOptions[0] || '',
-  amount: constants.MAX_FUNGIBLE_AMOUNT
+  amount: constants.MAX_FUNGIBLE_AMOUNT,
+  capability: NFTCapability.minting,
+  commitment: ''
 }))
 
 const tokenIdOptions = ref<{ value: string, label: string }[]>()
@@ -121,11 +119,6 @@ watch(() => publishRegistry.value, (yes) => {
     token.value.registry = { url: '', contentHash: '' }
   } else {
     delete token.value.registry
-  }
-})
-watch(() => token.value.message, (msg) => {
-  if (msg && msg.type === 'success') {
-    $q.notify({ color: 'positive', message: msg.text, timeout: 5000 })
   }
 })
 onMounted(() => {
