@@ -1,4 +1,4 @@
-import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, Mainnet, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
 import CashStudioToken from "./CashStudioToken"
 import { AuthChainGuard, CashStudioTokenI, Message, Registry } from "./interfaces"
@@ -377,7 +377,7 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
     let decoded
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     const newOwnerWallet = await (getWalletClass()).watchOnly(newOwnerAddress)
-    const newOwnerAuthchainGuardContract = new Contract(this.contractScript, newOwnerWallet.getPublicKeyHash(false), newOwnerWallet.network)
+    const newOwnerAuthchainGuardContract = new Contract(this.contractScript, [newOwnerWallet.getPublicKeyHash(false)], newOwnerWallet.network)
     try {
       transaction =
         this.publishOrBurnOrReleaseOrTransfer(Uint8Array.from(Array(33)), Uint8Array.from(Array(65)), newOwnerWallet.getPublicKeyHash(false))
