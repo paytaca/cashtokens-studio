@@ -1,5 +1,5 @@
 import { NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
-import { CashStudioTokenI, Registry} from './interfaces'
+import { CashStudioTokenI, GenesisCreator, Registry} from './interfaces'
 import AuthChainGuard from 'src/contracts/AuthChainGuard'
 import { decodeTransaction, hexToBin } from '@bitauth/libauth'
 
@@ -10,7 +10,7 @@ type Message = {
 /**
  * Cash<Studio>Token
  */
-export default abstract class CashStudioToken implements CashStudioTokenI{
+export default abstract class CashStudioToken implements CashStudioTokenI, GenesisCreator{
   tokenId?: string
   amount?:string
   capability?:NFTCapability
@@ -71,6 +71,9 @@ export default abstract class CashStudioToken implements CashStudioTokenI{
     return {encodedTransaction, sourceOutputs}
   }
 
+  /**
+   * Only use this for genesis transaction. Override this if interacting with contract
+   */
   protected async requestPaytacaSignature(encodedTransaction:any, sourceOutputs:any): Promise<any> {
     this._processing = 'Waiting for signature'
     const decoded = decodeTransaction(encodedTransaction)
