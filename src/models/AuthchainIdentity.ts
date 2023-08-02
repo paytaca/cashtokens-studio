@@ -22,11 +22,6 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
   protected _processing?: string
   protected _message?: Message
   private _contract?: Contract
-  /**
-   * If not set it means there is no previous publication.
-   * Invoking publish will try to build an authchain in chaingraph.
-   */
-  lastRegistry?: Registry
   constructor(p: {tokenId?:string, amount?:string, capability?: NFTCapability, commitment?:string, registry?: Registry, satoshis?:string, ownerWallet?: Wallet}) {
     this.tokenId = p.tokenId
     this.amount = p.amount
@@ -229,7 +224,7 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
    * Publishes registry on chain
    * @returns {Promise<string|undefined>} Promise that resolves to tx or undefined if transaction signing request was cancelled
    */
-  async publish(): Promise<string|undefined> {
+  async publish(opt?:{buildAuthchain?:boolean}): Promise<string|undefined> {
 
     this.ensureTokenId()
     this.ensureContract()
@@ -340,7 +335,7 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
     this._processing = 'Publishing'
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      if (!this.lastRegistry) {
+      if (opt?.buildAuthchain) {
         await BCMR.buildAuthChain({ transactionHash: this.tokenId!, network: this.ownerWallet!.network })
       }
       return tx
