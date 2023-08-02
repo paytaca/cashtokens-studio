@@ -205,10 +205,12 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
   }
 
   async getIdentities(): Promise<AuthchainIdentity[]>{
+    this._processing = 'Identities'
     this.ensureOwnerWallet()
     this.ensureContract()
     const contractWallet = await getWalletClass().watchOnly(this.contract!.getDepositAddress())
     const identityOutputs = (await contractWallet!.getAddressUtxos()).filter((utxo: UtxoI) => utxo.token?.commitment === constants.IDENTITY)
+    delete this._processing
     return identityOutputs.map((u:UtxoI) => {
       return new AuthchainIdentity({
         tokenId: u.token?.tokenId,
@@ -219,6 +221,7 @@ export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGua
         ownerWallet: this.ownerWallet
       })
     })
+
   }
   /**
    * Publishes registry on chain
