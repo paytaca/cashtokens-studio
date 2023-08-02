@@ -14,6 +14,13 @@
             </tr>
           </thead>
           <tbody>
+            <tr v-if="authchainIdentity?.processing === 'Identities'">
+              <td><q-skeleton type="text" /></td>
+              <td><q-skeleton type="text" /></td>
+              <td><q-skeleton type="text" /></td>
+              <td><q-skeleton type="text" /></td>
+              <td><q-skeleton type="text" /></td>
+            </tr>
             <tr v-for="ai, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i }}</td>
               <td>{{ ai.tokenId }}</td>
@@ -24,10 +31,16 @@
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup @click="dialog = 'authchain-publish'">Publish Registry</q-item>
-                      <q-item clickable v-close-popup @click="dialog = 'authchain-transfer'">Transfer Ownership</q-item>
-                      <q-item clickable v-close-popup @click="dialog = 'authchain-burn'">Burn Identity Output</q-item>
-                      <q-item clickable v-close-popup @click="dialog = 'authchain-release'">Release Identity
+                      <q-item clickable v-close-popup
+                        @click="openDialog(AuthchainRegistryPublisher.name as string, ai)">Publish
+                        Registry</q-item>
+                      <q-item clickable v-close-popup @click="openDialog(AuthchainTransferer.name as string, ai)">Transfer
+                        Ownership</q-item>
+                      <q-item clickable v-close-popup @click="openDialog(AuthchainBurner.name as string, ai)">Burn
+                        Identity
+                        Output</q-item>
+                      <q-item clickable v-close-popup @click="openDialog(AuthchainReleaser.name as string, ai)">Release
+                        Identity
                         Output</q-item>
                     </q-list>
                   </q-menu>
@@ -35,27 +48,67 @@
               </td>
             </tr>
           </tbody>
+
         </q-markup-table>
+        <AuthchainRegistryPublisher v-model="openARPDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+          v-close-popup @hide="onDialogHide" />
+        <AuthchainBurner v-model="openABDialog" :identity-output="(authchainIdentity as AuthchainIdentity)" v-close-popup
+          @hide="onDialogHide" />
+        <AuthchainTransferer v-model="openATDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+          v-close-popup @hide="onDialogHide" />
+        <AuthchainReleaser v-model="openARDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+          v-close-popup @hide="onDialogHide" />
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
 import AuthchainIdentity from 'src/models/AuthchainIdentity';
-import { onMounted, ref } from 'vue';
+import { nextTick, onMounted, ref } from 'vue';
 import { useUser } from 'src/stores/user';
 import { Wallet } from 'mainnet-js';
+import AuthchainRegistryPublisher from 'src/components/AuthchainRegistryPublisher.vue'
+import AuthchainBurner from 'src/components/AuthchainBurner.vue'
+import AuthchainTransferer from 'src/components/AuthchainTransferer.vue'
+import AuthchainReleaser from 'src/components/AuthchainReleaser.vue'
 
 defineOptions({ name: 'AuthchainsPage' })
+
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
-const dialog = ref<'authchain-publish' | 'authchain-transfer' | 'authchain-burn' | 'authchain-release' | undefined>()
+/**
+ * current authchain identity in view/dialog
+ */
+const authchainIdentity = ref<AuthchainIdentity>()
+const openARPDialog = ref<boolean>(false)
+const openABDialog = ref<boolean>(false)
+const openATDialog = ref<boolean>(false)
+const openARDialog = ref<boolean>(false)
+
 onMounted(async () => {
   if (user.wallet) {
-    const authchain = new AuthchainIdentity({ ownerWallet: user.wallet as Wallet })
-    authchainIdentities.value = await authchain.getIdentities()
+    authchainIdentity.value = new AuthchainIdentity({ ownerWallet: user.wallet as Wallet })
+    authchainIdentities.value = await authchainIdentity.value.getIdentities()
     console.log(authchainIdentities.value)
   }
-
 })
+
+const openDialog = (d: string, data: AuthchainIdentity) => {
+  authchainIdentity.value = data
+  nextTick(() => {
+    openARPDialog.value = d === AuthchainRegistryPublisher.name
+    openABDialog.value = d === AuthchainBurner.name
+    openATDialog.value = d === AuthchainTransferer.name
+    openARDialog.value = d === AuthchainReleaser.name
+  })
+}
+
+const onDialogHide = () => {
+  // delete authchainIdentity.value
+  // openARPDialog.value = false
+  // openABDialog.value = false
+  // openATDialog.value = false
+  // openARDialog.value = false
+}
+
 </script>
