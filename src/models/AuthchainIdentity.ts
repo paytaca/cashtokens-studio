@@ -1,7 +1,7 @@
 import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
 import CashStudioToken from "./CashStudioToken"
-import { CashStudioTokenI, Message, Registry } from "./interfaces"
+import { AuthChainGuard, CashStudioTokenI, Message, Registry } from "./interfaces"
 import { Contract } from "@mainnet-cash/contract"
 import getWalletClass from 'src/utils/getWalletClass'
 import constants from 'src/constants'
@@ -10,7 +10,7 @@ import { Artifact, SignatureTemplate, Utxo } from 'cashscript'
 import { scriptToBytecode } from '@cashscript/utils'
 import getByteCount from 'src/utils/getByteCount'
 
-export default class AuthchainIdentity implements CashStudioTokenI {
+export default class AuthchainIdentity implements CashStudioTokenI, AuthChainGuard {
   tokenId?: string
   amount?: string
   capability?: NFTCapability
@@ -38,7 +38,7 @@ export default class AuthchainIdentity implements CashStudioTokenI {
     this.createContract()
   }
 
-  private createContract() {
+  createContract() {
     if (this.ownerWallet) {
       this._contract = new Contract(
         this.contractScript,

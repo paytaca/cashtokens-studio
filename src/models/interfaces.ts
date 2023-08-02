@@ -30,6 +30,17 @@ export interface GenesisCreator {
   createGenesis(opt: GenesisOptions): Promise<string|void>
 }
 
+export interface AuthChainGuard {
+  publish(): Promise<string|undefined>
+  transfer(newOwnerAddress: string): Promise<string|undefined>
+  burn(): Promise<string|undefined>
+  release(tokenId: string, recipient: string): Promise<string|undefined>
+}
+
+export interface MBC {
+  unlockWithNft(): Promise<string|undefined>
+}
+
 export interface CashStudioTokenI extends Processing, Messaging{
   tokenId?: string
   amount?:string
@@ -39,10 +50,4 @@ export interface CashStudioTokenI extends Processing, Messaging{
   ownerWallet?: Wallet
 }
 
-export interface AuthchainIdentity {
-  /**
-   * Create a token genesis
-   * @return {string} The transaction hash on success
-   */
-  createGenesis(opt: GenesisOptions): Promise<string|void>
-}
+
