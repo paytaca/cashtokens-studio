@@ -27,7 +27,7 @@
               <td>{{ ai.amount }}</td>
               <td>{{ ai.capability }}</td>
               <td>{{ ai.commitment }}</td>
-              <td>
+              <td style="position:sticky">
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
@@ -51,13 +51,13 @@
 
         </q-markup-table>
         <AuthchainRegistryPublisher v-model="openARPDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup @hide="onDialogHide" />
-        <AuthchainBurner v-model="openABDialog" :identity-output="(authchainIdentity as AuthchainIdentity)" v-close-popup
-          @hide="onDialogHide" />
+          v-close-popup />
+        <AuthchainBurner v-model="openABDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+          v-close-popup />
         <AuthchainTransferer v-model="openATDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup @hide="onDialogHide" />
+          v-close-popup />
         <AuthchainReleaser v-model="openARDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup @hide="onDialogHide" />
+          v-close-popup />
       </div>
     </div>
   </q-page>
@@ -89,7 +89,6 @@ onMounted(async () => {
   if (user.wallet) {
     authchainIdentity.value = new AuthchainIdentity({ ownerWallet: user.wallet as Wallet })
     authchainIdentities.value = await authchainIdentity.value.getIdentities()
-    console.log(authchainIdentities.value)
   }
 })
 

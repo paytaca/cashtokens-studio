@@ -20,5 +20,5 @@ import { ref } from 'vue';
 
 defineOptions({ name: 'AuthchainReleaser' })
 const props = defineProps<{ identityOutput: AuthchainIdentity }>()
-const newIdentityOutput = ref<AuthchainIdentity>(props.identityOutput)
+const newIdentityOutput = ref<AuthchainIdentity>(new AuthchainIdentity({ ...props.identityOutput }))
 </script>
