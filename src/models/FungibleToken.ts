@@ -8,7 +8,7 @@ export default class FungibleToken extends CashStudioToken{
   }
 
   async createGenesis(opt: {storeAmountIn: 'authchain'|'minting-baton-covenant'|'creator-address'}): Promise<string | void> {
-    console.log('CREATING GENESIS', this)
+    this._processing = 'Processing transaction...'
     if (!this.tokenId) {
       throw new Error('The tokenId is not set')
     }
@@ -39,16 +39,14 @@ export default class FungibleToken extends CashStudioToken{
       }
       requests.push(this.prepareRegistryPublicationOutputRequest())
     }
-    console.log('BUILDING GENESIS TRANSACTION')
     const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
-    console.log('WAITING FOR SIGNATURE')
     const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    console.log('Submitting Transaction')
     const tx = await this.submitTransaction(signResult)
-    console.log('TX', tx)
     if(tx) {
+      this._message = { type: 'success', text: `Success! Tx = ${tx}`}
+      this._processing = 'Building authchain'
       await BCMR.buildAuthChain({ transactionHash: this.tokenId, network: this.ownerWallet!.network })
+      delete this._processing
     }
-
   }
 }
