@@ -3,7 +3,7 @@
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title>Issue fungibles from reserves</q-toolbar-title>
-        <TokenCategory :token-id="identityOutput.tokenId!" />
+        <TokenCategory v-if="identityOutput.tokenId" :token-id="identityOutput.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
@@ -15,7 +15,7 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn @click="publish">{{ newIdentityOutput.processing || 'Confirm Token Issuance' }}</q-btn>
+        <q-btn @click="() => issueTokens()">{{ newIdentityOutput.processing || 'Issue Tokens' }}</q-btn>
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -23,28 +23,46 @@
 
 <script setup lang="ts">
 import AuthchainIdentity from 'src/models/AuthchainIdentity';
-import { ref, watch, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import TokenCategory from './TokenCategory.vue';
 import { useQuasar } from 'quasar';
-
-type UrlContent = { url: string, contentHash: string }
+import { useUser } from 'src/stores/user';
+import { Wallet } from 'mainnet-js';
 
 defineOptions({ name: 'FungibleTokenIssuer' })
 const $q = useQuasar()
-
+const user = useUser()
 const props = defineProps<{ identityOutput: AuthchainIdentity }>()
 const recipient = ref<string>()
 const amount = ref<string>()
-const registry = ref<UrlContent>({ url: props.identityOutput?.registry?.url || '', contentHash: props.identityOutput?.registry?.contentHash || '' })
 const newIdentityOutput = ref<AuthchainIdentity>(
-  new AuthchainIdentity({ ...props.identityOutput })
+  new AuthchainIdentity({ ...props.identityOutput, ownerWallet: user.wallet as Wallet })
 )
-const currentFtReserves = computed(() => newIdentityOutput.value.amount)
-const publish = async () => {
-  newIdentityOutput.value.registry = registry.value
-  // const tx = await newIdentityOutput.value.issueFromReserve()
-  // if (tx) {
-  //   $q.notify({ type: 'positive', message: 'Tokens issued' })
+const currentFtReserves = computed(() => props.identityOutput.amount)
+
+onMounted(() => console.log(props.identityOutput))
+
+const issueTokens = () => {
+  console.log('ISSUING TOKENS', newIdentityOutput)
+  if (!recipient.value || !amount.value || Number(amount.value) === 0) {
+    $q.notify({ type: 'negative', message: 'Error!Amount and recipient required!' })
+  }
+  newIdentityOutput.value.tokenId = props.identityOutput.tokenId
+  newIdentityOutput.value.issueFungibleTokens(amount.value as string, recipient.value as string)
+    .then((tx) => {
+      if (tx) {
+        $q.notify({ type: 'positive', message: 'Tokens issued' })
+      }
+    })
+    .catch((error) => {
+      $q.notify({ type: 'negative', message: error?.toString() })
+    })
+  // try {
+  //   const tx = await newIdentityOutput.value.issueFungibleTokens(amount.value as string, recipient.value as string)
+
+  // } catch (error) {
+  //   $q.notify({ type: 'negative', message: error?.toString() })
   // }
+
 }
 </script>
