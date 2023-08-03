@@ -23,7 +23,9 @@
             </tr>
             <tr v-for="ai, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
-              <td>{{ ai.tokenId }}</td>
+              <td>
+                <TokenCategory :tokenId="ai.tokenId!" />
+              </td>
               <td>{{ ai.amount }}</td>
               <td>{{ ai.capability }}</td>
               <td>{{ ai.commitment }}</td>
@@ -42,8 +44,7 @@
                       <q-item clickable v-close-popup @click="openDialog(AuthchainReleaser.name as string, ai)">Release
                         Identity
                         Output</q-item>
-                      <q-item clickable v-if="Number(ai.amount) > 0" v-close-popup
-                        @click="openDialog(FungibleTokenIssuer.name as string, ai)">
+                      <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuer.name as string, ai)">
                         Issue Fungible Tokens
                       </q-item>
                     </q-list>
@@ -53,16 +54,18 @@
             </tr>
           </tbody>
         </q-markup-table>
-        <AuthchainRegistryPublisher v-model="openARPDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup />
-        <AuthchainBurner v-model="openABDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup />
-        <AuthchainTransferer v-model="openATDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup />
-        <AuthchainReleaser v-model="openARDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup />
-        <FungibleTokenIssuer v-model="openTIDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
-          v-close-popup />
+        <template v-if="authchainIdentity">
+          <AuthchainRegistryPublisher v-model="openARPDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+            v-close-popup />
+          <AuthchainBurner v-model="openABDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+            v-close-popup />
+          <AuthchainTransferer v-model="openATDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+            v-close-popup />
+          <AuthchainReleaser v-model="openARDialog" :identity-output="(authchainIdentity as AuthchainIdentity)"
+            v-close-popup />
+          <FungibleTokenIssuer v-model="openTIDialog" :identity-output="(new AuthchainIdentity({ ...authchainIdentity }))"
+            v-close-popup />
+        </template>
       </div>
     </div>
   </q-page>
@@ -77,7 +80,7 @@ import AuthchainBurner from 'src/components/AuthchainBurner.vue'
 import AuthchainTransferer from 'src/components/AuthchainTransferer.vue'
 import AuthchainReleaser from 'src/components/AuthchainReleaser.vue'
 import FungibleTokenIssuer from 'src/components/FungibleTokenIssuer.vue';
-
+import TokenCategory from 'src/components/TokenCategory.vue'
 defineOptions({ name: 'AuthchainsPage' })
 
 const user = useUser()
@@ -101,12 +104,10 @@ onMounted(async () => {
 
 const openDialog = (d: string, data: AuthchainIdentity) => {
   authchainIdentity.value = data
-  nextTick(() => {
-    openARPDialog.value = d === AuthchainRegistryPublisher.name
-    openABDialog.value = d === AuthchainBurner.name
-    openATDialog.value = d === AuthchainTransferer.name
-    openARDialog.value = d === AuthchainReleaser.name
-    openTIDialog.value = d === FungibleTokenIssuer.name
-  })
+  openARPDialog.value = d === AuthchainRegistryPublisher.name
+  openABDialog.value = d === AuthchainBurner.name
+  openATDialog.value = d === AuthchainTransferer.name
+  openARDialog.value = d === AuthchainReleaser.name
+  openTIDialog.value = d === FungibleTokenIssuer.name
 }
 </script>

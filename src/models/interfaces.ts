@@ -34,7 +34,7 @@ export interface AuthChainGuard {
   publish(): Promise<string|undefined>
   transfer(newOwnerAddress: string): Promise<string|undefined>
   burn(): Promise<string|undefined>
-  release(tokenId: string, recipient: string): Promise<string|undefined>
+  release(recipient: string): Promise<string|undefined>
 }
 
 export interface MBC {

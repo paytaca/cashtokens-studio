@@ -12,20 +12,16 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn @click="transfer">
-          <q-spinner v-if="authchain.processing" size="2em"></q-spinner>
-          {{ authchain.processing || 'Transfer' }}
-        </q-btn>
+        <BusyButton @click="transfer" :busyLabel="authchain.processing" label="Transfer" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
-import { useQuasar } from 'quasar';
-import AuthchainIdentity from 'src/models/AuthchainIdentity';
-import { ref } from 'vue';
-
-
+import { useQuasar } from 'quasar'
+import AuthchainIdentity from 'src/models/AuthchainIdentity'
+import { ref } from 'vue'
+import BusyButton from 'src/components/BusyButton.vue'
 
 defineOptions({ name: 'AuthchainTransferer' })
 const $q = useQuasar()

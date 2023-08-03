@@ -15,7 +15,8 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn @click="() => issueTokens()">{{ newIdentityOutput.processing || 'Issue Tokens' }}</q-btn>
+        <!-- <q-btn @click="() => issueTokens()">{{ newIdentityOutput.processing || 'Issue Tokens' }}</q-btn> -->
+        <BusyButton @click="() => issueTokens()" label="Issue Tokens" :busyLabel="newIdentityOutput.processing" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -28,6 +29,7 @@ import TokenCategory from './TokenCategory.vue';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import { Wallet } from 'mainnet-js';
+import BusyButton from 'src/components/BusyButton.vue'
 
 defineOptions({ name: 'FungibleTokenIssuer' })
 const $q = useQuasar()

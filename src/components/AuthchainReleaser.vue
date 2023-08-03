@@ -9,7 +9,7 @@
         </q-form>
       </q-card-section>
       <q-card-action>
-        <q-btn>{{ newIdentityOutput.processing || 'Release' }}</q-btn>
+        <BusyButton @click="() => { }" :busyLabel="newIdentityOutput.processing" label="Release" />
       </q-card-action>
     </q-card>
   </q-dialog>

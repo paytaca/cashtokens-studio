@@ -8,9 +8,9 @@
         <q-form>
         </q-form>
       </q-card-section>
-      <q-card-action>
+      <q-card-actions>
         <q-btn>{{ newIdentityOutput.processing || 'Publish' }}</q-btn>
-      </q-card-action>
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
