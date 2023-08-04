@@ -135,7 +135,7 @@ onMounted(() => {
 })
 
 const createGenesis = async () => {
-  if (!props.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
+  if (!form.value.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
     $q.notify({ type: 'negative', message: 'Missing AuthNFT!' })
     return
   }
@@ -144,7 +144,10 @@ const createGenesis = async () => {
     return
   }
   token.value.utxo = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0]
-  token.value.authNFT = props.authNft
+  token.value.authNFT = form.value.authNft
+  if (form.value.publishRegistry) {
+    token.value.registry = form.value.tokenRegistry
+  }
   try {
     await token.value.createGenesis({ genesisSupplyAmount: form.value.tokenAmount })
   } catch (error: any) {
