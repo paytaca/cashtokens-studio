@@ -22,16 +22,14 @@ defineOptions({ name: 'PaytacaConnect' })
 const $q = useQuasar()
 const router = useRouter()
 const { user } = useStore()
-const cancelAddressWatch = ref()
+const watching = ref()
 
 onMounted(async () => {
   if (detectPaytaca()) {
     const connected = await window.paytaca.connected()
     if (connected) {
-      let connectedAddress = await window.paytaca.address('bch')
-      connectedAddress = formatAddress(connectedAddress)
-      user.connectedPaytacaAddress = connectedAddress
-      user.wallet = await getWalletClass().watchOnly(connectedAddress)
+      user.connectedPaytacaAddress = formatAddress(await window.paytaca.address('bch'))
+      watchAddress(user.connectedPaytacaAddress)
       return
     }
   }
@@ -39,27 +37,8 @@ onMounted(async () => {
 })
 
 watch(() => user.connectedPaytacaAddress, async (address) => {
-  if (address) {
-    console.log('initializing wallet')
-    const WalletClass = getWalletClass()
-    user.wallet = await WalletClass.watchOnly(address)
-    user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
-    const userUtxos = await user.wallet.getAddressUtxos()
-
-    storeBalances(userUtxos)
-    cancelAddressWatch.value = user.wallet.watchAddress(async () => {
-      user.updatingBalances = true
-      user.connectedPaytacaWalletBchBalance = await user.wallet?.getBalance('sat') as string
-      const userUtxos = await user.wallet?.getAddressUtxos()
-
-      if (userUtxos) {
-        storeBalances(userUtxos)
-      }
-      user.updatingBalances = false
-    })
-  } else {
-    cancelAddressWatch.value()
-    router.push('/')
+  if (address && !watching.value) {
+    watchAddress(address)
   }
 })
 
@@ -76,23 +55,51 @@ const connect = async () => {
     dismiss()
     $q.notify({ message: 'Connected', color: 'positive', timeout: 500 })
     user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
+    user.wallet = await getWalletClass().watchOnly(user.connectedPaytacaAddress)
+    user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
+    const userUtxos = await user.wallet.getAddressUtxos()
+    storeBalances(userUtxos)
   }
 }
 
 const storeBalances = (userUtxos: UtxoI[]) => {
-  console.log(userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 0).slice(0, 5))
+  // console.log(userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 0).slice(0, 5))
   user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 2500).slice(0, 5)
-  user.fts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.amount > 0)
-  user.nfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && !utxo.token.amount)
-  user.fnfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && utxo.token.amount)
+  // user.fts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.amount > 0)
+  // user.nfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && !utxo.token.amount)
+  // user.fnfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && utxo.token.amount)
 }
+
+const watchAddress = async (address: string) => {
+  user.wallet = await getWalletClass().watchOnly(address)
+  console.log('Watching address')
+  watching.value = user.wallet.watchAddress(async () => {
+    console.log('WATCHER TRIGGERED')
+    user.updatingBalances = true
+    user.connectedPaytacaWalletBchBalance = await user.wallet?.getBalance('sat') as string
+    const userUtxos = await user.wallet?.getAddressUtxos()
+
+    if (userUtxos) {
+      storeBalances(userUtxos)
+    }
+    user.updatingBalances = false
+  })
+
+}
+
 
 const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   user.connectedPaytacaAddress = ''
+
+  if (watching.value) {
+    watching.value()
+    watching.value = null
+    console.log('CANCELLED WATCH', watching.value)
+  }
   await window.paytaca!.disconnect()
   router.push('/')
-  cancelAddressWatch.value()
+
 }
 
 

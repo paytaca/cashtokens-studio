@@ -7,13 +7,15 @@
           <q-btn to="/token/create/nonfungible">NFT</q-btn>
           <q-btn>FNFT</q-btn>
         </div>
-        <div class="row justify-center">
-          <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :genesis-token-id-options="tokenIdOptions" />
-          <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
+        <div class="row justify-center q-my-lg">
+          <!-- <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
+            :genesis-token-id-options="tokenIdOptions" /> -->
+          <!-- <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
             :genesis-token-id-options="tokenIdOptions" />
           <FungibleNonFungibleToken v-if="tokenType === 'hybrid'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :genesis-token-id-options="tokenIdOptions" />
+            :genesis-token-id-options="tokenIdOptions" /> -->
+          <AuthNFTView v-if="tokenType === 'authnft'" :owner="user.connectedPaytacaAddress" action="genesis"
+            :auth-nft="authNFT" />
         </div>
       </div>
     </div>
@@ -21,17 +23,38 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch, onMounted} from 'vue'
 import { useUser } from 'src/stores/user';
-import { UtxoI } from 'mainnet-js';
+import { UtxoI, Wallet } from 'mainnet-js';
 import FungibleToken from 'src/components/FungibleToken.vue';
 import NonFungibleToken from 'src/components/NonFungibleToken.vue';
 import FungibleNonFungibleToken from 'src/components/FungibleNonFungibleToken.vue';
+import AuthNFTView from 'src/components/AuthNFT.vue'
 import { useRoute, useRouter } from 'vue-router';
+import AuthNFT from 'src/models/AuthNFT';
 defineOptions({ name: 'CreateToken' })
+
 const user = useUser()
 const route = useRoute()
 const router = useRouter()
-const tokenIdOptions = computed(() => user.genesisInputs?.map((u: UtxoI) => u.txid))
+// const tokenIdOptions = computed(() => user.genesisInputs?.map((u: UtxoI) => u.txid))
+const authNFT = ref<AuthNFT>()
+const tokenIdOptions = computed(() => user.genesisInputs)
 const tokenType = computed(() => route.params.tokenType)
+
+// watch(()=> route.params.tokenType, async (tokenType)=>{
+//   if (tokenType === 'authnft') {
+//     authNFT.value = new AuthNFT({ownerWallet: user.wallet as Wallet})
+//     authNFT.value.utxo = await authNFT.value.scanWalletForSuitableAuthNFTUtxo()
+//     console.log('UTXO FOUND', authNFT)
+//   }
+// })
+onMounted(async ()=>{
+  if (route.params.tokenType === 'authnft') {
+    authNFT.value = new AuthNFT({ownerWallet: user.wallet as Wallet})
+    authNFT.value.utxo = await authNFT.value.scanWalletForSuitableAuthNFTUtxo()
+    console.log('UTXO FOUND', authNFT)
+  }
+})
 </script>
+

@@ -42,6 +42,11 @@ const menu = computed<any[]>(() => {
           icon: 'add',
         },
         {
+          label: 'Create AuthNFT',
+          href: '/token/create/authnft',
+          icon: 'add',
+        },
+        {
           label: 'Manage Tokens',
           href: '#',
           icon: 'token',
