@@ -12,10 +12,8 @@
               <th>Action</th>
             </tr>
           </thead>
-          <tbody v-if="AuthNFT.processing">
-            <PageContentSpinner :caption="AuthNFT.processing"/>
-          </tbody>
-          <tbody v-else  class="text-center">
+          <TableBodySkeleton v-if="AuthNFT.processing" col-count="4" row-count="3" :caption="AuthNFT.processing" />
+          <tbody v-else class="text-center">
             <tr v-for="authNft, i in authNfts" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
               <td>
@@ -26,8 +24,7 @@
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup
-                        @click="openDialog('ft-creator', authNft)">Use to create FT</q-item>
+                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft)">Use to create FT</q-item>
                       <!-- <q-item clickable v-close-popup @click="openDialog(AuthchainTransferer.name as string, ai)">Transfer
                         Ownership</q-item>
                       <q-item clickable v-close-popup @click="openDialog(AuthchainBurner.name as string, ai)">Burn
@@ -44,29 +41,32 @@
                 </q-btn>
               </td>
             </tr>
+
           </tbody>
         </q-markup-table>
       </div>
     </div>
     <q-dialog :model-value="dialog === 'ft-creator'" v-close-popup @hide="onDialogHide">
-      <q-card class="full-width q-pa-lg" >
-        <FungibleToken :auth-nft="targetAuthNft" :token-id-options="user.genesisInputs" action="genesis"/>
+      <q-card class="full-width q-pa-lg">
+        <FungibleToken :auth-nft="targetAuthNft" :token-id-options="user.genesisInputs" action="genesis" />
       </q-card>
     </q-dialog>
   </q-page>
 </template>
 <script setup lang="ts">
-import { Wallet } from 'mainnet-js';
 
+type Dialog = 'ft-creator' | 'nft-creator' | 'hybrid-creator' | undefined
+
+import { Wallet } from 'mainnet-js';
 import AuthNFT from 'src/models/AuthNFT';
 import { useUser } from 'src/stores/user';
 import { onMounted, ref } from 'vue';
-import PageContentSpinner from 'src/components/PageContentSpinner.vue';
 import TokenCategory from 'src/components/TokenCategory.vue';
 import FungibleToken from 'src/components/FungibleToken.vue';
+import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 const user = useUser()
 const authNfts = ref<AuthNFT[]>()
-const dialog = ref<'ft-creator'|'nft-creator'|'hybrid-creator'|undefined>()
+const dialog = ref<Dialog>()
 const targetAuthNft = ref<AuthNFT>() // AuthNFT to pass to open dialog
 
 onMounted(async () => {
@@ -77,7 +77,7 @@ onMounted(async () => {
   }
 })
 
-const openDialog = (dialogName:string, authNft: AuthNFT) => {
+const openDialog = (dialogName: Dialog, authNft: AuthNFT) => {
   dialog.value = dialogName
   targetAuthNft.value = authNft
 }

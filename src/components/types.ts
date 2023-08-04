@@ -1,0 +1,1 @@
+type FungibleTokenAction = 'genesis'

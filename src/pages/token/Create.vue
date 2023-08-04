@@ -8,13 +8,13 @@
           <q-btn>FNFT</q-btn>
         </div>
         <div class="row justify-center q-my-lg">
-          <!-- <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :genesis-token-id-options="tokenIdOptions" /> -->
+          <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
+            :token-id-options="user.genesisInputs" />
           <!-- <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
             :genesis-token-id-options="tokenIdOptions" />
           <FungibleNonFungibleToken v-if="tokenType === 'hybrid'" :owner="user.connectedPaytacaAddress" action="genesis"
             :genesis-token-id-options="tokenIdOptions" /> -->
-          <AuthNFTView v-if="tokenType === 'authnft'" :owner="user.connectedPaytacaAddress" action="genesis"
+          <AuthNFTView v-if="tokenType === 'authnft' && authNFT" :owner="user.connectedPaytacaAddress" action="genesis"
             :auth-nft="authNFT" />
         </div>
       </div>
@@ -23,7 +23,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onMounted} from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useUser } from 'src/stores/user';
 import { UtxoI, Wallet } from 'mainnet-js';
 import FungibleToken from 'src/components/FungibleToken.vue';
@@ -37,21 +37,13 @@ defineOptions({ name: 'CreateToken' })
 const user = useUser()
 const route = useRoute()
 const router = useRouter()
-// const tokenIdOptions = computed(() => user.genesisInputs?.map((u: UtxoI) => u.txid))
 const authNFT = ref<AuthNFT>()
-const tokenIdOptions = computed(() => user.genesisInputs)
 const tokenType = computed(() => route.params.tokenType)
 
-// watch(()=> route.params.tokenType, async (tokenType)=>{
-//   if (tokenType === 'authnft') {
-//     authNFT.value = new AuthNFT({ownerWallet: user.wallet as Wallet})
-//     authNFT.value.utxo = await authNFT.value.scanWalletForSuitableAuthNFTUtxo()
-//     console.log('UTXO FOUND', authNFT)
-//   }
-// })
-onMounted(async ()=>{
+onMounted(async () => {
+  console.log(user.authNFTs)
   if (route.params.tokenType === 'authnft') {
-    authNFT.value = new AuthNFT({ownerWallet: user.wallet as Wallet})
+    authNFT.value = new AuthNFT({ ownerWallet: user.wallet as Wallet })
     authNFT.value.utxo = await authNFT.value.scanWalletForSuitableAuthNFTUtxo()
     console.log('UTXO FOUND', authNFT)
   }
