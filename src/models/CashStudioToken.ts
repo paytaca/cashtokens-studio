@@ -64,8 +64,8 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
    * Owner's utxo that'll be used as token genesis input
    */
   async getGenesisInput(): Promise<UtxoI[]|void> {
-    if (!this.ownerWallet || !this.utxo?.token?.tokenId) return
-    return (await this.ownerWallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === this.utxo?.token?.tokenId)
+    if (!this.ownerWallet || !this.utxo?.txid) return
+    return (await this.ownerWallet.getAddressUtxos()).filter((val: UtxoI) => !val.token && val.vout === 0 && val.txid === this.utxo!.txid)
   }
 
   protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
@@ -139,7 +139,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
  * @requires authNFT
  * @requires ownerWallet
  */
-  protected prepareIdentityOutputRequest(): TokenSendRequest {
+  protected prepareIdentityOutputRequest(opt?:{amount?:string, capability?: NFTCapability, commitment?:string}): TokenSendRequest {
     if (!this.ownerWallet || !this.utxo) {
       delete this._processing
       throw new Error("Invalid owner or token id")
@@ -153,9 +153,9 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       cashaddr: authGuard.contract!.getTokenDepositAddress(),
       value: 1000,
       tokenId: this.utxo.txid!,
-      amount: Number(this.utxo?.token?.amount),
-      capability: this.utxo?.token?.capability,
-      commitment: this.utxo?.token?.commitment,
+      amount: Number(opt?.amount) || 0,
+      capability: opt?.capability,
+      commitment: opt?.commitment
     }
     return new TokenSendRequest(reqParam)
   }
