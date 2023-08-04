@@ -1,9 +1,10 @@
 import { BCMR, NFTCapability, OpReturnData, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
+import AuthNFT from './AuthNFT';
 
 export default class FungibleToken extends CashStudioToken{
-  constructor(p:{utxo?:UtxoI, ownerWallet?: Wallet}) {
+  constructor(p:{utxo?:UtxoI, authNFT?:AuthNFT, ownerWallet?: Wallet}) {
     super({...p})
   }
 

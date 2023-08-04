@@ -3,10 +3,17 @@
     <q-toolbar>
       <q-toolbar-title>Create Token</q-toolbar-title>
     </q-toolbar>
-    <q-input :model-value="owner || user.wallet.getTokenDepositAddress()" label="Owner" :filled="true" disable dense square />
-    <q-input :model-value="authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true" disable dense square />
-    <q-select class="overflow-hidden ellipsis" :filled="true" bottom-slots
-      v-model="form.tokenIdSelected" :options="tokenIdSelections" label="Token ID" dense square hide-bottom-space :disable="tokenIdSelections.length === 0">
+    <q-input v-if="owner || user.wallet" :model-value="owner || user.wallet!.getTokenDepositAddress()" label="Owner"
+      :filled="true" disable dense square />
+    <q-input :model-value="form.authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true"
+      :disable="Boolean(form.authNft?.utxo?.token?.tokenId)" dense square>
+      <template v-if="!form.authNft?.utxo?.token?.tokenId" v-slot:append>
+        <q-btn icon="refresh" flat dense color="orange" @click="checkAndLoadAuthNft"></q-btn>
+      </template>
+    </q-input>
+    <q-select class="overflow-hidden ellipsis" :filled="true" bottom-slots v-model="form.tokenIdSelected"
+      :options="tokenIdSelections" label="Token ID" dense square hide-bottom-space
+      :disable="tokenIdSelections.length === 0">
       <template v-slot:loading>
         <q-spinner-facebook size="sm" color="primary" />
       </template>
@@ -23,12 +30,11 @@
       <template v-if="form.publishRegistry">
         <div class="row q-pa-sm" style="border-style: solid; border-width: 1px; border-radius: 5px;">
           <q-input class="col-12 q-mt-sm" :filled="true" v-model="form.tokenRegistry.url" type="url"
-            label="The BCMR's URL" dense square standout
-            hide-bottom-space></q-input>
+            label="The BCMR's URL" dense square standout hide-bottom-space></q-input>
           <div class="col-12 row items-top q-col-gutter-none q-my-md">
             <div class="col-xs-12">
-              <q-input :filled="true" v-model="form.tokenRegistry.contentHash" :loading="form.isLoadingRegistry" type="url"
-                label="The BCMR's content hash" dense square>
+              <q-input :filled="true" v-model="form.tokenRegistry.contentHash" :loading="form.isLoadingRegistry"
+                type="url" label="The BCMR's content hash" dense square>
                 <template v-slot:loading>
                   <q-spinner-facebook color="primary" />
                 </template>
@@ -55,7 +61,7 @@
   </q-form>
 </template>
 <script setup lang="ts">
-import { UtxoI} from 'mainnet-js'
+import { UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
@@ -71,38 +77,47 @@ import FungibleTokenModel from 'src/models/FungibleToken'
 import constants from 'src/constants'
 
 const props = defineProps<{
-  owner?:string,
-  action:{ type: string, default: 'genesis'},
-  authNft?:AuthNFT,
+  owner?: string,
+  action: FungibleTokenAction,
+  authNft?: AuthNFT,
   tokenIdOptions?: UtxoI[]
   // authNftOptions?: AuthNFT[]
 }>()
+
 const $q = useQuasar()
 const user = useUser()
 
 const form = ref<{
-  useAuthGuard: true /*Future proofing, we might allow creation without AuthGuard*/,
+  useAuthGuard: boolean /*Future proofing, we might allow creation without AuthGuard*/,
   tokenIdSelected: { value: string, label: string },
-  tokenAmount:string,
+  authNft?: AuthNFT,
+  tokenAmount: string,
   tokenRegistry: {
     url: string,
     contentHash: string
   },
   publishRegistry: boolean,
   isLoadingRegistry: boolean
-}>({publishRegistry: false, tokenRegistry: {url:'', contentHash:''}})
+}>({
+  useAuthGuard: true,
+  tokenIdSelected: { value: '', label: '' },
+  tokenAmount: constants.MAX_FUNGIBLE_AMOUNT,
+  publishRegistry: false,
+  tokenRegistry: { url: '', contentHash: '' },
+  isLoadingRegistry: false
+})
 
 /**
  * Token to be created, values will be updated depending on the value of the form on write mode
  */
 const token = ref<FungibleTokenModel>(
   new FungibleTokenModel({
-    authNFT: props.authNFT,
-    ownerWallet: user.wallet
+    authNFT: props.authNft,
+    ownerWallet: user.wallet as Wallet
   })
 )
 
-const tokenIdSelections = computed<{ value: string, label: string }[]>(()=>
+const tokenIdSelections = computed<{ value: string, label: string }[]>(() =>
   props.tokenIdOptions?.map((u: UtxoI) => ({ value: u.txid, label: u.txid.replace(u.txid.substring(8, 48), '...') })) || []
 )
 
@@ -116,29 +131,30 @@ onMounted(() => {
   if (tokenIdSelections.value) {
     form.value.tokenIdSelected = tokenIdSelections.value[0]
   }
+  form.value.authNft = props.authNft
 })
 
 const createGenesis = async () => {
   if (!props.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
-    $q.nofity({type: 'negative', message: 'Missing AuthNFT!'})
+    $q.notify({ type: 'negative', message: 'Missing AuthNFT!' })
     return
   }
   if (!form.value.tokenIdSelected.value) {
-    $q.nofity({type: 'negative', message: 'Token ID required!'})
+    $q.notify({ type: 'negative', message: 'Token ID required!' })
     return
   }
   token.value.utxo = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0]
   token.value.authNFT = props.authNft
   try {
-    await token.value.createGenesis({genesisSupplyAmount: form.value.tokenAmount})
-  } catch (error:any) {
-    $q.notify({type:'negative', message: error?.message})
+    await token.value.createGenesis({ genesisSupplyAmount: form.value.tokenAmount })
+  } catch (error: any) {
+    $q.notify({ type: 'negative', message: error?.message })
   }
 
 }
 
 const loadRegistryHashFromUrl = () => {
-  form.value.isLoadingRegistry.value = true
+  form.value.isLoadingRegistry = true
   if (token.value.registry?.contentHash) {
     const endNotif = $q.notify({ spinner: true, message: 'Checking hash of URL\'s content', type: 'info' })
     fetchBcmrContentHash(token.value.registry.url)
@@ -150,10 +166,17 @@ const loadRegistryHashFromUrl = () => {
       .catch((e) => console.log(e))
       .finally(() => {
         endNotif()
-        form.value.isLoadingRegistry.value = false
+        form.value.isLoadingRegistry = false
       })
   }
+}
 
+
+const checkAndLoadAuthNft = async () => {
+  const a = (await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet))
+  if (a) {
+    form.value.authNft = a[0]
+  }
 }
 
 </script>
