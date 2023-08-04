@@ -1,7 +1,7 @@
 import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
 import CashStudioToken from "./CashStudioToken"
-import { AuthChainGuard, CashStudioTokenI, MBC, Message, Registry } from "./interfaces"
+import { AuthGuard as AuthGuardI, CashStudioTokenI, MBC, Message, Registry, RegistryPublicationInput } from "./interfaces"
 import { Contract } from "@mainnet-cash/contract"
 import getWalletClass from 'src/utils/getWalletClass'
 import constants from 'src/constants'
@@ -9,44 +9,54 @@ import toCashScript from 'src/utils/toCashScript'
 import { Artifact, SignatureTemplate, Utxo } from 'cashscript'
 import { scriptToBytecode } from '@cashscript/utils'
 import getByteCount from 'src/utils/getByteCount'
+import {AuthNFT} from './interfaces'
 
-/**
- * @deprecated Replaced with AuthGuard
- */
-export default class MintingCovenant implements CashStudioTokenI, MBC {
-  tokenId?: string
-  amount?: string
-  capability?: NFTCapability
-  commitment?: string
-  registry?: Registry
+
+export default class AuthGuard implements AuthGuardI {
+  registry?: RegistryPublicationInput
   ownerWallet?: Wallet
-  satoshis: string
-  baton?: UtxoI
+  authNFT?: AuthNFT
   protected _processing?: string
   protected _message?: Message
   private _contract?: Contract
-  constructor(p: {tokenId?:string, amount?:string, capability?: NFTCapability, commitment?:string, satoshis?:string, ownerWallet?: Wallet}) {
-    this.tokenId = p.tokenId
-    this.amount = p.amount
-    this.capability = p.capability
-    this.commitment = p.commitment
-    this.satoshis = p.satoshis?.toString() || ''
+  constructor(p: { authNFT?: AuthNFT, ownerWallet?: Wallet}) {
+    this.authNFT = p.authNFT
     this.ownerWallet = p.ownerWallet
-    this.createContract()
+    if (this.authNFT?.utxo?.token?.tokenId) {
+      this.createContract()
+    }
   }
 
   createContract() {
-    if (this.ownerWallet) {
+    this.ensureOwnerWallet()
+    this.ensureTokenId()
+    if (this.authNFT?.utxo?.token?.tokenId) {
       this._contract = new Contract(
         this.contractScript,
-        [this.ownerWallet.getPublicKeyHash()],
-        this.ownerWallet.network
+        [this.authNFT?.utxo?.token?.tokenId],
+        this.ownerWallet!.network
+      )
+    }
+  }
+
+  createGenesisContract() {
+    this.ensureOwnerWallet()
+    this.ensureAuthNFT()
+    console.log(this.authNFT)
+    if (!this.authNFT!.utxo?.txid) {
+      throw new Error('No valid utxo.Needs zeroeth output utxo as genesis input')
+    }
+    if (this.authNFT?.utxo?.txid) {
+      this._contract = new Contract(
+        this.contractScript,
+        [this.authNFT!.utxo!.txid],
+        this.ownerWallet!.network
       )
     }
   }
 
   protected ensureTokenId() {
-    if (!this.tokenId) {
+    if (!this.authNFT?.utxo?.token?.tokenId) {
       throw new Error('Invalid token id')
     }
   }
@@ -63,6 +73,12 @@ export default class MintingCovenant implements CashStudioTokenI, MBC {
     }
   }
 
+  protected ensureAuthNFT(){
+    if (!this.authNFT) {
+      throw new Error('Owner wallet not set')
+    }
+  }
+
   get processing(): string | undefined {
     return this._processing
   }
@@ -74,29 +90,34 @@ export default class MintingCovenant implements CashStudioTokenI, MBC {
     return this._contract
   }
 
-  /**
-   * Alias to the authchain guard function, it has a single function so we can use
-   * this for any authchain guard interaction
-   */
-  get unlockWithNft():any {
+  get f():any {
     return this._contract?.getContractFunction('unlockWithNft')
   }
 
-  async releaseTokens(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
+  /**
+   * Returns the AuthIdentities(Tokens) managed by this AuthGuard/AuthNFT pair.
+   * @returns The list if AuthIdentities(utxos) managed by this AuthGuard
+   */
+  async getManagedAuthIdentities(): Promise<any> {
+    this.ensureContract()
+    const w = await (getWalletClass()).watchOnly(this._contract!.getTokenDepositAddress())
+    return  (await w.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token?.tokenId === this.authNFT?.utxo?.token?.tokenId)
+  }
+
+  async unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
     this.ensureOwnerWallet()
     this.ensureContract()
     this.ensureTokenId()
     this._processing = 'Processing'
     const contractWallet = await getWalletClass().watchOnly(this._contract!.getTokenDepositAddress())
-    const mbcUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token && u.token?.tokenId === this.tokenId && u.token?.amount > 0)
+    const mbcUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token && u.token?.tokenId === this.authNFT!.utxo!.token!.tokenId! && u.token?.amount > 0)
     if(!mbcUtxo){
       throw new Error('No MBC utxo found!')
     }
     const toWallet = await getWalletClass().watchOnly(p.to)
     const contractOwnersWallet = await getWalletClass().watchOnly(p.contractOwner)
     const contractOwnersUtxos = (await contractOwnersWallet.getAddressUtxos())
-    this.baton = contractOwnersUtxos.find((u:UtxoI) => u.token && u.token.tokenId === this.tokenId && u.token.commitment === '00')
-    if (!this.baton) {
+    if (!this.authNFT) {
       throw new Error('Unauthorized!Spender does not own baton')
     }
     const funderInput:UtxoI[] = contractOwnersUtxos.filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 4000)
@@ -104,7 +125,7 @@ export default class MintingCovenant implements CashStudioTokenI, MBC {
       throw new Error('Insufficient balance to fund the txn')
     }
 
-    const inputs = [mbcUtxo, this.baton, funderInput[0]].map(toCashScript)
+    const inputs = [mbcUtxo, this.authNFT.utxo!, funderInput[0]].map(toCashScript)
     const minerFee = 1500
     let transaction
     let decoded
@@ -112,7 +133,7 @@ export default class MintingCovenant implements CashStudioTokenI, MBC {
     const sig2 = new SignatureTemplate(Uint8Array.from(Array(32)))
     try {
       transaction =
-          this.unlockWithNft().from(inputs[0])
+          this.f().from(inputs[0])
           .fromP2PKH(inputs[1], sig1)
           .fromP2PKH(inputs[2], sig1)
           .to([{
@@ -223,7 +244,7 @@ export default class MintingCovenant implements CashStudioTokenI, MBC {
     this._processing = 'Waiting for signature'
     try {
       const tx = await contractOwnersWallet.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      this._message = { type: 'success', text: `${this.amount} token issued to ${p.to.replace(p.to.substring(10,28),'...')}`}
+      this._message = { type: 'success', text: `${p.ftAmountToUnlock} token issued to ${p.to.replace(p.to.substring(10,28),'...')}`}
       return tx
     } catch (error) {
       console.log('Error creating FT Token during submission of txn', error)
