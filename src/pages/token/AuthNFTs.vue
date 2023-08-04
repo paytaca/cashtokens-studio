@@ -50,7 +50,7 @@
     </div>
     <q-dialog :model-value="dialog === 'ft-creator'" v-close-popup @hide="onDialogHide">
       <q-card class="full-width q-pa-lg" >
-        <FungibleToken :auth-nft="dialogAuthNft" action="genesis"/>
+        <FungibleToken :auth-nft="targetAuthNft" :token-id-options="user.genesisInputs" action="genesis"/>
       </q-card>
     </q-dialog>
   </q-page>
@@ -67,7 +67,7 @@ import FungibleToken from 'src/components/FungibleToken.vue';
 const user = useUser()
 const authNfts = ref<AuthNFT[]>()
 const dialog = ref<'ft-creator'|'nft-creator'|'hybrid-creator'|undefined>()
-const dialogAuthNft = ref<AuthNFT>() // AuthNFT to pass to open dialog
+const targetAuthNft = ref<AuthNFT>() // AuthNFT to pass to open dialog
 
 onMounted(async () => {
   try {
@@ -79,12 +79,12 @@ onMounted(async () => {
 
 const openDialog = (dialogName:string, authNft: AuthNFT) => {
   dialog.value = dialogName
-  dialogAuthNft.value = authNft
+  targetAuthNft.value = authNft
 }
 
 const onDialogHide = () => {
   dialog.value = undefined
-  dialogAuthNft.value = undefined
+  targetAuthNft.value = undefined
 }
 
 </script>
