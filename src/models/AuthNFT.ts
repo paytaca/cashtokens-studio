@@ -5,6 +5,8 @@ import AuthGuard from "./AuthGuard";
 import calcMinerFee from "src/utils/calcMinerFee";
 
 export default class AuthNFT extends NonFungibleToken {
+  private static _processing?:string
+
   constructor(p?:{utxo?: UtxoI, ownerWallet?:Wallet}) {
     super({...p})
   }
@@ -26,7 +28,9 @@ export default class AuthNFT extends NonFungibleToken {
    * Scan ownerWallet and return a utxo suitable to be an authNFT
    */
   static async scanWalletForSuitableAuthNFTUtxo(ownerWallet:Wallet):Promise<UtxoI|undefined> {
+    AuthNFT._processing = 'Scanning wallet for suitable UTXOs'
     const minerFee = calcMinerFee({'P2SH-P2WPKH':1},{P2PKH:1})
+    delete AuthNFT._processing
     return (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => !u.token && u.satoshis > 1000 + minerFee && u.vout===0)[0]
   }
 
@@ -41,6 +45,22 @@ export default class AuthNFT extends NonFungibleToken {
     return u
   }
 
+  static get processing(){
+    return this._processing
+  }
+  /**
+   * @return The authNFTs in a wallet
+   */
+  static async scanWalletForAuthNFTs(ownerWallet:Wallet): Promise<AuthNFT[]|undefined> {
+    AuthNFT._processing = 'Scanning wallets for AuthNFTs'
+    const authNFTUtxos = (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token.commitment==='00')
+    const authNFTs = []
+    for (let i=0; i < authNFTUtxos.length; i++) {
+      authNFTs.push(new AuthNFT({utxo: authNFTUtxos[i]}))
+    }
+    delete AuthNFT._processing
+    return authNFTs
+  }
   /**
    * Create genesis
    */

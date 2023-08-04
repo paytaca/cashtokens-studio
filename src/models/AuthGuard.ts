@@ -253,7 +253,6 @@ export default class AuthGuard implements AuthGuardI {
     }
   }
 
-
   get contractScript(): string {
     return `
     pragma cashscript ^0.8.0;
