@@ -3,7 +3,8 @@
     <q-toolbar>
       <q-toolbar-title>Create Token</q-toolbar-title>
     </q-toolbar>
-    <q-input :model-value="owner" label="Owner" :filled="true" disable dense square />
+    <q-input :model-value="owner || user.wallet.getTokenDepositAddress()" label="Owner" :filled="true" disable dense square />
+    <q-input :model-value="authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true" disable dense square />
     <q-select v-if="action === 'genesis'" class="overflow-hidden ellipsis" :filled="true" bottom-slots
       v-model="tokenIdSelected" :options="tokenIdOptions" label="Token ID" dense square hide-bottom-space>
       <template v-slot:loading>
@@ -15,28 +16,6 @@
     </template>
     <template v-if="tokenId">
       <q-input v-model="tokenAmount" label="Amount" :filled="true" dense square />
-      <!-- <q-select :filled="true" bottom-slots v-model="storeFtGenesisSupplyIn" :options="ftGenesisSupplyStoreOpts"
-        label="Store FT Genesis Supply In" dense square hide-bottom-space>
-        <template v-slot:option="scope">
-          <q-item v-bind="scope.itemProps">
-            {{ scope.opt.label }}
-          </q-item>
-        </template>
-      </q-select>
-      <div class="row cursor-pointer">
-        What's this?<q-icon name="arrow_outward"></q-icon>
-        <q-tooltip v-if="storeFtGenesisSupplyIn.value === 'authchain'">
-          Amount will be stored as FT reserve in the
-          authchain. Recommended for continued issuance.
-        </q-tooltip>
-        <q-tooltip v-if="storeFtGenesisSupplyIn.value === 'minting-baton-covenant'">
-          Amount will be stored as FT reserve in a
-          Minting Baton Covenant. Alternative for continued issuance.
-        </q-tooltip>
-        <q-tooltip v-if="storeFtGenesisSupplyIn.value === 'creator-address'">
-          Entire amount will be transferred to the creator's address
-        </q-tooltip>
-      </div> -->
       <div class="row items-center">
         <q-checkbox :filled="true" dark:color="lime" v-model="publishRegistry" size="xs" label="Publish BCMR">
         </q-checkbox>
@@ -47,7 +26,7 @@
       <template v-if="publishRegistry">
         <div v-if="tokenRegistry" class="row q-pa-sm" style="border-style: solid; border-width: 1px; border-radius: 5px;">
           <q-input class="col-12 q-mt-sm" :filled="true" v-model="tokenRegistry.url" type="url"
-            :rules="[v => v.length > 7 || 'Invalid URL']" label="The BCMR's URL" dense square standout
+            label="The BCMR's URL" dense square standout
             hide-bottom-space></q-input>
           <div class="col-12 row items-top q-col-gutter-none q-my-md">
             <div class="col-xs-12">
@@ -71,7 +50,6 @@
             <q-spinner :thickness="10" color="primary" size="sm" /> {{ token.processing }}
           </q-btn>
         </template>
-
         <template v-else>
           <q-btn v-if="action === 'genesis'" @click="createGenesis">Create Token</q-btn>
         </template>
@@ -79,31 +57,38 @@
     </template>
   </q-form>
 </template>
-
 <script setup lang="ts">
+import { UtxoI} from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { TokenAction } from 'src/types'
-import FungibleTokenModel from 'src/models/FungibleToken'
-import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
-import constants from 'src/constants'
-import { useUser } from 'src/stores/user'
-import { UtxoI } from 'mainnet-js'
-import { RegistryPublicationInput } from 'src/models/interfaces'
 import { Utxo } from 'cashscript'
+
+import { useUser } from 'src/stores/user'
+import { RegistryPublicationInput } from 'src/models/interfaces'
+import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
 import AuthNFT from 'src/models/AuthNFT'
-defineOptions({ name: 'FungibleToken' })
-const $q = useQuasar()
+import TokenCategory from 'src/components/TokenCategory.vue'
+import FungibleTokenModel from 'src/models/FungibleToken'
+import constants from 'src/constants'
+
+const props = defineProps<{
+  owner?:string,
+  action:{ type: string, default: 'genesis'},
+  authNft?:AuthNFT,
+  genesisTokenIdOptions?: UtxoI[],
+  genesisAuthNftOptions?: UtxoI[]
+}>()
+
 const user = useUser()
-const route = useRoute()
-const tokenId = ref<string>()
-const tokenAmount = ref<string>(constants.MAX_FUNGIBLE_AMOUNT)
-const tokenRegistry = ref<RegistryPublicationInput>()
-const authNFTUtxoTxid = ref<string>()
-const props = defineProps<{ owner?: string, action?: TokenAction, genesisTokenIdOptions?: UtxoI[], genesisAuthNftOptions?: UtxoI[] }>()
-// const token = ref<{ amount: string, tokenId: string }>({ amount: '', tokenId: '' })
-const token = ref<FungibleTokenModel>(new FungibleTokenModel({}))
+
+const token = ref<FungibleTokenModel>(
+  new FungibleTokenModel({
+    authNFT: props.authNFT,
+    ownerWallet: user.wallet
+  })
+)
 
 const tokenIdOptions = computed<{ value: string, label: string }[]>(()=>
   props.genesisTokenIdOptions?.map((u: UtxoI) => ({ value: u.txid, label: u.txid.replace(u.txid.substring(8, 48), '...') })) || []
@@ -113,20 +98,9 @@ const authNFTOptions = ref<{ value: string, label: string }[]>(
   props.genesisAuthNftOptions?.map((u: UtxoI) => ({ value: u.txid, label: u.txid.replace(u.txid.substring(8, 48), '...') })) || []
 )
 const authNftSelected = ref<{ value: string, label: string }>()
-/**
- * How the token amount (FT genesis supply) will be stored
- */
-// const storeFtGenesisSupplyIn = ref<{ value: 'authchain' | 'minting-baton-covenant' | 'creator-address', label: string }>({ value: 'authchain', label: 'Authchain (BCMR Recommendation)' })
-// const ftGenesisSupplyStoreOpts = [
-//   { value: 'authchain', label: 'Authchain (BCMR Recommendation)' },
-//   { value: 'minting-baton-covenant', label: 'Minting Baton Covenant' },
-//   { value: 'creator-address', label: 'Creator\'s Address' },
-// ]
-
 const publishRegistry = ref<boolean>(false)
 const isLoadingRegistry = ref<boolean>()
-
-watch(() => publishRegistry.value, (yes) => {
+  watch(() => publishRegistry.value, (yes:boolean) => {
   if (yes) {
     token.value.registry = { url: '', contentHash: '' }
   } else {
@@ -181,7 +155,5 @@ const loadRegistryHashFromUrl = () => {
   }
 
 }
-
-
 
 </script>
