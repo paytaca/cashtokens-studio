@@ -7,7 +7,7 @@ export default class FungibleToken extends CashStudioToken{
     super({...p})
   }
 
-  async createGenesis(opt?:{issuedSupply?: {amount:string, recipient: string}}): Promise<string | void> {
+  async createGenesis(opt:{genesisSupplyAmount:string, issuedSupplyAmount?: {amount:string, recipient: string}}): Promise<string | void> {
     this._processing = 'Processing transaction...'
     if (!this.utxo) { // utxo is genesis input during genesis
       delete this._processing
@@ -18,9 +18,8 @@ export default class FungibleToken extends CashStudioToken{
       throw new Error('The ownerWallet is not set')
     }
     const requests:(TokenSendRequest|OpReturnData)[] = []
-
-    requests.push(this.prepareIdentityOutputRequest())
-
+    requests.push(this.prepareIdentityOutputRequest({amount: opt?.genesisSupplyAmount}))
+    // TODO : ADD prepare request for issued supply if present
     if (this.registry) {
       if (!this.registry.contentHash) {
         delete this._processing
