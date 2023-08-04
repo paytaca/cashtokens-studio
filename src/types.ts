@@ -1,6 +1,7 @@
 
 
 import { UtxoI, Wallet } from 'mainnet-js';
+import { AuthNFT } from './models/interfaces';
 
 export type UIMessage = {
   text: string,
@@ -43,6 +44,7 @@ export type UserState = {
    * Utxos acceptable as authchain authbases, zeroeth decendant outputs
    */
   genesisInputs?: UtxoI[],
+  authNFTs?: AuthNFT[],
   updatingBalances: boolean
 }
 

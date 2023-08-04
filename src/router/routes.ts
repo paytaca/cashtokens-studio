@@ -16,7 +16,8 @@ const routes: RouteRecordRaw[] = [
       { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') },
       { name: 'token-identities', path: 'identities/:tokenType?', component: () => import('pages/token/Identities.vue') },
       { name: 'token-fungibles', path: 'fungibles', component: () => import('pages/token/Fungibles.vue') },
-      { name: 'token-authchains', path: 'authchains', component: () => import('pages/token/Authchains.vue') }
+      { name: 'token-authchains', path: 'authchains', component: () => import('pages/token/Authchains.vue') },
+      { name: 'token-authnfts', path: 'authnfts', component: () => import('pages/token/AuthNFTs.vue') }
 
     ],
   },
