@@ -26,15 +26,18 @@ import { useUser } from 'src/stores/user';
 import { ref, onMounted } from 'vue';
 import BusyButton from './BusyButton.vue';
 import { useQuasar } from 'quasar';
-const props = defineProps({
-  authNft: AuthNFT
-})
+const props = defineProps<{authNft:AuthNFT}>()
 const $q = useQuasar()
+const user = useUser()
 const createAuthNFTGenesis = async () => {
   try {
     const tx = await props.authNft?.createGenesis()
     if (tx) {
       $q.notify({type: 'positive', message: 'Success!Auth NFT created.Tx=' + tx})
+      if (!user.authNFTs) {
+        user.authNFTs = []
+      }
+      user.authNFTs?.push(props.authNft as AuthNFT)
     }
   } catch (error:any) {
     $q.notify({type: 'negative', message: 'Txn Failed!' + error.message})
