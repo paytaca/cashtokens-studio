@@ -1,8 +1,7 @@
 <template>
   <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm">
-    {{ user.genesisInputs }}
     <q-toolbar>
-      <q-toolbar-title>Create Token</q-toolbar-title>
+      <q-toolbar-title>Create Fungible Token</q-toolbar-title>
     </q-toolbar>
     <q-input v-if="owner || user.wallet" :model-value="owner || user.wallet!.getTokenDepositAddress()" label="Owner"
       :filled="true" disable dense square />
