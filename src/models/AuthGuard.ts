@@ -1,7 +1,7 @@
 import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
 import CashStudioToken from "./CashStudioToken"
-import { AuthGuard as AuthGuardI, CashStudioTokenI, MBC, Message, Registry, RegistryPublicationInput } from "./interfaces"
+import { AuthGuard as AuthGuardI, CashStudioTokenI, MBC, Message, Messaging, Processing, Registry, RegistryPublicationInput } from "./interfaces"
 import { Contract } from "@mainnet-cash/contract"
 import getWalletClass from 'src/utils/getWalletClass'
 import constants from 'src/constants'
@@ -12,7 +12,7 @@ import getByteCount from 'src/utils/getByteCount'
 import {AuthNFT} from './interfaces'
 
 
-export default class AuthGuard implements AuthGuardI {
+export default class AuthGuard implements AuthGuardI, Processing, Messaging{
   registry?: RegistryPublicationInput
   ownerWallet?: Wallet
   authNFT?: AuthNFT
@@ -107,10 +107,10 @@ export default class AuthGuard implements AuthGuardI {
    * Returns the AuthIdentities(Tokens) managed by this AuthGuard/AuthNFT pair.
    * @returns The list if AuthIdentities(utxos) managed by this AuthGuard
    */
-  async getManagedAuthIdentities(): Promise<any> {
+  async getLockedTokenIdentities(): Promise<any> {
     this.ensureContract()
     const w = await (getWalletClass()).watchOnly(this._contract!.getTokenDepositAddress())
-    return  (await w.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token?.tokenId === this.authNFT?.token?.tokenId)
+    return  (await w.getAddressUtxos())
   }
 
   /**
