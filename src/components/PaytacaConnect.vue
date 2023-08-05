@@ -17,6 +17,8 @@ import getWalletClass from 'src/utils/getWalletClass';
 import useStore from 'src/composables/useStore';
 import { UtxoI } from 'mainnet-js';
 import detectPaytaca from 'src/utils/detectPaytaca';
+import calcMinerFee from 'src/utils/calcMinerFee';
+import CashStudioToken from 'src/models/CashStudioToken';
 defineOptions({ name: 'PaytacaConnect' })
 
 const $q = useQuasar()
@@ -63,11 +65,11 @@ const connect = async () => {
 }
 
 const storeBalances = (userUtxos: UtxoI[]) => {
-  // console.log(userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 0).slice(0, 5))
-  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => !utxo.token && utxo.vout === 0 && utxo.satoshis > 2500).slice(0, 5)
-  // user.fts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.amount > 0)
-  // user.nfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && !utxo.token.amount)
-  // user.fnfts = userUtxos?.filter((utxo: UtxoI) => utxo.token && utxo.token.capability && utxo.token.amount)
+  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => {
+    return !utxo.token &&
+      utxo.vout === 0 &&
+      utxo.satoshis > CashStudioToken.DEFAULT_GENESIS_COST
+  }).slice(0, 5)
 }
 
 const watchAddress = async (address: string) => {
@@ -91,7 +93,6 @@ const watchAddress = async (address: string) => {
 const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   user.connectedPaytacaAddress = ''
-
   if (watching.value) {
     watching.value()
     watching.value = null
