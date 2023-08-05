@@ -8,6 +8,10 @@ import CashStudioToken from "./CashStudioToken";
 
 export default class AuthNFT extends NonFungibleToken {
   static DEFAULT_COMMITMENT = '00'
+  /**
+   * The tokens that can be unlocked by this AuthNFT
+   */
+  unlockableTokens = []
   private static _processing?:string
 
   /**
@@ -87,9 +91,9 @@ export default class AuthNFT extends NonFungibleToken {
     return authNFTs
   }
   /**
-   * Create genesis
+   * @override NonFungibleToken.createGenesis
    */
-  async createGenesis(opt?:{tokenAmount?:number}): Promise<string | void> {
+  async createGenesis(opt:{capability:NFTCapability, commitment: string}): Promise<string | void> {
     this.ensureUtxo()
     this.ensureOwnerWallet()
     this._processing = 'Processing'
@@ -129,5 +133,23 @@ export default class AuthNFT extends NonFungibleToken {
     )
     delete this._processing
     return {encodedTransaction, sourceOutputs}
+  }
+
+  /**
+   * AuthGuard for this AuthNFT
+   */
+  get authGuard(): AuthGuard {
+    return new AuthGuard({authNFT: this, ownerWallet: this.ownerWallet})
+  }
+
+  /**
+   * Scan the the authGuard address for tokens that can be unlocked by this AuthNFT key
+   */
+  async loadUnlockableTokens(){
+    this._processing = 'Scanning managed tokens'
+    this.unlockableTokens = await this.authGuard.getLockedTokenIdentities()
+    console.log(this.unlockableTokens)
+    delete this._processing
+    return this
   }
 }
