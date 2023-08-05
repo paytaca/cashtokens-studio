@@ -1,14 +1,37 @@
-import { NFTCapability, SendRequest, TokenSendRequest, UnitEnum, UtxoI, Wallet } from "mainnet-js";
+import { NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UnitEnum, UtxoI, Wallet } from "mainnet-js";
 import NonFungibleToken from "./NonFungibleToken";
 import AuthChainGuard from "src/contracts/AuthChainGuard";
 import AuthGuard from "./AuthGuard";
 import calcMinerFee from "src/utils/calcMinerFee";
+import { CashStudioTokenI } from "./interfaces";
+import CashStudioToken from "./CashStudioToken";
 
 export default class AuthNFT extends NonFungibleToken {
+  static DEFAULT_COMMITMENT = '00'
   private static _processing?:string
 
-  constructor(p?:{utxo?: UtxoI, ownerWallet?:Wallet}) {
-    super({...p})
+  /**
+   * Re-wrapping utxo:UtxoI data
+   */
+  get utxo():UtxoI {
+    return {
+      vout: this.vout,
+      txid: this.txid,
+      satoshis: this.satoshis,
+      height: this.height,
+      coinbase: this.coinbase,
+      token: this.token,
+    }
+  }
+
+  set utxo(u:UtxoI|undefined) {
+    if (!u) return
+    this.vout = u.vout
+    this.txid = u.txid
+    this.satoshis = u.satoshis
+    this.height = u.height
+    this.coinbase = u.coinbase
+    this.token = u.token
   }
 
   ensureUtxo(){
@@ -31,7 +54,7 @@ export default class AuthNFT extends NonFungibleToken {
     AuthNFT._processing = 'Scanning wallet for suitable UTXOs'
     const minerFee = calcMinerFee({'P2SH-P2WPKH':1},{P2PKH:1})
     delete AuthNFT._processing
-    return (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => !u.token && u.satoshis > 1000 + minerFee && u.vout===0)[0]
+    return (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => !u.token && u.satoshis > CashStudioToken.DEFAULT_TOKEN_VALUE + minerFee && u.vout===0)[0]
   }
 
   async scanWalletForSuitableAuthNFTUtxo():Promise<UtxoI|undefined>{
@@ -53,10 +76,12 @@ export default class AuthNFT extends NonFungibleToken {
    */
   static async scanWalletForAuthNFTs(ownerWallet:Wallet): Promise<AuthNFT[]|undefined> {
     AuthNFT._processing = 'Scanning wallets for AuthNFTs'
-    const authNFTUtxos = (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token.commitment==='00')
+    const authNFTUtxos = (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token.commitment === AuthNFT.DEFAULT_COMMITMENT)
     const authNFTs = []
     for (let i=0; i < authNFTUtxos.length; i++) {
-      authNFTs.push(new AuthNFT({utxo: authNFTUtxos[i]}))
+      // intentionally not setting wallet to make the obj leaner
+      // just set ownerWallet when invoking AuthNFT methods
+      authNFTs.push(new AuthNFT({...authNFTUtxos[i] as CashStudioTokenI}))
     }
     delete AuthNFT._processing
     return authNFTs
@@ -69,29 +94,12 @@ export default class AuthNFT extends NonFungibleToken {
     this.ensureOwnerWallet()
     this._processing = 'Processing'
     const authGuardContract = new AuthGuard({authNFT: this,ownerWallet: this.ownerWallet})
-    authGuardContract.createGenesisContract()
-    const requests:(TokenSendRequest)[] = []
-    requests.push(
-      // AuthGuard can be used as identity output
-      new TokenSendRequest({
-        cashaddr: authGuardContract.contract!.getTokenDepositAddress(),
-        tokenId: this.utxo!.txid,
-        value: 1000,
-        capability: this.utxo!.token?.capability || NFTCapability.none,
-        commitment: '00',
-        amount: Number(opt?.tokenAmount || '0')
-      }),
-    )
-    const minerFee = calcMinerFee({'P2SH-P2WPKH':1},{P2PKH:1})
-    if ((this.utxo!.satoshis - 1000 - minerFee) > 100) { // if there is non-negligible change
-      // Change
-      new SendRequest({
-        cashaddr: this.ownerWallet!.getDepositAddress(),
-        value: this.utxo!.satoshis - 1000 - minerFee,
-        unit: UnitEnum.SATOSHIS
-      })
-    }
-
+    authGuardContract.createAuthNFTGenesisContract()
+    const requests:(TokenSendRequest|SendRequest)[] = []
+    this.useAuthGuard = true // making sure we're using Authguard in preparing Authchain Identity
+    this.authNFT = this // using self as authNFT during genesis
+    requests.push(this.prepareAuthNFTRequest({genesis:true}))
+    requests.push(...this.prepareChangeReq(this.utxo))
     const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
     const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create Auth NFT')
     const tx = await this.submitTransaction(signResult)
@@ -99,8 +107,10 @@ export default class AuthNFT extends NonFungibleToken {
     return tx
   }
 
-
-  protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
+  /**
+   *
+   */
+  protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest|SendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
     if (!this.utxo?.txid) {
       throw new Error('No valid utxo.Needs zeroeth output utxo as genesis input')
     }
@@ -113,8 +123,8 @@ export default class AuthNFT extends NonFungibleToken {
         tokenOperation: 'genesis',
         checkTokenQuantities: false,
         buildUnsigned: true,
-        utxoIds: [this.utxo!], // this.utxo as genesis input
-        ensureUtxos: [this.utxo!]
+        utxoIds: [this.utxo], // this.utxo as genesis input
+        ensureUtxos: [this.utxo]
       }
     )
     delete this._processing
