@@ -26,7 +26,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
   authNFT?: AuthNFT
   registry?: RegistryPublicationInput
   ownerWallet?: Wallet | undefined
-  useAuthGuard?: boolean | undefined
+  useAuthGuard = true
   protected _processing?: string
   protected _message?: Message
 
@@ -201,7 +201,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
  * @requires authNFT
  * @requires ownerWallet
  */
-  protected prepareAuthchainIdentityReq(opt?:{genesis?:boolean}): TokenSendRequest {
+  protected prepareAuthchainIdentityReq(opt?:{genesis?:boolean, genesisSupply?:number, capability?:NFTCapability, commitment?:string}): TokenSendRequest {
     if (!this.ownerWallet || !this.txid) {
       delete this._processing
       throw new Error("No owner walletor utxo field not set")
@@ -224,14 +224,13 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       const authGuard = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
       authchainIdentityRecipient = authGuard.contract!.getTokenDepositAddress()
     }
-
     const reqParam = {
       cashaddr: authchainIdentityRecipient,
       value: CashStudioToken.DEFAULT_TOKEN_VALUE,
       tokenId: tokenId,
-      amount: this.token?.amount,
-      capability: this.token?.capability as NFTCapability,
-      commitment: this.token?.commitment
+      amount: opt?.genesis? opt.genesisSupply: 0,
+      capability: opt?.capability,
+      commitment: opt?.commitment
     }
 
     return new TokenSendRequest(reqParam)
