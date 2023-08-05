@@ -1,4 +1,4 @@
-import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
 import AuthNFT from './AuthNFT';
@@ -6,7 +6,6 @@ import AuthGuard from './AuthGuard';
 import calcMinerFee from 'src/utils/calcMinerFee';
 
 export default class FungibleToken extends CashStudioToken{
-
   /**
    * Output for the actual token category
    */
@@ -19,20 +18,22 @@ export default class FungibleToken extends CashStudioToken{
       }
       tokenId = this.token.tokenId
     }
+
     const requests = []
-    // Future proofing if we allow opting out of using AuthGuard
-    let tokenGenesisRecipient = this.ownerWallet!.getTokenDepositAddress()
-    if(this.useAuthGuard){
-      const ag = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
-      ag.createContract()
-      tokenGenesisRecipient = ag.contract!.getTokenDepositAddress()
-    }
-    requests.push(new TokenSendRequest({
-      tokenId,
-      value: CashStudioToken.DEFAULT_TOKEN_VALUE,
-      cashaddr: tokenGenesisRecipient,
-      amount: opt.genesis? opt.genesisSupply : this.token?.amount,
-    }))
+
+    // let tokenGenesisRecipient = this.ownerWallet!.getTokenDepositAddress()
+    // REMOVED: FT genesis is always stored in identity output
+    // if(this.useAuthGuard){
+    //   const ag = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
+    //   ag.createContract()
+    //   tokenGenesisRecipient = ag.contract!.getTokenDepositAddress()
+    // }
+    // requests.push(new TokenSendRequest({
+    //   tokenId,
+    //   value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+    //   cashaddr: tokenGenesisRecipient,
+    //   amount: opt.genesis? opt.genesisSupply : this.token?.amount,
+    // }))
 
     if (opt.issuedSupply) { // applicable during token genesis and when issuing a token post genesis
       if (!opt.issuedSupply.amount || !opt.issuedSupply.recipient || opt.issuedSupply.amount > opt.genesisSupply) {
@@ -43,7 +44,7 @@ export default class FungibleToken extends CashStudioToken{
           tokenId,
           value: CashStudioToken.DEFAULT_TOKEN_VALUE,
           cashaddr: opt.issuedSupply.recipient,
-          amount: opt.issuedSupply.amount,
+          amount: opt.issuedSupply.amount
         })
       )
     }
@@ -60,12 +61,16 @@ export default class FungibleToken extends CashStudioToken{
       delete this._processing
       throw new Error('The ownerWallet is not set')
     }
+    if (!opt.genesisSupply || opt.genesisSupply <= 0 ) { // TODO: add constraint for MAX if we solve the issue with the precision of casting a large value to Number
+      delete this._processing
+      throw new Error('Invalid fungible amount!')
+    }
     const requests:(TokenSendRequest|OpReturnData|SendRequest)[] = []
     try {
-      requests.push(this.prepareAuthchainIdentityReq({genesis:true}))
+      requests.push(this.prepareAuthchainIdentityReq({genesis:true, genesisSupply: opt.genesisSupply}))
       requests.push(...this.prepareFungibleTokenReq({genesis:true, genesisSupply: opt.genesisSupply, issuedSupply:opt.issuedSupply}))
       requests.push(...this.prepareRegistryPublicationReq())
-      requests.push(...this.prepareChangeReq(this.utxo))
+      // requests.push(...this.prepareChangeReq(this.utxo)) // change was auto returned
       const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
       const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
       const tx = await this.submitTransaction(signResult)
@@ -73,8 +78,8 @@ export default class FungibleToken extends CashStudioToken{
         this._message = { type: 'success', text: `Success! Tx = ${tx}`}
         this._processing = 'Building authchain'
         await BCMR.buildAuthChain({ transactionHash: this.utxo.txid, network: this.ownerWallet!.network })
-        // delete this._processing
       }
+      return tx
     } catch (error) {
       throw error
     } finally {

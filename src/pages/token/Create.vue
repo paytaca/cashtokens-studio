@@ -10,10 +10,10 @@
         <div class="row justify-center q-my-lg">
           <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
             :token-id-options="user.genesisInputs" />
-          <!-- <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :genesis-token-id-options="tokenIdOptions" />
-          <FungibleNonFungibleToken v-if="tokenType === 'hybrid'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :genesis-token-id-options="tokenIdOptions" /> -->
+          <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
+            :token-id-options="user.genesisInputs" />
+          <!-- <FungibleNonFungibleToken v-if="tokenType === 'hybrid'" :owner="user.connectedPaytacaAddress" action="genesis"
+            :genesis-token-id-options="tokenIdOptions" /> --> -->
           <AuthNFTView v-if="tokenType === 'authnft' && authNFT" :owner="user.connectedPaytacaAddress" action="genesis"
             :auth-nft="authNFT" />
         </div>

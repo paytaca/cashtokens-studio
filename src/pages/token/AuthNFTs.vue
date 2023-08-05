@@ -2,13 +2,13 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">Your Auth Tokens</h5>
+        <h5 class="text-center">Your AuthGuard Keys</h5>
         <q-markup-table>
           <thead>
             <tr>
               <th>#</th>
               <th>Token Id</th>
-              <th>No. of managed tokens</th>
+              <th>No. of managed categories</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -19,29 +19,27 @@
               <td>
                 <TokenCategory :tokenId="authNft?.utxo?.token?.tokenId" />
               </td>
-              <td> n/a </td>
+              <td>
+                <template v-if="authNft.processing">
+                  <q-spinner color="cyan"></q-spinner><i>{{ authNft.processing }}</i>
+                </template>
+                <template v-else>
+                  {{ authNft.unlockableTokens.length }}
+                </template>
+              </td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft)">Use to create FT</q-item>
-                      <!-- <q-item clickable v-close-popup @click="openDialog(AuthchainTransferer.name as string, ai)">Transfer
-                        Ownership</q-item>
-                      <q-item clickable v-close-popup @click="openDialog(AuthchainBurner.name as string, ai)">Burn
-                        Identity
-                        Output</q-item>
-                      <q-item clickable v-close-popup @click="openDialog(AuthchainReleaser.name as string, ai)">Release
-                        Identity
-                        Output</q-item>
-                      <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuer.name as string, ai)">
-                        Issue Fungible Tokens
-                      </q-item> -->
+                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft as AuthNFT)">Use to create
+                        FT</q-item>
+                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft as AuthNFT)">Use to create
+                        NFT</q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
               </td>
             </tr>
-
           </tbody>
         </q-markup-table>
       </div>
@@ -64,8 +62,11 @@ import { onMounted, ref } from 'vue';
 import TokenCategory from 'src/components/TokenCategory.vue';
 import FungibleToken from 'src/components/FungibleToken.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
+import AuthGuard from 'src/models/AuthGuard';
 const user = useUser()
-const authNfts = ref<AuthNFT[]>()
+// const authNfts = ref<AuthNFT[] | undefined>()
+const authNfts = ref<AuthNFT[] | undefined>()
+
 const dialog = ref<Dialog>()
 const targetAuthNft = ref<AuthNFT>() // AuthNFT to pass to open dialog
 
@@ -75,7 +76,18 @@ onMounted(async () => {
   } catch (error) {
     console.log(error)
   }
+  scanAuthNftsForManagedCategories()
 })
+
+
+const scanAuthNftsForManagedCategories = async () => {
+  if (authNfts.value) {
+    for (let i = 0; i < authNfts.value.length; i++) {
+      authNfts.value[i].ownerWallet = user.wallet as Wallet
+      await authNfts.value[i].loadUnlockableTokens()
+    }
+  }
+}
 
 const openDialog = (dialogName: Dialog, authNft: AuthNFT) => {
   dialog.value = dialogName
