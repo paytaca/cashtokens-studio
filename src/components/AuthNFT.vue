@@ -31,7 +31,7 @@ const $q = useQuasar()
 const user = useUser()
 const createAuthNFTGenesis = async () => {
   try {
-    const tx = await props.authNft?.createGenesis()
+    const tx = await props.authNft?.createGenesis({ commitment: '00', capability: 'none' })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Auth NFT created.Tx=' + tx })
       if (!user.authNFTs) {
