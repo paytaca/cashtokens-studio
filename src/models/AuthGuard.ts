@@ -19,44 +19,53 @@ export default class AuthGuard implements AuthGuardI {
   protected _processing?: string
   protected _message?: Message
   private _contract?: Contract
-  constructor(p: { authNFT?: AuthNFT, ownerWallet?: Wallet}) {
+  constructor(p: {authNFT?: AuthNFT, ownerWallet?: Wallet}) {
     this.authNFT = p.authNFT
     this.ownerWallet = p.ownerWallet
-    if (this.authNFT?.utxo?.token?.tokenId) {
+    if (this.authNFT?.token?.tokenId) {
+      // Assumes we're trying to use this AuthGuard instance to lock a token
       this.createContract()
+    } else {
+      // We're trying to create an AuthNFT token
+      this.createAuthNFTGenesisContract()
     }
   }
 
+  /**
+   * Create an AuthGuard contract, using the AuthNFT tokenId as the baton / Token recipient
+   */
   createContract() {
     this.ensureOwnerWallet()
     this.ensureTokenId()
-    if (this.authNFT?.utxo?.token?.tokenId) {
+    if (this.authNFT?.token?.tokenId) {
       this._contract = new Contract(
         this.contractScript,
-        [this.authNFT?.utxo?.token?.tokenId],
+        [this.authNFT?.token?.tokenId],
         this.ownerWallet!.network
       )
     }
   }
 
-  createGenesisContract() {
+  /**
+   * Create genesis of AuthGuard/AuthNFT.
+   */
+  createAuthNFTGenesisContract() {
     this.ensureOwnerWallet()
     this.ensureAuthNFT()
-    console.log(this.authNFT)
-    if (!this.authNFT!.utxo?.txid) {
+    if (!this.authNFT!.txid) {
       throw new Error('No valid utxo.Needs zeroeth output utxo as genesis input')
     }
-    if (this.authNFT?.utxo?.txid) {
+    if (this.authNFT?.txid) {
       this._contract = new Contract(
         this.contractScript,
-        [this.authNFT!.utxo!.txid],
+        [this.authNFT!.txid],
         this.ownerWallet!.network
       )
     }
   }
 
   protected ensureTokenId() {
-    if (!this.authNFT?.utxo?.token?.tokenId) {
+    if (!this.authNFT?.token?.tokenId) {
       throw new Error('Invalid token id')
     }
   }
@@ -101,31 +110,36 @@ export default class AuthGuard implements AuthGuardI {
   async getManagedAuthIdentities(): Promise<any> {
     this.ensureContract()
     const w = await (getWalletClass()).watchOnly(this._contract!.getTokenDepositAddress())
-    return  (await w.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token?.tokenId === this.authNFT?.utxo?.token?.tokenId)
+    return  (await w.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token?.tokenId === this.authNFT?.token?.tokenId)
   }
 
-  async unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
+  /**
+   * Usage:
+   *     Set the authNFT (this is like setting the key)
+   *
+   */
+  async unlockWithNft(p: {to: string, ftAmountToUnlock: bigint|string|number }): Promise<string | undefined> {
     this.ensureOwnerWallet()
     this.ensureContract()
     this.ensureTokenId()
     this._processing = 'Processing'
     const contractWallet = await getWalletClass().watchOnly(this._contract!.getTokenDepositAddress())
-    const mbcUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token && u.token?.tokenId === this.authNFT!.utxo!.token!.tokenId! && u.token?.amount > 0)
-    if(!mbcUtxo){
-      throw new Error('No MBC utxo found!')
+    const authguardUtxo = (await contractWallet.getAddressUtxos()).find((u: UtxoI) => u.token && u.token?.tokenId === this.authNFT!.token!.tokenId! && u.token?.amount > 0)
+    if(!authguardUtxo){
+      throw new Error('No utxo found in authguard!')
     }
     const toWallet = await getWalletClass().watchOnly(p.to)
-    const contractOwnersWallet = await getWalletClass().watchOnly(p.contractOwner)
-    const contractOwnersUtxos = (await contractOwnersWallet.getAddressUtxos())
+    const contractOwnersUtxos = (await this.ownerWallet!.getAddressUtxos())
     if (!this.authNFT) {
-      throw new Error('Unauthorized!Spender does not own baton')
+      throw new Error('Unauthorized!Spender does not own baton/AuthNFT key')
     }
     const funderInput:UtxoI[] = contractOwnersUtxos.filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > 4000)
     if (!funderInput) {
       throw new Error('Insufficient balance to fund the txn')
     }
-
-    const inputs = [mbcUtxo, this.authNFT.utxo!, funderInput[0]].map(toCashScript)
+    const ownerDepositAddress = this.ownerWallet!.getDepositAddress()
+    const ownerTokenDepositAddress = this.ownerWallet!.getTokenDepositAddress()
+    const inputs = [authguardUtxo, this.authNFT.utxo!, funderInput[0]].map(toCashScript)
     const minerFee = 1500
     let transaction
     let decoded
@@ -147,7 +161,7 @@ export default class AuthGuard implements AuthGuardI {
           }])
           .to([{
             // Return minting baton to owner
-            to: contractOwnersWallet.getTokenDepositAddress(),
+            to: ownerTokenDepositAddress,
             amount: inputs[1].satoshis,
             token: {
               category: inputs[1].token!.category,
@@ -166,7 +180,7 @@ export default class AuthGuard implements AuthGuardI {
           }])
           .to([{
             // change
-            to: p.contractOwner,
+            to: ownerDepositAddress,
             amount: inputs[2].satoshis - BigInt(minerFee) - BigInt(1000)
           }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
@@ -212,7 +226,7 @@ export default class AuthGuard implements AuthGuardI {
         },
         {
           ...decoded.inputs[1],
-          lockingBytecode: (cashAddressToLockingBytecode(contractOwnersWallet.getTokenDepositAddress()) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(ownerTokenDepositAddress) as any).bytecode,
           valueSatoshis: BigInt(inputs[1].satoshis),
           token: inputs[1].token && {
             ...inputs[1].token,
@@ -225,11 +239,11 @@ export default class AuthGuard implements AuthGuardI {
         },
         {
           ...decoded.inputs[2],
-          lockingBytecode: (cashAddressToLockingBytecode(p.contractOwner) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(ownerDepositAddress) as any).bytecode,
           valueSatoshis: inputs[2].satoshis
         }],
         broadcast: false,
-        userPrompt: `Release ${p.ftAmountToUnlock} tokens to ${p.contractOwner}`
+        userPrompt: `Release ${p.ftAmountToUnlock} tokens to ${ownerDepositAddress}`
       });
 
     } catch (error) {
@@ -243,7 +257,7 @@ export default class AuthGuard implements AuthGuardI {
     }
     this._processing = 'Waiting for signature'
     try {
-      const tx = await contractOwnersWallet.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       this._message = { type: 'success', text: `${p.ftAmountToUnlock} token issued to ${p.to.replace(p.to.substring(10,28),'...')}`}
       return tx
     } catch (error) {
