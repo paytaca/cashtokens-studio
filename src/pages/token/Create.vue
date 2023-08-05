@@ -43,9 +43,10 @@ const tokenType = computed(() => route.params.tokenType)
 onMounted(async () => {
   console.log(user.authNFTs)
   if (route.params.tokenType === 'authnft') {
-    authNFT.value = new AuthNFT({ ownerWallet: user.wallet as Wallet })
-    authNFT.value.utxo = await authNFT.value.scanWalletForSuitableAuthNFTUtxo()
-    console.log('UTXO FOUND', authNFT)
+    let authNFTGenesisInputUtxo = await AuthNFT.scanWalletForSuitableAuthNFTUtxo(user.wallet as Wallet)
+    if (authNFTGenesisInputUtxo) {
+      authNFT.value = new AuthNFT({ ...authNFTGenesisInputUtxo, ownerWallet: user.wallet! as Wallet })
+    }
   }
 })
 </script>

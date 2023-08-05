@@ -1,14 +1,56 @@
-import { BCMR, NFTCapability, OpReturnData, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
 import AuthNFT from './AuthNFT';
+import AuthGuard from './AuthGuard';
+import calcMinerFee from 'src/utils/calcMinerFee';
 
 export default class FungibleToken extends CashStudioToken{
-  constructor(p:{utxo?:UtxoI, authNFT?:AuthNFT, ownerWallet?: Wallet}) {
-    super({...p})
+
+  /**
+   * Output for the actual token category
+   */
+  prepareFungibleTokenReq(opt:{genesis:boolean, genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}):TokenSendRequest[] {
+    this.ensureOwnerWallet()
+    let tokenId = this.txid
+    if (!opt?.genesis) {
+      if (!this.token?.tokenId) {
+        throw new Error('Invalid token id')
+      }
+      tokenId = this.token.tokenId
+    }
+    const requests = []
+    // Future proofing if we allow opting out of using AuthGuard
+    let tokenGenesisRecipient = this.ownerWallet!.getTokenDepositAddress()
+    if(this.useAuthGuard){
+      const ag = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
+      ag.createContract()
+      tokenGenesisRecipient = ag.contract!.getTokenDepositAddress()
+    }
+    requests.push(new TokenSendRequest({
+      tokenId,
+      value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+      cashaddr: tokenGenesisRecipient,
+      amount: opt.genesis? opt.genesisSupply : this.token?.amount,
+    }))
+
+    if (opt.issuedSupply) { // applicable during token genesis and when issuing a token post genesis
+      if (!opt.issuedSupply.amount || !opt.issuedSupply.recipient || opt.issuedSupply.amount > opt.genesisSupply) {
+        throw new Error('Invalid value for issued supply amount or recipient!')
+      }
+      requests.push(
+        new TokenSendRequest({
+          tokenId,
+          value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+          cashaddr: opt.issuedSupply.recipient,
+          amount: opt.issuedSupply.amount,
+        })
+      )
+    }
+    return requests
   }
 
-  async createGenesis(opt:{genesisSupplyAmount:string, issuedSupplyAmount?: {amount:string, recipient: string}}): Promise<string | void> {
+  async createGenesis(opt:{genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}): Promise<string | void> {
     this._processing = 'Processing transaction...'
     if (!this.utxo) { // utxo is genesis input during genesis
       delete this._processing
@@ -18,27 +60,24 @@ export default class FungibleToken extends CashStudioToken{
       delete this._processing
       throw new Error('The ownerWallet is not set')
     }
-    const requests:(TokenSendRequest|OpReturnData)[] = []
-    requests.push(this.prepareIdentityOutputRequest({amount: opt?.genesisSupplyAmount}))
-    // TODO : ADD prepare request for issued supply if present
-    if (this.registry) {
-      if (!this.registry.contentHash) {
-        delete this._processing
-        throw new Error('Missing registry content hash. Unset registry if you don\'t intend to publish')
+    const requests:(TokenSendRequest|OpReturnData|SendRequest)[] = []
+    try {
+      requests.push(this.prepareAuthchainIdentityReq({genesis:true}))
+      requests.push(...this.prepareFungibleTokenReq({genesis:true, genesisSupply: opt.genesisSupply, issuedSupply:opt.issuedSupply}))
+      requests.push(...this.prepareRegistryPublicationReq())
+      requests.push(...this.prepareChangeReq(this.utxo))
+      const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
+      const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
+      const tx = await this.submitTransaction(signResult)
+      if(tx) {
+        this._message = { type: 'success', text: `Success! Tx = ${tx}`}
+        this._processing = 'Building authchain'
+        await BCMR.buildAuthChain({ transactionHash: this.utxo.txid, network: this.ownerWallet!.network })
+        // delete this._processing
       }
-      if (!this.registry.url) {
-        delete this._processing
-        throw new Error('Missing registry url. Unset registry if you don\'t intend to publish')
-      }
-      requests.push(this.prepareRegistryPublicationOutputRequest())
-    }
-    const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
-    const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    const tx = await this.submitTransaction(signResult)
-    if(tx) {
-      this._message = { type: 'success', text: `Success! Tx = ${tx}`}
-      this._processing = 'Building authchain'
-      await BCMR.buildAuthChain({ transactionHash: this.utxo.txid, network: this.ownerWallet!.network })
+    } catch (error) {
+      throw error
+    } finally {
       delete this._processing
     }
   }

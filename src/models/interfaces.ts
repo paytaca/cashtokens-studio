@@ -1,5 +1,5 @@
-import { NFTCapability, UtxoI, Wallet } from "mainnet-js"
-
+import { NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js"
+import CashStudioToken from "./CashStudioToken"
 /**
  * @deprecated
  */
@@ -65,22 +65,19 @@ export interface AuthGuard {
   unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string|undefined>
 }
 
-export interface AuthNFT {
-  utxo?: UtxoI
-  ownerWallet?: Wallet
-}
 
-export interface CashStudioTokenI extends Processing, Messaging{
-  /**
-   * You set this to genesis input utxo during genesis
-   */
-  utxo?: UtxoI
+
+export interface CashStudioTokenI extends UtxoI{
   /**
    * You set this to an existing AuthNFT during genesis
    */
   authNFT?: AuthNFT
   registry?: RegistryPublicationInput
   ownerWallet?: Wallet
+  useAuthGuard?: boolean
 }
+
+export interface AuthNFT extends CashStudioTokenI {}
+
 
 

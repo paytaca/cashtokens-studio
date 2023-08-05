@@ -1,54 +1,65 @@
-import { BCMR, NFTCapability, OpReturnData, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
 
 export default class NonFungibleToken extends CashStudioToken{
-  constructor(p:{utxo?:UtxoI, ownerWallet?: Wallet}) {
-    super({...p})
+
+  /**
+   * Re-wrapping utxo:UtxoI data
+   */
+  get utxo():UtxoI {
+    return {
+      vout: this.vout,
+      txid: this.txid,
+      satoshis: this.satoshis,
+      height: this.height,
+      coinbase: this.coinbase,
+      token: this.token,
+    }
   }
 
-  async createGenesis(): Promise<string | void> {
-    console.log('CREATING GENESIS', this)
+  /**
+   * Unwrap utxo
+   */
+  set utxo(u:UtxoI) {
+    this.vout = u.vout
+    this.txid = u.txid
+    this.satoshis = u.satoshis
+    this.height = u.height
+    this.coinbase = u.coinbase
+    this.token = u.token
+  }
 
-    if (!this.utxo?.token?.tokenId) {
-      throw new Error('The tokenId is not set')
+
+  async createGenesis(): Promise<string | void> {
+    if (!this.txid) {
+      throw new Error('Txid not set, this\'ll be used as token category')
     }
-    if (!this.utxo?.token?.capability) {
+    if (!this.token?.capability) {
       throw new Error('Capability required for NFT')
     }
     if (!this.ownerWallet) {
       throw new Error('The ownerWallet is not set')
     }
-    const requests:(TokenSendRequest|OpReturnData)[] = []
-    requests.push(this.prepareIdentityOutputRequest())
+    const requests:(TokenSendRequest|OpReturnData|SendRequest)[] = []
+    requests.push(this.prepareAuthchainIdentityReq())
     requests.push(
+      // Release the actual NFT to owner's address
       new TokenSendRequest({
         cashaddr: this.ownerWallet!.getTokenDepositAddress(),
-        tokenId: this.utxo.token.tokenId!,
-        value: 1000,
-        capability: this.utxo?.token?.capability,
-        commitment: this.utxo?.token?.commitment
-      }) // Release NFT to owner's address
+        tokenId: this.txid,
+        value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+        capability: this.token!.capability,
+        commitment: this.token?.commitment
+      })
     )
-    // TODO: ADD CHANGE
-    if (this.registry) {
-      if (!this.registry.contentHash) {
-        throw new Error('Missing registry content hash. Unset registry if you don\'t intend to publish')
-      }
-      if (!this.registry.url) {
-        throw new Error('Missing registry url. Unset registry if you don\'t intend to publish')
-      }
-      requests.push(this.prepareRegistryPublicationOutputRequest())
-    }
-    console.log('BUILDING GENESIS TRANSACTION')
+    requests.push(...this.prepareRegistryPublicationReq())
+    requests.push(...this.prepareChangeReq(this.utxo))
     const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
-    console.log('WAITING FOR SIGNATURE')
     const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    console.log('Submitting Transaction')
     const tx = await this.submitTransaction(signResult)
-    console.log('TX', tx)
     if(tx) {
-      await BCMR.buildAuthChain({ transactionHash: this.utxo.token.tokenId, network: this.ownerWallet!.network })
+      await BCMR.buildAuthChain({ transactionHash: this.txid, network: this.ownerWallet!.network })
     }
 
   }
