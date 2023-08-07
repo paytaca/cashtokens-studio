@@ -63,14 +63,10 @@ export interface Authchain {
 }
 
 export interface AuthGuard {
-  registry?: RegistryPublicationInput
   ownerWallet?: Wallet
   authNFT?: AuthNFT
-  publish(opt:{url:string, contentHash:string, authchainIdentityOutput: UtxoI}): Promise<string|undefined>
-  transfer(newOwnerAddress: string): Promise<string|undefined>
-  burn(): Promise<string|undefined>
   contract?: Contract
-  unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string|undefined>
+  unlockWithNft: Function
 }
 
 export interface CashStudioTokenI extends UtxoI{
