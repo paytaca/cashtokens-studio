@@ -55,7 +55,10 @@ export type RequireOptional<Type, Key extends keyof Type> = Type & {
 
 export type TokenType = 'fungible' | 'nonfungible' | 'hybrid'
 export type TokenAction = 'genesis' | ''
-
+export type RegistryPublicationData = {
+  url: string,
+  contentHash: string
+}
 declare global {
   interface Window { paytaca: any; }
 }

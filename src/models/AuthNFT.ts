@@ -6,12 +6,12 @@ import calcMinerFee from "src/utils/calcMinerFee";
 import { CashStudioTokenI } from "./interfaces";
 import CashStudioToken from "./CashStudioToken";
 
-export default class AuthNFT extends NonFungibleToken {
+export default class AuthNFT extends NonFungibleToken implements AuthNFT {
   static DEFAULT_COMMITMENT = '00'
   /**
    * The tokens that can be unlocked by this AuthNFT
    */
-  unlockableTokens = []
+  unlockableTokens:UtxoI[] = []
   private static _processing?:string
 
   /**
@@ -49,7 +49,7 @@ export default class AuthNFT extends NonFungibleToken {
   static async isUsed(authNFT: AuthNFT,  ownerWallet:Wallet): Promise<boolean> {
     const ag = new AuthGuard({authNFT: authNFT, ownerWallet: ownerWallet})
     console.log('AG', ag)
-    return (await ag.getManagedAuthIdentities()).length === 0
+    return (await ag.getLockedTokenIdentities()).length === 0
   }
   /**
    * Scan ownerWallet and return a utxo suitable to be an authNFT
@@ -138,7 +138,7 @@ export default class AuthNFT extends NonFungibleToken {
   /**
    * AuthGuard for this AuthNFT
    */
-  get authGuard(): AuthGuard {
+  public get authGuard(): AuthGuard {
     return new AuthGuard({authNFT: this, ownerWallet: this.ownerWallet})
   }
 
@@ -148,7 +148,6 @@ export default class AuthNFT extends NonFungibleToken {
   async loadUnlockableTokens(){
     this._processing = 'Scanning managed tokens'
     this.unlockableTokens = await this.authGuard.getLockedTokenIdentities()
-    console.log(this.unlockableTokens)
     delete this._processing
     return this
   }

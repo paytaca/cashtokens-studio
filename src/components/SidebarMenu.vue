@@ -62,8 +62,8 @@ const menu = computed<any[]>(() => {
             //   icon: 'token',
             // },
             {
-              label: 'Authchains',
-              href: '/token/authchains',
+              label: 'Authchain Identities',
+              href: '/token/authchain-identities',
               icon: 'token',
             },
             {

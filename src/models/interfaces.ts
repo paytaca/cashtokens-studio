@@ -1,5 +1,6 @@
-import { NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js"
+import { AuthChain, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js"
 import CashStudioToken from "./CashStudioToken"
+import { Contract } from "@mainnet-cash/contract"
 /**
  * @deprecated
  */
@@ -56,16 +57,21 @@ export interface MBC {
 }
 
 export interface Authchain {
-  publish(): Promise<string|undefined>
+  publish(opt:{url:string, contentHash:string}): Promise<string|undefined>
   transfer(newOwnerAddress: string): Promise<string|undefined>
   burn(): Promise<string|undefined>
 }
 
 export interface AuthGuard {
+  registry?: RegistryPublicationInput
+  ownerWallet?: Wallet
+  authNFT?: AuthNFT
+  publish(opt:{url:string, contentHash:string, authchainIdentityOutput: UtxoI}): Promise<string|undefined>
+  transfer(newOwnerAddress: string): Promise<string|undefined>
+  burn(): Promise<string|undefined>
+  contract?: Contract
   unlockWithNft(p: {contractOwner:string, to: string, ftAmountToUnlock: bigint|string|number }): Promise<string|undefined>
 }
-
-
 
 export interface CashStudioTokenI extends UtxoI{
   /**
@@ -77,7 +83,10 @@ export interface CashStudioTokenI extends UtxoI{
   useAuthGuard?: boolean
 }
 
-export interface AuthNFT extends CashStudioTokenI {}
+export interface AuthNFT extends CashStudioTokenI {
+  utxo?: UtxoI
+  authGuard?: AuthGuard
+}
 
 
 

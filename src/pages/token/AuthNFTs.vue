@@ -12,7 +12,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthNFT.processing" col-count="4" row-count="3" :caption="AuthNFT.processing" />
+          <TableBodySkeleton v-if="AuthNFT.processing" :col-count="4" :row-count="3" :caption="AuthNFT.processing" />
           <tbody v-else class="text-center">
             <tr v-for="authNft, i in authNfts" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>

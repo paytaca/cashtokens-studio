@@ -82,6 +82,10 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     return this._processing
   }
 
+  set processing(v:string) {
+    this._processing = v
+  }
+
   /**
    * E.g. success, Transaction submitted
    */
@@ -221,8 +225,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     }
     let authchainIdentityRecipient = this.ownerWallet.getTokenDepositAddress()
     if (this.useAuthGuard) {
-      const authGuard = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
-      authchainIdentityRecipient = authGuard.contract!.getTokenDepositAddress()
+      authchainIdentityRecipient = this.authNFT.authGuard!.contract!.getTokenDepositAddress()
     }
     const reqParam = {
       cashaddr: authchainIdentityRecipient,
@@ -243,11 +246,10 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     this.ensureOwnerWallet()
     let tokenId
     let value
-    let recipient
     let amount
     let capability
     let commitment
-    const cashaddr = this.ownerWallet!.getTokenDepositAddress()
+    let cashaddr = this.ownerWallet!.getTokenDepositAddress()
     if (opt.genesis) {
       tokenId = this.txid
       value = this.satoshis
@@ -261,10 +263,12 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       value = this.authNFT.satoshis
       tokenId = this.authNFT.token.tokenId
       value = this.authNFT.satoshis
-      amount = this.authNFT.token?.amount,
+      amount = Number(this.authNFT.token?.amount),
       capability = this.authNFT.token?.capability as NFTCapability,
-      commitment = this.authNFT.token?.commitment // should be a constant '00' string but's lets refer to authNFT anyway
-      recipient = this.authNFT.ownerWallet!.getTokenDepositAddress()
+      // should be a constant '00' string but's lets refer to authNFT anyway
+      // commitment = this.authNFT.token?.commitment
+      commitment = '00'
+      cashaddr = this.authNFT.ownerWallet!.getTokenDepositAddress()
     }
 
     return new TokenSendRequest({

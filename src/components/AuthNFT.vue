@@ -26,7 +26,7 @@ import { useUser } from 'src/stores/user';
 import { ref, onMounted } from 'vue';
 import BusyButton from './BusyButton.vue';
 import { useQuasar } from 'quasar';
-const props = defineProps<{ authNft: AuthNFT }>()
+const props = defineProps<{ authNft?: AuthNFT }>()
 const $q = useQuasar()
 const user = useUser()
 const createAuthNFTGenesis = async () => {

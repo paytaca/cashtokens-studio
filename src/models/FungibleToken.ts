@@ -21,20 +21,6 @@ export default class FungibleToken extends CashStudioToken{
 
     const requests = []
 
-    // let tokenGenesisRecipient = this.ownerWallet!.getTokenDepositAddress()
-    // REMOVED: FT genesis is always stored in identity output
-    // if(this.useAuthGuard){
-    //   const ag = new AuthGuard({authNFT: this.authNFT, ownerWallet: this.ownerWallet})
-    //   ag.createContract()
-    //   tokenGenesisRecipient = ag.contract!.getTokenDepositAddress()
-    // }
-    // requests.push(new TokenSendRequest({
-    //   tokenId,
-    //   value: CashStudioToken.DEFAULT_TOKEN_VALUE,
-    //   cashaddr: tokenGenesisRecipient,
-    //   amount: opt.genesis? opt.genesisSupply : this.token?.amount,
-    // }))
-
     if (opt.issuedSupply) { // applicable during token genesis and when issuing a token post genesis
       if (!opt.issuedSupply.amount || !opt.issuedSupply.recipient || opt.issuedSupply.amount > opt.genesisSupply) {
         throw new Error('Invalid value for issued supply amount or recipient!')
@@ -48,6 +34,17 @@ export default class FungibleToken extends CashStudioToken{
         })
       )
     }
+
+    // TODO: DELETE TESTING CREATING AUTHNFT WITH THE SAME CATEGORY AS THE FUNGIBLE TOKEN
+    // requests.push(
+    //   new TokenSendRequest({
+    //     tokenId,
+    //     value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+    //     cashaddr: this.ownerWallet!.getTokenDepositAddress(),
+    //     amount: 0,
+    //     commitment: '00'
+    //   })
+    // )
     return requests
   }
 
@@ -67,7 +64,9 @@ export default class FungibleToken extends CashStudioToken{
     }
     const requests:(TokenSendRequest|OpReturnData|SendRequest)[] = []
     try {
-      requests.push(this.prepareAuthchainIdentityReq({genesis:true, genesisSupply: opt.genesisSupply}))
+      // Following BCMR spec regarding Reserved/Unissued supply,
+      // FT reserves are in the authchain's identity output and capability = 'mutable'
+      requests.push(this.prepareAuthchainIdentityReq({genesis:true, genesisSupply: opt.genesisSupply, capability: NFTCapability.mutable}))
       requests.push(...this.prepareFungibleTokenReq({genesis:true, genesisSupply: opt.genesisSupply, issuedSupply:opt.issuedSupply}))
       requests.push(...this.prepareRegistryPublicationReq())
       // requests.push(...this.prepareChangeReq(this.utxo)) // change was auto returned

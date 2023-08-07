@@ -1,7 +1,7 @@
 <template>
   <tbody class="text-center">
-    <tr v-for="r, ri in rowCount" :key="'cts-tbs-' + ri">
-      <td v-for="c, ci in colCount" :key="'cts-tbs-' + ci"><q-skeleton type="text">{{ c }}{{ r }}</q-skeleton></td>
+    <tr v-for="ri in rowCount" :key="'cts-tbs-' + ri">
+      <td v-for="ci in colCount" :key="'cts-tbs-' + ci"><q-skeleton type="text"></q-skeleton></td>
     </tr>
     <tr v-if="caption">
       <td :colspan="colCount">{{ caption }}</td>
@@ -9,5 +9,5 @@
   </tbody>
 </template>
 <script setup lang="ts">
-defineProps<{ caption?: string, colCount: string, rowCount: string }>()
+defineProps<{ caption?: string, colCount: number, rowCount: number }>()
 </script>
