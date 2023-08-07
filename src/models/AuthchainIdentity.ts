@@ -6,7 +6,7 @@ import { Contract } from "@mainnet-cash/contract"
 import getWalletClass from 'src/utils/getWalletClass'
 import constants from 'src/constants'
 import toCashScript from 'src/utils/toCashScript'
-import { Artifact, SignatureTemplate, Utxo } from 'cashscript'
+import { Artifact, HashType, SignatureTemplate, Utxo } from 'cashscript'
 import { scriptToBytecode } from '@cashscript/utils'
 import getByteCount from 'src/utils/getByteCount'
 import AuthNFT from './AuthNFT'
@@ -35,29 +35,39 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       delete this._processing
       throw new Error('Insufficient balance to fund the txn')
     }
+
     const [authchainIdentityOutput, authNFTInput] = [this.utxo, this.authNFT!.utxo!].map(toCashScript)
     console.log('0', authchainIdentityOutput)
     console.log('1', authNFTInput)
     console.log(this.authNFT!.authGuard!.contract!.getTokenDepositAddress())
+
     let transaction
     let decoded
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     const sig2 = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authNFT!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+    const w = await (getWalletClass()).watchOnly(contractAddress)
+    const utxos = (await w.getAddressUtxos()).map(toCashScript)
+    console.log('RAW UTXOS', utxos)
+    console.log('IDENTITY OUTPUT UTXOS', authchainIdentityOutput)
+
     try {
       transaction =
-        this.authNFT!.authGuard!.contract!.getContractFunction('unlockWithNft')()
+        contract.getContractFunction('unlockWithNft')()
           .from(authchainIdentityOutput) // contract
-          .fromP2PKH(authNFTInput, sig) // AuthNFT
-          .fromP2PKH(funderInput, sig) // funder
+          .fromP2PKH([authNFTInput,funderInput], sig) // AuthNFT/minting baton, funder
           .to([{
-            // pass thru contract
-            to: this.authNFT!.authGuard!.contract!.getTokenDepositAddress(),
+            // return authchain identity output to contract
+            to: contractAddress,
             amount: authchainIdentityOutput.satoshis,
             token: authchainIdentityOutput.token
           }])
           .to([{
-            // Return minting baton/AuthNFT to owner
-            to: this.authNFT!.ownerWallet!.getTokenDepositAddress(),
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
             amount: BigInt(this.authNFT!.satoshis),
             token: authNFTInput.token
           }])
@@ -67,7 +77,8 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             opt.url.replace('https://', '')
           ])
           .to([{
-            to: this.ownerWallet!.getDepositAddress(),
+            // change
+            to: tokenOwner,
             amount: funderInput.satoshis - BigInt(publicationCost)
           }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(publicationCost))
@@ -90,19 +101,19 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       console.log('IDENTITY OUTPUT', authchainIdentityOutput)
       console.log('AUTHNFT TOKEN', this.authNFT!.token?.tokenId)
       console.log('AUTHGUARD AUTHNFT TOKEN', this.authNFT!.authGuard?.authNFT?.token?.tokenId)
-      console.log('ADDRESS', this.authNFT!.authGuard!.contract!.getTokenDepositAddress())
+      console.log('CONTRACT ADDRESS', contract.getTokenDepositAddress())
       const bytecode = (transaction as any).redeemScript;
-      const artifact = {...this.authNFT!.authGuard!.contract!.artifact} as Partial<Artifact>;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
       delete artifact.source;
       delete artifact.bytecode;
-      console.log('artifact', artifact)
+
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
       signingResult = await window.paytaca!.signTransaction({
         transaction: decoded,
         sourceOutputs: [{
           ...decoded.inputs[0],
-          lockingBytecode: (cashAddressToLockingBytecode(this.authNFT!.authGuard!.contract!.getTokenDepositAddress()) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
           valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
           token: authchainIdentityOutput.token && {
             ...authchainIdentityOutput.token,
@@ -120,7 +131,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
         },
         {
           ...decoded.inputs[1],
-          lockingBytecode: (cashAddressToLockingBytecode(this.ownerWallet!.getTokenDepositAddress()) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
           valueSatoshis: BigInt(authNFTInput.satoshis),
           token: authNFTInput.token && {
             ...authNFTInput.token,
@@ -133,7 +144,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
         },
         {
           ...decoded.inputs[2],
-          lockingBytecode: (cashAddressToLockingBytecode(this.ownerWallet!.getDepositAddress()) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
           valueSatoshis: funderInput.satoshis - BigInt(publicationCost),
         }
       ],
@@ -155,10 +166,10 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     console.log('SIGNED', signingResult.signedTransaction)
     const decodedSigned = decodeTransaction(hexToBin(signingResult.signedTransaction))
     console.log(decodedSigned)
-    console.log('BYTECODE CONTRACT', (cashAddressToLockingBytecode(this.authNFT!.authGuard!.contract!.getTokenDepositAddress()) as any).bytecode)
-    console.log('BYTECODE OUTPUT 0', (cashAddressToLockingBytecode(this.authNFT!.authGuard!.contract!.getTokenDepositAddress()) as any).bytecode)
+    console.log('BYTECODE CONTRACT', (cashAddressToLockingBytecode(contractAddress) as any).bytecode)
+    console.log('BYTECODE OUTPUT 0', (cashAddressToLockingBytecode(contractAddress) as any).bytecode)
     console.log(
-      binToHex((cashAddressToLockingBytecode(this.authNFT!.authGuard!.contract!.getTokenDepositAddress()) as any).bytecode)
+      binToHex((cashAddressToLockingBytecode(contractAddress) as any).bytecode)
         === binToHex(decodedSigned.outputs[0].lockingBytecode)
       )
     console.log('00', hexToBin('00'))
