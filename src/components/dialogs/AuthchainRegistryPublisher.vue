@@ -8,7 +8,7 @@
       <q-card-section>
         <template v-if="authchainIdentity?.token?.tokenId">
           <q-form class="q-gutter-sm">
-            <q-input :filled="true" :model-value="authchainIdentity?.token?.tokenId" type="url" label="Registry URL" dense
+            <q-input :filled="true" :model-value="authchainIdentity?.token?.tokenId" type="url" label="Token ID" dense
               square standout disable></q-input>
             <q-input :filled="true" v-model="form.url" type="url" label="Registry URL" dense square standout></q-input>
             <q-input :filled="true" v-model="form.contentHash" :loading="form.isLoadingRegistry" type="url"
