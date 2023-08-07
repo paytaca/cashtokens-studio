@@ -59,7 +59,7 @@
         </div>
       </template>
       <div class="row justify-end q-my-lg">
-        <template v-if="token.processing">
+        <template v-if="token && token.processing">
           <q-btn disable>
             <q-spinner :thickness="10" color="primary" size="sm" /> {{ token.processing }}
           </q-btn>
@@ -75,18 +75,11 @@
 import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
-import { TokenAction } from 'src/types'
-import { Utxo } from 'cashscript'
 
 import { useUser } from 'src/stores/user'
-import { CashStudioTokenI, RegistryPublicationInput } from 'src/models/interfaces'
+import { CashStudioTokenI } from 'src/models/interfaces'
 import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
 import AuthNFT from 'src/models/AuthNFT'
-import TokenCategory from 'src/components/TokenCategory.vue'
-import FungibleTokenModel from 'src/models/FungibleToken'
-import constants from 'src/constants'
-import CashStudioToken from 'src/models/CashStudioToken'
 import NonFungibleToken from 'src/models/NonFungibleToken'
 
 const props = defineProps<{
@@ -126,23 +119,24 @@ const form = ref<{
  * Token to be created, values will be updated depending on the value of the form on write mode
  */
 const token = ref<NonFungibleToken>(
-  new NonFungibleToken({
-    authNFT: props.authNft,
-    ownerWallet: user.wallet as Wallet
-  } as CashStudioTokenI)
+
 )
 
 const tokenIdSelections = computed<{ value: string, label: string }[]>(() =>
   props.tokenIdOptions?.map((u: UtxoI) => ({ value: u.txid, label: u.txid.replace(u.txid.substring(8, 48), '...') })) || []
 )
 
-watch(() => token.value.message, (msg) => {
+watch(() => token.value?.message, (msg) => {
   if (msg && msg.type === 'success') {
     $q.notify({ color: 'positive', message: msg.text, timeout: 5000 })
   }
 })
 
 onMounted(() => {
+  token.value = new NonFungibleToken({
+    authNFT: props.authNft,
+    ownerWallet: user.wallet as Wallet
+  } as CashStudioTokenI)
   if (tokenIdSelections.value) {
     form.value.tokenIdSelected = tokenIdSelections.value[0]
   }
@@ -158,13 +152,13 @@ const createGenesis = async () => {
     $q.notify({ type: 'negative', message: 'Token ID required!' })
     return
   }
-  token.value.utxo = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0] as UtxoI
-  token.value.authNFT = form.value.authNft
+  token.value!.utxo = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0] as UtxoI
+  // token.value!.authNFT = form.value.authNft
   if (form.value.publishRegistry) {
-    token.value.registry = form.value.tokenRegistry
+    token.value!.registry = form.value.tokenRegistry
   }
   try {
-    await token.value.createGenesis({ capability: form.value.tokenCapability, commitment: form.value.tokenCommitment })
+    await token.value!.createGenesis({ capability: form.value.tokenCapability, commitment: form.value.tokenCommitment })
   } catch (error: any) {
     $q.notify({ type: 'negative', message: error?.message })
   }
@@ -173,12 +167,12 @@ const createGenesis = async () => {
 
 const loadRegistryHashFromUrl = () => {
   form.value.isLoadingRegistry = true
-  if (token.value.registry?.contentHash) {
+  if (form.value.tokenRegistry?.contentHash) {
     const endNotif = $q.notify({ spinner: true, message: 'Checking hash of URL\'s content', type: 'info' })
-    fetchBcmrContentHash(token.value.registry.url)
+    fetchBcmrContentHash(form.value.tokenRegistry.url)
       .then((v) => {
-        if (token.value.registry) {
-          token.value.registry.contentHash = v || ''
+        if (form.value.tokenRegistry) {
+          form.value.tokenRegistry.contentHash = v || ''
         }
       })
       .catch((e) => console.log(e))
@@ -188,6 +182,7 @@ const loadRegistryHashFromUrl = () => {
       })
   }
 }
+
 
 const checkAndLoadAuthNft = async () => {
   const a = (await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet))
