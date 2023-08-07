@@ -34,17 +34,6 @@ export default class FungibleToken extends CashStudioToken{
         })
       )
     }
-
-    // TODO: DELETE TESTING CREATING AUTHNFT WITH THE SAME CATEGORY AS THE FUNGIBLE TOKEN
-    // requests.push(
-    //   new TokenSendRequest({
-    //     tokenId,
-    //     value: CashStudioToken.DEFAULT_TOKEN_VALUE,
-    //     cashaddr: this.ownerWallet!.getTokenDepositAddress(),
-    //     amount: 0,
-    //     commitment: '00'
-    //   })
-    // )
     return requests
   }
 
@@ -73,6 +62,7 @@ export default class FungibleToken extends CashStudioToken{
       const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
       const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
       const tx = await this.submitTransaction(signResult)
+
       if(tx) {
         this._message = { type: 'success', text: `Success! Tx = ${tx}`}
         this._processing = 'Building authchain'
