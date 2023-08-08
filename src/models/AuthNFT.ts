@@ -61,6 +61,13 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
     return (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => !u.token && u.satoshis > CashStudioToken.DEFAULT_TOKEN_VALUE + minerFee && u.vout===0)[0]
   }
 
+  static async scanWalletForSuitableAuthNFTUtxos(ownerWallet:Wallet):Promise<UtxoI[]|undefined> {
+    AuthNFT._processing = 'Scanning wallet for suitable UTXOs'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1},{P2PKH:1})
+    delete AuthNFT._processing
+    return (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => !u.token && u.satoshis > CashStudioToken.DEFAULT_TOKEN_VALUE + minerFee && u.vout===0)
+  }
+
   async scanWalletForSuitableAuthNFTUtxo():Promise<UtxoI|undefined>{
     this.ensureOwnerWallet()
     this._processing = 'Scanning wallet for suitable Auth utxo'
@@ -91,6 +98,7 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
     return authNFTs
   }
   /**
+   * @deprecated genesis of AuthNFT is done during genesis of token
    * @override NonFungibleToken.createGenesis
    */
   async createGenesis(opt:{capability:NFTCapability, commitment: string}): Promise<string | void> {
@@ -151,4 +159,5 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
     delete this._processing
     return this
   }
+
 }
