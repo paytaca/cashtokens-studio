@@ -8,12 +8,26 @@
           <q-btn>FNFT</q-btn>
         </div>
         <div class="row justify-center q-my-lg">
-          <FungibleToken v-if="tokenType === 'fungible'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :token-id-options="user.genesisInputs" />
-          <NonFungibleToken v-if="tokenType === 'nonfungible'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :token-id-options="user.genesisInputs" />
-          <AuthNFTView v-if="tokenType === 'authnft'" :owner="user.connectedPaytacaAddress" action="genesis"
-            :auth-nft="authNFT" />
+          <template v-if="!user.genesisInputs?.length || user.genesisInputs?.length < 2">
+
+            <q-icon name="warning"></q-icon>
+            <p>Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
+              Cashtoken Studio requires 2 vout-0
+              utxos as genesis inputs when creating a token. </p>
+
+            <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
+              @click="generateGenesisInputs" />
+          </template>
+          <template v-else>
+            <FungibleToken v-if="tokenType === 'fungible' && authNFT && tokenIdOptions"
+              :owner="user.connectedPaytacaAddress" action="genesis" :token-id-options="tokenIdOptions"
+              :auth-nft="authNFT" />
+            <NonFungibleToken v-if="tokenType === 'nonfungible' && authNFT && tokenIdOptions"
+              :owner="user.connectedPaytacaAddress" action="genesis" :token-id-options="tokenIdOptions"
+              :auth-nft="authNFT" />
+            <AuthNFTView v-if="tokenType === 'authnft'" :owner="user.connectedPaytacaAddress" action="genesis"
+              :auth-nft="authNFT" />
+          </template>
         </div>
       </div>
     </div>
@@ -30,22 +44,64 @@ import FungibleNonFungibleToken from 'src/components/FungibleNonFungibleToken.vu
 import AuthNFTView from 'src/components/AuthNFT.vue'
 import { useRoute, useRouter } from 'vue-router';
 import AuthNFT from 'src/models/AuthNFT';
+import GenesisInput from 'src/models/GenesisInput'
+import { useQuasar } from 'quasar';
+import BusyButton from 'src/components/BusyButton.vue'
 defineOptions({ name: 'CreateToken' })
 
+const $q = useQuasar()
 const user = useUser()
 const route = useRoute()
-const router = useRouter()
 const authNFT = ref<AuthNFT>()
+const tokenIdOptions = ref<UtxoI[]>()
 const tokenType = computed(() => route.params.tokenType)
+
+
+watch(() => user.genesisInputs, (value) => {
+  if (value && value.length >= 2) {
+    // use first for AuthNFT
+    authNFT.value = new AuthNFT({ ...user.genesisInputs![0], ownerWallet: user.wallet! as Wallet })
+    // the rest for token
+    tokenIdOptions.value = user.genesisInputs!.slice(1)
+  }
+})
+
+watch(() => GenesisInput.processing, (v) => {
+  console.log('value', v)
+})
 
 onMounted(async () => {
   console.log(user.authNFTs)
-  if (route.params.tokenType === 'authnft') {
-    let authNFTGenesisInputUtxo = await AuthNFT.scanWalletForSuitableAuthNFTUtxo(user.wallet as Wallet)
-    if (authNFTGenesisInputUtxo) {
-      authNFT.value = new AuthNFT({ ...authNFTGenesisInputUtxo, ownerWallet: user.wallet! as Wallet })
-    }
+  // if (route.params.tokenType === 'authnft') {
+  //   let authNFTGenesisInputUtxo = await AuthNFT.scanWalletForSuitableAuthNFTUtxo(user.wallet as Wallet)
+  //   if (authNFTGenesisInputUtxo) {
+  //     authNFT.value = new AuthNFT({ ...authNFTGenesisInputUtxo, ownerWallet: user.wallet! as Wallet })
+  //   }
+  // }
+  if (user.genesisInputs && user.genesisInputs?.length >= 2) {
+    // use first for AuthNFT
+    authNFT.value = new AuthNFT({ ...user.genesisInputs[0], ownerWallet: user.wallet! as Wallet })
+    // the rest for token
+    tokenIdOptions.value = user.genesisInputs.slice(1)
   }
 })
+
+const generateGenesisInputs = async () => {
+  console.log('GENERATING')
+  if (!user.wallet) {
+    $q.notify({ type: 'negative', message: 'Wallet not connected' })
+    return
+  }
+  try {
+    const tx = await GenesisInput.generate(user.wallet! as Wallet, 2)
+    if (tx) {
+      $q.notify({ type: 'positive', message: 'Genesis inputs created' })
+    }
+  } catch (error) {
+    console.log(error)
+    $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
+  }
+
+}
 </script>
 
