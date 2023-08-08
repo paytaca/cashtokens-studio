@@ -5,10 +5,16 @@
     </q-toolbar>
     <q-input v-if="owner || user.wallet" :model-value="owner || user.wallet!.getTokenDepositAddress()" label="Owner"
       :filled="true" disable dense square />
-    <q-input :model-value="form.authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true"
+    <!-- <q-input :model-value="form.authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true"
       :disable="Boolean(form.authNft?.utxo?.token?.tokenId)" dense square>
       <template v-if="!form.authNft?.utxo?.token?.tokenId" v-slot:append>
         <q-btn icon="refresh" flat dense color="orange" @click="checkAndLoadAuthNft"></q-btn>
+      </template>
+    </q-input> -->
+    <q-input v-if="action === 'genesis'" :model-value="authNft.txid" label="AuthNFT Token ID" :filled="true"
+      :disable="Boolean(authNft?.txid)" dense square>
+      <template v-if="!authNft?.txid" v-slot:append>
+        <q-btn icon="refresh" flat dense color="orange"></q-btn>
       </template>
     </q-input>
     <q-select class="overflow-hidden ellipsis" :filled="true" bottom-slots v-model="form.tokenIdSelected"
@@ -77,7 +83,7 @@ import constants from 'src/constants'
 const props = defineProps<{
   owner?: string,
   action: FungibleTokenAction,
-  authNft?: AuthNFT,
+  authNft: AuthNFT,
   tokenIdOptions?: UtxoI[]
   // authNftOptions?: AuthNFT[]
 }>()
@@ -88,7 +94,7 @@ const user = useUser()
 const form = ref<{
   useAuthGuard: boolean /*Future proofing, we might allow creation without AuthGuard*/,
   tokenIdSelected: { value: string, label: string },
-  authNft?: AuthNFT,
+  // authNft: AuthNFT,
   genesisSupply: string,
   issuedSupply: {
     amount: string,
@@ -110,7 +116,8 @@ const form = ref<{
   },
   publishRegistry: false,
   tokenRegistry: { url: '', contentHash: '' },
-  isLoadingRegistry: false
+  isLoadingRegistry: false,
+  // authNft: props.authNft
 })
 
 /**
@@ -129,31 +136,34 @@ watch(() => token.value?.message, (msg) => {
 })
 
 onMounted(() => {
-  token.value = new FungibleTokenModel({
-    authNFT: props.authNft,
-    ownerWallet: user.wallet as Wallet
-  } as CashStudioTokenI)
+  // token.value = new FungibleTokenModel({
+  //   authNFT: props.authNft,
+  //   ownerWallet: user.wallet as Wallet
+  // } as CashStudioTokenI)
 
   if (tokenIdSelections.value) {
     form.value.tokenIdSelected = tokenIdSelections.value[0]
   }
-  form.value.authNft = props.authNft
+  // form.value.authNft = props.authNft
 })
 
 const createGenesis = async () => {
-  if (!form.value.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
-    $q.notify({ type: 'negative', message: 'Missing AuthNFT!' })
-    return
-  }
+  // if (!form.value.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
+  //   $q.notify({ type: 'negative', message: 'Missing AuthNFT!' })
+  //   return
+  // }
   if (!form.value.tokenIdSelected.value) {
     $q.notify({ type: 'negative', message: 'Token ID required!' })
     return
   }
-  token.value!.utxo = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0] as UtxoI
-  // token.value!.authNFT! = form.value.authNft
+
+  const genesisInput = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0] as UtxoI
+  token.value = new FungibleTokenModel({ ...genesisInput, authNFT: props.authNft, ownerWallet: user.wallet as Wallet })
   if (form.value.publishRegistry) {
     token.value!.registry = form.value.tokenRegistry
   }
+  console.log('AUTHNFT TXID', props.authNft.txid)
+  console.log('TXID', token.value.txid)
   try {
     await token.value!.createGenesis({ genesisSupply: Number(form.value.genesisSupply) })
   } catch (error: any) {
@@ -180,11 +190,11 @@ const loadRegistryHashFromUrl = () => {
   }
 }
 
-const checkAndLoadAuthNft = async () => {
-  const a = (await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet))
-  if (a) {
-    form.value.authNft = a[0]
-  }
-}
+// const checkAndLoadAuthNft = async () => {
+//   const a = (await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet))
+//   if (a) {
+//     form.value.authNft = a[0]
+//   }
+// }
 
 </script>

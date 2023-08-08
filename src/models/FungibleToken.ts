@@ -51,11 +51,16 @@ export default class FungibleToken extends CashStudioToken{
       delete this._processing
       throw new Error('Invalid fungible amount!')
     }
+    if (!this.authNFT) {
+      delete this._processing
+      throw new Error('Missing authNFT ')
+    }
     const requests:(TokenSendRequest|OpReturnData|SendRequest)[] = []
     try {
       // Following BCMR spec regarding Reserved/Unissued supply,
       // FT reserves are in the authchain's identity output and capability = 'mutable'
       requests.push(this.prepareAuthchainIdentityReq({genesis:true, genesisSupply: opt.genesisSupply, capability: NFTCapability.mutable}))
+      requests.push(this.prepareAuthNFTReq({genesis:true}))
       requests.push(...this.prepareFungibleTokenReq({genesis:true, genesisSupply: opt.genesisSupply, issuedSupply:opt.issuedSupply}))
       requests.push(...this.prepareRegistryPublicationReq())
       // requests.push(...this.prepareChangeReq(this.utxo)) // change was auto returned
