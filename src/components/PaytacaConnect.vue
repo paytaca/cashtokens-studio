@@ -42,6 +42,7 @@ watch(() => user.connectedPaytacaAddress, async (address) => {
   if (address && !watching.value) {
     watchAddress(address)
   }
+  console.log(user.wallet?.provider)
 })
 
 const connect = async () => {
@@ -60,16 +61,19 @@ const connect = async () => {
     user.wallet = await getWalletClass().watchOnly(user.connectedPaytacaAddress)
     user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
     const userUtxos = await user.wallet.getAddressUtxos()
+
     storeBalances(userUtxos)
   }
 }
 
 const storeBalances = (userUtxos: UtxoI[]) => {
+  console.log(userUtxos)
   user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => {
-    return !utxo.token &&
+    return Boolean(!utxo.token) &&
       utxo.vout === 0 &&
-      utxo.satoshis > CashStudioToken.DEFAULT_GENESIS_COST
+      utxo.satoshis >= CashStudioToken.DEFAULT_TOKEN_VALUE
   }).slice(0, 5)
+  console.log(user.genesisInputs)
 }
 
 const watchAddress = async (address: string) => {
