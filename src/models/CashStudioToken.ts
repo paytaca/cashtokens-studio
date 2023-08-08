@@ -139,9 +139,21 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
   protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest|OpReturnData|SendRequest)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
     this._processing = 'Processing transaction'
     // const genesisInput = await this.getGenesisInput()
-    if (!this.txid) {
-      throw new Error('Invalid genesis input')
+    if (!this.txid || !this.authNFT?.txid) {
+      throw new Error('Invalid input for AuthNFT or Token')
     }
+
+    // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
+    const funder = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
+      return Boolean(!u.token) &&
+        (u.txid !== this.txid || u.txid !== this.authNFT!.txid) && // Exclude the utxo that we're using as genesis inputs
+          u.satoshis > CashStudioToken.DEFAULT_GENESIS_COST
+    })[0]
+
+    if (!funder) {
+      throw new Error('Insufficient balance to fund the transaction')
+    }
+
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
       false,
@@ -149,13 +161,14 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
         tokenOperation: 'genesis',
         checkTokenQuantities: false,
         buildUnsigned: true,
-        utxoIds: [this.utxo],
-        ensureUtxos: [this.utxo]
+        utxoIds: [this.utxo, this.authNFT!.utxo!, funder],
+        ensureUtxos: [this.utxo, this.authNFT!.utxo!, funder]
       }
     )
     delete this._processing
     return {encodedTransaction, sourceOutputs}
   }
+
 
   /**
    * Only use this for genesis transactions. Override this if interacting with contract
@@ -242,7 +255,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
   /**
    * Invoke and include request if CashStudioToken.useAuthGuard is true
    */
-  protected prepareAuthNFTRequest(opt:{genesis:boolean}): TokenSendRequest {
+  protected prepareAuthNFTReq(opt:{genesis:boolean}): TokenSendRequest {
     this.ensureOwnerWallet()
     let tokenId
     let value
@@ -251,10 +264,10 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     let commitment
     let cashaddr = this.ownerWallet!.getTokenDepositAddress()
     if (opt.genesis) {
-      tokenId = this.txid
-      value = this.satoshis
-      amount = Number(this.token?.amount),
-      capability = this.token?.capability as NFTCapability
+      tokenId = this.authNFT!.txid
+      value = this.authNFT!.satoshis
+      amount = Number(this.authNFT!.token?.amount),
+      capability = this.authNFT!.token?.capability as NFTCapability
       commitment = '00'
     } else {
       if (!this.authNFT?.token?.tokenId) {
@@ -319,15 +332,17 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     return (
     /**
      * Non-conservative estimate
-     * 1 input
-     * 3 outputs (identity output(also holds FT), issued FT or NFT, token change)
+     * 3 inputs (genesis input for creator's new Token, genesis input for creator's new AuthNFT, funder input)
+     * 3 outputs (identity output(also holds FT), [issued FT or NFT]?, token change)
      * Assumes the most costly address type
      */
-    calcMinerFee({ 'P2SH-P2WPKH': 1 }, { P2WSH: 3 }) +
+    calcMinerFee({ P2PKH: 3 }, { P2WSH: 1, P2PKH:2 }) +
     /**
      * We'll just assume that there is always an issued FT supply that will be given token values
      */
-    (CashStudioToken.DEFAULT_TOKEN_VALUE * 3)
+    (CashStudioToken.DEFAULT_TOKEN_VALUE * 3) + 400
     )
   }
+
+
 }

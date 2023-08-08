@@ -1,5 +1,5 @@
 import { BCMR, Mainnet, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
-import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
+import { cashAddressToLockingBytecode, decodeTransaction, encodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
 import CashStudioToken from "./CashStudioToken"
 import { AuthChainGuard, AuthNFT as AuthNFTI, Authchain, CashStudioTokenI, Message, Messaging, Processing, Registry, RegistryPublicationInput } from "./interfaces"
 import { Contract } from "@mainnet-cash/contract"
@@ -29,7 +29,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
 
   async publish(opt:{url: string, contentHash: string}):Promise<any> {
     this._processing = 'Processing'
-    const publicationCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2PKH: 3})
+    const publicationCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 1})
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > publicationCost).map(toCashScript)[0]
     if (!funderInput) {
       delete this._processing
@@ -53,12 +53,13 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     const utxos = (await w.getAddressUtxos()).map(toCashScript)
     console.log('RAW UTXOS', utxos)
     console.log('IDENTITY OUTPUT UTXOS', authchainIdentityOutput)
-
+    console.log('CONTRACT', contract)
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')()
           .from(authchainIdentityOutput) // contract
-          .fromP2PKH([authNFTInput,funderInput], sig) // AuthNFT/minting baton, funder
+          .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
+          .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
           .to([{
             // return authchain identity output to contract
             to: contractAddress,
@@ -71,16 +72,16 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             amount: BigInt(this.authNFT!.satoshis),
             token: authNFTInput.token
           }])
-          .withOpReturn([
-            'BCMR',
-            opt.contentHash, // sha256 of the contents from the uri below
-            opt.url.replace('https://', '')
-          ])
-          .to([{
-            // change
-            to: tokenOwner,
-            amount: funderInput.satoshis - BigInt(publicationCost)
-          }])
+          // .withOpReturn([
+          //   'BCMR',
+          //   opt.contentHash, // sha256 of the contents from the uri below
+          //   opt.url.replace('https://', '')
+          // ])
+          // .to([{
+          //   // change
+          //   to: tokenOwner,
+          //   amount: funderInput.satoshis - BigInt(publicationCost)
+          // }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(publicationCost))
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
@@ -98,22 +99,21 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     this._processing = 'Waiting for signature'
     let signingResult
     try {
-      console.log('IDENTITY OUTPUT', authchainIdentityOutput)
-      console.log('AUTHNFT TOKEN', this.authNFT!.token?.tokenId)
-      console.log('AUTHGUARD AUTHNFT TOKEN', this.authNFT!.authGuard?.authNFT?.token?.tokenId)
-      console.log('CONTRACT ADDRESS', contract.getTokenDepositAddress())
+
       const bytecode = (transaction as any).redeemScript;
       const artifact = {...contract.artifact} as Partial<Artifact>;
       delete artifact.source;
       delete artifact.bytecode;
 
+      // decoded.inputs[0].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
       signingResult = await window.paytaca!.signTransaction({
         transaction: decoded,
-        sourceOutputs: [{
+        sourceOutputs: [
+        {
           ...decoded.inputs[0],
-          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(contract.getTokenDepositAddress()) as any).bytecode,
           valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
           token: authchainIdentityOutput.token && {
             ...authchainIdentityOutput.token,
@@ -163,18 +163,12 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       return
     }
 
-    console.log('SIGNED', signingResult.signedTransaction)
     const decodedSigned = decodeTransaction(hexToBin(signingResult.signedTransaction))
-    console.log(decodedSigned)
-    console.log('BYTECODE CONTRACT', (cashAddressToLockingBytecode(contractAddress) as any).bytecode)
-    console.log('BYTECODE OUTPUT 0', (cashAddressToLockingBytecode(contractAddress) as any).bytecode)
     console.log(
       binToHex((cashAddressToLockingBytecode(contractAddress) as any).bytecode)
         === binToHex(decodedSigned.outputs[0].lockingBytecode)
       )
-    console.log('00', hexToBin('00'))
-    console.log('0x00', hexToBin('0x00'))
-
+    console.log('SIGNED TX', signingResult!.signedTransaction)
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       console.log('TX', tx)
@@ -187,14 +181,6 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
 
   }
 
-  // async publish(opt: { url: string; contentHash: string }): Promise<string | undefined> {
-  //   if (this.useAuthGuard) {
-  //     // delegate
-  //     this._processing = 'Processing'
-  //     return await this.authNFT?.authGuard!.publish({...opt, authchainIdentityOutput: this.utxo})
-  //   }
-  //   // TODO: Prepare a regular send request on this class if this Identity isn't locked with an AuthGuard
-  // }
   transfer(newOwnerAddress: string): Promise<string | undefined> {
     throw new Error('Method not implemented.')
   }
