@@ -19,7 +19,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="5" :row-count="3"
+          <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="8" :row-count="3"
             :caption="AuthchainIdentity.processing" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
