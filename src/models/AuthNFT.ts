@@ -97,20 +97,17 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
     delete AuthNFT._processing
     return authNFTs
   }
+
   /**
-   * @deprecated genesis of AuthNFT is done during genesis of token
+   * Can be used if when solely creating AuthNFT
    * @override NonFungibleToken.createGenesis
    */
   async createGenesis(opt:{capability:NFTCapability, commitment: string}): Promise<string | void> {
     this.ensureUtxo()
     this.ensureOwnerWallet()
     this._processing = 'Processing'
-    const authGuardContract = new AuthGuard({authNFT: this,ownerWallet: this.ownerWallet})
-    authGuardContract.createAuthNFTGenesisContract()
     const requests:(TokenSendRequest|SendRequest)[] = []
-    this.useAuthGuard = true // making sure we're using Authguard in preparing Authchain Identity
     this.authNFT = this // using self as authNFT during genesis
-    requests.push(this.prepareAuthNFTRequest({genesis:true}))
     requests.push(...this.prepareChangeReq(this.utxo))
     const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
     const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create Auth NFT')
