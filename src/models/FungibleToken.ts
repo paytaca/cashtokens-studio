@@ -7,7 +7,7 @@ import calcMinerFee from 'src/utils/calcMinerFee';
 
 export default class FungibleToken extends CashStudioToken{
   /**
-   * Output for the actual token category
+   * Prepare the request for user token's genesis
    */
   prepareFungibleTokenReq(opt:{genesis:boolean, genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}):TokenSendRequest[] {
     this.ensureOwnerWallet()
@@ -37,7 +37,9 @@ export default class FungibleToken extends CashStudioToken{
     return requests
   }
 
-  async createGenesis(opt:{genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}): Promise<string | void> {
+  async createGenesis(opt:{useAuthGuard?:boolean, genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}): Promise<string | void> {
+    this.useAuthGuard = opt?.useAuthGuard || true
+
     this._processing = 'Processing transaction...'
     if (!this.utxo) { // utxo is genesis input during genesis
       delete this._processing
@@ -60,11 +62,12 @@ export default class FungibleToken extends CashStudioToken{
       // Following BCMR spec regarding Reserved/Unissued supply,
       // FT reserves are in the authchain's identity output and capability = 'mutable'
       requests.push(this.prepareAuthchainIdentityReq({genesis:true, genesisSupply: opt.genesisSupply, capability: NFTCapability.mutable}))
-      requests.push(this.prepareAuthNFTReq({genesis:true}))
+      if (this.useAuthGuard) {
+        requests.push(this.prepareAuthNFTReq({genesis:true}))
+      }
       requests.push(...this.prepareFungibleTokenReq({genesis:true, genesisSupply: opt.genesisSupply, issuedSupply:opt.issuedSupply}))
       requests.push(...this.prepareRegistryPublicationReq())
-      // requests.push(...this.prepareChangeReq(this.utxo)) // change was auto returned
-      const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
+      const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
       const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
       const tx = await this.submitTransaction(signResult)
 
