@@ -3,6 +3,7 @@ import calcMinerFee from 'src/utils/calcMinerFee';
 import CashStudioToken from './CashStudioToken';
 import { decodeTransaction, hexToBin } from '@bitauth/libauth';
 export default class GenesisInput implements UtxoI {
+
   txid: string;
   vout: number;
   satoshis: number;
@@ -10,7 +11,6 @@ export default class GenesisInput implements UtxoI {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   private static _processing?:string;
-  static processing = ''
   constructor(instance:UtxoI) {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
@@ -22,6 +22,7 @@ export default class GenesisInput implements UtxoI {
     this.coinbase = instance.coinbase
     this.token = instance.token
   }
+
 
   get utxo():UtxoI {
     return {
@@ -49,23 +50,22 @@ export default class GenesisInput implements UtxoI {
     this.token = u.token
   }
 
-  // static get processing():string|undefined {
-  //   return GenesisInput._processing
-  // }
-
+  static get processing():string|undefined {
+    return GenesisInput._processing
+  }
 
   /**
    * Generate genesis inputs from wallet's utxos
    */
   static async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
-    GenesisInput.processing = 'Scanning wallet'
+    GenesisInput._processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
     const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > (CashStudioToken.DEFAULT_TOKEN_VALUE) + fee)[0]
     if (!funder) {
       throw new Error('Insufficient balance, please try to consolidate your utxos')
     }
     // build tx
-    GenesisInput.processing = 'Processing'
+    GenesisInput._processing = 'Processing'
     console.log('ADDRESS', ownerWallet!.getDepositAddress())
     const { encodedTransaction, sourceOutputs } = await ownerWallet!.encodeTransaction(
       [new SendRequest({
@@ -88,8 +88,7 @@ export default class GenesisInput implements UtxoI {
       throw new Error('Error decoding transaction')
     }
     // request signature
-    GenesisInput.processing = 'Waiting for signature'
-    console.log(GenesisInput._processing)
+    GenesisInput._processing = 'Waiting for signature'
     let signResult: {signedTransaction:any} | undefined
     try {
       signResult = await window.paytaca.signTransaction({
@@ -101,18 +100,18 @@ export default class GenesisInput implements UtxoI {
     } catch (error) {
       console.log(error)
     } finally {
-      GenesisInput.processing = ''
+      delete GenesisInput._processing
     }
 
     if (!signResult?.signedTransaction) {
-      GenesisInput.processing = ''
+      delete GenesisInput._processing
       return
     }
 
-    GenesisInput.processing = 'Generating genesis inputs'
+    GenesisInput._processing = 'Submitting Transaction'
     const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)
     // delete GenesisInput.processing
-    GenesisInput.processing = ''
+    delete GenesisInput._processing
     return tx
   }
 

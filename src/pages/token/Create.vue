@@ -14,7 +14,6 @@
             <p>Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
               Cashtoken Studio requires 2 vout-0
               utxos as genesis inputs when creating a token. </p>
-
             <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
               @click="generateGenesisInputs" />
           </template>
@@ -35,18 +34,20 @@
 </template>
 
 <script setup lang="ts">
+
 import { computed, ref, watch, onMounted } from 'vue'
-import { useUser } from 'src/stores/user';
 import { UtxoI, Wallet } from 'mainnet-js';
-import FungibleToken from 'src/components/FungibleToken.vue';
-import NonFungibleToken from 'src/components/NonFungibleToken.vue';
-import FungibleNonFungibleToken from 'src/components/FungibleNonFungibleToken.vue';
-import AuthNFTView from 'src/components/AuthNFT.vue'
-import { useRoute, useRouter } from 'vue-router';
-import AuthNFT from 'src/models/AuthNFT';
-import GenesisInput from 'src/models/GenesisInput'
+import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
+import { useUser } from 'src/stores/user';
+
+import NonFungibleToken from 'src/components/NonFungibleToken.vue';
+import FungibleToken from 'src/components/FungibleToken.vue';
 import BusyButton from 'src/components/BusyButton.vue'
+import AuthNFTView from 'src/components/AuthNFT.vue'
+import GenesisInput from 'src/models/GenesisInput'
+import AuthNFT from 'src/models/AuthNFT';
+
 defineOptions({ name: 'CreateToken' })
 
 const $q = useQuasar()
@@ -55,7 +56,6 @@ const route = useRoute()
 const authNFT = ref<AuthNFT>()
 const tokenIdOptions = ref<UtxoI[]>()
 const tokenType = computed(() => route.params.tokenType)
-
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 2) {
@@ -66,18 +66,7 @@ watch(() => user.genesisInputs, (value) => {
   }
 })
 
-watch(() => GenesisInput.processing, (v) => {
-  console.log('value', v)
-})
-
 onMounted(async () => {
-  console.log(user.authNFTs)
-  // if (route.params.tokenType === 'authnft') {
-  //   let authNFTGenesisInputUtxo = await AuthNFT.scanWalletForSuitableAuthNFTUtxo(user.wallet as Wallet)
-  //   if (authNFTGenesisInputUtxo) {
-  //     authNFT.value = new AuthNFT({ ...authNFTGenesisInputUtxo, ownerWallet: user.wallet! as Wallet })
-  //   }
-  // }
   if (user.genesisInputs && user.genesisInputs?.length >= 2) {
     // use first for AuthNFT
     authNFT.value = new AuthNFT({ ...user.genesisInputs[0], ownerWallet: user.wallet! as Wallet })
@@ -87,7 +76,6 @@ onMounted(async () => {
 })
 
 const generateGenesisInputs = async () => {
-  console.log('GENERATING')
   if (!user.wallet) {
     $q.notify({ type: 'negative', message: 'Wallet not connected' })
     return

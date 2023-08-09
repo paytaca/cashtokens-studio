@@ -33,11 +33,9 @@
   </q-dialog>
 </template>
 <script setup lang="ts">
-import { log } from 'console';
 import { useQuasar } from 'quasar';
-import AuthchainIdentity from 'src/models/AuthchainIdentity'
-import { RegistryPublicationData } from 'src/types'
 import { ref } from 'vue';
+import AuthchainIdentity from 'src/models/AuthchainIdentity'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash'
@@ -49,11 +47,8 @@ const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean
   contentHash: ''
 })
 const publish = async () => {
-  console.log('AUTHNFT', props.authchainIdentity.authNFT?.token?.tokenId)
-  console.log('AUTHGUARD', props.authchainIdentity.authNFT.authGuard)
   try {
     const tx = await props.authchainIdentity.publish({ url: form.value.url, contentHash: form.value.contentHash })
-    console.log(props.authchainIdentity.authNFT.authGuard)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
     }
