@@ -29,7 +29,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
 
   async publish(opt:{url: string, contentHash: string}):Promise<any> {
     this._processing = 'Processing'
-    const publicationCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 1})
+    const publicationCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 2})
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > publicationCost).map(toCashScript)[0]
     if (!funderInput) {
       delete this._processing
@@ -49,9 +49,9 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     const contractAddress = contract.getTokenDepositAddress()
     const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
     const tokenOwner = this.ownerWallet!.getDepositAddress()
-    const w = await (getWalletClass()).watchOnly(contractAddress)
-    const utxos = (await w.getAddressUtxos()).map(toCashScript)
-    console.log('RAW UTXOS', utxos)
+    // const w = await (getWalletClass()).watchOnly(contractAddress)
+    // const utxos = (await w.getAddressUtxos()).map(toCashScript)
+    // console.log('RAW UTXOS', utxos)
     console.log('IDENTITY OUTPUT UTXOS', authchainIdentityOutput)
     console.log('CONTRACT', contract)
     try {
@@ -72,16 +72,16 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             amount: BigInt(this.authNFT!.satoshis),
             token: authNFTInput.token
           }])
-          // .withOpReturn([
-          //   'BCMR',
-          //   opt.contentHash, // sha256 of the contents from the uri below
-          //   opt.url.replace('https://', '')
-          // ])
-          // .to([{
-          //   // change
-          //   to: tokenOwner,
-          //   amount: funderInput.satoshis - BigInt(publicationCost)
-          // }])
+          .withOpReturn([
+            'BCMR',
+            opt.contentHash, // sha256 of the contents from the uri below
+            opt.url.replace('https://', '')
+          ])
+          .to([{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(publicationCost)
+          }])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(publicationCost))
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
@@ -113,7 +113,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
         sourceOutputs: [
         {
           ...decoded.inputs[0],
-          lockingBytecode: (cashAddressToLockingBytecode(contract.getTokenDepositAddress()) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
           valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
           token: authchainIdentityOutput.token && {
             ...authchainIdentityOutput.token,

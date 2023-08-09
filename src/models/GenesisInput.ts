@@ -60,7 +60,6 @@ export default class GenesisInput implements UtxoI {
   static async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
     GenesisInput.processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
-    // ! remove + 5000
     const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > (CashStudioToken.DEFAULT_TOKEN_VALUE) + fee)[0]
     if (!funder) {
       throw new Error('Insufficient balance, please try to consolidate your utxos')
