@@ -47,7 +47,7 @@ export default class NonFungibleToken extends CashStudioToken{
       delete this._processing
       throw new Error('The ownerWallet is not set')
     }
-    if (!opt.capability) { // TODO: add constraint for MAX if we solve the issue with the precision of casting a large value to Number
+    if (!opt.capability) {
       delete this._processing
       throw new Error('NFT requires capability')
     }
@@ -57,7 +57,7 @@ export default class NonFungibleToken extends CashStudioToken{
       requests.push(...this.prepareNonFungibleTokenReq({genesis:true, capability: opt.capability, commitment: opt.commitment}))
       requests.push(...this.prepareRegistryPublicationReq())
       // requests.push(...this.prepareChangeReq(this.utxo)) // change was auto returned
-      const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
+      const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
       const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs)
       const tx = await this.submitTransaction(signResult)
       if(tx) {
