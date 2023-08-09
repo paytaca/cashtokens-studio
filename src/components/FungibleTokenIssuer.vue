@@ -1,25 +1,24 @@
 <template>
-  <q-dialog>
-    <q-card class="q-px-sm q-py-lg full-width">
-      <q-toolbar>
-        <q-toolbar-title>Issue fungibles from reserves</q-toolbar-title>
-        <TokenCategory v-if="identityOutput.tokenId" :token-id="identityOutput.tokenId" />
-      </q-toolbar>
-      <q-card-section class="q-gutter-sm">
-        <q-form class="q-gutter-sm">
-          <q-input :model-value="currentFtReserves" label="Current supply (in reserves)" filled dense disable></q-input>
-          <q-input v-if="amount && Number(amount) > 0" :model-value="Number(currentFtReserves) - Number(amount)"
-            label="New supply (in reserves)" filled dense disable></q-input>
-          <q-input v-model="recipient" label="Recipient's Address" filled dense></q-input>
-          <q-input v-model="amount" label="Token amount or qty" filled dense></q-input>
-        </q-form>
-      </q-card-section>
-      <q-card-actions class="row justify-end">
-        <!-- <q-btn @click="() => issueTokens()">{{ newIdentityOutput.processing || 'Issue Tokens' }}</q-btn> -->
-        <BusyButton @click="() => issueTokens()" label="Issue Tokens" :busyLabel="newIdentityOutput.processing" />
-      </q-card-actions>
-    </q-card>
-  </q-dialog>
+  <q-card class="q-px-sm q-py-lg full-width">
+    <q-toolbar>
+      <q-toolbar-title>Issue fungibles from reserves</q-toolbar-title>
+      <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
+    </q-toolbar>
+    <q-card-section class="q-gutter-sm">
+      <q-form class="q-gutter-sm">
+        <q-input :model-value="currentFtReserves" label="Current supply (in reserves)" filled dense disable></q-input>
+        <q-input v-if="form.amount && Number(form.amount) > 0"
+          :model-value="Number(currentFtReserves) - Number(form.amount)" label="New supply (in reserves)" filled dense
+          disable></q-input>
+        <q-input v-model="form.recipient" label="Recipient's Address" filled dense></q-input>
+        <q-input v-model="form.amount" label="Token amount or qty" filled dense></q-input>
+      </q-form>
+    </q-card-section>
+    <q-card-actions class="row justify-end">
+      <BusyButton @click="() => releaseTokensFromReserveSupply()" label="Issue Tokens"
+        :busyLabel="authchainIdentity.processing" />
+    </q-card-actions>
+  </q-card>
 </template>
 
 <script setup lang="ts">
@@ -28,43 +27,30 @@ import { ref, computed, onMounted } from 'vue';
 import TokenCategory from './TokenCategory.vue';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
-import { Wallet } from 'mainnet-js';
 import BusyButton from 'src/components/BusyButton.vue'
 
 defineOptions({ name: 'FungibleTokenIssuer' })
 const $q = useQuasar()
-const user = useUser()
-const props = defineProps<{ identityOutput: AuthchainIdentity }>()
-const recipient = ref<string>()
-const amount = ref<string>()
-const newIdentityOutput = ref<AuthchainIdentity>(
-  new AuthchainIdentity({ ...props.identityOutput, ownerWallet: user.wallet as Wallet })
-)
-const currentFtReserves = computed(() => props.identityOutput.amount)
+const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
+const form = ref<{ recipient: string, amount: string }>({
+  recipient: '',
+  amount: '0'
+})
+const currentFtReserves = computed(() => props.authchainIdentity.token?.amount)
 
-onMounted(() => console.log(props.identityOutput))
+onMounted(() => console.log(props.authchainIdentity))
 
-const issueTokens = () => {
-  console.log('ISSUING TOKENS', newIdentityOutput)
-  if (!recipient.value || !amount.value || Number(amount.value) === 0) {
-    $q.notify({ type: 'negative', message: 'Error!Amount and recipient required!' })
+const releaseTokensFromReserveSupply = async () => {
+  if (!form.value || !form.value.recipient || Number(form.value.amount) <= 0) {
+    return $q.notify({ type: 'negative', message: 'Error!Amount and recipient required!' })
   }
-  newIdentityOutput.value.tokenId = props.identityOutput.tokenId
-  newIdentityOutput.value.issueFungibleTokens(amount.value as string, recipient.value as string)
-    .then((tx) => {
-      if (tx) {
-        $q.notify({ type: 'positive', message: 'Tokens issued' })
-      }
-    })
-    .catch((error) => {
-      $q.notify({ type: 'negative', message: error?.toString() })
-    })
-  // try {
-  //   const tx = await newIdentityOutput.value.issueFungibleTokens(amount.value as string, recipient.value as string)
 
-  // } catch (error) {
-  //   $q.notify({ type: 'negative', message: error?.toString() })
-  // }
+  try {
+    const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: Number(form.value.amount) })
+    $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+  } catch (error: any) {
+    return $q.notify({ type: 'negative', message: error.message })
+  }
 
 }
 </script>

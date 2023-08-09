@@ -81,7 +81,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
   }
 
   /**
-   * E.g. success, Transaction submitted
+   * E.g. {success, Transaction submitted} or {error, Tx Failed}
    */
   get message():Message | undefined{
     return this._message
@@ -239,7 +239,6 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       capability: opt?.capability,
       commitment: opt?.commitment
     }
-
     return new TokenSendRequest(reqParam)
   }
 

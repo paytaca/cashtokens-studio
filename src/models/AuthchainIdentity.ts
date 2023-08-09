@@ -16,11 +16,11 @@ import AuthGuard from './AuthGuard'
 
 /**
  * In an AuthGuard context an AuthchainIdentity are the tokens that are on an AuthGuard address
- * Without AuthGuard it could be any Utxo vout=0 of the owner's address
+ * Without AuthGuard it could be any Utxo where vout=0 of the owner's address
  * TODO.: Also include plain utxo @ vout0?
  * TODO..: To get the token category managed by this utxo, the utxo's txid is
  * TODO...: = the txid of the tokens authhead in chaingraph or paytaca's bcmr
- * TODO....: we can get the authhead using that instantiate an AuthchainIdentity
+ * TODO....: we can get the authhead using that to instantiate an AuthchainIdentity
  *
  */
 export default class AuthchainIdentity extends CashStudioToken implements Authchain, Processing, Messaging {
@@ -31,8 +31,8 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     this.ensureOwnerWallet()
     this.ensureAuthNFT()
     this._processing = 'Processing'
-    const publicationCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 2})
-    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > publicationCost).map(toCashScript)[0]
+    const issuanceCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 2})
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost).map(toCashScript)[0]
     if (!funderInput) {
       delete this._processing
       throw new Error('Insufficient balance to fund the txn')
@@ -68,12 +68,12 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             opt.contentHash, // sha256 of the contents from the uri below
             opt.url.replace('https://', '')
           ])
-          .to(funderInput.satoshis - BigInt(publicationCost) > 546 ?[{
+          .to(funderInput.satoshis - BigInt(issuanceCost) > 546 ?[{
             // change
             to: tokenOwner,
-            amount: funderInput.satoshis - BigInt(publicationCost)
+            amount: funderInput.satoshis - BigInt(issuanceCost)
           }]:[])
-          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(publicationCost))
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(issuanceCost))
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
@@ -170,6 +170,172 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       delete this._processing
     }
 
+  }
+
+  /**
+   *  Token issuance from reserves
+   */
+  async releaseTokensFromReserveSupply(arg:{to: string, amount: number}): Promise<string | void> {
+    this.ensureOwnerWallet()
+    this.ensureTokenId()
+    if (this.useAuthGuard) {
+      this.ensureAuthNFT()
+    }
+
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:2, P2PKH: 2})
+    const issuanceCost = minerFee + CashStudioToken.DEFAULT_TOKEN_VALUE // Token value of the issued tokens utxo
+
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+
+    console.log('ISSUANCE COST', issuanceCost)
+    console.log('FUNDER INPUT', funderInput)
+
+    const [authchainIdentityOutput, authNFTInput] = [this.utxo, this.authNFT!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authNFT!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+    let transaction
+    let decoded
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')()
+          .from(authchainIdentityOutput) // contract
+          // TODO: MAKE USE OF AUTHNFT OPTIONAL ONLY WHEN USING AUTHGUARD
+          .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
+          .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
+          .to([{
+            // return authchain identity output to contract
+            to: contractAddress,
+            amount: authchainIdentityOutput.satoshis,
+            token: {
+              category: authchainIdentityOutput.token!.category,
+              amount: authchainIdentityOutput.token!.amount - BigInt(arg.amount), // deduct
+              nft: authchainIdentityOutput.token!.nft
+            }
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(authNFTInput.satoshis),
+            token: authNFTInput.token
+          }])
+          .to([{
+            // Issue tokens
+            to: arg.to,
+            amount: BigInt(CashStudioToken.DEFAULT_TOKEN_VALUE),
+            token: {
+              category: authchainIdentityOutput.token!.category,
+              amount: BigInt(arg.amount), // issued amount
+              // nft: authchainIdentityOutput.token!.nft
+            }
+          }])
+          .to(funderInput.satoshis - BigInt(issuanceCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(issuanceCost)
+          }]:[])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        console.log('decoded:', decoded)
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error building transaction')
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      signingResult = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
+          token: authchainIdentityOutput.token && {
+            ...authchainIdentityOutput.token,
+            category: hexToBin(authchainIdentityOutput.token!.category),
+            nft: authchainIdentityOutput.token.nft && {
+              ...authchainIdentityOutput.token.nft,
+              commitment: hexToBin(authchainIdentityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authNFTInput.satoshis),
+          token: authNFTInput.token && {
+            ...authNFTInput.token,
+            category: hexToBin(authNFTInput.token!.category),
+            nft: authNFTInput.token.nft && {
+              ...authNFTInput.token.nft,
+              commitment: hexToBin(authNFTInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ],
+        broadcast: false,
+        userPrompt: 'Issue/Release Tokens'
+      });
+
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error signing transaction')
+    }
+
+    if (!signingResult) {
+      console.log('signed', signingResult)
+      delete this._processing
+      return
+    }
+
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      if (tx) {
+        this._processing = 'Tokens issued'
+        setTimeout(()=> {
+          delete this._processing
+        }, 2000)
+      }
+      return tx
+    } catch (error) {
+      console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
+    } finally {
+      delete this._processing
+    }
   }
 
   transfer(newOwnerAddress: string): Promise<string | undefined> {

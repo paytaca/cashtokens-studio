@@ -17,5 +17,14 @@ export class Bcmr implements Registry {
     this.latestRevision = instance.latestRevision
   }
 
+  addNFT(){}
+  removeNFT(){}
+  addIdentityHistory(){}
+  addTag(){}
+  removeTag(){}
+  toJSON(){
+    return JSON.stringify(this)
+  }
+
 
 }

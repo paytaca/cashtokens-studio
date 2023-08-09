@@ -1,11 +1,11 @@
 <template>
   <q-page class="q-ma-lg">
+    {{ dialog }}
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">Authchain Identities</h5>
         <p class="text-center">List of authchain identity outputs. You can use this to manage the authchain of your tokens
         </p>
-        {{ AuthchainIdentity.processing }}
         <q-markup-table>
           <thead>
             <tr>
@@ -41,6 +41,9 @@
                       <q-item clickable v-close-popup @click="openDialog(AuthchainRegistryPublisher.__name, identity)">
                         Publish Registry
                       </q-item>
+                      <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
+                        Issue Tokens
+                      </q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -48,7 +51,10 @@
             </tr>
           </tbody>
         </q-markup-table>
+
         <AuthchainRegistryPublisher v-if="dialog" :model-value="dialog === AuthchainRegistryPublisher.__name"
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+        <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
       </div>
     </div>
@@ -63,6 +69,7 @@ import AuthchainIdentity from 'src/models/AuthchainIdentity';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisher from 'src/components/dialogs/AuthchainRegistryPublisher.vue'
+import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()

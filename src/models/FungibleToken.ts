@@ -1,9 +1,10 @@
-import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
+import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet, binToHex, hexToBin, qrAddress, utf8ToBin } from 'mainnet-js'
 import CashStudioToken from './CashStudioToken';
 import MintingCovenant from 'src/contracts/MintingCovenant';
 import AuthNFT from './AuthNFT';
 import AuthGuard from './AuthGuard';
 import calcMinerFee from 'src/utils/calcMinerFee';
+import { cashAddressToLockingBytecode } from '@bitauth/libauth';
 
 export default class FungibleToken extends CashStudioToken{
   /**
@@ -83,4 +84,6 @@ export default class FungibleToken extends CashStudioToken{
       delete this._processing
     }
   }
+
+
 }
