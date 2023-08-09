@@ -40,12 +40,6 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     this.registry = instance.registry
     this.ownerWallet = instance.ownerWallet
   }
-  // get utxo(): UtxoI {
-  //   throw new Error('Method not implemented.')
-  // }
-  // set utxo(u: UtxoI) {
-  //   throw new Error('Method not implemented.')
-  // }
 
   /**
    * Re-wrapping utxo:UtxoI data
@@ -121,26 +115,22 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
         return !val.token && val.vout === 0 && val.txid === this.txid
       })
   }
-  /**
-   * The utxo that will be used to fund the transaction
-   */
-  // async getFunderUtxos(transactionType: 'genesis' | 'send'):Promise<UtxoI[]|void> {
-  //   this.ensureOwnerWallet()
 
-  //   return (await this.ownerWallet!.getAddressUtxos())
-  //   .filter((val: UtxoI) => {
-  //     return !val.token && val.satoshis > this.calculateTransactionCost(transactionType)
-  //   })
-  // }
-  /**
-   * Require implementation to calculate cost
-   */
-
-  protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest|OpReturnData|SendRequest)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
+  protected async buildTokenGenesisTransaction(genesisRequests:(TokenSendRequest|OpReturnData|SendRequest)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
     this._processing = 'Processing transaction'
     // const genesisInput = await this.getGenesisInput()
-    if (!this.txid || !this.authNFT?.txid) {
-      throw new Error('Invalid input for AuthNFT or Token')
+    if (!this.txid) {
+      throw new Error('Invalid genesis input. Missing txid')
+    }
+
+    if (this.vout !== 0) {
+      throw new Error('Invalid genesis input. Must be a zeroeth descendant output (vout 0)')
+    }
+
+    if (this.useAuthGuard) {
+      if(!this.authNFT?.txid) {
+        throw new Error('Using AuthGuard but AuthNFT is not provided')
+      }
     }
 
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
@@ -154,6 +144,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       throw new Error('Insufficient balance to fund the transaction')
     }
 
+    const useThisUtxos = this.useAuthGuard? [this.utxo, this.authNFT!.utxo!, funder]: [this.utxo, funder]
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
       false,
@@ -161,8 +152,8 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
         tokenOperation: 'genesis',
         checkTokenQuantities: false,
         buildUnsigned: true,
-        utxoIds: [this.utxo, this.authNFT!.utxo!, funder],
-        ensureUtxos: [this.utxo, this.authNFT!.utxo!, funder]
+        utxoIds: useThisUtxos,
+        ensureUtxos: useThisUtxos
       }
     )
     delete this._processing
@@ -232,12 +223,12 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       tokenId = this.token.tokenId
     }
 
-    if (!this.authNFT) {
-      delete this._processing
-      throw new Error("Missing authNFT")
-    }
     let authchainIdentityRecipient = this.ownerWallet.getTokenDepositAddress()
     if (this.useAuthGuard) {
+      if (!this.authNFT) {
+        delete this._processing
+        throw new Error("Missing authNFT")
+      }
       authchainIdentityRecipient = this.authNFT.authGuard!.contract!.getTokenDepositAddress()
     }
     const reqParam = {
