@@ -1,76 +1,42 @@
-import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
-import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
-import CashStudioToken from "./CashStudioToken"
-import { AuthGuard as AuthGuardI, CashStudioTokenI, MBC, Message, Messaging, Processing, Registry, RegistryPublicationInput } from "./interfaces"
+import { UtxoI, Wallet } from 'mainnet-js'
 import { Contract } from "@mainnet-cash/contract"
+
+import {
+  AuthNFT,
+  AuthGuard as AuthGuardI,
+  Message,
+  Messaging,
+  Processing,
+  RegistryPublicationInput } from "./interfaces"
 import getWalletClass from 'src/utils/getWalletClass'
-import constants from 'src/constants'
-import toCashScript from 'src/utils/toCashScript'
-import { Artifact, SignatureTemplate, Utxo } from 'cashscript'
-import { scriptToBytecode } from '@cashscript/utils'
-import getByteCount from 'src/utils/getByteCount'
-import {AuthNFT} from './interfaces'
-import calcMinerFee from 'src/utils/calcMinerFee'
-import { toValue } from 'vue'
 
 
 export default class AuthGuard implements AuthGuardI, Processing, Messaging{
-  registry?: RegistryPublicationInput
-  ownerWallet?: Wallet
+  tokenId?: string
   authNFT?: AuthNFT
   protected _processing?: string
   protected _message?: Message
   private _contract?: Contract
-  constructor(p: {authNFT?: AuthNFT, ownerWallet?: Wallet}) {
+  constructor(p: {authNFT?: AuthNFT, ownerWallet: Wallet}) {
     this.authNFT = p.authNFT
-    this.ownerWallet = p.ownerWallet
     if (this.authNFT?.token?.tokenId) {
-      // Assumes we're trying to use an existing AuthNFT to create a contract
-      this.createContract()
+      this.tokenId = this.authNFT.token.tokenId
+      // Existing contract
+    } else if(this.authNFT?.txid) {
+      this.tokenId = this.authNFT.txid
+      // New contract
     } else {
-      // We're trying to create an AuthNFT token
-      this.createAuthNFTGenesisContract()
+      throw new Error('Unable to determine which what tokenId to use to instantiate the contract. AuthNFT have no txid nor tokenId')
     }
-  }
-  transfer(newOwnerAddress: string): Promise<string | undefined> {
-    throw new Error('Method not implemented.')
-  }
-  burn(): Promise<string | undefined> {
-    throw new Error('Method not implemented.')
-  }
 
-  /**
-   * Create an AuthGuard contract, using the AuthNFT tokenId as the baton / Token recipient
-   */
-  createContract() {
-    this.ensureOwnerWallet()
-    this.ensureTokenId()
-    if (this.authNFT?.token?.tokenId) {
-      this._contract = new Contract(
-        this.contractScript,
-        [`0x${this.authNFT.token.tokenId.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`],
-        this.ownerWallet!.network
-      )
-    }
-    return this
-  }
-
-  /**
-   * Create genesis of AuthGuard/AuthNFT.
-   */
-  createAuthNFTGenesisContract() {
-    this.ensureOwnerWallet()
-    this.ensureAuthNFT()
-    if (!this.authNFT!.txid) {
-      throw new Error('Invalid authNFT input utxo')
-    }
     this._contract = new Contract(
       this.contractScript,
-      [`0x${this.authNFT!.txid.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`],
-      this.ownerWallet!.network
+      [`0x${this.tokenId!.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`],
+      p.ownerWallet!.network
     )
-    return this
+
   }
+
 
   protected ensureTokenId() {
     if (!this.authNFT?.token?.tokenId) {
@@ -84,11 +50,6 @@ export default class AuthGuard implements AuthGuardI, Processing, Messaging{
     }
   }
 
-  protected ensureOwnerWallet(){
-    if (!this.ownerWallet) {
-      throw new Error('Owner wallet not set')
-    }
-  }
 
   protected ensureAuthNFT(){
     if (!this.authNFT) {
