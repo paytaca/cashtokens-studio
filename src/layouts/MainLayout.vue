@@ -18,13 +18,9 @@
               <q-img src="images/bch-logo.png"></q-img>
             </q-avatar>
           </div>
-          <div class="col-12 text-center">
-            <q-chip color="grey">
-              {{
-                user.connectedPaytacaAddress?.replace(user.connectedPaytacaAddress.substring(11, 40), '...') ||
-                'disconnected'
-              }}
-            </q-chip>
+          <div class="col-12 text-center q-gutter-sm">
+            <CashAddress :cashaddr="user.connectedPaytacaAddress" />
+            <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" />
           </div>
         </div>
         <SidebarMenu />
@@ -47,6 +43,7 @@ import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import useStore from 'src/composables/useStore'
+import CashAddress from 'src/components/CashAddress.vue'
 
 export default defineComponent({
   name: 'MainLayout',
@@ -54,7 +51,8 @@ export default defineComponent({
   components: {
     SidebarMenu,
     LightSwitch,
-    PaytacaConnect
+    PaytacaConnect,
+    CashAddress
   },
 
   setup() {

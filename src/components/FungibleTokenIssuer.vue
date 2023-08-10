@@ -6,9 +6,9 @@
     </q-toolbar>
     <q-card-section class="q-gutter-sm">
       <q-form class="q-gutter-sm">
-        <q-input :model-value="currentFtReserves" label="Current supply (in reserves)" filled dense disable></q-input>
+        <q-input :model-value="currentFtReserves" label="Current reserve supply" filled dense disable></q-input>
         <q-input v-if="form.amount && Number(form.amount) > 0"
-          :model-value="Number(currentFtReserves) - Number(form.amount)" label="New supply (in reserves)" filled dense
+          :model-value="String(BigInt(currentFtReserves) - BigInt(form.amount))" label="New reserve supply" filled dense
           disable></q-input>
         <q-input v-model="form.recipient" label="Recipient's Address" filled dense></q-input>
         <q-input v-model="form.amount" label="Token amount or qty" filled dense></q-input>
@@ -30,9 +30,8 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 
 defineOptions({ name: 'FungibleTokenIssuer' })
-// const emit = defineEmits(['tokensIssued'])
 const emit = defineEmits<{
-  (e: 'tokensIssued', val: { tokenId: string, to: string, amount: number }): void
+  (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
 }>()
 
 const $q = useQuasar()
@@ -41,7 +40,7 @@ const form = ref<{ recipient: string, amount: string }>({
   recipient: '',
   amount: '0'
 })
-const currentFtReserves = computed(() => props.authchainIdentity.token?.amount)
+const currentFtReserves = computed(() => BigInt(props.authchainIdentity.token!.amount).toString())
 
 onMounted(() => console.log(props.authchainIdentity))
 
@@ -51,9 +50,9 @@ const releaseTokensFromReserveSupply = async () => {
   }
 
   try {
-    const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: Number(form.value.amount) })
+    const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: form.value.amount })
     $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
-    emit('tokensIssued', { tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: Number(form.value.amount) })
+    emit('tokensIssued', { tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount })
   } catch (error: any) {
     return $q.notify({ type: 'negative', message: error.message })
   }

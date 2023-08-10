@@ -170,7 +170,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
   /**
    *  Token issuance from reserves
    */
-  async releaseTokensFromReserveSupply(arg:{to: string, amount: number}): Promise<string | void> {
+  async releaseTokensFromReserveSupply(arg:{to: string, amount: string}): Promise<string | void> {
     this.ensureOwnerWallet()
     this.ensureTokenId()
     if (this.useAuthGuard) {
@@ -195,6 +195,8 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     const tokenOwner = this.ownerWallet!.getDepositAddress()
     let transaction
     let decoded
+    console.log('INPUT', authchainIdentityOutput.satoshis)
+    console.log('INPUT AMOUNT', BigInt(authchainIdentityOutput.token!.amount))
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')()
@@ -208,7 +210,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             amount: authchainIdentityOutput.satoshis,
             token: {
               category: authchainIdentityOutput.token!.category,
-              amount: authchainIdentityOutput.token!.amount - BigInt(arg.amount), // deduct
+              amount: BigInt(authchainIdentityOutput.token!.amount) - BigInt(arg.amount), // deduct
               nft: authchainIdentityOutput.token!.nft
             }
           }])

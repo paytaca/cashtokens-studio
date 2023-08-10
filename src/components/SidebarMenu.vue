@@ -77,7 +77,7 @@ const menu = computed<any[]>(() => {
       disabled: Boolean(user.connectedPaytacaAddress) === false,
       children: [
         {
-          label: 'Fungibles (FTs) ' + `${user.fts?.length || 0}`,
+          label: 'Fungibles (FTs)',
           href: '/balances/fungibles',
           avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },

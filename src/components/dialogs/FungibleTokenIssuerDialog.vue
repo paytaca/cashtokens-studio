@@ -9,6 +9,6 @@ import FungibleTokenIssuer from 'src/components/FungibleTokenIssuer.vue';
 defineOptions({ name: 'FungibleTokenIssuerDialog' })
 defineProps<{ authchainIdentity: AuthchainIdentity }>()
 defineEmits<{
-  (e: 'tokensIssued', val: { tokenId: string, to: string, amount: number }): void
+  (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
 }>()
 </script>

@@ -20,7 +20,7 @@
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
-              <td>{{ identity.token?.amount || 'n/a' }}</td>
+              <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
@@ -43,7 +43,7 @@
 </template>
 <script setup lang="ts">
 import { Wallet } from 'mainnet-js';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import AuthchainIdentity from 'src/models/AuthchainIdentity';
@@ -57,7 +57,7 @@ const authchainIdentities = ref<AuthchainIdentity[]>()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 onMounted(async () => {
   if (user.wallet) {
-    authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
+    authchainIdentities.value = [...await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)]
     console.log(authchainIdentities.value)
   }
 })
