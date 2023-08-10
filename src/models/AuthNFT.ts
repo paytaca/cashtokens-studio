@@ -99,8 +99,8 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
   }
 
   /**
-   * Can be used if when solely creating AuthNFT
-   * @override NonFungibleToken.createGenesis
+   * Can be used when solely creating AuthNFT
+   * @override CashStudioToken.createGenesis
    */
   async createGenesis(opt:{capability:NFTCapability, commitment: string}): Promise<string | void> {
     this.ensureUtxo()
@@ -109,7 +109,7 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
     const requests:(TokenSendRequest|SendRequest)[] = []
     this.authNFT = this // using self as authNFT during genesis
     requests.push(...this.prepareChangeReq(this.utxo))
-    const {encodedTransaction, sourceOutputs} = await this.buildGenesisTransaction(requests)
+    const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
     const signResult = await this.requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create Auth NFT')
     const tx = await this.submitTransaction(signResult)
     delete this._processing
@@ -117,9 +117,9 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
   }
 
   /**
-   *
+   *@override CashStudioToken.buildTokenGenesisTransaction
    */
-  protected async buildGenesisTransaction(genesisRequests:(TokenSendRequest|SendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
+  protected async buildTokenGenesisTransaction(genesisRequests:(TokenSendRequest|SendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
     if (!this.utxo?.txid) {
       throw new Error('No valid utxo.Needs zeroeth output utxo as genesis input')
     }
@@ -144,7 +144,7 @@ export default class AuthNFT extends NonFungibleToken implements AuthNFT {
    * AuthGuard for this AuthNFT
    */
   public get authGuard(): AuthGuard {
-    return new AuthGuard({authNFT: this, ownerWallet: this.ownerWallet})
+    return new AuthGuard({authNFT: this, ownerWallet: this.ownerWallet as Wallet})
   }
 
   /**
