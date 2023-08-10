@@ -1,18 +1,13 @@
-import { BCMR, Mainnet, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet, binToHex, utf8ToBin } from 'mainnet-js'
-import { cashAddressToLockingBytecode, decodeTransaction, encodeTransaction, hexToBin, sha256 } from '@bitauth/libauth'
-import CashStudioToken from "./CashStudioToken"
-import { AuthChainGuard, AuthNFT as AuthNFTI, Authchain, CashStudioTokenI, Message, Messaging, Processing, Registry, RegistryPublicationInput } from "./interfaces"
-import { Contract } from "@mainnet-cash/contract"
-import getWalletClass from 'src/utils/getWalletClass'
-import constants from 'src/constants'
-import toCashScript from 'src/utils/toCashScript'
-import { Artifact, HashType, SignatureTemplate, Utxo } from 'cashscript'
+import { UtxoI, Wallet } from 'mainnet-js'
 import { scriptToBytecode } from '@cashscript/utils'
-import getByteCount from 'src/utils/getByteCount'
+import { Artifact, SignatureTemplate } from 'cashscript'
+import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from '@bitauth/libauth'
+
 import AuthNFT from './AuthNFT'
-import { toValue } from 'vue'
+import CashStudioToken from "./CashStudioToken"
 import calcMinerFee from 'src/utils/calcMinerFee'
-import AuthGuard from './AuthGuard'
+import toCashScript from 'src/utils/toCashScript'
+import { Authchain, Messaging, Processing } from "./interfaces"
 
 /**
  * In an AuthGuard context an AuthchainIdentity are the tokens that are on an AuthGuard address
@@ -192,9 +187,6 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       throw new Error('Insufficient balance to fund the txn')
     }
 
-    console.log('ISSUANCE COST', issuanceCost)
-    console.log('FUNDER INPUT', funderInput)
-
     const [authchainIdentityOutput, authNFTInput] = [this.utxo, this.authNFT!.utxo!].map(toCashScript)
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     const contract = this.authNFT!.authGuard!.contract!
@@ -322,14 +314,9 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
       return
     }
 
+    this._processing = 'Submitting Transaction'
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      if (tx) {
-        this._processing = 'Tokens issued'
-        setTimeout(()=> {
-          delete this._processing
-        }, 2000)
-      }
       return tx
     } catch (error) {
       console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
@@ -338,9 +325,17 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     }
   }
 
+  /**
+   * Transfer the ownership of this authchain identity output
+   */
   transfer(newOwnerAddress: string): Promise<string | undefined> {
     throw new Error('Method not implemented.')
   }
+
+
+  /**
+   * Burn the authchain
+   */
   burn(): Promise<string | undefined> {
     throw new Error('Method not implemented.')
   }

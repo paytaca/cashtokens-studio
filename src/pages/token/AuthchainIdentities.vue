@@ -14,8 +14,8 @@
               <th>Fungible Reserves</th>
               <th>NFT Capability</th>
               <th>NFT Commitment</th>
-              <th>AuthGuard Address</th>
-              <th>Auth NFT</th>
+              <th>AuthGuard</th>
+              <th>AuthKey</th>
               <th>Action</th>
             </tr>
           </thead>
