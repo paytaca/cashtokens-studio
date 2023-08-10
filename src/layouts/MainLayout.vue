@@ -18,7 +18,7 @@
               <q-img src="images/bch-logo.png"></q-img>
             </q-avatar>
           </div>
-          <div class="col-12 text-center q-gutter-sm">
+          <div v-if="user.wallet" class="col-12 text-center q-gutter-sm">
             <CashAddress :cashaddr="user.connectedPaytacaAddress" />
             <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" />
           </div>
