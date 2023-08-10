@@ -51,16 +51,6 @@ const menu = computed<any[]>(() => {
           href: '#',
           icon: 'token',
           children: [
-            // {
-            //   label: 'Authchain Identities',
-            //   href: '/token/identities',
-            //   icon: 'token',
-            // },
-            // {
-            //   label: 'Fungible Reserves',
-            //   href: '/token/fungibles',
-            //   icon: 'token',
-            // },
             {
               label: 'Authchain Identities',
               href: '/token/authchain-identities',
@@ -69,6 +59,11 @@ const menu = computed<any[]>(() => {
             {
               label: 'Auth Tokens(AuthNFTs)',
               href: '/token/authnfts',
+              icon: 'token',
+            },
+            {
+              label: 'Fungible Reserves',
+              href: '/token/ftreserves',
               icon: 'token',
             }
           ]
