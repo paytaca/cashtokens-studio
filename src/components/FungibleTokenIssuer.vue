@@ -30,6 +30,11 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 
 defineOptions({ name: 'FungibleTokenIssuer' })
+// const emit = defineEmits(['tokensIssued'])
+const emit = defineEmits<{
+  (e: 'tokensIssued', val: { tokenId: string, to: string, amount: number }): void
+}>()
+
 const $q = useQuasar()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const form = ref<{ recipient: string, amount: string }>({
@@ -48,6 +53,7 @@ const releaseTokensFromReserveSupply = async () => {
   try {
     const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: Number(form.value.amount) })
     $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+    emit('tokensIssued', { tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: Number(form.value.amount) })
   } catch (error: any) {
     return $q.notify({ type: 'negative', message: error.message })
   }
