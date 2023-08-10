@@ -5,12 +5,6 @@
     </q-toolbar>
     <q-input v-if="owner || user.wallet" :model-value="owner || user.wallet!.getTokenDepositAddress()" label="Owner"
       :filled="true" disable dense square />
-    <!-- <q-input :model-value="form.authNft?.utxo?.token?.tokenId" label="AuthNFT Token ID" :filled="true"
-      :disable="Boolean(form.authNft?.utxo?.token?.tokenId)" dense square>
-      <template v-if="!form.authNft?.utxo?.token?.tokenId" v-slot:append>
-        <q-btn icon="refresh" flat dense color="orange" @click="checkAndLoadAuthNft"></q-btn>
-      </template>
-    </q-input> -->
     <q-input v-if="action === 'genesis'" :model-value="authNft.txid" label="AuthNFT Token ID" :filled="true"
       :disable="Boolean(authNft?.txid)" dense square>
       <template v-if="!authNft?.txid" v-slot:append>
@@ -28,7 +22,12 @@
       </template>
     </q-select>
     <template v-if="form.tokenIdSelected">
-      <q-input v-model="form.genesisSupply" label="Amount" :filled="true" dense square />
+      <q-input v-model="form.genesisSupply" label="Amount" placeholder="0" :filled="true" dense square>
+        <template v-slot:append>
+          <q-btn size="md" color="warning" dense flat
+            @click="form.genesisSupply = constants.MAX_FUNGIBLE_AMOUNT">Max</q-btn>
+        </template>
+      </q-input>
       <div class="row items-center">
         <q-checkbox :filled="true" dark:color="lime" v-model="form.publishRegistry" size="xs" label="Publish BCMR">
         </q-checkbox>
@@ -109,7 +108,7 @@ const form = ref<{
 }>({
   useAuthGuard: true,
   tokenIdSelected: { value: '', label: '' },
-  genesisSupply: constants.MAX_FUNGIBLE_AMOUNT,
+  genesisSupply: '',
   issuedSupply: {
     amount: '0',
     recipient: ''
