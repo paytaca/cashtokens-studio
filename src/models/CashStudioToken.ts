@@ -161,11 +161,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
   }
 
 
-  /**
-   * Only use this for genesis transactions. Override this if interacting with contract
-   */
-  protected async requestPaytacaSignature(encodedTransaction:any, sourceOutputs:any, prompt?:string): Promise<any> {
-    this._processing = 'Waiting for signature'
+  static async requestPaytacaSignature(encodedTransaction:any, sourceOutputs:any, prompt?:string): Promise<any> {
     const decoded = decodeTransaction(encodedTransaction)
     if (typeof decoded === 'string') {
       throw new Error('Error decoding transaction')
@@ -175,9 +171,31 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
           transaction: decoded,
           sourceOutputs: [...sourceOutputs],
           broadcast: false,
-          userPrompt: prompt || 'Token Genesis Request'
+          userPrompt: prompt || 'Signature Requested'
       })
       return signResult
+    } catch (error) {
+      throw error
+    }
+  }
+
+  /**
+   * Use for regular requests, no contract interaction
+   */
+  protected async requestPaytacaSignature(encodedTransaction:any, sourceOutputs:any, prompt?:string): Promise<any> {
+    this._processing = 'Waiting for signature'
+    // const decoded = decodeTransaction(encodedTransaction)
+    // if (typeof decoded === 'string') {
+    //   throw new Error('Error decoding transaction')
+    // }
+    try {
+      // const signResult = await window.paytaca.signTransaction({
+      //     transaction: decoded,
+      //     sourceOutputs: [...sourceOutputs],
+      //     broadcast: false,
+      //     userPrompt: prompt || 'Token Genesis Request'
+      // })
+      return await CashStudioToken.requestPaytacaSignature(encodedTransaction, sourceOutputs, prompt || 'Token Genesis Request')
     } catch (error) {
       console.log(error)
     } finally {
@@ -185,10 +203,17 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     }
   }
 
-  protected async submitTransaction(signResult: any): Promise<string|void> {
+  static async submitTransaction(signResult:any, ownerWallet: Wallet): Promise<string|undefined> {
+    if (signResult?.signedTransaction) {
+      return ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
+    }
+  }
+
+  protected async submitTransaction(signResult: any): Promise<string|undefined> {
     if (signResult?.signedTransaction) {
       this._processing = 'Submitting transaction'
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
+      const tx = await CashStudioToken.submitTransaction(signResult, this.ownerWallet as Wallet)
       delete this._processing
       return tx
     }

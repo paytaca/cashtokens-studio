@@ -11,7 +11,6 @@ const routes: RouteRecordRaw[] = [
     path: '/token',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'token-browse', path: 'browse/:tokenType?', component: defineAsyncComponent(() => import('pages/token/Browse.vue')) },
       { name: 'token-view', path: 'view', component: () => import('pages/token/View.vue') },
       { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') },
       { name: 'token-authchains', path: 'authchain-identities', component: () => import('pages/token/AuthchainIdentities.vue') },
@@ -32,8 +31,8 @@ const routes: RouteRecordRaw[] = [
     path: '/balances',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'fungibles', component: () => import('pages/balances/Fungibles.vue') },
-      { path: 'collectibles', component: () => import('pages/balances/Collectibles.vue') }
+      { path: 'fungibles', component: () => import('pages/balances/FungibleTokens.vue') },
+      { path: 'collectibles', component: () => import('pages/balances/Collectibles.vue')},
     ],
   },
   // Always leave this as last one,

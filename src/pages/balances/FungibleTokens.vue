@@ -28,25 +28,25 @@
                 </td>
               </tr>
             </tbody>
-            {{ TokenSenderDialog.__name }}
           </q-markup-table>
-          {{ dialogData }}
-          <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData" />
+          <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData"
+            @hide="onHide" />
         </q-scroll-area>
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
-import { UtxoI } from 'mainnet-js';
+import { UtxoI, Wallet } from 'mainnet-js';
 import { onMounted, ref } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-import TokenSenderDialog from 'src/components/TokenSenderDialog.vue'
+import TokenSenderDialog from 'src/components/dialogs/TokenSenderDialog.vue'
+import FungibleToken from 'src/models/FungibleToken'
 
-defineOptions({ name: 'FungiblesBalance' })
+defineOptions({ name: 'FungibleTokens' })
 
 const user = useUser()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
@@ -55,7 +55,7 @@ const loading = ref<string>('')
 onMounted(async () => {
   if (user.wallet) {
     loading.value = 'Scanning wallet for fungible tokens'
-    const utxos = (await user.wallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0)
+    const utxos = await FungibleToken.scanWalletForFungibleTokens(user.wallet as Wallet)
     utxos.forEach((u: UtxoI) => {
       let b = balances.value.find((b) => b.tokenId === u.token?.tokenId)
       if (b) {

@@ -5,9 +5,16 @@ import AuthNFT from './AuthNFT';
 import AuthGuard from './AuthGuard';
 import calcMinerFee from 'src/utils/calcMinerFee';
 import { cashAddressToLockingBytecode } from '@bitauth/libauth';
+import constants from 'src/constants';
 
 export default class FungibleToken extends CashStudioToken{
-  /**
+
+  private static _processing?:string
+
+  static get processing():string|undefined {
+    return FungibleToken._processing
+  }
+   /**
    * Prepare the request for user token's genesis
    */
   prepareFungibleTokenReq(opt:{genesis:boolean, genesisSupply:number, issuedSupply?: {amount:number, recipient: string}}):TokenSendRequest[] {
@@ -85,5 +92,60 @@ export default class FungibleToken extends CashStudioToken{
     }
   }
 
+  static async scanWalletForFungibleTokens(ownerWallet: Wallet): Promise<UtxoI[]> {
+    return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability) || []
+  }
+
+  static async send(arg:{tokenId: string, amount: bigint, to: string, ownerWallet: Wallet}):Promise<string|undefined> {
+    // if (arg.sourceUtxos === undefined) {
+    //   arg.sourceUtxos = await FungibleToken.scanWalletForFungibleTokens(arg.ownerWallet)
+    // }
+    // console.log('SOURCES', arg.sourceUtxos)
+    FungibleToken._processing = 'Processing'
+    // const minerFee = calcMinerFee({P2PKH:arg.sourceUtxos.length}, {P2SH:1, P2KPH:1})
+    // const sendCost = minerFee + CashStudioToken.DEFAULT_TOKEN_VALUE
+    // console.log('SOURCE UTXOS', arg.sourceUtxos)
+    const requests = [
+      new TokenSendRequest({
+        cashaddr: arg.to,
+        value: CashStudioToken.DEFAULT_TOKEN_VALUE,
+        amount: Number(arg.amount), // !change to bigint once mainnet-js supports it
+        tokenId: arg.tokenId
+      })
+    ]
+    // TODO: CALCULATE IF SOURCE HAS ENOUGH TO FUND, ADD FUNDER INPUT IF NEEDED
+    const { encodedTransaction, sourceOutputs } = await arg.ownerWallet!.encodeTransaction(
+      requests,
+      false,
+      {
+        tokenOperation: 'send',
+        checkTokenQuantities: true,
+        buildUnsigned: true,
+        // utxoIds: arg.sourceUtxos,
+        // ensureUtxos: arg.sourceUtxos
+      }
+    )
+
+    FungibleToken._processing = 'Waiting for signature'
+    let signResult
+    try {
+      signResult = await CashStudioToken.requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+    FungibleToken._processing = `Sending ${arg.amount} tokens`
+    try {
+      return await CashStudioToken.submitTransaction(signResult, arg.ownerWallet)
+    } catch (error) {
+      console.log(error)
+
+      throw error
+    } finally {
+      delete FungibleToken._processing
+    }
+
+
+  }
 
 }

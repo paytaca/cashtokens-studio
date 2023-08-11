@@ -84,7 +84,8 @@ const menu = computed<any[]>(() => {
         {
           label: 'Fungibles (FTs)',
           href: '/balances/fungibles',
-          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+          icon: 'token'
+          // avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
         },
         {
           label: 'Collectibles (NFTs)',
@@ -106,6 +107,7 @@ const menu = computed<any[]>(() => {
 })
 
 watch(selected, (currentlySelected, previouslySelected) => {
+  console.log(currentlySelected)
   /**
    * Toggle Expand / Collapse of menu with children on select
    */

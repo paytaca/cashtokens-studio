@@ -5,26 +5,30 @@
         <h5 class="text-center">Authchain Identities</h5>
         <p class="text-center">List of authchain identity outputs. You can use this to manage the authchain of your tokens
         </p>
-        <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
-          { label: 'Detailed View', value: 'detailed' },
-          { label: 'Simple View', value: 'simple' },
-        ]" size="sm" dense no-caps />
-        <!-- <q-btn @click="detailedView = true" color="primary" size="sm" dense flat>Detailed View</q-btn> -->
+        <div class="row justify-end q-my-sm">
+          <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
+            { label: 'Simple View', value: 'simple' },
+            { label: 'Detailed View', value: 'detailed' },
+          ]" size="sm" dense no-caps />
+        </div>
+
         <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>Token Id/Category</th>
-                <th v-if="viewType && viewType.value == 'detailed'">Fungible Reserves</th>
-                <th v-if="viewType && viewType.value == 'detailed'">NFT Capability</th>
-                <th v-if="viewType && viewType.value == 'detailed'">NFT Commitment</th>
+                <template v-if="viewType == 'detailed'">
+                  <th>Fungible Reserves</th>
+                  <th>NFT Capability</th>
+                  <th>NFT Commitment</th>
+                </template>
                 <th>AuthGuard</th>
                 <th>AuthKey</th>
                 <th>Action</th>
               </tr>
             </thead>
-            <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="8" :row-count="3"
+            <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="viewType === 'simple' ? 5 : 8" :row-count="3"
               :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
@@ -32,9 +36,11 @@
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
-                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.amount || 'n/a' }}</td>
-                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.capability || 'n/a' }}</td>
-                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.commitment || 'n/a' }}</td>
+                <template v-if="viewType == 'detailed'">
+                  <td>{{ identity.token?.amount || 'n/a' }}</td>
+                  <td>{{ identity.token?.capability || 'n/a' }}</td>
+                  <td>{{ identity.token?.commitment || 'n/a' }}</td>
+                </template>
                 <td>
                   <CashAddress :cashaddr="identity.authNFT?.authGuard?.contract?.getTokenDepositAddress()" />
                 </td>
@@ -83,7 +89,7 @@ import CashAddress from 'src/components/CashAddress.vue'
 
 const user = useUser()
 const detailedView = ref<boolean>(false)
-const viewType = ref<{ value: string, label: string }>()
+const viewType = ref<string>('simple')
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 onMounted(async () => {

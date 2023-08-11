@@ -2,24 +2,33 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Transfer Token</q-toolbar-title>
+        <q-toolbar-title>Send Tokens</q-toolbar-title>
         <TokenCategory v-if="tokenBalance.tokenId" :token-id="tokenBalance.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
-          <q-input v-if="tokenBalance.balance > 0" :model-value="String(tokenBalance.balance)" label="Balance" filled
-            dense disable></q-input>
-          <q-input v-if="tokenBalance.balance > 0" v-model="form.amount" label="Amount to send" placeholder="0" filled
-            dense disable>
+          <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance.tokenId" label="Token ID/Category" filled dense
+            disable></q-input>
+          <q-input v-if="tokenBalance.balance > 0"
+            :model-value="!form.amount ? String(tokenBalance.balance) : String(tokenBalance.balance - BigInt(form.amount))"
+            :label="!form.amount ? 'Current Balance' : 'New Balance'" filled dense disable></q-input>
+          <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense>
             <template v-slot:append>
-              <q-btn size="sm" color="warning">All</q-btn>
+              <q-btn size="sm" color="warning" flat dense @click="form.amount = String(tokenBalance.balance)">Send
+                all</q-btn>
             </template>
           </q-input>
-          <q-input v-model="form.to" label="Recipient's Address" filled dense></q-input>
+          <q-input v-model="form.to" label="Recipient's Address" filled dense>
+            <template v-slot:append>
+              <q-btn size="sm" color="warning" flat dense
+                @click="form.to = (user.wallet?.getTokenDepositAddress() as string)">Send to
+                self</q-btn>
+            </template>
+          </q-input>
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => sendToken()" label="Send Tokens" :busyLabel="token.processing" />
+        <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="FungibleToken.processing" color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -29,18 +38,42 @@
 import CashStudioToken from 'src/models/CashStudioToken';
 import { ref } from 'vue';
 import { TokenBalance } from '../types';
+import { useUser } from 'src/stores/user';
+import BusyButton from 'src/components/BusyButton.vue'
+import FungibleToken from 'src/models/FungibleToken';
+import TokenCategory from 'src/components/TokenCategory.vue'
+import { Wallet } from 'mainnet-js';
+import { useQuasar } from 'quasar';
 
 const props = defineProps<{
-  token: CashStudioToken,
   tokenBalance: TokenBalance
 }>()
+
+const $q = useQuasar()
+const user = useUser()
 
 const form = ref<{ to: string, amount: string }>({
   to: '',
   amount: ''
 })
 
-const sendToken = () => {
-  console.log(props.token)
+const send = async () => {
+  try {
+    console.log('SENDING')
+    const tx = await FungibleToken.send({
+      tokenId: props.tokenBalance.tokenId,
+      to: form.value.to,
+      amount: BigInt(form.value.amount),
+      // sourceUtxos: props.tokenBalance.utxos,
+      ownerWallet: user.wallet as Wallet
+    })
+    if (tx) {
+      $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+    }
+  } catch (error) {
+    console.log(error)
+  }
+
+
 }
 </script>
