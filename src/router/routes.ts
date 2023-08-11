@@ -8,31 +8,28 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
   },
   {
-    path: '/token',
+    path: '/issuer',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'token-view', path: 'view', component: () => import('pages/token/View.vue') },
-      { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') },
-      { name: 'token-authchains', path: 'authchain-identities', component: () => import('pages/token/AuthchainIdentities.vue') },
-      { name: 'token-authnfts', path: 'authnfts', component: () => import('pages/token/AuthNFTs.vue') },
-      { name: 'token-fungible-reserves', path: 'ftreserves', component: () => import('pages/token/FungibleReserves.vue') },
-      { name: 'token-nonfungible-reserves', path: 'nftreserves', component: () => import('pages/token/NonFungibleReserves.vue') }
-
+      { name: 'create', path: 'create/:tokenType', component: () => import('pages/issuer/CreateToken.vue') },
     ],
   },
   {
-    path: '/registry',
+    path: '/issuer/manage',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'registry-edit', path: 'edit', component: () => import('pages/registry/Edit.vue') }
+      { name: 'authchains', path: 'authchains', component: () => import('pages/issuer/manage/AuthChains.vue') },
+      { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
+      { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
+      { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') }
     ],
   },
   {
-    path: '/balances',
+    path: '/account/balance',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'fungibles', component: () => import('pages/balances/FungibleTokens.vue') },
-      { path: 'collectibles', component: () => import('pages/balances/Collectibles.vue')},
+      { path: 'fungibles', component: () => import('pages/balance/FungibleTokens.vue') },
+      { path: 'collectibles', component: () => import('pages/balance/Collectibles.vue')},
     ],
   },
   // Always leave this as last one,

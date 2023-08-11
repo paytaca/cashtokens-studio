@@ -2,7 +2,7 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">Authchain Identities</h5>
+        <h5 class="text-center">Authchains</h5>
         <p class="text-center">List of authchain identity outputs. You can use this to manage the authchain of your tokens
         </p>
         <div class="row justify-end q-my-sm">
@@ -28,8 +28,8 @@
                 <th>Action</th>
               </tr>
             </thead>
-            <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="viewType === 'simple' ? 5 : 8" :row-count="3"
-              :caption="AuthchainIdentity.processing" />
+            <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="viewType === 'simple' ? 5 : 8"
+              :row-count="3" :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
                 <td>{{ i + 1 }}</td>

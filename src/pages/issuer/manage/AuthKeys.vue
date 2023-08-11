@@ -2,8 +2,8 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">Your AuthGuard Keys</h5>
-        <p>AuthKeys are NFTs that you'd use to manage the authchain, fungible reserves and/or NFT minters. Don't send
+        <h5 class="text-center">List of AuthKeys</h5>
+        <p>An AuthKey is an NFT that you'd use to manage the authchain, fungible reserves and/or NFT minters. Don't send
           these
           keys to anyone unless you intend to give them permission to manage your tokens. </p>
         <q-markup-table>
@@ -34,10 +34,9 @@
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft as AuthNFT)">Use to create
+                      <q-item clickable v-close-popup
+                        @click="openDialog(FungibleTokenDialog.__name, authNft as AuthNFT)">Use to create
                         FT</q-item>
-                      <q-item clickable v-close-popup @click="openDialog('ft-creator', authNft as AuthNFT)">Use to create
-                        NFT</q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -47,31 +46,25 @@
         </q-markup-table>
       </div>
     </div>
-    <q-dialog :model-value="dialog === 'ft-creator'" v-close-popup @hide="onDialogHide">
-      <q-card class="full-width q-pa-lg">
-        <FungibleToken :auth-nft="targetAuthNft" :token-id-options="user.genesisInputs" action="genesis" />
-      </q-card>
-    </q-dialog>
+    <FungibleTokenDialog v-if="dialog" :auth-nft="dialogData" :model-value="dialog === FungibleTokenDialog.__name"
+      :token-id-options="user.genesisInputs" action="genesis" @hide="onHide" />
   </q-page>
 </template>
 <script setup lang="ts">
-
-type Dialog = 'ft-creator' | 'nft-creator' | 'hybrid-creator' | undefined
 
 import { Wallet } from 'mainnet-js';
 import AuthNFT from 'src/models/AuthNFT';
 import { useUser } from 'src/stores/user';
 import { onMounted, ref } from 'vue';
 import TokenCategory from 'src/components/TokenCategory.vue';
-import FungibleToken from 'src/components/FungibleToken.vue';
+import FungibleTokenDialog from 'src/components/dialogs/FungibleTokenDialog.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
-import AuthGuard from 'src/models/AuthGuard';
+import { useDialogs } from 'src/composables'
 const user = useUser()
-// const authNfts = ref<AuthNFT[] | undefined>()
+
 const authNfts = ref<AuthNFT[] | undefined>()
 
-const dialog = ref<Dialog>()
-const targetAuthNft = ref<AuthNFT>() // AuthNFT to pass to open dialog
+const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
 onMounted(async () => {
   try {
@@ -92,14 +85,5 @@ const scanAuthNftsForManagedCategories = async () => {
   }
 }
 
-const openDialog = (dialogName: Dialog, authNft: AuthNFT) => {
-  dialog.value = dialogName
-  targetAuthNft.value = authNft
-}
-
-const onDialogHide = () => {
-  dialog.value = undefined
-  targetAuthNft.value = undefined
-}
 
 </script>

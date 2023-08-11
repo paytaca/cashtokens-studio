@@ -1,17 +1,19 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:expanded="expanded" v-model:selected="selected"
-      default-expand-all />
+      default-expand-all ref="qtree" />
   </div>
 </template>
 
 <script setup lang="ts">
 
 import { useRouter } from 'vue-router'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import useStore from 'src/composables/useStore'
+import shortenAddress from 'src/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
+const qtree = ref()
 const router = useRouter()
 const { user } = useStore()
 const lastSelectedBeforeUnselect = ref<string | null>(null)
@@ -27,23 +29,23 @@ const menu = computed<any[]>(() => {
       disabled: Boolean(user.connectedPaytacaAddress) === false,
       children: [
         {
-          label: 'Create Fungible Token',
-          href: '/token/create/fungible',
+          label: 'Create FT',
+          href: '/issuer/create/fungible',
           icon: 'add',
         },
         {
           label: 'Create NFT',
-          href: '/token/create/nonfungible',
+          href: '/issuer/create/nonfungible',
           icon: 'add',
         },
         {
           label: 'Create FNFT hybrid',
-          href: '/token/create/hybrid',
+          href: '/issuer/create/hybrid',
           icon: 'add',
         },
         {
           label: 'Create AuthKey',
-          href: '/token/create/authnft',
+          href: '/issuer/create/authkey',
           icon: 'add',
         },
         {
@@ -52,54 +54,69 @@ const menu = computed<any[]>(() => {
           icon: 'token',
           children: [
             {
-              label: 'Authchains',
-              href: '/token/authchain-identities',
-              icon: 'token',
-            },
-            {
-              label: 'AuthKeys',
-              href: '/token/authnfts',
-              icon: 'token',
-            },
-            {
               label: 'FT Reserves',
-              href: '/token/ftreserves',
+              href: '/issuer/manage/ft-reserves',
               icon: 'token',
             },
             {
               label: 'NFT Reserves',
-              href: '/token/nftreserves',
+              href: '/issuer/manage/nft-reserves',
               icon: 'token',
-            }
+            },
+            {
+              label: 'AuthChains',
+              href: '/issuer/manage/authchains',
+              icon: 'token',
+            },
+            {
+              label: 'AuthKeys',
+              href: '/issuer/manage/authkeys',
+              icon: 'token',
+            },
+
           ]
         }
       ]
     },
     {
-      label: 'Wallet Balance',
+      label: 'Account',
       href: '#Balance',
       icon: 'account_balance_wallet',
       disabled: Boolean(user.connectedPaytacaAddress) === false,
       children: [
+
         {
-          label: 'Fungibles (FTs)',
-          href: '/balances/fungibles',
-          icon: 'token'
-          // avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+          label: shortenAddress(user.wallet?.getTokenDepositAddress()),
+          href: '#Tokenaddr',
+          children: [
+            {
+              label: 'Fungibles (FTs)',
+              href: '/balances/fungibles',
+              icon: 'token'
+              // avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+            },
+            {
+              label: 'Collectibles (NFTs)',
+              href: '/balances/collectibles',
+              icon: 'token'
+            },
+            {
+              label: 'Hybrids (FNFTs)',
+              href: '/balances/nonfungibles',
+              avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+            }
+          ]
         },
         {
-          label: 'Collectibles (NFTs)',
-          href: '/balances/collectibles',
-          icon: 'token'
-        },
-        {
-          label: 'Hybrids (FNFTs)',
-          href: '/balances/nonfungibles',
-          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
-        },
-        {
-          label: user.connectedPaytacaWalletBchBalance ? Number(user.connectedPaytacaWalletBchBalance) / 1e8 : '',
-          avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
+          label: shortenAddress(user.wallet?.getDepositAddress()),
+          icon: 'content_copy',
+          href: '#Cashaddr',
+          children: [
+            {
+              label: user.connectedPaytacaWalletBchBalance ? Number(user.connectedPaytacaWalletBchBalance) / 1e8 : '',
+              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
+            }
+          ]
         },
       ]
     }
@@ -107,7 +124,6 @@ const menu = computed<any[]>(() => {
 })
 
 watch(selected, (currentlySelected, previouslySelected) => {
-  console.log(currentlySelected)
   /**
    * Toggle Expand / Collapse of menu with children on select
    */
@@ -135,5 +151,8 @@ watch(selected, (currentlySelected, previouslySelected) => {
   }
 })
 
+onMounted(() => {
+  console.log(qtree.value.expandAll())
+})
 
 </script>

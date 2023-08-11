@@ -29,7 +29,7 @@
             <NonFungibleToken v-if="tokenType === 'nonfungible' && authNFT && tokenIdOptions"
               :owner="user.connectedPaytacaAddress" action="genesis" :token-id-options="tokenIdOptions"
               :auth-nft="authNFT" />
-            <AuthNFTView v-if="tokenType === 'authnft'" :owner="user.connectedPaytacaAddress" action="genesis"
+            <AuthNFTView v-if="tokenType === 'authkey'" :owner="user.connectedPaytacaAddress" action="genesis"
               :auth-nft="authNFT" />
           </template>
         </div>
@@ -52,8 +52,6 @@ import BusyButton from 'src/components/BusyButton.vue'
 import AuthNFTView from 'src/components/AuthNFT.vue'
 import GenesisInput from 'src/models/GenesisInput'
 import AuthNFT from 'src/models/AuthNFT';
-
-defineOptions({ name: 'CreateToken' })
 
 const $q = useQuasar()
 const user = useUser()

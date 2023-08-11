@@ -53,7 +53,7 @@ export type RequireOptional<Type, Key extends keyof Type> = Type & {
   [Property in Key]-?: Type[Property];
 };
 
-export type TokenType = 'fungible' | 'nonfungible' | 'hybrid'
+export type TokenType = 'fungible' | 'nonfungible' | 'hybrid' | 'authkey'
 export type TokenAction = 'genesis' | ''
 export type RegistryPublicationData = {
   url: string,
