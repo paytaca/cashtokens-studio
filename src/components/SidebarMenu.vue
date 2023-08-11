@@ -42,28 +42,33 @@ const menu = computed<any[]>(() => {
           icon: 'add',
         },
         {
-          label: 'Create AuthNFT',
+          label: 'Create AuthKey',
           href: '/token/create/authnft',
           icon: 'add',
         },
         {
-          label: 'Manage Tokens',
+          label: 'Manage',
           href: '#',
           icon: 'token',
           children: [
             {
-              label: 'Authchain Identities',
+              label: 'Authchains',
               href: '/token/authchain-identities',
               icon: 'token',
             },
             {
-              label: 'Auth Tokens(AuthNFTs)',
+              label: 'AuthKeys',
               href: '/token/authnfts',
               icon: 'token',
             },
             {
-              label: 'Fungible Reserves',
+              label: 'FT Reserves',
               href: '/token/ftreserves',
+              icon: 'token',
+            },
+            {
+              label: 'NFT Reserves',
+              href: '/token/nftreserves',
               icon: 'token',
             }
           ]
@@ -83,6 +88,7 @@ const menu = computed<any[]>(() => {
         },
         {
           label: 'Collectibles (NFTs)',
+          href: '/balances/collectibles',
           icon: 'token'
         },
         {

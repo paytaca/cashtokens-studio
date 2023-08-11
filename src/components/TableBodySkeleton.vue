@@ -4,7 +4,9 @@
       <td v-for="ci in colCount" :key="'cts-tbs-' + ci"><q-skeleton type="text"></q-skeleton></td>
     </tr>
     <tr v-if="caption">
-      <td :colspan="colCount">{{ caption }}</td>
+      <td :colspan="colCount">
+        <q-spinner-grid size="xs"></q-spinner-grid> {{ caption }}
+      </td>
     </tr>
   </tbody>
 </template>

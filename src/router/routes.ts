@@ -16,7 +16,8 @@ const routes: RouteRecordRaw[] = [
       { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') },
       { name: 'token-authchains', path: 'authchain-identities', component: () => import('pages/token/AuthchainIdentities.vue') },
       { name: 'token-authnfts', path: 'authnfts', component: () => import('pages/token/AuthNFTs.vue') },
-      { name: 'token-fungible-reserves', path: 'ftreserves', component: () => import('pages/token/FungibleReserves.vue') }
+      { name: 'token-fungible-reserves', path: 'ftreserves', component: () => import('pages/token/FungibleReserves.vue') },
+      { name: 'token-nonfungible-reserves', path: 'nftreserves', component: () => import('pages/token/NonFungibleReserves.vue') }
 
     ],
   },
@@ -31,7 +32,8 @@ const routes: RouteRecordRaw[] = [
     path: '/balances',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'fungibles', component: () => import('pages/balances/Fungibles.vue') }
+      { path: 'fungibles', component: () => import('pages/balances/Fungibles.vue') },
+      { path: 'collectibles', component: () => import('pages/balances/Collectibles.vue') }
     ],
   },
   // Always leave this as last one,

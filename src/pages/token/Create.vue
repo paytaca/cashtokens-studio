@@ -9,13 +9,18 @@
         </div>
         <div class="row justify-center q-my-lg">
           <template v-if="!user.genesisInputs?.length || user.genesisInputs?.length < 2">
-
-            <q-icon name="warning"></q-icon>
-            <p>Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
+            <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
+              <template v-slot:avatar>
+                <q-icon name="warning" color="warning" size="xs" />
+              </template>
+              Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
               Cashtoken Studio requires 2 vout-0
-              utxos as genesis inputs when creating a token. </p>
-            <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
-              @click="generateGenesisInputs" />
+              utxos as genesis inputs when creating a token.
+              <template v-slot:action>
+                <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
+                  @click="generateGenesisInputs" color="primary" />
+              </template>
+            </q-banner>
           </template>
           <template v-else>
             <FungibleToken v-if="tokenType === 'fungible' && authNFT && tokenIdOptions"

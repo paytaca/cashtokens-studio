@@ -78,6 +78,7 @@ import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
 import AuthNFT from 'src/models/AuthNFT'
 import FungibleTokenModel from 'src/models/FungibleToken'
 import constants from 'src/constants'
+import { FungibleTokenAction } from './types'
 
 const props = defineProps<{
   owner?: string,

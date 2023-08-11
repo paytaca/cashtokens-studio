@@ -5,16 +5,20 @@
         <h5 class="text-center">Authchain Identities</h5>
         <p class="text-center">List of authchain identity outputs. You can use this to manage the authchain of your tokens
         </p>
-
+        <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
+          { label: 'Detailed View', value: 'detailed' },
+          { label: 'Simple View', value: 'simple' },
+        ]" size="sm" dense no-caps />
+        <!-- <q-btn @click="detailedView = true" color="primary" size="sm" dense flat>Detailed View</q-btn> -->
         <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
               <tr>
                 <th>#</th>
                 <th>Token Id/Category</th>
-                <th>Fungible Reserves</th>
-                <th>NFT Capability</th>
-                <th>NFT Commitment</th>
+                <th v-if="viewType && viewType.value == 'detailed'">Fungible Reserves</th>
+                <th v-if="viewType && viewType.value == 'detailed'">NFT Capability</th>
+                <th v-if="viewType && viewType.value == 'detailed'">NFT Commitment</th>
                 <th>AuthGuard</th>
                 <th>AuthKey</th>
                 <th>Action</th>
@@ -28,9 +32,9 @@
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
-                <td>{{ identity.token?.amount || 'n/a' }}</td>
-                <td>{{ identity.token?.capability || 'n/a' }}</td>
-                <td>{{ identity.token?.commitment || 'n/a' }}</td>
+                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.amount || 'n/a' }}</td>
+                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.capability || 'n/a' }}</td>
+                <td v-if="viewType && viewType.value == 'detailed'">{{ identity.token?.commitment || 'n/a' }}</td>
                 <td>
                   <CashAddress :cashaddr="identity.authNFT?.authGuard?.contract?.getTokenDepositAddress()" />
                 </td>
@@ -78,6 +82,8 @@ import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssue
 import CashAddress from 'src/components/CashAddress.vue'
 
 const user = useUser()
+const detailedView = ref<boolean>(false)
+const viewType = ref<{ value: string, label: string }>()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 onMounted(async () => {

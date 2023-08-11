@@ -10,7 +10,7 @@
         <q-input v-if="form.amount && Number(form.amount) > 0"
           :model-value="String(BigInt(currentFtReserves) - BigInt(form.amount))" label="New reserve supply" filled dense
           disable></q-input>
-        <q-input v-model="form.recipient" label="Recipient's Address" filled dense></q-input>
+        <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense></q-input>
         <q-input v-model="form.amount" label="Token amount or qty" filled dense></q-input>
       </q-form>
     </q-card-section>

@@ -3,11 +3,14 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">Your AuthGuard Keys</h5>
+        <p>AuthKeys are NFTs that you'd use to manage the authchain, fungible reserves and/or NFT minters. Don't send
+          these
+          keys to anyone unless you intend to give them permission to manage your tokens. </p>
         <q-markup-table>
           <thead>
             <tr>
               <th>#</th>
-              <th>Token Id</th>
+              <th>Id</th>
               <th>No. of managed categories</th>
               <th>Action</th>
             </tr>

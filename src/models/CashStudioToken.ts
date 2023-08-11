@@ -215,7 +215,7 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
       throw new Error("No owner walletor utxo field not set")
     }
     let tokenId = this.txid
-
+    console.log('TOKEN ID', tokenId)
     if (!opt?.genesis) {
       if (!this.token?.tokenId) { // Require tokenId if this call isn't for a token genesis
         throw new Error("Preparing authchain identity with a missing token id")
@@ -333,6 +333,5 @@ export default abstract class CashStudioToken implements CashStudioTokenI, Genes
     (CashStudioToken.DEFAULT_TOKEN_VALUE * 3) + 400
     )
   }
-
 
 }
