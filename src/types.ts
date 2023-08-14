@@ -2,6 +2,7 @@
 
 import { UtxoI, Wallet } from 'mainnet-js';
 import { AuthNFT } from './models/interfaces';
+import AuthchainIdentity from './models/AuthchainIdentity';
 
 export type UIMessage = {
   text: string,
@@ -32,9 +33,9 @@ export type updateBcmr =  (contractOwnerAddress:string, contractAddress:string, 
 export type UserState = {
   connectedPaytacaAddress?: string,
   connectedPaytacaWalletBchBalance?: string | number,
-  fts?: UtxoI[],
-  nfts?: UtxoI[],
-  fnfts?: UtxoI[],
+  // fts?: UtxoI[],
+  // nfts?: UtxoI[],
+  // fnfts?: UtxoI[],
   wallet?: Wallet,
   /**
    * True if wallet is being watched
@@ -45,6 +46,7 @@ export type UserState = {
    */
   genesisInputs?: UtxoI[],
   authNFTs?: AuthNFT[],
+  authchainIdentities?: AuthchainIdentity[],
   updatingBalances: boolean
 }
 

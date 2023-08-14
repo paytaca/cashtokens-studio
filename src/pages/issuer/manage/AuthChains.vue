@@ -28,8 +28,8 @@
                 <th>Action</th>
               </tr>
             </thead>
-            <TableBodySkeleton v-if="AuthchainIdentity.processing" :col-count="viewType === 'simple' ? 5 : 8"
-              :row-count="3" :caption="AuthchainIdentity.processing" />
+            <TableBodySkeleton v-if="!authchainIdentities && AuthchainIdentity.processing"
+              :col-count="viewType === 'simple' ? 5 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
                 <td>{{ i + 1 }}</td>
@@ -62,11 +62,14 @@
                   </q-btn>
                 </td>
               </tr>
+              <tr v-if="authchainIdentities && AuthchainIdentity.processing">
+                <td :colspan="viewType === 'simple' ? 5 : 8">
+                  <q-spinner-grid size="xs"></q-spinner-grid> Checking for updates
+                </td>
+              </tr>
             </tbody>
           </q-markup-table>
-
         </q-scroll-area>
-
         <AuthchainRegistryPublisher v-if="dialog" :model-value="dialog === AuthchainRegistryPublisher.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
@@ -88,14 +91,16 @@ import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssue
 import CashAddress from 'src/components/CashAddress.vue'
 
 const user = useUser()
-const detailedView = ref<boolean>(false)
 const viewType = ref<string>('simple')
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 onMounted(async () => {
   if (user.wallet) {
+    if (user.authchainIdentities) {
+      authchainIdentities.value = user.authchainIdentities as AuthchainIdentity[]
+    }
     authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-    console.log(authchainIdentities.value)
+    user.authchainIdentities = authchainIdentities.value
   }
 })
 

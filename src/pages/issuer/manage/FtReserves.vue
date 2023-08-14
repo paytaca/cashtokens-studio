@@ -12,9 +12,8 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthchainIdentity.processing || authchainIdentities === undefined" :col-count="4"
-            :row-count="3"
-            :caption="AuthchainIdentity.processing || authchainIdentities === undefined ? AuthchainIdentity.processing || 'Scanning wallet for fungible reserves' : ''" />
+          <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="4" :row-count="3"
+            :caption="'Scanning wallet for fungible reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
@@ -32,6 +31,11 @@
                     </q-list>
                   </q-menu>
                 </q-btn>
+              </td>
+            </tr>
+            <tr v-if="AuthchainIdentity.processing && authchainIdentities">
+              <td colspan="4">
+                <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
           </tbody>
@@ -59,8 +63,11 @@ const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
 onMounted(async () => {
   if (user.wallet) {
-    authchainIdentities.value = [
-      ...await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)].filter((ai) => ai.token?.amount && ai.token.amount > 0) || []
+    if (user.authchainIdentities) {
+      authchainIdentities.value = user.authchainIdentities.filter((ai) => ai.token?.amount && ai.token.amount > 0) as AuthchainIdentity[]
+    }
+    user.authchainIdentities = (await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet))
+    authchainIdentities.value = user.authchainIdentities.filter((ai) => ai.token?.amount && ai.token.amount > 0) as AuthchainIdentity[]
   }
 })
 

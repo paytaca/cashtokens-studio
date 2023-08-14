@@ -15,7 +15,8 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthNFT.processing" :col-count="4" :row-count="3" :caption="AuthNFT.processing" />
+          <TableBodySkeleton v-if="AuthNFT.processing && !authNfts" :col-count="4" :row-count="3"
+            :caption="AuthNFT.processing" />
           <tbody v-else class="text-center">
             <tr v-for="authNft, i in authNfts" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
@@ -42,6 +43,11 @@
                     </q-list>
                   </q-menu>
                 </q-btn>
+              </td>
+            </tr>
+            <tr v-if="AuthNFT.processing && authNfts">
+              <td colspan="5">
+                <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
           </tbody>
@@ -72,8 +78,12 @@ const authNfts = ref<AuthNFT[] | undefined>()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
 onMounted(async () => {
+  if (user.authNFTs) {
+    authNfts.value = user.authNFTs as AuthNFT[]
+  }
   try {
     authNfts.value = await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet)
+    user.authNFTs = authNfts.value
   } catch (error) {
     console.log(error)
   }
