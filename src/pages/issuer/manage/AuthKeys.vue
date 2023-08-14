@@ -37,6 +37,8 @@
                       <q-item clickable v-close-popup
                         @click="openDialog(FungibleTokenDialog.__name, authNft as AuthNFT)">Use to create
                         FT</q-item>
+                      <q-item clickable v-close-popup
+                        @click="openDialog(AuthKeyTransferDialog.__name, authNft as AuthNFT)">Transfer AuthKey</q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -48,6 +50,8 @@
     </div>
     <FungibleTokenDialog v-if="dialog" :auth-nft="dialogData" :model-value="dialog === FungibleTokenDialog.__name"
       :token-id-options="user.genesisInputs" action="genesis" @hide="onHide" />
+    <AuthKeyTransferDialog v-if="dialog" :auth-key="dialogData" :model-value="dialog === AuthKeyTransferDialog.__name"
+      @hide="onHide" />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -59,6 +63,7 @@ import { onMounted, ref } from 'vue';
 import TokenCategory from 'src/components/TokenCategory.vue';
 import FungibleTokenDialog from 'src/components/dialogs/FungibleTokenDialog.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
+import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
 import { useDialogs } from 'src/composables'
 const user = useUser()
 
