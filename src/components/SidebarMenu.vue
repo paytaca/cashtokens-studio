@@ -49,6 +49,11 @@ const menu = computed<any[]>(() => {
           icon: 'add',
         },
         {
+          label: 'Create BCMR',
+          href: '/issuer/create/bcmr',
+          icon: 'add',
+        },
+        {
           label: 'Manage',
           href: '#',
           icon: 'token',
