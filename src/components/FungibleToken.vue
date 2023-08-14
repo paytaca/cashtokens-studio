@@ -22,7 +22,7 @@
       </template>
     </q-select>
     <template v-if="form.tokenIdSelected">
-      <q-input v-model="form.genesisSupply" label="Amount" placeholder="0" :filled="true" dense square>
+      <q-input v-model="form.genesisSupply" label="Genesis Supply" placeholder="0" :filled="true" dense square>
         <template v-slot:append>
           <q-btn size="md" color="warning" dense flat
             @click="form.genesisSupply = constants.MAX_FUNGIBLE_AMOUNT">Max</q-btn>
