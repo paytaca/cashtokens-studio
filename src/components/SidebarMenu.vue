@@ -96,20 +96,20 @@ const menu = computed<any[]>(() => {
           children: [
             {
               label: 'Fungibles (FTs)',
-              href: '/balances/fungibles',
+              href: '/account/balance/fungibletokens',
               icon: 'token'
               // avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
             },
             {
               label: 'Collectibles (NFTs)',
-              href: '/balances/collectibles',
+              href: '/account/balance/collectibles',
               icon: 'token'
             },
-            {
-              label: 'Hybrids (FNFTs)',
-              href: '/balances/nonfungibles',
-              avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
-            }
+            // {
+            //   label: 'Hybrids (FNFTs)',
+            //   href: '/account/balance/fungibletokens',
+            //   avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+            // }
           ]
         },
         {

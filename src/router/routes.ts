@@ -28,8 +28,8 @@ const routes: RouteRecordRaw[] = [
     path: '/account/balance',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'fungibles', component: () => import('pages/balance/FungibleTokens.vue') },
-      { path: 'collectibles', component: () => import('pages/balance/Collectibles.vue')},
+      { path: 'fungibletokens', component: () => import('pages/account/balance/FungibleTokens.vue') },
+      { path: 'collectibles', component: () => import('pages/account/balance/Collectibles.vue')},
     ],
   },
   // Always leave this as last one,

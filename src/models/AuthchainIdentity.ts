@@ -360,7 +360,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     const contract = this.authNFT!.authGuard!.contract!
     const contractAddress = contract.getTokenDepositAddress()
     const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
-    const tokenOwner = this.ownerWallet!.getDepositAddress()
+    const depositAddress = this.ownerWallet!.getDepositAddress()
     let transaction
     let decoded
     try {
@@ -371,7 +371,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
           .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
           .to([{
             // transfer identity output to owner's p2pkh address
-            to: tokenOwner,
+            to: this.ownerWallet!.getTokenDepositAddress(),
             amount: authchainIdentityOutput.satoshis,
             token: {
               category: authchainIdentityOutput.token!.category,
@@ -388,7 +388,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
             // emptied authkey's value transferred to owner
           .to(funderInput.satoshis - BigInt(unguardingCost) > 546 ?[{
             // change
-            to: tokenOwner,
+            to: depositAddress,
             amount: funderInput.satoshis - BigInt(unguardingCost)
           }]:[])
           .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
@@ -452,7 +452,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
         },
         {
           ...decoded.inputs[2],
-          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          lockingBytecode: (cashAddressToLockingBytecode(depositAddress) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
       ],

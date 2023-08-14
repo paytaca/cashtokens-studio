@@ -19,7 +19,7 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => console.log('Releasing authchain from authguard')" label="Unguard Authchain"
+        <BusyButton @click="() => unguardAuthchain()" label="Unguard Authchain"
           :busyLabel="authchainIdentity.processing" />
       </q-card-actions>
     </q-card>
