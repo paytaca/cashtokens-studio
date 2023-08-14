@@ -7,7 +7,7 @@ import {
   Message,
   Messaging,
   Processing,
-  RegistryPublicationInput } from "./interfaces"
+  } from "./interfaces"
 import getWalletClass from 'src/utils/getWalletClass'
 
 
@@ -92,22 +92,16 @@ export default class AuthGuard implements AuthGuardI, Processing, Messaging{
     return `
     pragma cashscript ^0.8.0;
 
-    // covenant of the CCI token standard
-    // Covenant unlocked by a specific NFT
-
-    // Opcode count: 8 (max 201)
-    // Bytesize: 46 (max 520)
-
-    contract mintingCovenant(
-        bytes tokenId
-    ) {
-        function unlockWithNft() {
-            // Check that the first input holds the minting baton
-            require(tx.inputs[1].tokenCategory == tokenId);
-            require(tx.inputs[1].nftCommitment == 0x00);
-            // Self preservation of the minting covenant as the first output
-            require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+    contract AuthGuard(bytes tokenId) {
+      function unlockWithNft(bool keepGuarded) {
+        // Check that the first input holds the minting baton
+        require(tx.inputs[1].tokenCategory == tokenId);
+        require(tx.inputs[1].tokenAmount == 0);
+        if(keepGuarded){
+          // Self preservation of the minting covenant as the first output
+          require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
         }
+      }
     }`
   }
 
