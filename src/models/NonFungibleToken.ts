@@ -112,9 +112,6 @@ export default class NonFungibleToken extends CashStudioToken{
     const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
     const tokenOwner = this.ownerWallet!.getDepositAddress()
 
-    console.log('Mint Cost', mintCost)
-    console.log('authchain', authchainIdentityOutput)
-    console.log('authNFTInput', authNFTInput)
     let transaction
     let decoded
     try {
@@ -250,5 +247,59 @@ export default class NonFungibleToken extends CashStudioToken{
       delete this._processing
     }
 
+  }
+
+  /**
+   * Transfer the token to the new owner
+   */
+  async transfer(arg:{recipient: string}):Promise<string|undefined> {
+
+    this.ensureOwnerWallet()
+
+    if (!this.token?.tokenId) {
+      throw new Error('Invalid token id')
+    }
+
+    this._processing = 'Processing'
+
+    const requests = [new TokenSendRequest({
+      tokenId: this.token!.tokenId,
+      value: this.satoshis,
+      cashaddr: arg.recipient,
+      amount: this.token.amount,
+      capability: this.token.capability,
+      commitment: this.token.commitment
+    })]
+
+
+    const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
+      requests,
+      false,
+      {
+        tokenOperation: 'send',
+        checkTokenQuantities: true,
+        buildUnsigned: true
+      }
+    )
+
+    this._processing = 'Waiting for signature'
+    let signResult
+    try {
+      signResult = await CashStudioToken.requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+
+    try {
+      this._processing = 'Transferring'
+      return await this.ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)
+    } catch (error) {
+      console.log(error)
+      throw error
+    } finally {
+      delete this._processing
+    }
   }
 }
