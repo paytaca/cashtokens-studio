@@ -57,6 +57,9 @@
                         <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
                           Issue Tokens
                         </q-item>
+                        <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
+                          Unguard
+                        </q-item>
                       </q-list>
                     </q-menu>
                   </q-btn>
@@ -64,7 +67,7 @@
               </tr>
               <tr v-if="authchainIdentities && AuthchainIdentity.processing">
                 <td :colspan="viewType === 'simple' ? 5 : 8">
-                  <q-spinner-grid size="xs"></q-spinner-grid> Checking for updates
+                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
             </tbody>
@@ -73,6 +76,8 @@
         <AuthchainRegistryPublisher v-if="dialog" :model-value="dialog === AuthchainRegistryPublisher.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+        <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
       </div>
     </div>
@@ -88,6 +93,7 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisher from 'src/components/dialogs/AuthchainRegistryPublisher.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
+import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue'
 
 const user = useUser()

@@ -116,7 +116,7 @@ export default class NonFungibleToken extends CashStudioToken{
     let decoded
     try {
       transaction =
-        contract.getContractFunction('unlockWithNft')()
+        contract.getContractFunction('unlockWithNft')(true)
           .from(authchainIdentityOutput) // contract
           .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
           .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder

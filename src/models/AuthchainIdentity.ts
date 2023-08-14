@@ -8,6 +8,8 @@ import CashStudioToken from "./CashStudioToken"
 import calcMinerFee from 'src/utils/calcMinerFee'
 import toCashScript from 'src/utils/toCashScript'
 import { Authchain, Messaging, Processing } from "./interfaces"
+import shortenAddress from 'src/utils/shortenAddress'
+import shortenTokenId from 'src/utils/shortenTokenId'
 
 /**
  * In an AuthGuard context an AuthchainIdentity are the tokens that are on an AuthGuard address
@@ -21,6 +23,11 @@ import { Authchain, Messaging, Processing } from "./interfaces"
 export default class AuthchainIdentity extends CashStudioToken implements Authchain, Processing, Messaging {
 
   private static _processing?:string
+
+  transfer(newOwnerAddress: string): Promise<string | undefined> {
+    throw new Error('Method not implemented.')
+  }
+
 
   async publish(opt:{url: string, contentHash: string}):Promise<any> {
     this.ensureOwnerWallet()
@@ -42,7 +49,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     let decoded
     try {
       transaction =
-        contract.getContractFunction('unlockWithNft')()
+        contract.getContractFunction('unlockWithNft')(true)
           .from(authchainIdentityOutput) // contract
           .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
           .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
@@ -199,7 +206,7 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
     console.log('INPUT AMOUNT', BigInt(authchainIdentityOutput.token!.amount))
     try {
       transaction =
-        contract.getContractFunction('unlockWithNft')()
+        contract.getContractFunction('unlockWithNft')(true)
           .from(authchainIdentityOutput) // contract
           // TODO: MAKE USE OF AUTHNFT OPTIONAL ONLY WHEN USING AUTHGUARD
           .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
@@ -328,10 +335,152 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
   }
 
   /**
-   * Transfer the ownership of this authchain identity output
+   *
+   *  Unguard or release this authchain identity output from the AuthGuard covenant.
    */
-  transfer(newOwnerAddress: string): Promise<string | undefined> {
-    throw new Error('Method not implemented.')
+  async unguard(): Promise<string | void> {
+    this.ensureOwnerWallet()
+    this.ensureTokenId()
+    if (this.useAuthGuard) {
+      this.ensureAuthNFT()
+    }
+
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2PKH: 2})
+    const unguardingCost = minerFee
+
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > unguardingCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+
+    const [authchainIdentityOutput, authNFTInput] = [this.utxo, this.authNFT!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authNFT!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+    let transaction
+    let decoded
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(false)
+          .from(authchainIdentityOutput) // contract
+          .fromP2PKH([authNFTInput], sig) // AuthNFT/minting baton, funder
+          .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
+          .to([{
+            // transfer identity output to owner's p2pkh address
+            to: tokenOwner,
+            amount: authchainIdentityOutput.satoshis,
+            token: {
+              category: authchainIdentityOutput.token!.category,
+              amount: authchainIdentityOutput.token!.amount,
+              nft: authchainIdentityOutput.token!.nft
+            }
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authNFT!.satoshis),
+            token: authNFTInput.token
+          }])
+            // emptied authkey's value transferred to owner
+          .to(funderInput.satoshis - BigInt(unguardingCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(unguardingCost)
+          }]:[])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        console.log('decoded:', decoded)
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error building transaction')
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      signingResult = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
+          token: authchainIdentityOutput.token && {
+            ...authchainIdentityOutput.token,
+            category: hexToBin(authchainIdentityOutput.token!.category),
+            nft: authchainIdentityOutput.token.nft && {
+              ...authchainIdentityOutput.token.nft,
+              commitment: hexToBin(authchainIdentityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authNFTInput.satoshis),
+          token: authNFTInput.token && {
+            ...authNFTInput.token,
+            category: hexToBin(authNFTInput.token!.category),
+            nft: authNFTInput.token.nft && {
+              ...authNFTInput.token.nft,
+              commitment: hexToBin(authNFTInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ],
+        broadcast: false,
+        userPrompt: 'Unguard Token: ' + shortenTokenId(this.token!.tokenId)
+      });
+
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error signing transaction')
+    }
+
+    if (!signingResult) {
+      console.log('signed', signingResult)
+      delete this._processing
+      return
+    }
+
+    this._processing = 'Submitting Transaction'
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      return tx
+    } catch (error) {
+      console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
+    } finally {
+      delete this._processing
+    }
   }
 
 
