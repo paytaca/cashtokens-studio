@@ -485,10 +485,145 @@ export default class AuthchainIdentity extends CashStudioToken implements Authch
 
 
   /**
-   * Burn the authchain
+   * Burn the authchain identity output
    */
-  burn(): Promise<string | undefined> {
-    throw new Error('Method not implemented.')
+  async burn(): Promise<string | undefined> {
+    this.ensureOwnerWallet()
+    this.ensureTokenId()
+    if (this.useAuthGuard) {
+      this.ensureAuthNFT()
+    }
+
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2PKH: 2})
+    const burningCost = minerFee
+
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > burningCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+
+    const [authchainIdentityOutput, authNFTInput] = [this.utxo, this.authNFT!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authNFT!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authNFT!.ownerWallet!.getTokenDepositAddress()
+    const depositAddress = this.ownerWallet!.getDepositAddress()
+    let transaction
+    let decoded
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(false)
+          .from(authchainIdentityOutput)
+          .fromP2PKH([authNFTInput], sig)
+          .fromP2PKH([funderInput], sig)
+          .withOpReturn([
+            'BURN',
+            `0x${authchainIdentityOutput.txid.match(/[a-fA-F0-9]{2}/g)?.reverse().join('')}`
+          ])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authNFT!.satoshis),
+            token: authNFTInput.token
+          }])
+            // authchainIdentityOutput's value transferred to funder
+          .to((funderInput.satoshis + authchainIdentityOutput.satoshis) - BigInt(burningCost) > 546 ?[{
+            // change
+            to: depositAddress,
+            amount: (funderInput.satoshis + authchainIdentityOutput.satoshis) - BigInt(burningCost)
+          }]:[])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        console.log('decoded:', decoded)
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error building transaction')
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      signingResult = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
+          token: authchainIdentityOutput.token && {
+            ...authchainIdentityOutput.token,
+            category: hexToBin(authchainIdentityOutput.token!.category),
+            nft: authchainIdentityOutput.token.nft && {
+              ...authchainIdentityOutput.token.nft,
+              commitment: hexToBin(authchainIdentityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authNFTInput.satoshis),
+          token: authNFTInput.token && {
+            ...authNFTInput.token,
+            category: hexToBin(authNFTInput.token!.category),
+            nft: authNFTInput.token.nft && {
+              ...authNFTInput.token.nft,
+              commitment: hexToBin(authNFTInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(depositAddress) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ],
+        broadcast: false,
+        userPrompt: 'Burn authchain of token: ' + shortenTokenId(this.token!.tokenId)
+      });
+
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error signing transaction')
+    }
+
+    if (!signingResult) {
+      console.log('signed', signingResult)
+      delete this._processing
+      return
+    }
+
+    this._processing = 'Burning'
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      return tx
+    } catch (error) {
+      console.log('Error:AuthchainIdentity@', error)
+    } finally {
+      delete this._processing
+    }
   }
   /**
    * If this is an Identity Output of an AuthGuard
