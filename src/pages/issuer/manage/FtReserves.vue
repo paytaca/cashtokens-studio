@@ -38,6 +38,11 @@
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
+            <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
+              <td colspan="4">
+                No data
+              </td>
+            </tr>
           </tbody>
         </q-markup-table>
         <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"

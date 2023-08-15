@@ -30,22 +30,22 @@ const menu = computed<any[]>(() => {
       children: [
         {
           label: 'Create FT',
-          href: '/issuer/create/fungible',
+          href: '/issuer/create/token/fungible',
           icon: 'add',
         },
         {
           label: 'Create NFT',
-          href: '/issuer/create/nonfungible',
+          href: '/issuer/create/token/nonfungible',
           icon: 'add',
         },
         {
           label: 'Create FNFT hybrid',
-          href: '/issuer/create/hybrid',
+          href: '/issuer/create/token/hybrid',
           icon: 'add',
         },
         {
           label: 'Create AuthKey',
-          href: '/issuer/create/authkey',
+          href: '/issuer/create/token/authkey',
           icon: 'add',
         },
         {

@@ -11,7 +11,8 @@ const routes: RouteRecordRaw[] = [
     path: '/issuer',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'create', path: 'create/:tokenType', component: () => import('pages/issuer/CreateToken.vue') },
+      { name: 'create-bcmr', path: 'create/bcmr', component: () => import('pages/issuer/CreateBcmr.vue') },
+      { name: 'create-token', path: 'create/token/:tokenType', component: () => import('pages/issuer/CreateToken.vue') }
     ],
   },
   {

@@ -50,6 +50,11 @@
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
+            <tr v-if="authNfts?.length === 0 && !AuthNFT.processing">
+              <td colspan="5">
+                No data
+              </td>
+            </tr>
           </tbody>
         </q-markup-table>
       </div>

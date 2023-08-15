@@ -60,9 +60,9 @@
                         <q-item clickable v-close-popup @click="openDialog(AuthchainBurnerDialog.__name, identity)">
                           Burn Authchain
                         </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
+                        <!-- <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
                           Issue Tokens
-                        </q-item>
+                        </q-item> -->
                       </q-list>
                     </q-menu>
                   </q-btn>
@@ -71,6 +71,11 @@
               <tr v-if="authchainIdentities && AuthchainIdentity.processing">
                 <td :colspan="viewType === 'simple' ? 5 : 8">
                   <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
+                </td>
+              </tr>
+              <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
+                <td :colspan="viewType === 'simple' ? 5 : 8">
+                  No data
                 </td>
               </tr>
             </tbody>
