@@ -54,11 +54,14 @@
                         <q-item clickable v-close-popup @click="openDialog(AuthchainRegistryPublisher.__name, identity)">
                           Publish Registry
                         </q-item>
+                        <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
+                          Unguard Authchain
+                        </q-item>
+                        <q-item clickable v-close-popup @click="openDialog(AuthchainBurnerDialog.__name, identity)">
+                          Burn Authchain
+                        </q-item>
                         <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
                           Issue Tokens
-                        </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
-                          Unguard
                         </q-item>
                       </q-list>
                     </q-menu>
@@ -79,6 +82,8 @@
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+        <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
       </div>
     </div>
   </q-page>
@@ -95,6 +100,7 @@ import AuthchainRegistryPublisher from 'src/components/dialogs/AuthchainRegistry
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue'
+import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 
 const user = useUser()
 const viewType = ref<string>('simple')

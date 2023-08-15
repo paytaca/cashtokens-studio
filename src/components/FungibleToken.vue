@@ -162,11 +162,10 @@ const createGenesis = async () => {
   if (form.value.publishRegistry) {
     token.value!.registry = form.value.tokenRegistry
   }
-  console.log('AUTHNFT TXID', props.authNft.txid)
-  console.log('TXID', token.value.txid)
   try {
     await token.value!.createGenesis({ genesisSupply: Number(form.value.genesisSupply) })
   } catch (error: any) {
+    console.log(error)
     $q.notify({ type: 'negative', message: error?.message })
   }
 
