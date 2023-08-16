@@ -1,27 +1,16 @@
-FROM nikolaik/python-nodejs:python3.11-nodejs20-alpine
-
-RUN mkdir -p /usr/cashtoken-studio
-WORKDIR /usr/cashtoken-studio
-COPY . .
-
-RUN yarn global add node-gyp
-RUN yarn --ignore-engines
-
-RUN rm -rf node_modules/@mainnet-cash/contract/node_modules/cashscript
-RUN rm -rf node_modules/@mainnet-cash/contract/node_modules/@cashscript/utils
-# RUN npx nuxi clean
-# RUN yarn postinstall
-
-RUN yarn run build
-
-# ENV NUXT_HOST=0.0.0.0
-# ENV NUXT_PORT=9000
-
-EXPOSE 9000
-
+FROM nikolaik/python-nodejs:python3.11-nodejs18
+# RUN apt-get update
+# # For libpq
+# RUN apt-get install postgresql -y
+# Installing node_modules first so it can be cached
+COPY ./dist/ssr/package.json /tmp/package.json
+RUN cd /tmp && yarn --ignore-engines
+RUN mkdir -p /usr/cashtoken-studio/dist/ssr && cp -r /tmp/node_modules /usr/cashtoken-studio/dist/ssr
+WORKDIR /usr/cashtoken-studio/dist/ssr
+COPY ./dist/ssr/ .
 ENV NODE_OPTIONS="--experimental-specifier-resolution=node index"
+RUN cd /usr/cashtoken-studio/dist/ssr
+ENTRYPOINT ["node", "index.js"]
 
-RUN cd dist/ssr
 
-# ENTRYPOINT ["yarn", "start"]
-ENTRYPOINT ["quasar", "dev -m ssr"]
+
