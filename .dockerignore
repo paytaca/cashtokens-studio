@@ -1,0 +1,11 @@
+**/node_modules
+**/dist
+*.log
+.git
+.vscode
+.eslintignore
+.eslintrc.cjs
+.prettierrc
+.editorconfig
+README.md
+
