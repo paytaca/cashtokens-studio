@@ -5,8 +5,9 @@ import AuthGuard from "./AuthGuard";
 import calcMinerFee from "src/utils/calcMinerFee";
 import { CashStudioTokenI } from "./interfaces";
 import CashStudioToken from "./CashStudioToken";
+import {AuthNFT as AuthNFTI} from './interfaces'
 
-export default class AuthNFT extends NonFungibleToken implements AuthNFT {
+export default class AuthNFT extends NonFungibleToken implements AuthNFTI {
   static DEFAULT_COMMITMENT = '00'
   /**
    * The tokens that can be unlocked by this AuthNFT
