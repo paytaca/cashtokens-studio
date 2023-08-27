@@ -1,15 +1,16 @@
 import compression from 'compression';
 import { ssrMiddleware } from 'quasar/wrappers';
 import express from 'express'
+
 import bodyParser from 'body-parser'
 import { NFTStorage, File } from 'nft.storage'
 import fs from 'fs'
 import crypto from 'crypto'
-
-
+const multer = require('multer')
+const throttle = require('express-throttle-bandwidth')
 const client = new NFTStorage({ token: process.env.NFT_STORAGE_API_KEY || '' })
 
-const multer = require('multer')
+
 
 //Setting storage engine
 
@@ -43,6 +44,8 @@ export default ssrMiddleware(async ({ app, resolve }) => {
   //   next()
   // })
 
+  app.use(throttle(1024 * 128))
+
   app.post('/api/tokens/icon/upload', upload.single('icon'), async (req:any, res:any) => {
     const metadata = await client.store({
       name: 'CTStudio',
@@ -66,15 +69,15 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     });
   })
 
+  /**
+   * Stores the Registry(BCMR) in nft.storage
+   */
   app.post('/api/tokens/registry/storage', bodyParser.json(), async (req:any, res:any) => {
 
     const headers = {
       'Authorization': `Bearer ${process.env.NFT_STORAGE_API_KEY}`,
       'Content-Type': 'application/json'
     };
-
-    console.log(req.body)
-
 
     // Convert JSON object to JSON string
     const jsonString = JSON.stringify(req.body);
@@ -94,7 +97,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         res.status(200).send({
           artifact: {
             uris: {
-              https: `https://nftstorage.link/${json.value.cid}`,
+              https: `https://nftstorage.link/ipfs/${json.value.cid}`,
               ipfs: `ipfs://${json.value.cid}`
             },
             contentHash: hash.update(jsonString).digest('hex')
@@ -105,20 +108,5 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     } catch (error) {
       res.status(400).send(error)
     }
-
-
-    // fs.writeFile(`${bcmr.registryIdentity}.json`, bcmr.getContent(), 'utf-8', (err:any) => {
-    //   if(!err) {
-    //     res.status(200).send({
-    //       storageArtifact: {
-    //         uris: '',
-    //         contentHash: ''
-    //       }
-    //     });
-    //   } else {
-    //     res.status(400).send(err);
-    //   }
-    // })
-
   })
 });
