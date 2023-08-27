@@ -12,14 +12,14 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="transfer" :busyLabel="authchain.processing" label="Transfer" />
+        <!-- <BusyButton @click="transfer" :busyLabel="authchain.processing" label="Transfer" /> -->
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import AuthchainIdentity from 'src/models/AuthchainIdentity'
+import {AuthchainIdentity} from 'src/app'
 import { ref } from 'vue'
 import BusyButton from 'src/components/BusyButton.vue'
 
@@ -28,13 +28,13 @@ const $q = useQuasar()
 const props = defineProps<{ identityOutput: AuthchainIdentity }>()
 const newOwner = ref<string>()
 const authchain = ref<AuthchainIdentity>(
-  new AuthchainIdentity({ ...props.identityOutput })
+  // new AuthchainIdentity({ ...props.identityOutput })
 )
 const transfer = async () => {
   authchain.value = props.identityOutput
-  const tx = await authchain.value.transfer(newOwner.value!)
-  if (tx) {
-    $q.notify({ type: 'success', message: 'Authchain transferred' })
-  }
+  // const tx = await authchain.value.transfer(newOwner.value!)
+  // if (tx) {
+  //   $q.notify({ type: 'success', message: 'Authchain transferred' })
+  // }
 }
 </script>

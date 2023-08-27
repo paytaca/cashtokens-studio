@@ -2,33 +2,40 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">List of AuthKeys</h5>
-        <p>An AuthKey is an NFT that you'd use to manage the authchain, fungible reserves and/or NFT minters. Don't send
-          these
-          keys to anyone unless you intend to give them permission to manage your tokens. </p>
+        <h5 class="text-center">My AuthKeys</h5>
+        <q-expansion-item label="Description">
+          <p>
+            When you create a token (genesis) in CSStudio it's locked in a contract, called an AuthGuard.
+            An AuthKey (or Minting Baton) is an NFT that let's the holder manage the locked tokens.
+            Holder of the AuthKey can manage the authchain, issue tokens from fungible reserves or mint new NFTs
+            if the token created was a <code>minting</code> NFT.
+            Don't send these keys to anyone unless you intend to give them permission to manage your tokens.
+          </p>
+        </q-expansion-item>
+
         <q-markup-table>
           <thead>
             <tr>
               <th>#</th>
               <th>Id</th>
-              <th>No. of managed categories</th>
+              <th>No. of managed tokens</th>
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthNFT.processing && !authNfts" :col-count="4" :row-count="3"
-            :caption="AuthNFT.processing" />
+          <TableBodySkeleton v-if="AuthKey.processing && !authKeys" :col-count="4" :row-count="3"
+            :caption="AuthKey.processing" />
           <tbody v-else class="text-center">
-            <tr v-for="authNft, i in authNfts" :key="'ai-rec-' + i">
+            <tr v-for="authKey, i in authKeys" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
               <td>
-                <TokenCategory :tokenId="authNft?.utxo?.token?.tokenId" />
+                <TokenCategory :tokenId="authKey?.utxo?.token?.tokenId" />
               </td>
               <td>
-                <template v-if="authNft.processing">
-                  <q-spinner color="cyan"></q-spinner><i>{{ authNft.processing }}</i>
+                <template v-if="authKey.processing">
+                  <q-spinner color="cyan"></q-spinner><i>{{ authKey.processing }}</i>
                 </template>
                 <template v-else>
-                  {{ authNft.unlockableTokens.length }}
+                  {{ authKey.unlockableTokens?.length }}
                 </template>
               </td>
               <td>
@@ -36,21 +43,24 @@
                   <q-menu>
                     <q-list>
                       <q-item clickable v-close-popup
-                        @click="openDialog(FungibleTokenDialog.__name, authNft as AuthNFT)">Use to create
-                        FT</q-item>
+                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, {authKey: authKey as AuthKey, tokenType: 'ft'})">
+                        Use to create FT</q-item>
                       <q-item clickable v-close-popup
-                        @click="openDialog(AuthKeyTransferDialog.__name, authNft as AuthNFT)">Transfer AuthKey</q-item>
+                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, {authKey: authKey as AuthKey, tokenType: 'nft'})">
+                        Use to create NFT</q-item>
+                      <q-item clickable v-close-popup
+                        @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer AuthKey</q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
               </td>
             </tr>
-            <tr v-if="AuthNFT.processing && authNfts">
+            <tr v-if="AuthKey.processing && authKeys">
               <td colspan="5">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
-            <tr v-if="authNfts?.length === 0 && !AuthNFT.processing">
+            <tr v-if="authKeys?.length === 0 && !AuthKey.processing">
               <td colspan="5">
                 No data
               </td>
@@ -59,50 +69,71 @@
         </q-markup-table>
       </div>
     </div>
-    <FungibleTokenDialog v-if="dialog" :auth-nft="dialogData" :model-value="dialog === FungibleTokenDialog.__name"
-      :token-id-options="user.genesisInputs" action="genesis" @hide="onHide" />
     <AuthKeyTransferDialog v-if="dialog" :auth-key="dialogData" :model-value="dialog === AuthKeyTransferDialog.__name"
+      @hide="onHide" />
+    <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType" :model-value="dialog === AuthKeyCreateTokenDialog.__name"
       @hide="onHide" />
   </q-page>
 </template>
 <script setup lang="ts">
 
 import { Wallet } from 'mainnet-js';
-import AuthNFT from 'src/models/AuthNFT';
 import { useUser } from 'src/stores/user';
 import { onMounted, ref } from 'vue';
+import { useDialogs } from 'src/composables'
+import { AuthKey } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue';
-import FungibleTokenDialog from 'src/components/dialogs/FungibleTokenDialog.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
-import { useDialogs } from 'src/composables'
+import AuthKeyCreateTokenDialog from 'src/components/dialogs/AuthKeyCreateTokenDialog.vue'
+
 const user = useUser()
 
-const authNfts = ref<AuthNFT[] | undefined>()
+const authKeys = ref<AuthKey[] | undefined>()
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
 onMounted(async () => {
-  if (user.authNFTs) {
-    authNfts.value = user.authNFTs as AuthNFT[]
+  if (user.authKeys) {
+    authKeys.value = user.authKeys as AuthKey[]
   }
   try {
-    authNfts.value = await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet)
-    user.authNFTs = authNfts.value
+    authKeys.value = await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet)
+    user.authKeys = authKeys.value
   } catch (error) {
     console.log(error)
   }
-  scanAuthNftsForManagedCategories()
+  scanAuthKeysForManagedCategories()
 })
 
-
-const scanAuthNftsForManagedCategories = async () => {
-  if (authNfts.value) {
-    for (let i = 0; i < authNfts.value.length; i++) {
-      authNfts.value[i].ownerWallet = user.wallet as Wallet
-      await authNfts.value[i].loadUnlockableTokens()
+/**
+ * Checks and loads the managed token categories of each AuthKey.
+ * Basically just checking each AuthKey's associated
+ * AuthGuard contract token address for tokens.
+ */
+const scanAuthKeysForManagedCategories = async () => {
+  if (authKeys.value) {
+    for (let i = 0; i < authKeys.value.length; i++) {
+      authKeys.value[i].ownerWallet = user.wallet as Wallet
+      await authKeys.value[i].loadUnlockableTokens()
     }
   }
+}
+
+/**
+ * Just a wrapper to openDialog so we can attach the wallet to the authKey object
+ */
+const wOpenAuthKeyTransferDialog = (dialogName: string|undefined, authKey: AuthKey) => {
+  authKey.ownerWallet = user.wallet! as Wallet
+  openDialog(dialogName, authKey)
+}
+
+/**
+ * Just a wrapper to openDialog so we can attach the wallet to the authKey object
+ */
+const wOpenAuthKeyCreateTokenDialog = (dialogName: string|undefined, dialogData: {authKey:AuthKey, tokenType: 'ft'|'nft'}) => {
+  dialogData.authKey.ownerWallet = user.wallet! as Wallet
+  openDialog(dialogName, dialogData)
 }
 
 

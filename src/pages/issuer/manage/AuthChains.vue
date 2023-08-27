@@ -17,7 +17,7 @@
             <thead>
               <tr>
                 <th>#</th>
-                <th>Token Id/Category</th>
+                <th>Your Token</th>
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
@@ -42,16 +42,16 @@
                   <td>{{ identity.token?.commitment || 'n/a' }}</td>
                 </template>
                 <td>
-                  <CashAddress :cashaddr="identity.authNFT?.authGuard?.contract?.getTokenDepositAddress()" />
+                  <CashAddress :cashaddr="identity.authKey?.authGuard?.contract?.getTokenDepositAddress()" />
                 </td>
                 <td>
-                  <TokenCategory :token-id="identity.authNFT?.token?.tokenId" icon-right="key" />
+                  <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
                 </td>
                 <td>
                   <q-btn icon="more_vert" size="md" round flat dense>
                     <q-menu>
                       <q-list>
-                        <q-item clickable v-close-popup @click="openDialog(AuthchainRegistryPublisher.__name, identity)">
+                        <q-item clickable v-close-popup @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
                           Publish Registry
                         </q-item>
                         <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
@@ -60,9 +60,6 @@
                         <q-item clickable v-close-popup @click="openDialog(AuthchainBurnerDialog.__name, identity)">
                           Burn Authchain
                         </q-item>
-                        <!-- <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
-                          Issue Tokens
-                        </q-item> -->
                       </q-list>
                     </q-menu>
                   </q-btn>
@@ -81,9 +78,7 @@
             </tbody>
           </q-markup-table>
         </q-scroll-area>
-        <AuthchainRegistryPublisher v-if="dialog" :model-value="dialog === AuthchainRegistryPublisher.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
-        <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
+        <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
@@ -98,11 +93,10 @@ import { Wallet } from 'mainnet-js';
 import { onMounted, ref } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import AuthchainIdentity from 'src/models/AuthchainIdentity';
+import { AuthchainIdentity } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-import AuthchainRegistryPublisher from 'src/components/dialogs/AuthchainRegistryPublisher.vue'
-import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
+import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
@@ -118,7 +112,9 @@ onMounted(async () => {
     }
     authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     user.authchainIdentities = authchainIdentities.value
+    console.log(authchainIdentities.value)
   }
+
 })
 
 </script>

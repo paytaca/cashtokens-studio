@@ -5,9 +5,9 @@
     </q-toolbar>
     <q-input v-if="owner || user.wallet" :model-value="owner || user.wallet!.getTokenDepositAddress()" label="Owner"
       :filled="true" disable dense square />
-    <q-input v-if="action === 'genesis'" :model-value="authNft.txid" label="AuthNFT Token ID" :filled="true"
-      :disable="Boolean(authNft?.txid)" dense square>
-      <template v-if="!authNft?.txid" v-slot:append>
+    <q-input v-if="action === 'genesis'" :model-value="authKey.txid" label="AuthKey Token ID" :filled="true"
+      :disable="Boolean(authKey?.txid)" dense square>
+      <template v-if="!authKey?.txid" v-slot:append>
         <q-btn icon="refresh" flat dense color="orange"></q-btn>
       </template>
     </q-input>
@@ -25,7 +25,7 @@
       <q-input v-model="form.genesisSupply" label="Genesis Supply" placeholder="0" :filled="true" dense square>
         <template v-slot:append>
           <q-btn size="md" color="warning" dense flat
-            @click="form.genesisSupply = constants.MAX_FUNGIBLE_AMOUNT">Max</q-btn>
+            @click="form.genesisSupply = MAX_FUNGIBLE_AMOUNT">Max</q-btn>
         </template>
       </q-input>
       <div class="row items-center">
@@ -73,28 +73,24 @@ import { UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
 import { useUser } from 'src/stores/user'
-import { CashStudioTokenI } from 'src/models/interfaces'
-import fetchBcmrContentHash from 'src/bcmr/fetchBcmrContentHash';
-import AuthNFT from 'src/models/AuthNFT'
-import FungibleTokenModel from 'src/models/FungibleToken'
-import constants from 'src/constants'
-import { FungibleTokenAction } from './types'
+import { fetchBcmrContentHash } from 'src/app/bcmr';
+import { AuthKey, CashToken } from 'src/app'
+import { MAX_FUNGIBLE_AMOUNT } from 'src/app/constants'
 
 const props = defineProps<{
   owner?: string,
-  action: FungibleTokenAction,
-  authNft: AuthNFT,
+  action: 'genesis' | undefined,
+  authKey: AuthKey,
   tokenIdOptions?: UtxoI[]
-  // authNftOptions?: AuthNFT[]
+  // authKeyOptions?: AuthKey[]
 }>()
 
 const $q = useQuasar()
 const user = useUser()
-
 const form = ref<{
   useAuthGuard: boolean /*Future proofing, we might allow creation without AuthGuard*/,
   tokenIdSelected: { value: string, label: string },
-  // authNft: AuthNFT,
+  // authKey: AuthKey,
   genesisSupply: string,
   issuedSupply: {
     amount: string,
@@ -117,39 +113,34 @@ const form = ref<{
   publishRegistry: false,
   tokenRegistry: { url: '', contentHash: '' },
   isLoadingRegistry: false,
-  // authNft: props.authNft
+  // authKey: props.authKey
 })
 
 /**
  * Token to be created, values will be updated depending on the value of the form on write mode
  */
-const token = ref<FungibleTokenModel>()
+const token = ref<CashToken>()
 
 const tokenIdSelections = computed<{ value: string, label: string }[]>(() =>
   props.tokenIdOptions?.map((u: UtxoI) => ({ value: u.txid, label: u.txid.replace(u.txid.substring(8, 48), '...') })) || []
 )
 
-watch(() => token.value?.message, (msg) => {
-  if (msg && msg.type === 'success') {
-    $q.notify({ color: 'positive', message: msg.text, timeout: 5000 })
-  }
-})
 
 onMounted(() => {
   // token.value = new FungibleTokenModel({
-  //   authNFT: props.authNft,
+  //   authNFT: props.authKey,
   //   ownerWallet: user.wallet as Wallet
   // } as CashStudioTokenI)
 
   if (tokenIdSelections.value) {
     form.value.tokenIdSelected = tokenIdSelections.value[0]
   }
-  // form.value.authNft = props.authNft
+  // form.value.authKey = props.authKey
 })
 
 const createGenesis = async () => {
-  // if (!form.value.authNft?.utxo?.token?.tokenId && form.value.useAuthGuard) {
-  //   $q.notify({ type: 'negative', message: 'Missing AuthNFT!' })
+  // if (!form.value.authKey?.utxo?.token?.tokenId && form.value.useAuthGuard) {
+  //   $q.notify({ type: 'negative', message: 'Missing AuthKey!' })
   //   return
   // }
   if (!form.value.tokenIdSelected.value) {
@@ -158,12 +149,16 @@ const createGenesis = async () => {
   }
 
   const genesisInput = props.tokenIdOptions?.filter((u: UtxoI) => u.txid == form.value.tokenIdSelected.value)[0] as UtxoI
-  token.value = new FungibleTokenModel({ ...genesisInput, authNFT: props.authNft, ownerWallet: user.wallet as Wallet })
+  token.value = new CashToken()
+  token.value.utxo = genesisInput
+  token.value.authKey = props.authKey
+  token.value.ownerWallet = user.wallet as Wallet
+
   if (form.value.publishRegistry) {
     token.value!.registry = form.value.tokenRegistry
   }
   try {
-    await token.value!.createGenesis({ genesisSupply: Number(form.value.genesisSupply) })
+    await token.value!.createGenesis({ genesisSupply: form.value.genesisSupply })
   } catch (error: any) {
     console.log(error)
     $q.notify({ type: 'negative', message: error?.message })
@@ -176,12 +171,12 @@ const loadRegistryHashFromUrl = () => {
   if (form.value.tokenRegistry?.contentHash) {
     const endNotif = $q.notify({ spinner: true, message: 'Checking hash of URL\'s content', type: 'info' })
     fetchBcmrContentHash(form.value.tokenRegistry.url)
-      .then((v) => {
+      .then((v:any) => {
         if (form.value.tokenRegistry) {
           form.value.tokenRegistry.contentHash = v || ''
         }
       })
-      .catch((e) => console.log(e))
+      .catch((e:any) => console.log(e))
       .finally(() => {
         endNotif()
         form.value.isLoadingRegistry = false
@@ -190,9 +185,9 @@ const loadRegistryHashFromUrl = () => {
 }
 
 // const checkAndLoadAuthNft = async () => {
-//   const a = (await AuthNFT.scanWalletForAuthNFTs(user.wallet as Wallet))
+//   const a = (await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet))
 //   if (a) {
-//     form.value.authNft = a[0]
+//     form.value.authKey = a[0]
 //   }
 // }
 

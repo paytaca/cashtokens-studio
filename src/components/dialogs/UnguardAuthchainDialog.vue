@@ -19,16 +19,20 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => unguardAuthchain()" label="Unguard Authchain"
-          :busyLabel="authchainIdentity.processing" />
+        <BusyButton @click="() => unguardAuthchain()"
+          :busyLabel="authchainIdentity.processing"
+          label="Unguard Authchain"
+          color="primary"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
-import AuthchainIdentity from 'src/models/AuthchainIdentity'
+import { AuthchainIdentity } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useQuasar } from 'quasar';
+import shortenTx from 'src/app/utils/shortenTx';
 
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const $q = useQuasar()
@@ -36,9 +40,11 @@ const unguardAuthchain = async () => {
   try {
     const tx = await props.authchainIdentity.unguard()
     if (tx) {
+      // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
       $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
     }
   } catch (error: any) {
+    console.log(error)
     $q.notify({ type: 'positive', message: 'Txn Failed ' + error.message })
   }
 

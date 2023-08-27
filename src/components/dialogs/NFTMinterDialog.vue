@@ -33,12 +33,12 @@
 import { ref } from 'vue';
 import { NFTCapability } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import NonFungibleToken from 'src/models/NonFungibleToken';
+import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 
 const props = defineProps<{
-  minter: NonFungibleToken,
+  minter: CashToken,
 }>()
 
 const emit = defineEmits<{
@@ -55,11 +55,11 @@ const form = ref<{ capability: NFTCapability, commitment: string, recipient: str
 const mintToken = async () => {
   if (props.minter) {
     try {
-      const tx = await props.minter.mintChild(form.value)
-      if (tx) {
-        emit('nftMinted', { tokenId: props.minter.token!.tokenId, ...form.value })
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
-      }
+      // const tx = await props.minter.mintChild(form.value)
+      // if (tx) {
+      //   emit('nftMinted', { tokenId: props.minter.token!.tokenId, ...form.value })
+      //   $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+      // }
     } catch (error: any) {
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     }

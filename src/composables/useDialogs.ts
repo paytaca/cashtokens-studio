@@ -11,10 +11,10 @@ export const useDialogs = () => {
     }
   }
 
-const onHide = () => {
-  dialog.value = undefined
-  dialogData.value = undefined
-}
+  const onHide = () => {
+    dialog.value = undefined
+    dialogData.value = undefined
+  }
   return { dialog, dialogData, openDialog, onHide }
 }
 

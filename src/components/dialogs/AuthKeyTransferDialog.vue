@@ -18,24 +18,33 @@
         </q-banner>
         <q-form class="q-gutter-sm">
           <q-input :model-value="authKey.token?.tokenId" label="AuthKey ID" filled dense disable></q-input>
-          <q-input v-model="form.recipient" label="Recipient" filled dense></q-input>
+          <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense></q-input>
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => transferAuthKey()" label="Transfer AuthKey" :busyLabel="authKey.processing" />
+        <BusyButton
+          @click="() => transferAuthKey()"
+          label="Transfer AuthKey"
+          :busyLabel="authKey.processing"
+          color="primary"
+        />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import AuthNFT from 'src/models/AuthNFT';
+import { AuthKey } from 'src/app';
 import { ref } from 'vue';
 import BusyButton from 'src/components/BusyButton.vue'
+import { useUser } from 'src/stores/user';
+import { Wallet } from 'mainnet-js';
+import shortenTokenId from 'src/app/utils/shortenTokenId';
 
 defineOptions({ name: 'FungibleTokenIssuerDialog' })
 const $q = useQuasar()
-const props = defineProps<{ authKey: AuthNFT }>()
+const user = useUser()
+const props = defineProps<{ authKey: AuthKey }>()
 defineEmits<{
   (e: 'authKeyTransferred', val: { tokenId: string, to: string, amount: string }): void
 }>()
@@ -45,13 +54,13 @@ const form = ref<{ recipient: string }>({
 })
 
 const transferAuthKey = async () => {
-  console.log('Transferring authkey')
   try {
-    const tx = await props.authKey.transfer({ recipient: form.value.recipient })
+    const tx = await props.authKey.transfer(form.value.recipient)
     if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!Tx' + tx })
+      $q.notify({ type: 'positive', message: 'Success!Tx' + shortenTokenId(tx) })
     }
   } catch (error: any) {
+    console.log(error)
     $q.notify({ type: 'negative', message: 'Error!' + error.message })
   }
 }

@@ -1,4 +1,3 @@
-import { defineAsyncComponent } from 'vue';
 import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
@@ -11,8 +10,8 @@ const routes: RouteRecordRaw[] = [
     path: '/issuer',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'create-bcmr', path: 'create/bcmr', component: () => import('pages/issuer/CreateBcmr.vue') },
-      { name: 'create-token', path: 'create/token/:tokenType', component: () => import('pages/issuer/CreateToken.vue') }
+      { name: 'create-authkey', path: 'tokens/create/authkey', component: () => import('pages/issuer/CreateAuthKey.vue') },
+      { name: 'create-token', path: 'tokens/create/:tokenType', component: () => import('pages/issuer/CreateToken.vue') },
     ],
   },
   {
@@ -25,21 +24,13 @@ const routes: RouteRecordRaw[] = [
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') }
     ],
   },
-  {
-    path: '/account/balance',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [
-      { path: 'fungibletokens', component: () => import('pages/account/balance/FungibleTokens.vue') },
-      { path: 'collectibles', component: () => import('pages/account/balance/Collectibles.vue')},
-    ],
-  },
+
   // Always leave this as last one,
   // but you can also remove it
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
-  }
-
+  },
 ];
 
 export default routes;

@@ -56,10 +56,9 @@ import { Wallet } from 'mainnet-js';
 import { onMounted, ref, computed } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import AuthchainIdentity from 'src/models/AuthchainIdentity';
+import {AuthchainIdentity} from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 
 const user = useUser()

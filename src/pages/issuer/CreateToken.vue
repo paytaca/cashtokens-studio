@@ -3,12 +3,11 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row justify-end">
-          <q-btn to="/token/create/fungible">FT</q-btn>
-          <q-btn to="/token/create/nonfungible">NFT</q-btn>
-          <q-btn>FNFT</q-btn>
+          <q-btn to="/issuer/tokens/create/ft">FT</q-btn>
+          <q-btn to="/issuer/tokens/create/nft">NFT</q-btn>
         </div>
         <div class="row justify-center q-my-lg">
-          <template v-if="!user.genesisInputs?.length || user.genesisInputs?.length < 2">
+          <template v-if="!genesisInput || !authKey">
             <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
               <template v-slot:avatar>
                 <q-icon name="warning" color="warning" size="xs" />
@@ -23,14 +22,13 @@
             </q-banner>
           </template>
           <template v-else>
-            <FungibleToken v-if="tokenType === 'fungible' && authNFT && tokenIdOptions"
-              :owner="user.connectedPaytacaAddress" action="genesis" :token-id-options="tokenIdOptions"
-              :auth-nft="authNFT" />
-            <NonFungibleToken v-if="tokenType === 'nonfungible' && authNFT && tokenIdOptions"
-              :owner="user.connectedPaytacaAddress" action="genesis" :token-id-options="tokenIdOptions"
-              :auth-nft="authNFT" />
-            <AuthNFTView v-if="tokenType === 'authkey'" :owner="user.connectedPaytacaAddress" action="genesis"
-              :auth-nft="authNFT" />
+            <TokenGenesisForm
+              :token-type="(route.params.tokenType as ('ft'|'nft'|'fnft'))"
+              :genesis-input="genesisInput"
+              :auth-key="authKey"
+              :owner-wallet="(user.wallet! as Wallet)"
+              :create-auth-key="true"
+              />
           </template>
         </div>
       </div>
@@ -40,41 +38,33 @@
 
 <script setup lang="ts">
 
-import { computed, ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
 import { UtxoI, Wallet } from 'mainnet-js';
-import { useRoute } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
-
-import NonFungibleToken from 'src/components/NonFungibleToken.vue';
-import FungibleToken from 'src/components/FungibleToken.vue';
 import BusyButton from 'src/components/BusyButton.vue'
-import AuthNFTView from 'src/components/AuthNFT.vue'
-import GenesisInput from 'src/models/GenesisInput'
-import AuthNFT from 'src/models/AuthNFT';
+import { GenesisInput, AuthKey } from 'src/app'
+import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 
 const $q = useQuasar()
 const user = useUser()
 const route = useRoute()
-const authNFT = ref<AuthNFT>()
-const tokenIdOptions = ref<UtxoI[]>()
-const tokenType = computed(() => route.params.tokenType)
+const authKey = ref<AuthKey>()
+const genesisInput = ref<UtxoI>()
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 2) {
-    // use first for AuthNFT
-    authNFT.value = new AuthNFT({ ...user.genesisInputs![0], ownerWallet: user.wallet! as Wallet })
-    // the rest for token
-    tokenIdOptions.value = user.genesisInputs!.slice(1)
+    // use first for AuthKey
+    genesisInput.value = value[0]
+    authKey.value = new AuthKey({...value[1]})
   }
 })
 
 onMounted(async () => {
   if (user.genesisInputs && user.genesisInputs?.length >= 2) {
-    // use first for AuthNFT
-    authNFT.value = new AuthNFT({ ...user.genesisInputs[0], ownerWallet: user.wallet! as Wallet })
-    // the rest for token
-    tokenIdOptions.value = user.genesisInputs.slice(1)
+    genesisInput.value = user.genesisInputs[0]
+    authKey.value = new AuthKey({...user.genesisInputs[1]})
   }
 })
 

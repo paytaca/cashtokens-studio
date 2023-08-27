@@ -27,11 +27,11 @@
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openDialog(NFTMinterDialog.__name, new NonFungibleToken({ ...identity }))" clickable
                         v-close-popup>
                         Mint Child NFT
-                      </q-item>
+                      </q-item> -->
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -49,8 +49,8 @@
             </tr>
           </tbody>
         </q-markup-table>
-        <NFTMinterDialog v-if="dialog" :model-value="dialog === NFTMinterDialog.__name"
-          :minter="(dialogData as NonFungibleToken)" @hide="onHide" @nft-minted="onMint" />
+        <!-- <NFTMinterDialog v-if="dialog" :model-value="dialog === NFTMinterDialog.__name"
+          :minter="(dialogData as NonFungibleToken)" @hide="onHide" @nft-minted="onMint" /> -->
       </div>
     </div>
   </q-page>
@@ -60,13 +60,13 @@ import { NFTCapability, Wallet } from 'mainnet-js';
 import { onMounted, ref, computed } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import AuthchainIdentity from 'src/models/AuthchainIdentity';
+import {AuthchainIdentity} from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 
-import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
-import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
-import NonFungibleToken from 'src/models/NonFungibleToken';
+// import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
+// import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
+// import NonFungibleToken from 'src/models/NonFungibleToken';
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()

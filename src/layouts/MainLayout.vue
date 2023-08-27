@@ -19,7 +19,7 @@
             </q-avatar>
           </div>
           <div v-if="user.wallet" class="col-12 text-center q-gutter-sm">
-            <CashAddress :cashaddr="user.connectedPaytacaAddress" />
+            <CashAddress :cashaddr="user.walletAddress" />
             <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" />
           </div>
         </div>
@@ -30,8 +30,8 @@
       :thumb-style="{ width: '0px' }">
       <q-page-container>
         <router-view />
-        <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
-          label-style="font-size: 1.1em" />
+        <!-- <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
+          label-style="font-size: 1.1em" /> -->
       </q-page-container>
     </q-scroll-area>
   </q-layout>
@@ -42,12 +42,11 @@ import { defineComponent, ref } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
-import useStore from 'src/composables/useStore'
+import {useUser} from 'src/stores/user'
 import CashAddress from 'src/components/CashAddress.vue'
 
 export default defineComponent({
   name: 'MainLayout',
-
   components: {
     SidebarMenu,
     LightSwitch,
@@ -57,9 +56,8 @@ export default defineComponent({
 
   setup() {
     const leftDrawerOpen = ref(false)
-    const { user, ui } = useStore()
+    const user = useUser()
     return {
-      ui,
       leftDrawerOpen,
       toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value

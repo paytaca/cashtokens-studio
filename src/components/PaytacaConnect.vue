@@ -1,7 +1,7 @@
 <template>
-  <div class="row q-my-sm q-mx-sm" @click.stop="user.connectedPaytacaAddress ? disconnect() : connect()">
+  <div class="row q-my-sm q-mx-sm" @click.stop="user.walletAddress ? disconnect() : connect()">
     <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md" align="center" stack dense>
-      <q-icon v-if="user.connectedPaytacaAddress" name="link" color="positive" size="xs" class="q-py-sm"
+      <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
         style="width:.15em;height:.10em"></q-icon>
       <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
     </q-btn>
@@ -12,33 +12,33 @@
 import { useQuasar } from 'quasar'
 import { ref, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import formatAddress from 'src/utils/formatAddress';
-import getWalletClass from 'src/utils/getWalletClass';
-import useStore from 'src/composables/useStore';
-import { UtxoI } from 'mainnet-js';
-import detectPaytaca from 'src/utils/detectPaytaca';
-import calcMinerFee from 'src/utils/calcMinerFee';
-import CashStudioToken from 'src/models/CashStudioToken';
+import { UtxoI, Wallet } from 'mainnet-js';
+import formatAddress from 'src/app/utils/formatAddress';
+import getWalletClass from 'src/app/utils/getWalletClass';
+import { useUser } from 'src/stores/user';
+import { DEFAULT_TOKEN_VALUE } from 'src/app/constants'
+import { AuthchainIdentity } from 'src/app';
+
 defineOptions({ name: 'PaytacaConnect' })
 
 const $q = useQuasar()
 const router = useRouter()
-const { user } = useStore()
+const user = useUser()
 const watching = ref()
 
 onMounted(async () => {
-  if (detectPaytaca()) {
+  if (window.paytaca) {
     const connected = await window.paytaca.connected()
     if (connected) {
-      user.connectedPaytacaAddress = formatAddress(await window.paytaca.address('bch'))
-      watchAddress(user.connectedPaytacaAddress)
+      user.walletAddress = formatAddress(await window.paytaca.address('bch'))
+      watchAddress(user.walletAddress)
       return
     }
   }
   router.push('/')
 })
 
-watch(() => user.connectedPaytacaAddress, async (address) => {
+watch(() => user.walletAddress, async (address) => {
   if (address && !watching.value) {
     watchAddress(address)
   }
@@ -57,32 +57,29 @@ const connect = async () => {
     }
     dismiss()
     $q.notify({ message: 'Connected', color: 'positive', timeout: 500 })
-    user.connectedPaytacaAddress = formatAddress(paytacaConnection.address)
-    user.wallet = await getWalletClass().watchOnly(user.connectedPaytacaAddress)
-    user.connectedPaytacaWalletBchBalance = String(await user.wallet.getBalance('sat'))
+    user.walletAddress = formatAddress(paytacaConnection.address)
+    user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+    user.walletBchBalance = String(await user.wallet.getBalance('sat'))
     const userUtxos = await user.wallet.getAddressUtxos()
-
     storeBalances(userUtxos)
   }
 }
 
 const storeBalances = (userUtxos: UtxoI[]) => {
-  console.log(userUtxos)
   user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => {
     return Boolean(!utxo.token) &&
       utxo.vout === 0 &&
-      utxo.satoshis >= CashStudioToken.DEFAULT_TOKEN_VALUE
+      utxo.satoshis >= DEFAULT_TOKEN_VALUE
   }).slice(0, 5)
-  console.log(user.genesisInputs)
 }
 
 const watchAddress = async (address: string) => {
   user.wallet = await getWalletClass().watchOnly(address)
-  console.log('Watching address')
   watching.value = user.wallet.watchAddress(async () => {
-    console.log('WATCHER TRIGGERED')
+    console.log('Watching address')
     user.updatingBalances = true
-    user.connectedPaytacaWalletBchBalance = await user.wallet?.getBalance('sat') as string
+    user.walletBchBalance = await user.wallet?.getBalance('sat') as string
+    user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
 
     if (userUtxos) {
@@ -96,11 +93,10 @@ const watchAddress = async (address: string) => {
 
 const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-  user.connectedPaytacaAddress = ''
+  user.walletAddress = ''
   if (watching.value) {
     watching.value()
     watching.value = null
-    console.log('CANCELLED WATCH', watching.value)
   }
   await window.paytaca!.disconnect()
   router.push('/')

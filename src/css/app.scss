@@ -1,38 +1,38 @@
 // app global css in SCSS form
 
 @font-face {
-  font-family: montserrat-regular;
-  src: url(../public/fonts/montserrat/Montserrat-Regular.woff2);
+  font-family: 'montserrat-regular';
+  src: url('/fonts/montserrat/Montserrat-Regular.woff2');
 }
 
 @font-face {
-  font-family: montserrat-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Regular-Italic.woff2);
+  font-family: 'montserrat-italic';
+  src: url('/fonts/montserrat/Montserrat-Regular-Italic.woff2');
 }
 
 @font-face {
-  font-family: montserrat-thin;
-  src: url(../public/fonts/montserrat/Montserrat-Thin.woff2);
+  font-family: 'montserrat-thin';
+  src: url('/fonts/montserrat/Montserrat-Thin.woff2');
 }
 
 @font-face {
-  font-family: montserrat-thin-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Thin-Italic.woff2);
+  font-family: 'montserrat-thin-italic';
+  src: url('/fonts/montserrat/Montserrat-Thin-Italic.woff2');
 }
 
 @font-face {
-  font-family: montserrat-bold;
-  src: url(../public/fonts/montserrat/Montserrat-Bold.woff2);
+  font-family: 'montserrat-bold';
+  src: url('/fonts/montserrat/Montserrat-Bold.woff2');
 }
 
 @font-face {
-  font-family: montserrat-bold-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Bold-Italic.woff2);
+  font-family: 'montserrat-bold-italic';
+  src: url('/fonts/montserrat/Montserrat-Bold-Italic.woff2');
 }
 
 @font-face {
-  font-family: cutive-mono;
-  src: url(../public/fonts/montserrat/Cutive-Mono.woff2);
+  font-family: 'cutive-mono';
+  src: url('/fonts/montserrat/Cutive-Mono.woff2');
 }
 
 body {

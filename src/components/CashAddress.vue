@@ -10,6 +10,6 @@
   </q-btn>
 </template>
 <script setup lang="ts">
-import copyText from 'src/utils/copyText'
+import copyText from 'src/app/utils/copyText'
 defineProps<{ cashaddr?: string }>()
 </script>

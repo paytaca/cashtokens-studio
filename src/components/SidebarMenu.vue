@@ -9,13 +9,13 @@
 
 import { useRouter } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
-import useStore from 'src/composables/useStore'
-import shortenAddress from 'src/utils/shortenAddress';
+import {useUser} from 'src/stores/user'
+import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
 const qtree = ref()
 const router = useRouter()
-const { user } = useStore()
+const user = useUser()
 const lastSelectedBeforeUnselect = ref<string | null>(null)
 const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
@@ -26,26 +26,21 @@ const menu = computed<any[]>(() => {
       label: 'Issuer',
       href: '#Issuer',
       icon: 'domain_add',
-      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      disabled: Boolean(user.walletAddress) === false,
       children: [
         {
+          label: 'Create AuthKey',
+          href: '/issuer/tokens/create/authkey',
+          icon: 'add',
+        },
+        {
           label: 'Create FT',
-          href: '/issuer/create/token/fungible',
+          href: '/issuer/tokens/create/ft',
           icon: 'add',
         },
         {
           label: 'Create NFT',
-          href: '/issuer/create/token/nonfungible',
-          icon: 'add',
-        },
-        {
-          label: 'Create FNFT hybrid',
-          href: '/issuer/create/token/hybrid',
-          icon: 'add',
-        },
-        {
-          label: 'Create AuthKey',
-          href: '/issuer/create/token/authkey',
+          href: '/issuer/tokens/create/nft',
           icon: 'add',
         },
         {
@@ -87,7 +82,7 @@ const menu = computed<any[]>(() => {
       label: 'Account',
       href: '#Balance',
       icon: 'account_balance_wallet',
-      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      disabled: Boolean(user.walletAddress) === false,
       children: [
 
         {
@@ -118,7 +113,7 @@ const menu = computed<any[]>(() => {
           href: '#Cashaddr',
           children: [
             {
-              label: user.connectedPaytacaWalletBchBalance ? Number(user.connectedPaytacaWalletBchBalance) / 1e8 : '',
+              label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
               avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
             }
           ]
