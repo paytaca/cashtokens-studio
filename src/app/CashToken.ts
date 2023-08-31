@@ -16,7 +16,7 @@ export class CashToken implements UtxoI {
   token?: TokenI | undefined;
   ownerWallet?: Wallet
   authKey?: AuthKey
-  registry?: { url: string, contentHash: string }
+  registry?: { uri: string|string[], contentHash: string }
   /**
    * If true, token will be locked on the AuthGuard contract during genesis. Default = true
    */
@@ -38,7 +38,7 @@ export class CashToken implements UtxoI {
       token?: TokenI | undefined;
       ownerWallet?: Wallet
       authKey?: AuthKey,
-      registry?: { url: string, contentHash: string }
+      registry?: { uri: string, contentHash: string }
     }
   ){
     if (u) {
@@ -82,6 +82,10 @@ export class CashToken implements UtxoI {
 
   get processing():string|undefined {
     return this._processing
+  }
+
+  set processing(msg: string|undefined) {
+    this._processing = msg
   }
 
   get genesisCost(): number {
@@ -134,11 +138,18 @@ export class CashToken implements UtxoI {
 
   protected prepareGenesisRegistyPublicationReq(): OpReturnData[] {
     if (this.registry) { // if registry is set, assumes publishing
-      if (!this.registry?.url || !this.registry?.contentHash) {
+      if (!this.registry?.uri || !this.registry?.contentHash) {
         delete this._processing
         throw new Error("Invalid registry publication url or content hash")
       }
-      return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, this.registry.url.replace('https://', '')])]
+
+
+      if (typeof(this.registry?.uri) === 'string') {
+        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
+      } else if (this.registry?.uri instanceof Array){
+        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, ...this.registry.uri.map((u) => u.replace(/https:\/\/|ipfs:\/\//, ''))])]
+      }
+
     }
     return []
   }
