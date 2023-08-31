@@ -136,7 +136,7 @@ export class CashToken implements UtxoI {
     })
   }
 
-  protected prepareGenesisRegistyPublicationReq(): OpReturnData[] {
+  protected prepareGenesisRegistryPublicationReq(): OpReturnData[] {
     if (this.registry) { // if registry is set, assumes publishing
       if (!this.registry?.uri || !this.registry?.contentHash) {
         delete this._processing
@@ -222,7 +222,7 @@ export class CashToken implements UtxoI {
     if (opt.includeAuthKeyGenesis) {
       requests.push(this.prepareGenesisAuthKeyReq())
     }
-    requests.push(...this.prepareGenesisRegistyPublicationReq())
+    requests.push(...this.prepareGenesisRegistryPublicationReq())
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests, opt.includeAuthKeyGenesis)
     this._processing = 'Waiting for signature'
     const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
