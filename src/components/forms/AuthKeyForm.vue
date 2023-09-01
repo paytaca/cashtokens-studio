@@ -7,11 +7,12 @@
       <q-spinner-grid></q-spinner-grid>
       {{ authKey.processing }}
     </template>
-    <q-input v-if="genesisInput" :model-value="genesisInput.txid" :filled="true" disable dense square label="AuthKey ID (vout-0 utxo txid)"/>
+    <q-input v-if="genesisInput" :model-value="genesisInput.txid" :filled="true" disable dense square
+      label="AuthKey ID (vout-0 utxo txid)" />
     <p v-else>No utxo suitable as auth Key in your address. Please send BCH to your address.</p>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createAuthKeyGenesis" :busy-label="authKey?.processing"
-        label="Create AuthKey" :disable="!user.wallet || !genesisInput" color="primary"/>
+        label="Create AuthKey" :disable="!user.wallet || !genesisInput" color="primary" />
     </div>
   </q-form>
 </template>
@@ -21,7 +22,7 @@ import { AuthKey } from 'src/app';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue';
 import { useQuasar } from 'quasar';
-import { ref, onMounted} from 'vue';
+import { ref, onMounted } from 'vue';
 
 const props = defineProps<{
   /**
@@ -34,15 +35,15 @@ const authKey = ref<AuthKey>()
 const $q = useQuasar()
 const user = useUser()
 
-onMounted(()=>{
+onMounted(() => {
   if (props.genesisInput && props.ownerWallet) {
-    authKey.value = new AuthKey({...props.genesisInput, ownerWallet: props.ownerWallet})
+    authKey.value = new AuthKey({ ...props.genesisInput, ownerWallet: props.ownerWallet })
   }
 })
 
 const createAuthKeyGenesis = async () => {
   try {
-    authKey.value = new AuthKey({...props.genesisInput, ownerWallet: props.ownerWallet})
+    authKey.value = new AuthKey({ ...props.genesisInput!, ownerWallet: props.ownerWallet })
     const tx = await authKey?.value.createGenesis({ commitment: '00', capability: 'none' })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Auth NFT created.Tx=' + tx })
