@@ -4,7 +4,7 @@
       <q-toolbar class="bg-teal-10">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          Cashtokens Studio
+          Cashtokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
         </q-toolbar-title>
         <light-switch />
         <paytaca-connect />
@@ -42,9 +42,9 @@ import { defineComponent, ref } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
-import {useUser} from 'src/stores/user'
+import { useUser } from 'src/stores/user'
 import CashAddress from 'src/components/CashAddress.vue'
-
+import getAppEnv from 'src/app/utils/getAppEnv'
 export default defineComponent({
   name: 'MainLayout',
   components: {
@@ -62,7 +62,8 @@ export default defineComponent({
       toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
-      user
+      user,
+      getAppEnv
     }
   }
 });
