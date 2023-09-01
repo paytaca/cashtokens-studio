@@ -86,15 +86,15 @@ def build(c,environment,confirm_first=True):
     if proceed == True:
         print(f'Building cashtokens-studio/{environment}')
         with c.cd(f'/home/ubuntu/cashtokens-studio/{environment}'):
-            c.run('yarn --ignore-engines')
+            # c.run('yarn --ignore-engines')
             if environment == 'staging':
                 c.run('cp deployment/.env.dev .env.dev')
-                c.run('yarn run devbuild -m ssr')
-                c.run(f'docker-compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
+                # c.run('yarn run devbuild -m ssr')
+                c.run(f'sudo docker-compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
             elif environment == 'prod':
                 c.run('cp deployment/.env.prod .env.prod')
-                c.run('quasar build -m ssr')
-                c.run(f'docker-compose  -f deployment/{environment}.yml build')
+                # c.run('quasar build -m ssr')
+                c.run(f'sudo docker-compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
 
 
 @task(hosts=hosts)
@@ -125,12 +125,12 @@ def up(c,environment,confirm_first=True):
     if proceed == True:
         print(f'Docker up {environment}')
         with c.cd(f'/home/ubuntu/cashtokens-studio/{environment}'):
-            if environment == 'staging':
-                # lets just commit to this, staging was deployed with 'staging' project name,
-                c.run(f'docker-compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
-            elif environment == 'prod':
-                c.run(f'docker-compose  -f deployment/{environment}.yml build')
-            # c.run(f'docker-compose  -f deployment/{environment}.yml up -d')
+            # if environment == 'staging':
+            #     # lets just commit to this, staging was deployed with 'staging' project name,
+            #     c.run(f'docker-compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
+            # elif environment == 'prod':
+            #     c.run(f'docker-compose  -f deployment/{environment}.yml build')
+            c.run(f'sudo docker-compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml up -d')
 
 
 @task(hosts=hosts)
@@ -164,12 +164,12 @@ def down(c,environment,confirm_first=True):
     if proceed == True:
         print(f'Executing docker down to cashtokens-studio/{environment}')
         with c.cd(f'/home/ubuntu/cashtokens-studio/{environment}'):
-            if environment == 'staging':
-                # lets just commit to this, staging was already deployed with 'staging' as project name,
-                c.run(f'docker-compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
-            elif environment == 'prod':
-                c.run(f'docker-compose  -f deployment/{environment}.yml build')
-            # c.run(f'docker-compose  -f deployment/{environment}.yml rm --stop --force')
+            # if environment == 'staging':
+            #     # lets just commit to this, staging was already deployed with 'staging' as project name,
+            #     c.run(f'docker-compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
+            # elif environment == 'prod':
+            #     c.run(f'docker-compose  -f deployment/{environment}.yml build')
+            c.run(f'sudo docker-compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml rm --stop --force')
 
 @task(hosts=hosts)
 def deploy(c, environment):
