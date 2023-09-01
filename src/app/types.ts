@@ -8,3 +8,12 @@ export type GenesisOptions = {
   capability?: NFTCapability,
   commitment?: string
 }
+
+export declare interface BcmrStorageArtifact {
+  uris: {
+    https: string,
+    ipfs: string
+  },
+  contentHash: string
+}
+
