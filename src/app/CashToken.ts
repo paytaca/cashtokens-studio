@@ -143,7 +143,6 @@ export class CashToken implements UtxoI {
         throw new Error("Invalid registry publication url or content hash")
       }
 
-
       if (typeof(this.registry?.uri) === 'string') {
         return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
       } else if (this.registry?.uri instanceof Array){
