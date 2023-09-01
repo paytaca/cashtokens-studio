@@ -1,6 +1,7 @@
 import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, OffChainRegistryIdentity, Registry, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
 import { AuthchainIdentity } from "../";
 import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
+import { BcmrStorageArtifact } from "../types";
 
 export class Bcmr implements Registry {
 
@@ -172,16 +173,15 @@ export class Bcmr implements Registry {
    * Stores this registry to the ipfs server. Invoke this first before publishing so
    * that the registry uri can be populated.
    */
-  async storeRegistry() {
+  async storeRegistry(): Promise<BcmrStorageArtifact|undefined> {
     try {
       console.log('content', this.getContent())
-      const resp = await fetch('/api/tokens/registry/storage',
-      {
+      const resp = await fetch('/api/tokens/registry/storage', {
         method: 'POST', body: this.getContent(),
         headers: { 'Content-Type': 'application/json' }
       })
       const respJson = await resp.json()
-      console.log(respJson)
+      return respJson.artifact
     } catch (error) {
       console.log(error)
     }
