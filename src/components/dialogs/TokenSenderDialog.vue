@@ -28,19 +28,18 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="FungibleToken.processing" color="primary" />
+        <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="CashToken.processing" color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import CashStudioToken from 'src/models/CashStudioToken';
 import { ref } from 'vue';
-import { TokenBalance } from '../types';
+import { TokenBalance } from 'src/app/types';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import FungibleToken from 'src/models/FungibleToken';
+import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
@@ -60,7 +59,7 @@ const form = ref<{ to: string, amount: string }>({
 const send = async () => {
   try {
     console.log('SENDING')
-    const tx = await FungibleToken.send({
+    const tx = await CashToken.send({
       tokenId: props.tokenBalance.tokenId,
       to: form.value.to,
       amount: BigInt(form.value.amount),
