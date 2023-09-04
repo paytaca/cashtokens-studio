@@ -142,6 +142,8 @@ module.exports = configure(function (ctx) {
 
       env: { // ui accessible envs
         APP_ENV: process.env.APP_ENV,
+        //TODO: only add this if context is isServer
+        NFT_STORAGE_API_KEY: process.env.NFT_STORAGE_API_KEY
       },
     },
 
