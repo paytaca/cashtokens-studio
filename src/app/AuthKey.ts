@@ -132,6 +132,21 @@ export class AuthKey implements UtxoI {
   }
 
   protected async buildTokenGenesisTransaction(genesisRequests:(TokenSendRequest|SendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
+    // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
+    const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
+      return Boolean(!u.token) &&
+        (u.txid !== this.txid) && // Exclude the utxo that we're using as genesis inputs
+          u.satoshis > this.genesisCost
+    })[0]
+
+    if (!funderUtxo) {
+      throw new Error('Insufficient balance to fund the transaction')
+    }
+
+    // const useThisUtxos = this.authKey? [this.utxo, this.authKey!.utxo!, funderUtxo]: [this.utxo, funderUtxo]
+    const utxoExpenses = [this.utxo, funderUtxo]
+    
+    utxoExpenses.push(funderUtxo)
 
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
@@ -140,8 +155,8 @@ export class AuthKey implements UtxoI {
         tokenOperation: 'genesis',
         checkTokenQuantities: false,
         buildUnsigned: true,
-        utxoIds: [this.utxo], // this.utxo as genesis input
-        ensureUtxos: [this.utxo]
+        utxoIds: utxoExpenses, // this.utxo as genesis input
+        ensureUtxos: utxoExpenses
       }
     )
     delete this._processing
@@ -168,10 +183,10 @@ export class AuthKey implements UtxoI {
         commitment: opt?.commitment || '00'
       })
     ]
-    requests.push(...this.prepareChangeReq(this.utxo))
+    // requests.push(...this.prepareChangeReq(this.utxo))
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
     this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create Auth NFT')
+    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
     this._processing = 'Creating AuthKey'
     const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
     delete this._processing
@@ -189,19 +204,19 @@ export class AuthKey implements UtxoI {
   }
 
   /**
-   * @return The authNFTs in a wallet
+   * @return The authKeys in a wallet
    */
   static async scanWalletForAuthKeys(ownerWallet:Wallet): Promise<AuthKey[]|undefined> {
     AuthKey._processing = 'Scanning wallets for AuthKeys'
-    const authNFTUtxos = (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token.commitment == AuthKey.DEFAULT_COMMITMENT)
-    const authNFTs = []
-    for (let i=0; i < authNFTUtxos.length; i++) {
+    const authKeyUtxos = (await ownerWallet?.getAddressUtxos()).filter((u:UtxoI) => u.token && u.token.commitment == AuthKey.DEFAULT_COMMITMENT)
+    const authKeys = []
+    for (let i=0; i < authKeyUtxos.length; i++) {
       // intentionally not setting wallet to make the obj leaner
       // just set ownerWallet when invoking AuthKey methods
-      authNFTs.push(new AuthKey({...authNFTUtxos[i]}))
+      authKeys.push(new AuthKey({...authKeyUtxos[i]}))
     }
     delete AuthKey._processing
-    return authNFTs
+    return authKeys
   }
 
   /**
