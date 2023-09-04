@@ -4,7 +4,7 @@
       <q-toolbar class="bg-teal-10">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          Cashtokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
+          CashTokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
         </q-toolbar-title>
         <light-switch />
         <paytaca-connect />
