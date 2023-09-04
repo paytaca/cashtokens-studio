@@ -3,10 +3,10 @@
     <q-toolbar>
       <q-toolbar-title>Create AuthKey</q-toolbar-title>
     </q-toolbar>
-    <template v-if="authKey && authKey.processing">
+    <!-- <template v-if="authKey && authKey.processing">
       <q-spinner-grid></q-spinner-grid>
       {{ authKey.processing }}
-    </template>
+    </template> -->
     <q-input v-if="genesisInput" :model-value="genesisInput.txid" :filled="true" disable dense square
       label="AuthKey ID (vout-0 utxo txid)" />
     <p v-else>No utxo suitable as auth Key in your address. Please send BCH to your address.</p>

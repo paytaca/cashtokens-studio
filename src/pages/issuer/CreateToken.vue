@@ -2,10 +2,6 @@
   <q-page class="q-pa-sm">
     <div class="row justify-center">
       <div class="col-xs-12 col-sm-10 col-lg-9">
-        <div class="row justify-end">
-          <q-btn to="/issuer/tokens/create/ft">FT</q-btn>
-          <q-btn to="/issuer/tokens/create/nft">NFT</q-btn>
-        </div>
         <div class="row justify-center q-my-lg">
           <template v-if="!genesisInput || !authKey">
             <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
@@ -22,13 +18,8 @@
             </q-banner>
           </template>
           <template v-else>
-            <TokenGenesisForm
-              :token-type="(route.params.tokenType as ('ft'|'nft'|'fnft'))"
-              :genesis-input="genesisInput"
-              :auth-key="authKey"
-              :owner-wallet="(user.wallet! as Wallet)"
-              :create-auth-key="true"
-              />
+            <TokenGenesisForm :token-type="(route.params.tokenType as ('ft' | 'nft' | 'fnft'))" :genesis-input="genesisInput"
+              :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)" :create-auth-key="true" />
           </template>
         </div>
       </div>
@@ -57,14 +48,14 @@ watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 2) {
     // use first for AuthKey
     genesisInput.value = value[0]
-    authKey.value = new AuthKey({...value[1]})
+    authKey.value = new AuthKey({ ...value[1] })
   }
 })
 
 onMounted(async () => {
   if (user.genesisInputs && user.genesisInputs?.length >= 2) {
     genesisInput.value = user.genesisInputs[0]
-    authKey.value = new AuthKey({...user.genesisInputs[1]})
+    authKey.value = new AuthKey({ ...user.genesisInputs[1] })
   }
 })
 

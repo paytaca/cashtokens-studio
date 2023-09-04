@@ -18,7 +18,7 @@
             </q-banner>
           </template>
           <template v-else>
-            <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)"/>
+            <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)" />
           </template>
         </div>
       </div>
@@ -48,7 +48,6 @@ watch(() => user.genesisInputs, (value) => {
 })
 
 onMounted(async () => {
-  console.log(user.genesisInputs)
   if (user.genesisInputs && user.genesisInputs?.length >= 1) {
     genesisInput.value = user.genesisInputs[0]
   }

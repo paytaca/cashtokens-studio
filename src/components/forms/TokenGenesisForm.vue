@@ -11,7 +11,11 @@
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense
         square />
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
-        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense square />
+        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense square>
+          <template v-slot:append>
+            <q-btn color="primary" dense flat @click="genesisToken.amount = MAX_FUNGIBLE_AMOUNT" label="Max" />
+          </template>
+        </q-input>
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense square />
       </template>
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
@@ -43,7 +47,7 @@ import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
 import { useUser } from 'src/stores/user'
-import { AuthKey, CashToken } from 'src/app'
+import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
 import shortenAddress from 'src/app/utils/shortenAddress'
 import shortenTokenId from 'src/app/utils/shortenTokenId'
