@@ -1,6 +1,9 @@
 version: "3"
 services:
   web:
-    build: .
+    container_name: cts
+    build:
+      context: /home/ubuntu/Codes/scibiz/cashtokens-studio
+      dockerfile: ./deployment/dev.Dockerfile
     ports:
       - "3000:3000"
