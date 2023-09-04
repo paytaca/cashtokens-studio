@@ -28,6 +28,7 @@ export class CashToken implements UtxoI {
    */
   includeAuthKeyGenesis: boolean
   private _processing?: string
+  private static _processing?: string
   constructor(
     u?: {
       txid: string;
@@ -86,6 +87,14 @@ export class CashToken implements UtxoI {
 
   set processing(msg: string|undefined) {
     this._processing = msg
+  }
+
+  static get processing():string|undefined {
+    return CashToken._processing
+  }
+
+  static set processing(msg: string|undefined) {
+    CashToken._processing = msg
   }
 
   get genesisCost(): number {
@@ -243,4 +252,61 @@ export class CashToken implements UtxoI {
     }
 
   }
+
+  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet}):Promise<string|undefined> {
+    CashToken._processing = 'Processing'
+    
+    const requests = [
+      new TokenSendRequest({
+        cashaddr: arg.to,
+        value: DEFAULT_TOKEN_VALUE,
+        amount: Number(arg.amount), // !change to bigint once mainnet-js supports it
+        tokenId: arg.tokenId,
+        capability: arg.capabality,
+        commitment: arg.commitment
+      })
+    ]
+    // TODO: CALCULATE IF SOURCE HAS ENOUGH TO FUND, ADD FUNDER INPUT IF NEEDED
+    const { encodedTransaction, sourceOutputs } = await arg.ownerWallet!.encodeTransaction(
+      requests,
+      false,
+      {
+        tokenOperation: 'send',
+        checkTokenQuantities: true,
+        buildUnsigned: true,
+        // utxoIds: arg.sourceUtxos,
+        // ensureUtxos: arg.sourceUtxos
+      }
+    )
+
+    CashToken._processing = 'Waiting for signature'
+    let signResult
+    try {
+      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
+    } catch (error) {
+      console.log(error)
+      throw error
+    }
+    CashToken._processing = `Sending ${arg.amount} tokens`
+    try {
+      return await submitTransaction(signResult, arg.ownerWallet)
+    } catch (error) {
+      console.log(error)
+
+      throw error
+    } finally {
+      delete CashToken._processing
+    }
+
+  }
+
+  static async scanWalletForTokens(tokenType: 'ft'|'nft'|'all', ownerWallet: Wallet): Promise<UtxoI[]> {
+    if(tokenType === 'ft') {
+      return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability) || []
+    } else if (tokenType === 'nft') {
+      return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.capability) || []
+    }
+    return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token) || []
+  }
+
 }
