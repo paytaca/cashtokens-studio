@@ -46,6 +46,11 @@ export default ssrMiddleware(async ({ app, resolve }) => {
 
   app.use(throttle(1024 * 128))
 
+  app.get('/api/testx11', async (req:any, res:any) => {
+    console.log('NFT_STORAGE_API_KEY', process.env.NFT_STORAGE_API_KEY)
+    res.send({test: 'test api', NFT_STORAGE_API_KEY: process.env.NFT_STORAGE_API_KEY})
+  })
+
   app.post('/api/tokens/icon/upload', upload.single('icon'), async (req:any, res:any) => {
     const metadata = await client.store({
       name: 'CTStudio',
@@ -57,16 +62,24 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       )
     })
     const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
-    const metadataContents = await fetch(`https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`)
-    const {/*name, description,*/image } = await metadataContents.json()
-    const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
-    res.status(200).send({
-      nftStorageMetadata: metadata,
-      iconUris: {
-        ipfs: image,
-        https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
-      }
-    });
+    try {
+      const metadataContents = await fetch(`https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`)
+      const {/*name, description,*/image } = await metadataContents.json()
+      const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
+      res.status(200).send({
+        nftStorageMetadata: metadata,
+        iconUris: {
+          ipfs: image,
+          https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
+        }
+      });
+      
+    } catch (error) {
+      
+      console.log('NFT STORAGE API KEY', process.env.NFT_STORAGE_API_KEY)
+      res.status(400).send(error)
+    }
+    
   })
 
   /**
