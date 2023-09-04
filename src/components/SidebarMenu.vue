@@ -9,7 +9,7 @@
 
 import { useRouter } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
-import {useUser} from 'src/stores/user'
+import { useUser } from 'src/stores/user'
 import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
@@ -84,10 +84,22 @@ const menu = computed<any[]>(() => {
       icon: 'account_balance_wallet',
       disabled: Boolean(user.walletAddress) === false,
       children: [
+        {
+          label: shortenAddress(user.wallet?.getDepositAddress()),
+          icon: 'account_balance_wallet',
+          href: '#Cashaddr',
+          children: [
+            {
+              label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
+              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
+            }
+          ]
+        },
 
         {
           label: shortenAddress(user.wallet?.getTokenDepositAddress()),
           href: '#Tokenaddr',
+          icon: 'token',
           children: [
             {
               label: 'Fungibles (FTs)',
@@ -106,18 +118,8 @@ const menu = computed<any[]>(() => {
             //   avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
             // }
           ]
-        },
-        {
-          label: shortenAddress(user.wallet?.getDepositAddress()),
-          icon: 'content_copy',
-          href: '#Cashaddr',
-          children: [
-            {
-              label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
-              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
-            }
-          ]
-        },
+        }
+
       ]
     }
   ]

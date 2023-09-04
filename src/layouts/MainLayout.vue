@@ -14,13 +14,14 @@
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
-            <q-avatar>
+            <!-- <q-avatar>
               <q-img src="images/bch-logo.png"></q-img>
-            </q-avatar>
+            </q-avatar> -->
+            <q-btn to="/" icon="home" size="xl" flat />
           </div>
           <div v-if="user.wallet" class="col-12 text-center q-gutter-sm">
-            <CashAddress :cashaddr="user.walletAddress" />
-            <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" />
+            <CashAddress :cashaddr="user.walletAddress" type="cash" />
+            <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" type="token" />
           </div>
         </div>
         <SidebarMenu />
