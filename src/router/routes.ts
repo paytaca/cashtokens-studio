@@ -24,6 +24,14 @@ const routes: RouteRecordRaw[] = [
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') }
     ],
   },
+  {
+    path: '/account/balance',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'fungibletokens', component: () => import('pages/account/balances/FungibleTokens.vue') },
+      { path: 'collectibles', component: () => import('pages/account/balances/NonFungibleTokens.vue')},
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it
