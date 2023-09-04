@@ -4,7 +4,7 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row justify-center q-my-lg">
           <template v-if="!genesisInput || !authKey">
-            <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
+            <q-banner class="q-mt-lg" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
               <template v-slot:avatar>
                 <q-icon name="warning" color="warning" size="xs" />
               </template>
