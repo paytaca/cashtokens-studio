@@ -31,6 +31,10 @@ onMounted(async () => {
     const connected = await window.paytaca.connected()
     if (connected) {
       user.walletAddress = formatAddress(await window.paytaca.address('bch'))
+      user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+      user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+      const userUtxos = await user.wallet.getAddressUtxos()
+      storeBalances(userUtxos)
       watchAddress(user.walletAddress)
       return
     }

@@ -18,6 +18,7 @@ export class GenesisInput implements UtxoI {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   private static _processing?:string;
+  private _processing?:string;
   constructor(instance:UtxoI) {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
@@ -61,18 +62,31 @@ export class GenesisInput implements UtxoI {
     return GenesisInput._processing
   }
 
+  static set processing(p: string|undefined) {
+    GenesisInput._processing = p
+  }
+
+  get processing():string|undefined {
+    return this._processing
+  }
+
+  set processing(p: string|undefined) {
+    this._processing = p
+  }
+
+
   /**
    * Generate genesis inputs from wallet's utxos
    */
   static async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
-    GenesisInput._processing = 'Scanning wallet'
+    GenesisInput.processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
     const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
     if (!funder) {
       throw new Error('Insufficient balance, please try to consolidate your utxos')
     }
     // build tx
-    GenesisInput._processing = 'Processing'
+    GenesisInput.processing = 'Processing'
     const { encodedTransaction, sourceOutputs } = await ownerWallet!.encodeTransaction(
       [new SendRequest({
         cashaddr: ownerWallet!.getDepositAddress(),
@@ -94,8 +108,8 @@ export class GenesisInput implements UtxoI {
       throw new Error('Error decoding transaction')
     }
     // request signature
-    delete GenesisInput._processing
-    GenesisInput._processing = 'Waiting for signature'
+    delete GenesisInput.processing
+    GenesisInput.processing = 'Waiting for signature'
     let signResult: {signedTransaction:any} | undefined
     try {
       signResult = await window.paytaca.signTransaction({
@@ -107,18 +121,18 @@ export class GenesisInput implements UtxoI {
     } catch (error) {
       console.log(error)
     } finally {
-      delete GenesisInput._processing
+      delete GenesisInput.processing
     }
 
     if (!signResult?.signedTransaction) {
-      delete GenesisInput._processing
+      delete GenesisInput.processing
       return
     }
-    delete GenesisInput._processing
-    GenesisInput._processing = 'Submitting Transaction'
+    delete GenesisInput.processing
+    GenesisInput.processing = 'Submitting Transaction'
     const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)
     // delete GenesisInput.processing
-    delete GenesisInput._processing
+    delete GenesisInput.processing
     return tx
   }
 
