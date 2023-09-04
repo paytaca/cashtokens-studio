@@ -43,14 +43,14 @@ const menu = computed<any[]>(() => {
           href: '/issuer/tokens/create/nft',
           icon: 'add',
         },
-        {
-          label: 'Create BCMR',
-          href: '/issuer/create/bcmr',
-          icon: 'add',
-        },
+        // {
+        //   label: 'Create BCMR',
+        //   href: '/issuer/create/bcmr',
+        //   icon: 'add',
+        // },
         {
           label: 'Manage',
-          href: '#',
+          href: '#Manage',
           icon: 'token',
           children: [
             {
@@ -72,7 +72,7 @@ const menu = computed<any[]>(() => {
               label: 'AuthKeys',
               href: '/issuer/manage/authkeys',
               icon: 'token',
-            },
+            }
 
           ]
         }
@@ -90,6 +90,7 @@ const menu = computed<any[]>(() => {
           href: '#Cashaddr',
           children: [
             {
+              href: '#',
               label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
               avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
             }
