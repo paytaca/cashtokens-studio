@@ -1,6 +1,7 @@
 version: "3.8"
 services:
   web:
+    container_name: cts-staging
     build:
       context: /home/ubuntu/cashtokens-studio/staging
       dockerfile: ./deployment/Dockerfile.staging
