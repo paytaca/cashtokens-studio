@@ -1,4 +1,4 @@
-import { NFTCapability, TokenI } from "mainnet-js"
+import { NFTCapability, TokenI, UtxoI } from "mainnet-js"
 
 export type GenesisOptions = {
   useAuthGuard?: boolean,                                 // use authguard, default = true
@@ -7,6 +7,12 @@ export type GenesisOptions = {
   amount?: string | number,
   capability?: NFTCapability,
   commitment?: string
+}
+
+export type TokenBalance = {
+  tokenId: string,
+  utxos: UtxoI[],
+  balance: bigint
 }
 
 export declare interface BcmrStorageArtifact {
