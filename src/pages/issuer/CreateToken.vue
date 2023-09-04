@@ -9,8 +9,9 @@
                 <q-icon name="warning" color="warning" size="xs" />
               </template>
               Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
-              Cashtoken Studio requires 2 vout-0
-              utxos as genesis inputs when creating a token.
+              This operation will create a Token and an AuthKey so it requires 2 vout-0
+              utxos as genesis inputs. If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys"
+                label="Click Here" size="md" color="secondary" dense flat no-caps />
               <template v-slot:action>
                 <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
@@ -18,8 +19,9 @@
             </q-banner>
           </template>
           <template v-else>
-            <TokenGenesisForm :token-type="(route.params.tokenType as ('ft' | 'nft' | 'fnft'))" :genesis-input="genesisInput"
-              :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)" :create-auth-key="true" />
+            <TokenGenesisForm :token-type="(route.params.tokenType as ('ft' | 'nft' | 'fnft'))"
+              :genesis-input="genesisInput" :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)"
+              :create-auth-key="true" />
           </template>
         </div>
       </div>

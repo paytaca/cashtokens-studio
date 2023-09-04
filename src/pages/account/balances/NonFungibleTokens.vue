@@ -14,7 +14,7 @@
                                 <th>Action</th>
                             </tr>
                         </thead>
-                        <TableBodySkeleton v-if="loading" :col-count="4" :row-count="3" :caption="loading" />
+                        <TableBodySkeleton v-if="loading" :col-count="5" :row-count="3" :caption="loading" />
                         <tbody v-else class="text-center">
                             <tr v-for="b, i in collectibles" :key="'ai-rec-' + i">
                                 <td>{{ i + 1 }}</td>

@@ -20,7 +20,7 @@
       </template>
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
         <q-input v-model="genesisToken.commitment" label="Token Commitment" :filled="true" dense square />
-        <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-2'">
+        <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           Capability <sup><code>{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
             { value: NFTCapability.minting, label: 'Minting' },
@@ -34,7 +34,7 @@
 
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
         :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense square size="sm"
-        style="width:100%" class="q-mx-xs" />
+        style="width:100%;max-width: 100%;" class="q-mx-xs" />
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="cashToken?.processing" label="Create Token"
