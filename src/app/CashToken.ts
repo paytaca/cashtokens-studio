@@ -1,11 +1,13 @@
 import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, DEFAULT_TOKEN_VALUE } from '.'
 import { GenesisOptions } from "./types";
-import { request } from "http";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { Console } from "console";
+import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
+import { Artifact, scriptToBytecode } from "@cashscript/utils";
+import { SignatureTemplate } from "cashscript";
+import toCashScript from "./utils/toCashScript";
 export class CashToken implements UtxoI {
 
   txid: string;
@@ -116,6 +118,12 @@ export class CashToken implements UtxoI {
   ensureOwnerWallet() {
     if (!this.ownerWallet) {
       throw new Error('Missing owner wallet')
+    }
+  }
+
+  ensureAuthKey(){
+    if (!this.authKey) {
+      throw new Error('AuthKey required')
     }
   }
 
@@ -296,6 +304,171 @@ export class CashToken implements UtxoI {
       throw error
     } finally {
       delete CashToken._processing
+    }
+
+  }
+
+  async mintChild(arg:{ capability: NFTCapability, commitment: string, recipient: string }): Promise<string|undefined>{
+    
+    if (this.token?.capability !== NFTCapability.minting) {
+      throw new Error('No capability to mint')
+    }
+
+    if (!arg.recipient) {
+      throw new Error('Missing recipient')
+    }
+
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3})
+    const mintCost = minerFee + DEFAULT_TOKEN_VALUE
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost).map(toCashScript)[0]
+
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+    const [authchainIdentityOutput, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authKey!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+
+    let transaction
+    let decoded
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(true)
+          .from(authchainIdentityOutput) // contract
+          .fromP2PKH([authKeyInput], sig) // AuthNFT/minting baton, funder
+          .fromP2PKH([funderInput], sig) // AuthNFT/minting baton, funder
+          .to([{
+            // return authchain identity output to contract
+            to: contractAddress,
+            amount: authchainIdentityOutput.satoshis,
+            token: authchainIdentityOutput.token
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authKey!.satoshis),
+            token: authKeyInput.token
+          }])
+          .to([{
+            // The NFT to mint
+            to: arg.recipient, // token address
+            amount: BigInt(DEFAULT_TOKEN_VALUE),
+            token: {
+              amount: BigInt(0),
+              category: authchainIdentityOutput.token!.category,
+              nft: {
+                commitment: arg.commitment,
+                capability: arg.capability
+              }
+            }
+          }])
+          .to(funderInput.satoshis - BigInt(mintCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(mintCost)
+          }]:[])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        console.log('decoded:', decoded)
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error building transaction')
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      signingResult = await window.paytaca!.signTransaction({
+        transaction: decoded,
+        sourceOutputs: [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
+          token: authchainIdentityOutput.token && {
+            ...authchainIdentityOutput.token,
+            category: hexToBin(authchainIdentityOutput.token!.category),
+            nft: authchainIdentityOutput.token.nft && {
+              ...authchainIdentityOutput.token.nft,
+              commitment: hexToBin(authchainIdentityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authKeyInput.satoshis),
+          token: authKeyInput.token && {
+            ...authKeyInput.token,
+            category: hexToBin(authKeyInput.token!.category),
+            nft: authKeyInput.token.nft && {
+              ...authKeyInput.token.nft,
+              commitment: hexToBin(authKeyInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ],
+        broadcast: false,
+        userPrompt: 'Mint NFT'
+      });
+
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error signing transaction')
+    }
+
+    if (!signingResult) {
+      console.log('signed', signingResult)
+      delete this._processing
+      return
+    }
+
+    this._processing = 'Minting'
+    try {
+      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      if (tx) {
+        this._processing = 'Minted'
+        setTimeout(()=> {
+          delete this._processing
+        }, 2000)
+      }
+      return tx
+    } catch (error) {
+      console.log('Error:CashToken@mintChild', error)
+    } finally {
+      delete this._processing
     }
 
   }
