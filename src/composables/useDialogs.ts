@@ -15,7 +15,12 @@ export const useDialogs = () => {
     dialog.value = undefined
     dialogData.value = undefined
   }
-  return { dialog, dialogData, openDialog, onHide }
+
+  const hideDialog = () => {
+    onHide()
+  }
+
+  return { dialog, dialogData, openDialog, onHide, hideDialog }
 }
 
 
