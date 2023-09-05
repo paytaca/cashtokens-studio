@@ -32,6 +32,7 @@ onMounted(async () => {
     if (connected) {
       user.walletAddress = formatAddress(await window.paytaca.address('bch'))
       user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+      user.walletTokenAddress = user.wallet.getTokenDepositAddress()
       user.walletBchBalance = String(await user.wallet.getBalance('sat'))
       const userUtxos = await user.wallet.getAddressUtxos()
       storeBalances(userUtxos)
@@ -62,7 +63,9 @@ const connect = async () => {
     dismiss()
     $q.notify({ message: 'Connected', color: 'positive', timeout: 500 })
     user.walletAddress = formatAddress(paytacaConnection.address)
+
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+    user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     user.walletBchBalance = String(await user.wallet.getBalance('sat'))
     const userUtxos = await user.wallet.getAddressUtxos()
     storeBalances(userUtxos)
