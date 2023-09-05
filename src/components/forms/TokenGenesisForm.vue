@@ -6,19 +6,24 @@
       </q-toolbar-title>
     </q-toolbar>
     <template v-if="genesisInput">
-      <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense square />
-      <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense
-        square />
+      <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
+      <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
-        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense square>
+        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense bottom-slots>
           <template v-slot:append>
             <q-btn color="warning" dense flat @click="genesisToken.amount = MAX_FUNGIBLE_AMOUNT" label="Max" />
           </template>
+          <template v-slot:hint>
+            <div class="row justify-end text-italic" :class="isValidTokenAmount ? 'text-primary' : 'text-negative'">
+              {{ tokenAmountWithDecimal }}
+              {{ !isValidTokenAmount ? 'Invalid amount' : '' }}
+            </div>
+          </template>
         </q-input>
-        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense square />
+        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
       </template>
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
-        <q-input v-model="genesisToken.commitment" label="Token Commitment" :filled="true" dense square />
+        <q-input v-model="genesisToken.commitment" label="Token Commitment" :filled="true" dense />
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           Capability <sup><code>{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
@@ -29,16 +34,19 @@
         </div>
       </template>
 
-      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense square />
-      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense square />
-      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" dense square />
+      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" input-class="text-uppercase"
+        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Invalid symbol, value must be allcaps and starts with a letter (A to Z 0 to 9 and -)']"
+        dense>
+      </q-input>
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
-        :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense square size="sm"
+        :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
         style="width:100%;max-width: 100%;" class="q-mx-xs" />
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="cashToken?.processing" label="Create Token"
-        :disable="!user.wallet || !genesisInput || cashToken?.processing" color="primary" />
+        :disable="!user.wallet || !genesisInput || cashToken?.processing || !isValidTokenAmount" color="primary" />
     </div>
   </q-form>
 </template>
@@ -74,11 +82,11 @@ const props = defineProps<{
 
 const genesisToken = ref<{
   tokenId: string,
-  amount: string | number,
+  amount: string | number,   // actual  amount that will be sent 
   capability: NFTCapability | undefined
-  commitment: string | undefined
+  commitment: string | undefined,
 }>({
-  amount: 0,
+  amount: props.tokenType === 'ft' ? 1 : 0,
   tokenId: props.genesisInput.txid,
   capability: undefined,
   commitment: undefined
@@ -101,6 +109,30 @@ const genesisTokenMetadata = ref<{
     https: '',
     ipfs: ''
   }
+})
+
+
+const tokenAmountWithDecimal = computed<string>(() => {
+  if (Number(genesisTokenMetadata.value.decimals) > 0) {
+    return `${genesisToken.value.amount.toString()}.`.padEnd(`${genesisToken.value.amount.toString()}`.length + Number(genesisTokenMetadata.value.decimals) + 1, '0')
+  }
+  return `${genesisToken.value.amount.toString()}`
+})
+
+const isValidTokenAmount = computed<boolean>(() => {
+  if (!tokenAmountWithDecimal.value) {
+    return false
+  }
+  if (tokenAmountWithDecimal.value.replace('.', '').length > 19) {
+    return false
+  }
+  if (Number(tokenAmountWithDecimal.value.replace('.', '')) > Number(MAX_FUNGIBLE_AMOUNT)) {
+    return false
+  }
+  if (Number(tokenAmountWithDecimal.value) <= 0) {
+    return false
+  }
+  return true
 })
 
 const cashToken = ref<CashToken>()
@@ -167,13 +199,12 @@ const createToken = async () => {
     }
 
     const tx = await cashToken.value.createGenesis({
-      amount: genesisToken.value.amount,
+      amount: Number(tokenAmountWithDecimal.value.replace('.', '')),
       capability: genesisToken.value.capability,
       commitment: genesisToken.value.commitment,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true
     })
     if (tx) {
-      // $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + shortenTokenId(tx) })
       $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + tx })
       if (!user.tokens) {
         user.tokens = []

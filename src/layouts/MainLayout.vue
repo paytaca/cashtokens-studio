@@ -4,7 +4,12 @@
       <q-toolbar class="bg-teal-10">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          CashTokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
+          <q-btn to="/" flat no-caps>
+            <q-avatar size="55px">
+              <q-img src="images/ctslogo.png"></q-img>
+            </q-avatar>
+
+          </q-btn> CashTokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
         </q-toolbar-title>
         <light-switch />
         <paytaca-connect />
@@ -14,10 +19,12 @@
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
-            <!-- <q-avatar>
-              <q-img src="images/bch-logo.png"></q-img>
-            </q-avatar> -->
-            <q-btn to="/" icon="home" size="xl" flat />
+            <!-- <q-btn to="/" icon="home" size="50px" flat color="primary"> -->
+            <q-btn to="/" size="50px" flat color="primary">
+              <q-avatar size="150px">
+                <q-img src="images/ctslogo.png"></q-img>
+              </q-avatar>
+            </q-btn>
           </div>
           <div v-if="user.wallet" class="col-12 text-center q-gutter-sm">
             <CashAddress :cashaddr="user.walletAddress" type="cash" />
