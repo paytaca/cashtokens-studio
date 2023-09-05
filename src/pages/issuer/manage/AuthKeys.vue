@@ -5,7 +5,9 @@
         <h5 class="text-center">My AuthKeys</h5>
         <q-expansion-item label="Description">
           <p>
-            When you create a token (genesis) in CSStudio it's locked in a contract, called an AuthGuard.
+            When you create a token (genesis) in CSStudio it's locked in a contract called an <q-btn
+              href="https://github.com/mr-zwets/AuthGuard" target="_blank" color="secondary" flat dense label="AuthGuard"
+              no-caps style="text-indent:0" />.
             An AuthKey (or Minting Baton) is an NFT that let's the holder manage the locked tokens.
             Holder of the AuthKey can manage the authchain, issue tokens from fungible reserves or mint new NFTs
             if the token created was a <code>minting</code> NFT.
@@ -43,13 +45,14 @@
                   <q-menu>
                     <q-list>
                       <q-item clickable v-close-popup
-                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, {authKey: authKey as AuthKey, tokenType: 'ft'})">
+                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, { authKey: authKey as AuthKey, tokenType: 'ft' })">
                         Use to create FT</q-item>
                       <q-item clickable v-close-popup
-                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, {authKey: authKey as AuthKey, tokenType: 'nft'})">
+                        @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, { authKey: authKey as AuthKey, tokenType: 'nft' })">
                         Use to create NFT</q-item>
                       <q-item clickable v-close-popup
-                        @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer AuthKey</q-item>
+                        @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer
+                        AuthKey</q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -71,8 +74,8 @@
     </div>
     <AuthKeyTransferDialog v-if="dialog" :auth-key="dialogData" :model-value="dialog === AuthKeyTransferDialog.__name"
       @hide="onHide" />
-    <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType" :model-value="dialog === AuthKeyCreateTokenDialog.__name"
-      @hide="onHide" />
+    <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType"
+      :model-value="dialog === AuthKeyCreateTokenDialog.__name" @hide="onHide" />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -123,7 +126,7 @@ const scanAuthKeysForManagedCategories = async () => {
 /**
  * Just a wrapper to openDialog so we can attach the wallet to the authKey object
  */
-const wOpenAuthKeyTransferDialog = (dialogName: string|undefined, authKey: AuthKey) => {
+const wOpenAuthKeyTransferDialog = (dialogName: string | undefined, authKey: AuthKey) => {
   authKey.ownerWallet = user.wallet! as Wallet
   openDialog(dialogName, authKey)
 }
@@ -131,7 +134,7 @@ const wOpenAuthKeyTransferDialog = (dialogName: string|undefined, authKey: AuthK
 /**
  * Just a wrapper to openDialog so we can attach the wallet to the authKey object
  */
-const wOpenAuthKeyCreateTokenDialog = (dialogName: string|undefined, dialogData: {authKey:AuthKey, tokenType: 'ft'|'nft'}) => {
+const wOpenAuthKeyCreateTokenDialog = (dialogName: string | undefined, dialogData: { authKey: AuthKey, tokenType: 'ft' | 'nft' }) => {
   dialogData.authKey.ownerWallet = user.wallet! as Wallet
   openDialog(dialogName, dialogData)
 }
