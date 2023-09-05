@@ -3,7 +3,6 @@
     <q-toolbar>
       <q-toolbar-title>
         <slot name="title">Token Genesis</slot>
-
       </q-toolbar-title>
     </q-toolbar>
     <template v-if="genesisInput">
@@ -30,15 +29,16 @@
         </div>
       </template>
 
+      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense square />
+      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense square />
       <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" dense square />
-
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
         :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense square size="sm"
         style="width:100%;max-width: 100%;" class="q-mx-xs" />
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="cashToken?.processing" label="Create Token"
-        :disable="!user.wallet || !genesisInput" color="primary" />
+        :disable="!user.wallet || !genesisInput || cashToken?.processing" color="primary" />
     </div>
   </q-form>
 </template>
@@ -85,11 +85,15 @@ const genesisToken = ref<{
 })
 
 const genesisTokenMetadata = ref<{
+  name: string,
+  description: string,
   icon: string,
   symbol: string,
   decimals: number,
   iconUris: { https: string, ipfs: string }
 }>({
+  name: '',
+  description: '',
   icon: '',
   symbol: '',
   decimals: 0,
@@ -129,7 +133,8 @@ const createToken = async () => {
       latestRevision: new Date().toISOString()
     })
 
-    bcmr.setRegistryName(`Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
+    bcmr.setRegistryName(genesisTokenMetadata.value.name || `Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
+    bcmr.setRegistryDescription(genesisTokenMetadata.value.description)
     bcmr.setTokenSymbol(genesisTokenMetadata.value.symbol)
     if (genesisTokenMetadata.value.decimals) {
       bcmr.setTokenDecimals(genesisTokenMetadata.value.decimals)
@@ -143,9 +148,11 @@ const createToken = async () => {
     cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
     cashToken.value.processing = 'Creating registry'
 
+    console.log('BCMR', bcmr.getContent())
     let storageArtifact: BcmrStorageArtifact | undefined
     try {
       storageArtifact = await bcmr.storeRegistry()
+      console.log('storage artifact:', storageArtifact)
     } catch (error) {
       console.log(error)
       // TODO, tell user that there was an error storing the BCMR, try again

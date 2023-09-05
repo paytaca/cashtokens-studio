@@ -47,7 +47,6 @@ watch(() => user.walletAddress, async (address) => {
   if (address && !watching.value) {
     watchAddress(address)
   }
-  console.log(user.wallet?.provider)
 })
 
 const connect = async () => {
