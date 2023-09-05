@@ -13,7 +13,7 @@
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
         <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense square>
           <template v-slot:append>
-            <q-btn color="primary" dense flat @click="genesisToken.amount = MAX_FUNGIBLE_AMOUNT" label="Max" />
+            <q-btn color="warning" dense flat @click="genesisToken.amount = MAX_FUNGIBLE_AMOUNT" label="Max" />
           </template>
         </q-input>
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense square />
