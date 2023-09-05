@@ -250,6 +250,7 @@ export class CashToken implements UtxoI {
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)
       // if (tx) {
+      //   this._processing = 'Token created, building authchain in chaingraph'
       //   await BCMR.buildAuthChain({ transactionHash: this.utxo.txid, network: this.ownerWallet!.network })
       // }
       return tx

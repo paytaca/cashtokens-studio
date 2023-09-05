@@ -8,7 +8,6 @@ export class AuthGuard {
   protected _processing?: string
   private _contract?: Contract
   constructor(tokenId:string, network: NetworkType) {
-    console.log('AUTHGUARD TOKEN ID', tokenId)
     this.tokenId = tokenId
     this.network = network
     this._contract = new Contract(
