@@ -23,7 +23,7 @@
                   <th>NFT Capability</th>
                   <th>NFT Commitment</th>
                 </template>
-                <th>AuthGuard</th>
+                <th>AuthGuard Contract Address</th>
                 <th>AuthKey</th>
                 <th>Action</th>
               </tr>
@@ -42,7 +42,8 @@
                   <td>{{ identity.token?.commitment || 'n/a' }}</td>
                 </template>
                 <td>
-                  <CashAddress :cashaddr="identity.authKey?.authGuard?.contract?.getTokenDepositAddress()" />
+                  <CashAddress :cashaddr="identity.authKey?.authGuard?.contract?.getTokenDepositAddress()"
+                    tool-tip="Copy Contract Address" />
                 </td>
                 <td>
                   <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
@@ -51,7 +52,8 @@
                   <q-btn icon="more_vert" size="md" round flat dense>
                     <q-menu>
                       <q-list>
-                        <q-item clickable v-close-popup @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
+                        <q-item clickable v-close-popup
+                          @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
                           Publish Registry
                         </q-item>
                         <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
@@ -94,6 +96,7 @@ import { onMounted, ref } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import { AuthchainIdentity } from 'src/app';
+import copyText from 'src/app/utils/copyText'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -112,7 +115,6 @@ onMounted(async () => {
     }
     authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     user.authchainIdentities = authchainIdentities.value
-    console.log(authchainIdentities.value)
   }
 
 })
