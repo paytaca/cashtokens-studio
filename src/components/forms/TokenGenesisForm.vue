@@ -201,7 +201,7 @@ const createToken = async () => {
       console.log('storage artifact:', bcmrStorageArtifact.value)
     } catch (error) {
       console.log(error)
-      // TODO, tell user that there was an error storing the BCMR, try again
+      $q.notify({ type: 'negative', message: 'Failed to create registry.Please try again later!' })
       return
     }
 
