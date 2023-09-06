@@ -75,7 +75,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       });
       
     } catch (error) {
-      
+      console.log(error)
       console.log('NFT STORAGE API KEY', process.env.NFT_STORAGE_API_KEY)
       res.status(400).send(error)
     }

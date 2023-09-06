@@ -43,6 +43,16 @@
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
         :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
         style="width:100%;max-width: 100%;" class="q-mx-xs" />
+      <div v-if="genesisTokenMetadata.iconUris.https" class="row justify-end">
+        <q-btn :href="genesisTokenMetadata.iconUris.https" label="View Icon Location" target="_blank" dense flat no-caps
+          color="secondary" icon="preview" />
+      </div>
+      <div v-if="bcmrStorageArtifact?.uris" class="row justify-end">
+        <q-btn :href="bcmrStorageArtifact.uris.https" label="View Registry" target="_blank" dense flat no-caps
+          color="secondary" icon="preview" />
+        <q-btn label="Download Registry" type="a" dense flat no-caps color="secondary" icon="cloud_download"
+          @click="downloadBcmr" />
+      </div>
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="cashToken?.processing" label="Create Token"
@@ -61,6 +71,7 @@ import shortenAddress from 'src/app/utils/shortenAddress'
 import shortenTokenId from 'src/app/utils/shortenTokenId'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
 import { BcmrStorageArtifact } from 'src/app/types'
+import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample'
 
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
@@ -111,6 +122,9 @@ const genesisTokenMetadata = ref<{
   }
 })
 
+const bcmr = ref<Bcmr>()
+const bcmrStorageArtifact = ref<BcmrStorageArtifact>()
+
 
 const tokenAmountWithDecimal = computed<string>(() => {
   if (Number(genesisTokenMetadata.value.decimals) > 0) {
@@ -150,7 +164,7 @@ const onTokenIconUpload = (info: any) => {
     const serverResponse = JSON.parse(info.xhr.responseText)
     genesisTokenMetadata.value.iconUris = serverResponse.iconUris
   } catch (error) {
-
+    console.log(error)
   }
 }
 
@@ -159,32 +173,32 @@ const createToken = async () => {
 
     // Store initial registry
 
-    const bcmr = new Bcmr({
+    bcmr.value = new Bcmr({
       version: { major: 0, minor: 1, patch: 0 },
       registryIdentity: genesisToken.value.tokenId,
       latestRevision: new Date().toISOString()
     })
 
-    bcmr.setRegistryName(genesisTokenMetadata.value.name || `Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
-    bcmr.setRegistryDescription(genesisTokenMetadata.value.description)
-    bcmr.setTokenSymbol(genesisTokenMetadata.value.symbol)
+    bcmr.value.setRegistryName(genesisTokenMetadata.value.name || `Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
+    bcmr.value.setRegistryDescription(genesisTokenMetadata.value.description)
+    bcmr.value.setTokenSymbol(genesisTokenMetadata.value.symbol)
     if (genesisTokenMetadata.value.decimals) {
-      bcmr.setTokenDecimals(genesisTokenMetadata.value.decimals)
+      bcmr.value.setTokenDecimals(genesisTokenMetadata.value.decimals)
     }
     if (genesisTokenMetadata.value.iconUris.https) {
-      bcmr.addIconUri(genesisTokenMetadata.value.iconUris.https)
+      bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.https)
     } else if (genesisTokenMetadata.value.iconUris.ipfs) {
-      bcmr.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
+      bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
     }
 
     cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
     cashToken.value.processing = 'Creating registry'
 
-    console.log('BCMR', bcmr.getContent())
-    let storageArtifact: BcmrStorageArtifact | undefined
+    console.log('BCMR', bcmr.value.getContent())
+    // let storageArtifact: BcmrStorageArtifact | undefined
     try {
-      storageArtifact = await bcmr.storeRegistry()
-      console.log('storage artifact:', storageArtifact)
+      bcmrStorageArtifact.value = await bcmr.value.storeRegistry()
+      console.log('storage artifact:', bcmrStorageArtifact.value)
     } catch (error) {
       console.log(error)
       // TODO, tell user that there was an error storing the BCMR, try again
@@ -194,8 +208,8 @@ const createToken = async () => {
     cashToken.value.processing = 'Registry created!'
 
     cashToken.value.registry = {
-      uri: [storageArtifact!.uris.https, storageArtifact!.uris.ipfs],
-      contentHash: storageArtifact!.contentHash
+      uri: [bcmrStorageArtifact.value!.uris.https, bcmrStorageArtifact.value!.uris.ipfs],
+      contentHash: bcmrStorageArtifact.value!.contentHash
     }
 
     const tx = await cashToken.value.createGenesis({
@@ -215,4 +229,25 @@ const createToken = async () => {
     $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
 }
+
+/**
+ * Downloads the bcmr to users computer.
+ * @dev This does not actually get the bcmr from the upload location, instead, 
+ *      this just re-uses the bcmr content that was used during upload. To save
+ *      on network request.
+ *      
+ */
+const downloadBcmr = async () => {
+  if (bcmrStorageArtifact.value?.uris.https && bcmr.value) {
+    const blob = new Blob([bcmr.value.getContent()], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bitcoin-cash-metadata-registry.json'; // Specify the desired file name with the appropriate extension
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+  }
+}
+
 </script>
