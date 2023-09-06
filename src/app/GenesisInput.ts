@@ -74,6 +74,67 @@ export class GenesisInput implements UtxoI {
     this._processing = p
   }
 
+  /**
+   * Generate genesis inputs from wallet's utxos
+   */
+  async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
+    this._processing = 'Scanning wallet'
+    const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
+    const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
+    if (!funder) {
+      throw new Error('Insufficient balance, please try to consolidate your utxos')
+    }
+    // build tx
+    this._processing = 'Processing'
+    const { encodedTransaction, sourceOutputs } = await ownerWallet!.encodeTransaction(
+      [new SendRequest({
+        cashaddr: ownerWallet!.getDepositAddress(),
+        value: DEFAULT_TOKEN_VALUE,
+        unit: UnitEnum.SATOSHIS
+      })],
+      false,
+      {
+        // tokenOperation: 'genesis',
+        checkTokenQuantities: false,
+        buildUnsigned: true,
+        utxoIds: [funder],
+        ensureUtxos: [funder]
+      }
+    )
+
+    const decoded = decodeTransaction(encodedTransaction)
+    if (typeof decoded === 'string') {
+      throw new Error('Error decoding transaction')
+    }
+    // request signature
+    delete this._processing
+    this._processing = 'Waiting for signature'
+    let signResult: {signedTransaction:any} | undefined
+    try {
+      signResult = await window.paytaca.signTransaction({
+          transaction: decoded,
+          sourceOutputs: [...sourceOutputs],
+          broadcast: false,
+          userPrompt: 'Generate genesis inputs'
+      })
+    } catch (error) {
+      console.log(error)
+    } finally {
+      delete this._processing
+    }
+
+    if (!signResult?.signedTransaction) {
+      delete this._processing
+      return
+    }
+    delete this._processing
+    this._processing = 'Submitting Transaction'
+    const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)
+    // delete GenesisInput.processing
+    delete this._processing
+    return tx
+  }
+
 
   /**
    * Generate genesis inputs from wallet's utxos

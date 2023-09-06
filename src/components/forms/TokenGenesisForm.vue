@@ -55,8 +55,9 @@
       </div>
     </template>
     <div class="row justify-end q-my-lg">
-      <BusyButton v-if="genesisInput" @click="createToken" :busy-label="cashToken?.processing" label="Create Token"
-        :disable="!user.wallet || !genesisInput || cashToken?.processing || !isValidTokenAmount" color="primary" />
+      <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
+        :force-disable="!user.wallet || !genesisInput || Boolean(busyButtonLabel) || !isValidTokenAmount"
+        color="primary" />
     </div>
   </q-form>
 </template>
@@ -72,6 +73,8 @@ import shortenTokenId from 'src/app/utils/shortenTokenId'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
 import { BcmrStorageArtifact } from 'src/app/types'
 import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample'
+import { useUI } from 'src/stores/ui'
+import { useStatusBar } from 'src/composables/useStatusBar'
 
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
@@ -122,10 +125,15 @@ const genesisTokenMetadata = ref<{
   }
 })
 
+const busyButtonLabel = computed<string | undefined>(() => {
+  if (cashToken.value?.processing?.includes('Building authchain')) {
+    return ''
+  }
+  return cashToken.value?.processing
+})
+
 const bcmr = ref<Bcmr>()
 const bcmrStorageArtifact = ref<BcmrStorageArtifact>()
-
-
 const tokenAmountWithDecimal = computed<string>(() => {
   if (Number(genesisTokenMetadata.value.decimals) > 0) {
     return `${genesisToken.value.amount.toString()}.`.padEnd(`${genesisToken.value.amount.toString()}`.length + Number(genesisTokenMetadata.value.decimals) + 1, '0')
@@ -152,6 +160,7 @@ const isValidTokenAmount = computed<boolean>(() => {
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
+const { setStatusProvider } = useStatusBar()
 
 onMounted(() => {
   if (props.tokenType === 'nft') {
@@ -169,10 +178,9 @@ const onTokenIconUpload = (info: any) => {
 }
 
 const createToken = async () => {
+  setStatusProvider(null)
   try {
-
     // Store initial registry
-
     bcmr.value = new Bcmr({
       version: { major: 0, minor: 1, patch: 0 },
       registryIdentity: genesisToken.value.tokenId,
@@ -218,16 +226,22 @@ const createToken = async () => {
       commitment: genesisToken.value.commitment,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true
     })
+
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + tx })
       if (!user.tokens) {
         user.tokens = []
       }
       user.tokens?.push(cashToken.value)
+      setStatusProvider(cashToken.value)
+      await cashToken.value.buildAuthChainInChainGraph()
     }
+    setStatusProvider(null)
   } catch (error: any) {
-    $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
+    setStatusProvider(null)
+    return $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
+
 }
 
 /**

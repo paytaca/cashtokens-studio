@@ -5,8 +5,9 @@ import { BCMR, hexToBin } from 'mainnet-js'
  * Fetch the authchain information from a trusted external indexer
  * The authchain in this implementation is specific to resolve to a valid metadata registry
  *
- * (Modified BCMR.fetchAuthChainFromChaingraph of mainnet-js, only gets the authhead instead of the
- * entire chain)
+ * (Ron's mod of BCMR.fetchAuthChainFromChaingraph of mainnet-js, modified the query so that it
+ * only gets the authhead instead of the entire chain)
+ * 
  *
  * @param  {string} options.chaingraphUrl (required) URL of a chaingraph indexer instance to fetch info from
  * @param  {string} options.transactionHash (required) transaction hash from which to build the auth chain

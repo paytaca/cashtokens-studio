@@ -6,6 +6,7 @@ import { SignatureTemplate} from "cashscript";
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
+import { TokenCategory } from "./bcmr/bcmr-v2.schema";
 
 export class AuthchainIdentity implements UtxoI {
   txid: string;
@@ -17,6 +18,15 @@ export class AuthchainIdentity implements UtxoI {
   authKey?: AuthKey
   ownerWallet?: Wallet
   useAuthGuard?: true   // default
+  /**
+   * TokenCategory is a portion of the BCMR schema, we attached it here 
+   * since this serves as the token's profile and is frequently accessed
+   * CAUTION: Do not include the `nfts` field 
+   * it might have a lot of items, e.g. BITCATS might
+   * have 10k items.
+   */
+  tokenCategory?: TokenCategory
+
   private _processing?: string
   private static _processing?: string
 
@@ -682,9 +692,31 @@ export class AuthchainIdentity implements UtxoI {
     }
   }
 
+  async resolveTokenCategory(){
+    try {
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
+      const rj = await r.json()
+    } catch (error) {
+      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+    }
+  }
+  /**
+   * Populate the tokenCategory from Paytaca's bcmr indexer
+   */
+  static async utilPopulateTokenCategory(identities:AuthchainIdentity[]) {  
+    for(let i=0; i < identities.length; i++) {
+      try {
+        const r = await fetch(`${process.env.BCMR_API}bcmr/${identities[i].token!.tokenId}/token`)  
+        const rj = await r.json()
+      } catch (error) {
+        console.log(`Error fetching ${identities[i].token!.tokenId} from indexer`, error)
+        continue
+      } 
+      
+    }
+  }
 
   // statics
-
   static async scanWalletForAuthchainIdentities(ownerWallet:Wallet): Promise<AuthchainIdentity[]> {
     AuthchainIdentity._processing = 'Scanning wallet for authchain identities'
     const identities:any[] = []
@@ -702,6 +734,7 @@ export class AuthchainIdentity implements UtxoI {
     }
 
     delete  AuthchainIdentity._processing
+    AuthchainIdentity.utilPopulateTokenCategory(identities)
     return identities
   }
 }

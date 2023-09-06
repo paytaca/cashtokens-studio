@@ -41,6 +41,11 @@
         <!-- <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
           label-style="font-size: 1.1em" /> -->
       </q-page-container>
+      <q-footer class="text-grey text-right q-px-md q-pb-sm text-italic" reveal style="background-color: unset;">
+        <template v-if="ui.statusMessage">
+          <span class="q-mr-sm">{{ ui.statusMessage }}</span><q-spinner-dots></q-spinner-dots>
+        </template>
+      </q-footer>
     </q-scroll-area>
   </q-layout>
 </template>
@@ -51,8 +56,10 @@ import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import { useUser } from 'src/stores/user'
+import { useUI } from 'src/stores/ui';
 import CashAddress from 'src/components/CashAddress.vue'
 import getAppEnv from 'src/app/utils/getAppEnv'
+
 export default defineComponent({
   name: 'MainLayout',
   components: {
@@ -65,12 +72,14 @@ export default defineComponent({
   setup() {
     const leftDrawerOpen = ref(false)
     const user = useUser()
+    const ui = useUI()
     return {
       leftDrawerOpen,
       toggleLeftDrawer() {
         leftDrawerOpen.value = !leftDrawerOpen.value
       },
       user,
+      ui,
       getAppEnv
     }
   }

@@ -18,6 +18,7 @@
               <tr>
                 <th>#</th>
                 <th>Your Token</th>
+                <th>Symbol</th>
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
@@ -36,6 +37,7 @@
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
+                <td>{{ identity.tokenCategory?.symbol }}</td>
                 <template v-if="viewType == 'detailed'">
                   <td>{{ identity.token?.amount || 'n/a' }}</td>
                   <td>{{ identity.token?.capability || 'n/a' }}</td>
@@ -115,6 +117,10 @@ onMounted(async () => {
     }
     authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     user.authchainIdentities = authchainIdentities.value
+    authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
+      await a.resolveTokenCategory()
+      console.log(a)
+    })
   }
 
 })

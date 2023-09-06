@@ -1,4 +1,4 @@
-import { BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
+import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, DEFAULT_TOKEN_VALUE } from '.'
 import { GenesisOptions } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
@@ -8,6 +8,12 @@ import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bita
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
+import { TokenCategory } from "./bcmr/bcmr-v2.schema";
+
+/**
+ * TODO: Transfer token genesis functionality to GenesisInput, 
+ * it makes more sense there.
+ */
 export class CashToken implements UtxoI {
 
   txid: string;
@@ -19,6 +25,14 @@ export class CashToken implements UtxoI {
   ownerWallet?: Wallet
   authKey?: AuthKey
   registry?: { uri: string|string[], contentHash: string }
+  /**
+   * TokenCategory is a portion of the BCMR schema, we attached it here 
+   * since this serves as the token's profile and maybe frequently accessed
+   * CAUTION: Do not include the `nfts` field 
+   * it might have a lot of items, e.g. BITCATS might
+   * have 10k items.
+   */
+  tokenCategory?: TokenCategory
   /**
    * If true, token will be locked on the AuthGuard contract during genesis. Default = true
    */
@@ -249,18 +263,29 @@ export class CashToken implements UtxoI {
     this._processing = 'Creating Token'
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)
-      // if (tx) {
-      //   this._processing = 'Token created, building authchain in chaingraph'
-      //   await BCMR.buildAuthChain({ transactionHash: this.utxo.txid, network: this.ownerWallet!.network })
-      // }
       return tx
     } catch (error) {
       console.log(error)
     } finally {
       delete this._processing
     }
-
   }
+
+  /**
+   * Call this immediately AFTER a successful genesis transaction (after createGenesis).
+   *
+   */
+  async buildAuthChainInChainGraph(): Promise<AuthChain> {
+    this._processing = 'Building authchain in chaingraph'
+    // Note: If this uses this.utxo.txid it means this was called after genesis
+    //       this.token?.tokenId option made available so that authchain can still
+    //       be built after genesis
+    const authChain = await BCMR.buildAuthChain({ transactionHash: this.token?.tokenId || this.utxo.txid, network: this.ownerWallet!.network })
+    console.log('AUTHCHAIN', authChain)
+    delete this._processing 
+    return authChain
+    
+  } 
 
   static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
