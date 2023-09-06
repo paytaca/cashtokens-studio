@@ -696,6 +696,7 @@ export class AuthchainIdentity implements UtxoI {
     try {
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
       const rj = await r.json()
+      this.tokenCategory = rj
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     }

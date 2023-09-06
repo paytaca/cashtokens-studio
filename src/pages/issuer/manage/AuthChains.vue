@@ -37,7 +37,10 @@
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
-                <td>{{ identity.tokenCategory?.symbol }}</td>
+                <td>
+                  <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
+                    identity.tokenCategory?.symbol }}</q-chip>
+                </td>
                 <template v-if="viewType == 'detailed'">
                   <td>{{ identity.token?.amount || 'n/a' }}</td>
                   <td>{{ identity.token?.capability || 'n/a' }}</td>
@@ -98,7 +101,6 @@ import { onMounted, ref } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import { AuthchainIdentity } from 'src/app';
-import copyText from 'src/app/utils/copyText'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
