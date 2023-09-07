@@ -9,6 +9,7 @@ import shortenTokenId from "./utils/shortenTokenId";
 import { TokenCategory } from "./bcmr/bcmr-v2.schema";
 
 export class AuthchainIdentity implements UtxoI {
+
   txid: string;
   vout: number;
   satoshis: number;
@@ -693,12 +694,17 @@ export class AuthchainIdentity implements UtxoI {
   }
 
   async resolveTokenCategory(){
+    if (!this.token?.tokenId) return
     try {
+      this._processing = 'Checking token registry'
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
       const rj = await r.json()
       this.tokenCategory = rj
+      delete this._processing
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+    } finally {
+      delete this._processing
     }
   }
   /**

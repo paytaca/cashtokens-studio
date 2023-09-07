@@ -8,6 +8,7 @@
             <tr>
               <th>#</th>
               <th>Token Id/Category</th>
+              <th>Symbol</th>
               <th>Capability</th>
               <th>Commitment</th>
               <th>Action</th>
@@ -21,8 +22,13 @@
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
-              <td>{{ identity.token?.capability }}</td>
-              <td>{{ identity.token?.commitment }}</td>
+              <td>
+                <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
+                  identity.tokenCategory?.symbol }}</q-chip>
+                <span v-else>---</span>
+              </td>
+              <td>{{ identity.token?.capability || '---' }}</td>
+              <td>{{ identity.token?.commitment || '---' }}</td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
@@ -38,12 +44,12 @@
               </td>
             </tr>
             <tr v-if="AuthchainIdentity.processing && authchainIdentities">
-              <td colspan="5">
+              <td colspan="6">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
             <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
-              <td colspan="5">
+              <td colspan="6">
                 No data
               </td>
             </tr>
@@ -87,6 +93,9 @@ onMounted(async () => {
     }
     user.authchainIdentities = (await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet))
     authchainIdentities.value = user.authchainIdentities.filter((ai) => !ai.token?.amount && ai.token?.capability) as AuthchainIdentity[]
+    authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
+      await a.resolveTokenCategory()
+    })
   }
 })
 

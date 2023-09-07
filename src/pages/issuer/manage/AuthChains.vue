@@ -38,8 +38,13 @@
                   <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
                 <td>
-                  <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
-                    identity.tokenCategory?.symbol }}</q-chip>
+                  <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
+                  <div v-else>
+                    <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
+                      identity.tokenCategory?.symbol }}</q-chip>
+                    <span v-else>---</span>
+                  </div>
+
                 </td>
                 <template v-if="viewType == 'detailed'">
                   <td>{{ identity.token?.amount || 'n/a' }}</td>
@@ -73,12 +78,12 @@
                 </td>
               </tr>
               <tr v-if="authchainIdentities && AuthchainIdentity.processing">
-                <td :colspan="viewType === 'simple' ? 5 : 8">
+                <td :colspan="viewType === 'simple' ? 6 : 8">
                   <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
               <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
-                <td :colspan="viewType === 'simple' ? 5 : 8">
+                <td :colspan="viewType === 'simple' ? 6 : 8">
                   No data
                 </td>
               </tr>

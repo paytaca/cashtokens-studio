@@ -8,6 +8,7 @@
             <tr>
               <th>#</th>
               <th>Token Id/Category</th>
+              <th>Symbol</th>
               <th>Reserved Supplies</th>
               <th>Action</th>
             </tr>
@@ -19,6 +20,11 @@
               <td>{{ i + 1 }}</td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
+              </td>
+              <td>
+                <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
+                  identity.tokenCategory?.symbol }}</q-chip>
+                <span v-else>---</span>
               </td>
               <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td>
               <td>
@@ -72,6 +78,10 @@ onMounted(async () => {
     }
     user.authchainIdentities = (await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet))
     authchainIdentities.value = user.authchainIdentities.filter((ai) => ai.token?.amount && ai.token.amount > 0) as AuthchainIdentity[]
+    authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
+      await a.resolveTokenCategory()
+    })
+
   }
 
 

@@ -499,6 +499,20 @@ export class CashToken implements UtxoI {
 
   }
 
+  async resolveTokenCategory(){
+    if (!this.token?.tokenId) return
+    try {
+      this._processing = 'Checking token registry'
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
+      const rj = await r.json()
+      this.tokenCategory = rj
+    } catch (error) {
+      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+    } finally {
+      delete this._processing
+    }
+  }
+
   static async scanWalletForTokens(tokenType: 'ft'|'nft'|'all', ownerWallet: Wallet): Promise<UtxoI[]> {
     if(tokenType === 'ft') {
       return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability) || []
