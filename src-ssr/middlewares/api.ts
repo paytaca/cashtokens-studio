@@ -94,7 +94,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
 
     // Convert JSON object to JSON string
     const jsonString = JSON.stringify(req.body);
-
+    console.log(jsonString)
     // Create a Blob from the JSON string
     const blob = new Blob([jsonString], { type: 'application/json' });
 

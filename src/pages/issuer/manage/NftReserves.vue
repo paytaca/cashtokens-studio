@@ -7,8 +7,9 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Token Id/Category</th>
+              <th>Brand</th>
               <th>Symbol</th>
+              <th>Token Id</th>
               <th>Capability</th>
               <th>Commitment</th>
               <th>Action</th>
@@ -20,12 +21,18 @@
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
               <td>
-                <TokenCategory :tokenId="identity.token?.tokenId" />
+                <q-avatar v-if="identity.tokenUris?.icon">
+                  <img :src="identity.tokenUris?.icon" alt="na">
+                </q-avatar>
+                <q-icon v-else name="token" size="xl" color="grey-9" />
               </td>
               <td>
                 <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
                   identity.tokenCategory?.symbol }}</q-chip>
                 <span v-else>---</span>
+              </td>
+              <td>
+                <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
               <td>{{ identity.token?.capability || '---' }}</td>
               <td>{{ identity.token?.commitment || '---' }}</td>
@@ -44,12 +51,12 @@
               </td>
             </tr>
             <tr v-if="AuthchainIdentity.processing && authchainIdentities">
-              <td colspan="6">
+              <td colspan="7">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
             <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
-              <td colspan="6">
+              <td colspan="7">
                 No data
               </td>
             </tr>
@@ -95,6 +102,7 @@ onMounted(async () => {
     authchainIdentities.value = user.authchainIdentities.filter((ai) => !ai.token?.amount && ai.token?.capability) as AuthchainIdentity[]
     authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
       await a.resolveTokenCategory()
+      await a.resolveTokenUris()
     })
   }
 })

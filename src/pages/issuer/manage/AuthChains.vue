@@ -11,14 +11,14 @@
             { label: 'Detailed View', value: 'detailed' },
           ]" size="sm" dense no-caps />
         </div>
-
-        <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
+        <q-scroll-area style="position:relative; height:200vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
               <tr>
                 <th>#</th>
-                <th>Your Token</th>
+                <th>Brand</th>
                 <th>Symbol</th>
+                <th>Token Id</th>
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
@@ -30,21 +30,27 @@
               </tr>
             </thead>
             <TableBodySkeleton v-if="!authchainIdentities && AuthchainIdentity.processing"
-              :col-count="viewType === 'simple' ? 5 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
+              :col-count="viewType === 'simple' ? 6 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
                 <td>{{ i + 1 }}</td>
                 <td>
-                  <TokenCategory :tokenId="identity.token?.tokenId" />
+                  <q-avatar v-if="identity.tokenUris?.icon">
+                    <img :src="identity.tokenUris?.icon" alt="na">
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="disabled" />
                 </td>
                 <td>
                   <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
                   <div v-else>
-                    <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
-                      identity.tokenCategory?.symbol }}</q-chip>
+                    <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
+                      {{ identity.tokenCategory?.symbol }}
+                    </q-chip>
                     <span v-else>---</span>
                   </div>
-
+                </td>
+                <td>
+                  <TokenCategory :tokenId="identity.token?.tokenId" />
                 </td>
                 <template v-if="viewType == 'detailed'">
                   <td>{{ identity.token?.amount || 'n/a' }}</td>
@@ -126,7 +132,7 @@ onMounted(async () => {
     user.authchainIdentities = authchainIdentities.value
     authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
       await a.resolveTokenCategory()
-      console.log(a)
+      await a.resolveTokenUris()
     })
   }
 

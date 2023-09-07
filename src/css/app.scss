@@ -38,6 +38,13 @@
 body {
   font-family: 'montserrat-regular';
   font-size: .8em;
+  /* For Firefox */
+  /* Note: You may need to adjust this for older Firefox versions */
+  scrollbar-width: none;
+
+  /* For Edge and other non-WebKit browsers */
+  /* Note: You may need to adjust this for older Edge versions */
+  -ms-overflow-style: none;
 }
 
 form {
@@ -89,4 +96,25 @@ code {
     min-width: 13em;
     min-height: 13em;
   }
+}
+
+// .q-dialog__inner > div {
+//   overflow: unset;
+// }
+
+/* For WebKit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 0; /* Adjust as needed */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent; /* Hide the thumb */
+}
+
+
+.text-disabled {
+  color: #c4baba !important;
+}
+.bg-disabled {
+  background: #c4baba !important;
 }
