@@ -8,13 +8,14 @@ import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bita
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
-import { TokenCategory } from "./bcmr/bcmr-v2.schema";
+import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { PartialBcmr } from "./interfaces";
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
  * it makes more sense there.
  */
-export class CashToken implements UtxoI {
+export class CashToken implements UtxoI, PartialBcmr {
 
   txid: string;
   vout: number;
@@ -33,6 +34,7 @@ export class CashToken implements UtxoI {
    * have 10k items.
    */
   tokenCategory?: TokenCategory
+  tokenUris?: URIs
   /**
    * If true, token will be locked on the AuthGuard contract during genesis. Default = true
    */
@@ -506,6 +508,19 @@ export class CashToken implements UtxoI {
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
       const rj = await r.json()
       this.tokenCategory = rj
+    } catch (error) {
+      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+    } finally {
+      delete this._processing
+    }
+  }
+  
+  async resolveTokenUris(){
+    if (!this.token?.tokenId) return
+    try {
+      this._processing = 'Checking token registry'
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
+      this.tokenUris = await r.json()
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {

@@ -6,9 +6,10 @@ import { SignatureTemplate} from "cashscript";
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
-import { TokenCategory } from "./bcmr/bcmr-v2.schema";
+import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { PartialBcmr } from "./interfaces";
 
-export class AuthchainIdentity implements UtxoI {
+export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   txid: string;
   vout: number;
@@ -27,6 +28,7 @@ export class AuthchainIdentity implements UtxoI {
    * have 10k items.
    */
   tokenCategory?: TokenCategory
+  tokenUris?: URIs
 
   private _processing?: string
   private static _processing?: string
@@ -707,6 +709,20 @@ export class AuthchainIdentity implements UtxoI {
       delete this._processing
     }
   }
+
+  async resolveTokenUris(){
+    if (!this.token?.tokenId) return
+    try {
+      this._processing = 'Checking token registry'
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
+      this.tokenUris = await r.json()
+    } catch (error) {
+      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+    } finally {
+      delete this._processing
+    }
+  }
+  
   /**
    * Populate the tokenCategory from Paytaca's bcmr indexer
    */
