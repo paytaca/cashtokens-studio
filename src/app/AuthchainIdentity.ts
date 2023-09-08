@@ -417,8 +417,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     const tokenOwner = this.ownerWallet!.getDepositAddress()
     let transaction
     let decoded
-    console.log('INPUT', authchainIdentityOutput.satoshis)
-    console.log('INPUT AMOUNT', BigInt(authchainIdentityOutput.token!.amount))
+    console.log('AMOUNT TO SEND', arg.amount)
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')(true)
