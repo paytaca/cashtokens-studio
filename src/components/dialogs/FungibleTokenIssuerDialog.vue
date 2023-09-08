@@ -2,7 +2,20 @@
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Issue ft from reserves</q-toolbar-title>
+        <q-toolbar-title class="row items-center text-h5">
+          Issue Fungible Tokens
+        </q-toolbar-title>
+      </q-toolbar>
+      <q-toolbar>
+        <q-toolbar-title class="row items-center">
+          <q-avatar v-if="authchainIdentity.tokenUris?.icon">
+            <img :src="authchainIdentity.tokenUris?.icon" alt="">
+          </q-avatar>
+          <q-icon v-else name="token" size="lg" />
+          <span class="q-ml-md text-body2"><span class="text-bold">{{ authchainIdentity.tokenCategory?.symbol || 'FT'
+          }}</span></span>
+        </q-toolbar-title>
+
         <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
@@ -14,7 +27,7 @@
             dense disable bottom-slots>
             <template v-slot:hint>
               <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-              <div class="row justify-end text-italic">{{ currentFtReserves }} (satoshi)</div>
+              <div class="row justify-end text-italic">{{ currentFtReserves }} (Raw FT Amount)</div>
             </template>
           </q-input>
 
@@ -24,7 +37,7 @@
               <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
               <div class="row justify-end text-italic">{{ String(BigInt(currentFtReserves) -
                 BigInt(form.tokeshiAmount ||
-                  form.amount)) }} (satoshi)</div>
+                  form.amount)) }} (Raw FT Amount)</div>
             </template>
           </q-input>
           <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense>
@@ -49,7 +62,7 @@
                 <span class="text-weight-bold text-green-6">{{
                   form.tokeshiAmount || 0
                 }}</span>
-                <span>(satoshi)</span>
+                <span>(Raw FT Amount)</span>
               </div>
             </template>
           </q-input>
