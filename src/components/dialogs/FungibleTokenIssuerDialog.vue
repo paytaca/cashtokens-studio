@@ -70,7 +70,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end q-my-lg">
         <BusyButton @click="() => releaseTokensFromReserveSupply()" :busyLabel="authchainIdentity.processing"
-          label="Issue Tokens" color="primary q-mt-lg" size="md" />
+          label="Issue Tokens" color="primary q-mt-lg" size="lg" />
       </q-card-actions>
     </q-card>
   </q-dialog>

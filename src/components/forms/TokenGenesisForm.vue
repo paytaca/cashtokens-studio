@@ -1,7 +1,7 @@
 <template>
   <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm">
     <q-toolbar>
-      <q-toolbar-title>
+      <q-toolbar-title class="text-h5">
         <slot name="title">Token Genesis</slot>
       </q-toolbar-title>
     </q-toolbar>
@@ -56,8 +56,8 @@
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
-        :force-disable="!user.wallet || !genesisInput || Boolean(busyButtonLabel) || !isValidTokenAmount"
-        color="primary" />
+        :force-disable="!user.wallet || !genesisInput || Boolean(busyButtonLabel) || !isValidTokenAmount" color="primary"
+        size="lg" />
     </div>
   </q-form>
 </template>
