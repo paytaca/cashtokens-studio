@@ -48,12 +48,12 @@
               </td>
             </tr>
             <tr v-if="AuthchainIdentity.processing && authchainIdentities">
-              <td colspan="4">
+              <td colspan="6">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
             <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
-              <td colspan="4">
+              <td colspan="6">
                 No data
               </td>
             </tr>

@@ -15,7 +15,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="5" :row-count="4"
+          <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="7" :row-count="4"
             :caption="'Scanning wallet for fungible reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">

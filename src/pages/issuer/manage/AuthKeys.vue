@@ -25,7 +25,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthKey.processing && !authKeys" :col-count="4" :row-count="3"
+          <TableBodySkeleton v-if="AuthKey.processing && !authKeys" :col-count="5" :row-count="3"
             :caption="AuthKey.processing" />
           <tbody v-else class="text-center">
             <tr v-for="authKey, i in authKeys" :key="'ai-rec-' + i">

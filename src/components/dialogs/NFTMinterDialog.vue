@@ -27,7 +27,7 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => mintToken()" label="Mint Token" :busyLabel="minter.processing" color="primary" />
+        <BusyButton @click="() => mintToken()" label="Mint NFT" :busyLabel="minter.processing" color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
