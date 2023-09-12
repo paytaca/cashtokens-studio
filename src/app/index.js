@@ -5,6 +5,8 @@ export * from './AuthKey'
 export * from './GenesisInput'
 export * from './AuthchainIdentity'
 export * from './CashToken'
+export * from './Watchtower'
 export * from './bcmr/Bcmr'
+
 
 
