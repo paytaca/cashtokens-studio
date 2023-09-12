@@ -15,7 +15,7 @@
             </tr>
           </thead>
           <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="4" :row-count="3"
-            :caption="'Scanning wallet for fungible reserves'" />
+            :caption="'Scanning wallet for FT reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
@@ -92,8 +92,6 @@ onMounted(async () => {
     })
 
   }
-
-
 })
 
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {

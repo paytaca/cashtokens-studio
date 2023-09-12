@@ -16,7 +16,7 @@
             </tr>
           </thead>
           <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="7" :row-count="4"
-            :caption="'Scanning wallet for fungible reserves'" />
+            :caption="'Scanning wallet for NFT reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
@@ -41,8 +41,7 @@
                   <q-menu>
                     <q-list>
                       <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        @click="openDialog(NFTMinterDialog.__name, new CashToken({ ...identity }))" clickable
-                        v-close-popup>
+                        @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
                     </q-list>
@@ -85,13 +84,10 @@ const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
-// onMounted(async () => {
-//   if (user.wallet) {
-//     authchainIdentities.value = [
-//       ...await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-//     ].filter((ai) => !ai.token?.amount && ai.token?.capability) || []
-//   }
-// })
+const openMintChildDialog = (identity: AuthchainIdentity) => {
+  const ct = new CashToken({ ...identity })
+  openDialog(NFTMinterDialog.__name, ct)
+}
 
 onMounted(async () => {
   if (user.wallet) {
