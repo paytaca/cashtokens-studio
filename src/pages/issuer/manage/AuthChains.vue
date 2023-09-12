@@ -30,7 +30,7 @@
               </tr>
             </thead>
             <TableBodySkeleton v-if="!authchainIdentities && AuthchainIdentity.processing"
-              :col-count="viewType === 'simple' ? 6 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
+              :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
                 <td>{{ i + 1 }}</td>
@@ -84,12 +84,12 @@
                 </td>
               </tr>
               <tr v-if="authchainIdentities && AuthchainIdentity.processing">
-                <td :colspan="viewType === 'simple' ? 6 : 8">
+                <td :colspan="viewType === 'simple' ? 7 : 8">
                   <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
               <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
-                <td :colspan="viewType === 'simple' ? 6 : 8">
+                <td :colspan="viewType === 'simple' ? 7 : 8">
                   No data
                 </td>
               </tr>

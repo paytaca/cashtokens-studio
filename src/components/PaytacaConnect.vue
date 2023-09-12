@@ -1,11 +1,17 @@
 <template>
-  <div class="row q-my-sm q-mx-sm" @click.stop="user.walletAddress ? disconnect() : connect()">
+  <!-- <div class="row q-my-sm q-mx-sm" @click.stop="user.walletAddress ? disconnect() : connect()">
     <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md" align="center" stack dense>
       <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
         style="width:.15em;height:.10em"></q-icon>
       <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
     </q-btn>
-  </div>
+  </div> -->
+  <q-btn icon="img:images/paytaca-128x128.png" class="q-px-md" align="center"
+    @click.stop="user.walletAddress ? disconnect() : connect()" stack dense>
+    <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
+      style="width:.15em;height:.10em"></q-icon>
+    <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
+  </q-btn>
 </template>
 
 <script setup lang="ts">

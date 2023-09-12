@@ -19,7 +19,8 @@
           <thead>
             <tr>
               <th>#</th>
-              <th>Id</th>
+              <th>AuthKey Id</th>
+              <th>AuthGuard Contract Address</th>
               <th>No. of managed tokens</th>
               <th>Action</th>
             </tr>
@@ -30,7 +31,11 @@
             <tr v-for="authKey, i in authKeys" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
               <td>
-                <TokenCategory :tokenId="authKey?.utxo?.token?.tokenId" />
+                <TokenCategory :tokenId="authKey?.utxo?.token?.tokenId" icon-right="key" />
+              </td>
+              <td>
+                <CashAddress :cashaddr="authKey?.authGuard?.contract?.getTokenDepositAddress()"
+                  tool-tip="Copy Contract Address" />
               </td>
               <td>
                 <template v-if="authKey.processing">
@@ -89,6 +94,7 @@ import TokenCategory from 'src/components/TokenCategory.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
 import AuthKeyCreateTokenDialog from 'src/components/dialogs/AuthKeyCreateTokenDialog.vue'
+import CashAddress from 'src/components/CashAddress.vue';
 
 const user = useUser()
 

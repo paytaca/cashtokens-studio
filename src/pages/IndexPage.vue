@@ -2,10 +2,10 @@
   <q-page class="row items-center justify-evenly">
     <div class="col">
       <div class="row items-center justify-evenly text-h3">
-        Welcome to CashTokens Studio
+        <q-img src="images/cts_transparent.png" alt="" style="" />
       </div>
       <div class="row items-center justify-evenly">
-        <paytaca-connect />
+        <paytaca-connect size="3em" />
       </div>
     </div>
   </q-page>

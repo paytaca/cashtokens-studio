@@ -1,15 +1,12 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <q-header elevated>
-      <q-toolbar class="bg-teal-10">
+      <q-toolbar class="bg-teal-10 q-py-sm">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-btn to="/" flat no-caps>
-            <q-avatar size="55px">
-              <q-img src="images/ctslogo.png"></q-img>
-            </q-avatar>
-
-          </q-btn> CashTokens Studio <code v-if="getAppEnv() !== 'production'">[TEST MODE]</code>
+          <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')" src="images/cts_transparent.png"
+            style="max-height: 3em;object-fit: fill;max-width:8em"></q-img>
+          <code v-if="getAppEnv() !== 'production'" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         <light-switch />
         <paytaca-connect />
@@ -20,9 +17,9 @@
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
             <!-- <q-btn to="/" icon="home" size="50px" flat color="primary"> -->
-            <q-btn to="/" size="50px" flat color="primary">
-              <q-avatar size="150px">
-                <q-img src="images/ctslogo.png"></q-img>
+            <q-btn to="/" size="2em" flat color="primary">
+              <q-avatar size="4em">
+                <q-img src="images/cts_icon.png"></q-img>
               </q-avatar>
             </q-btn>
           </div>
@@ -59,7 +56,7 @@ import { useUser } from 'src/stores/user'
 import { useUI } from 'src/stores/ui';
 import CashAddress from 'src/components/CashAddress.vue'
 import getAppEnv from 'src/app/utils/getAppEnv'
-
+import { useRoute, useRouter } from 'vue-router'
 export default defineComponent({
   name: 'MainLayout',
   components: {
@@ -73,6 +70,8 @@ export default defineComponent({
     const leftDrawerOpen = ref(false)
     const user = useUser()
     const ui = useUI()
+    const route = useRoute()
+    const router = useRouter()
     return {
       leftDrawerOpen,
       toggleLeftDrawer() {
@@ -80,7 +79,9 @@ export default defineComponent({
       },
       user,
       ui,
-      getAppEnv
+      getAppEnv,
+      route,
+      router
     }
   }
 });
