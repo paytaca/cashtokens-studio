@@ -66,7 +66,7 @@ import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed } from 'vue'
 import { useUser } from 'src/stores/user'
-import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT } from 'src/app'
+import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
 import shortenAddress from 'src/app/utils/shortenAddress'
 import shortenTokenId from 'src/app/utils/shortenTokenId'
@@ -177,6 +177,7 @@ const onTokenIconUpload = (info: any) => {
   }
 }
 
+
 const createToken = async () => {
   setStatusProvider(null)
   try {
@@ -226,6 +227,8 @@ const createToken = async () => {
       commitment: genesisToken.value.commitment,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true
     })
+
+    await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
 
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + tx })
