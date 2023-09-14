@@ -6,8 +6,9 @@ export class Watchtower {
   processing?:string
   async subscribe(address: string): Promise<any> {
     this.processing = 'Subscribing address to watchtower'
-    const res = await fetch(`${process.env.WATCHTOWER_API}/subscription/`, {
+    const res = await fetch(`${process.env.WATCHTOWER_API}subscription/`, {
       method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({address: address})
     })
     delete this.processing 
