@@ -8,20 +8,37 @@
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
+
+      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" input-class="text-uppercase"
+        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Invalid symbol, value must be allcaps and starts with a letter (A to Z 0 to 9 and -)']"
+        dense>
+      </q-input>
+
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
-        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense bottom-slots>
+        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
+        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense>
           <template v-slot:append>
-            <q-btn color="warning" dense flat @click="genesisToken.amount = MAX_FUNGIBLE_AMOUNT" label="Max" />
+            <q-btn :color="$q.dark.isActive ? 'warning' : 'primary'" flat @click="setSupplyToMax" label="Max" />
           </template>
           <template v-slot:hint>
-            <div class="row justify-end text-italic" :class="isValidTokenAmount ? 'text-primary' : 'text-negative'">
-              {{ tokenAmountWithDecimal }}
-              {{ !isValidTokenAmount ? 'Invalid amount' : '' }}
-            </div>
+            {{ !isValidTokenAmount ? 'Invalid amount' : '' }}
           </template>
         </q-input>
-        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
+        <div class="row justify-end" :class="isValidTokenAmount ? 'text-primary' : 'text-negative'">
+          <div class="col">
+            <div class="row">{{ !isValidTokenAmount ? 'Invalid amount' : '' }}</div>
+            <div v-if="genesisToken.amount" class="row">
+              <code>{{ tokenAmountWithDecimal }} <q-chip v-if="genesisTokenMetadata.symbol" class="text-uppercase" color="orange-10" size="sm" square outline>{{ genesisTokenMetadata.symbol }}</q-chip></code>
+            </div>
+            <!-- <div class="row">
+              <code>Raw FT Amount: {{ tokenAmountWithDecimal.replace('.', '') }} <q-chip v-if="genesisTokenMetadata.symbol" class="text-uppercase" color="orange-10"  size="sm" square outline>{{ genesisTokenMetadata.symbol }}</q-chip></code>
+            </div> -->
+          </div>
+        </div>
       </template>
+
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
         <q-input v-model="genesisToken.commitment" label="Token Commitment" :filled="true" dense />
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
@@ -34,12 +51,7 @@
         </div>
       </template>
 
-      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense />
-      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
-      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" input-class="text-uppercase"
-        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Invalid symbol, value must be allcaps and starts with a letter (A to Z 0 to 9 and -)']"
-        dense>
-      </q-input>
+
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
         :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
         style="width:100%;max-width: 100%;" class="q-mx-xs" />
@@ -136,6 +148,16 @@ const bcmr = ref<Bcmr>()
 const bcmrStorageArtifact = ref<BcmrStorageArtifact>()
 const tokenAmountWithDecimal = computed<string>(() => {
   if (Number(genesisTokenMetadata.value.decimals) > 0) {
+    if (
+      genesisToken.value.amount >= MAX_FUNGIBLE_AMOUNT ||
+      Number(`${genesisToken.value.amount.toString()}`.padEnd(genesisToken.value.amount.toString().length + Number(genesisTokenMetadata.value.decimals), '0')) >= Number(MAX_FUNGIBLE_AMOUNT)
+    ) {
+      // don't pad, accomodate 
+      const decimal_place = genesisToken.value.amount.toString().length - Number(genesisTokenMetadata.value.decimals)
+      const whole = genesisToken.value.amount.toString().substring(0, decimal_place)
+      const decimal = genesisToken.value.amount.toString().substring(decimal_place)
+      return `${whole}.${decimal}`
+    }
     return `${genesisToken.value.amount.toString()}.`.padEnd(`${genesisToken.value.amount.toString()}`.length + Number(genesisTokenMetadata.value.decimals) + 1, '0')
   }
   return `${genesisToken.value.amount.toString()}`
@@ -175,6 +197,10 @@ const onTokenIconUpload = (info: any) => {
   } catch (error) {
     console.log(error)
   }
+}
+
+const setSupplyToMax = () => {
+  genesisToken.value.amount = MAX_FUNGIBLE_AMOUNT
 }
 
 
