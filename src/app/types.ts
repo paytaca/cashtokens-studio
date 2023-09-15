@@ -23,3 +23,12 @@ export declare interface BcmrStorageArtifact {
   contentHash: string
 }
 
+export declare interface PaginatedData {
+  count: number,
+  limit: number,
+  offset: number,
+  next: string|null,
+  previous: string|null
+  results: any[]
+}
+
