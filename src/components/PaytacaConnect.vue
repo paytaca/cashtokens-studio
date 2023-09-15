@@ -91,7 +91,7 @@ const watchAddress = async (address: string) => {
     console.log('Watching address')
     user.updatingBalances = true
     user.walletBchBalance = await user.wallet?.getBalance('sat') as string
-    user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
+    // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
 
     if (userUtxos) {
