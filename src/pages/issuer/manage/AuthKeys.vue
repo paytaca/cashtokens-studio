@@ -109,7 +109,7 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   currentPage: 0,
   maxRowsPerPage: 0,
   rowCount: 0,
-  offset: 10,
+  offset: 0,
 })
 const watchtower = ref<Watchtower>(new Watchtower())
 
@@ -128,6 +128,7 @@ watch(() => pagination.value.currentPage, async (pageNumber) => {
     // populate 
     authKeys.value = []
     const results = paginatedAuthKeys.value.results
+
     for (let i = 0; i < results.length; i++) {
       const {
         txid,
@@ -145,9 +146,6 @@ watch(() => pagination.value.currentPage, async (pageNumber) => {
       authKey.unlockableTokensCount = unlockableTokensCount
       authKeys.value.push(authKey)
     }
-
-
-
   }
 })
 
@@ -163,9 +161,9 @@ const initPagination = () => {
 }
 
 onMounted(async () => {
-  if (user.authKeys) {
-    authKeys.value = user.authKeys as AuthKey[]
-  }
+  // if (user.authKeys) {
+  //   authKeys.value = user.authKeys as AuthKey[]
+  // }
   // try {
   //   authKeys.value = await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet)
   //   user.authKeys = authKeys.value
@@ -174,7 +172,7 @@ onMounted(async () => {
   // }
 
   // scanAuthKeysForManagedCategories()
-  paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(user.wallet!.getTokenDepositAddress())
+  paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(user.wallet!.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset })
   console.log('WATCHTOWER', paginatedAuthKeys.value)
   initPagination()
 })
