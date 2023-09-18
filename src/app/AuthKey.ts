@@ -17,6 +17,7 @@ export class AuthKey implements UtxoI {
   private _processing?: string
   private static _processing?: string
   unlockableTokens?: UtxoI[]
+  unlockableTokensCount?: number
   static readonly DEFAULT_COMMITMENT = '00'
   constructor(
     u?: {
