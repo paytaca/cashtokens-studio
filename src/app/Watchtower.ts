@@ -1,26 +1,30 @@
-import { UtxoI, Wallet, NetworkType } from 'mainnet-js'
-import { Contract } from "@mainnet-cash/contract"
-import getWalletClass from 'src/app/utils/getWalletClass'
-import { AuthchainIdentity } from './AuthchainIdentity'
+
 import { PaginatedData } from './types'
 import querify from './utils/querify'
 
-type FetchAuthchainIdentitiesQueryParams = {
+type PaginationQueryParams = {
   limit?: number, 
-  offset?: number, 
+  offset?: number 
+}
+
+type FetchAuthchainIdentitiesQueryParams = {
   token_amount__eq?: number,
   token_amount__gte?: number,
   token_amount__lte?: number,
   token_is_nft?: boolean,
-  token_capability?: boolean,
-  token_commitment?: boolean,
+  token_capability?: string,
+  token_commitment?: string,
   authguard?: string
-}
+} & PaginationQueryParams
 
-type FetchAuthKeysParams = {
-  limit?: number, 
-  offset?: number 
-}
+type FetchUtxoQueryParams = {
+  is_token?: boolean,
+  token_type?: 'ft' | 'nft' | 'hybrid',
+  capability?: string,
+  commitment?: string,
+} & PaginationQueryParams
+
+
 
 export class Watchtower {
   apiBaseUri: string
@@ -75,7 +79,7 @@ export class Watchtower {
    * @param {string} ownerAddress of the owner of the AuthKeys
    * @param {object} q The query parameters
    */
-    async fetchAuthKeys(ownerAddress: string, q?:FetchAuthKeysParams): Promise<PaginatedData> {
+    async fetchAuthKeys(ownerAddress: string, q?:PaginationQueryParams): Promise<PaginatedData> {
       this.processing = 'Fetching authkeys'
       let result: any
       try {
@@ -84,7 +88,7 @@ export class Watchtower {
           url += '?' + querify(q)
         }
         const r = await fetch(url)
-        const result = await r.json()
+        result = await r.json()
         return result
       } catch (error) {
         this.error = error
@@ -93,4 +97,37 @@ export class Watchtower {
       }
       return result
     }
+
+  /**
+   * Fetches AuthKeys owned by the given address.
+   * @param {string} ownerAddress of the owner of the AuthKeys
+   * @param {object} q The query parameters
+   */
+    async fetchNfts(ownerAddress: string, q?:FetchUtxoQueryParams): Promise<PaginatedData> {
+      this.processing = 'Fetching NFTs'
+      let result: any
+      
+      if (!q) {
+        q = { is_token: true, token_type: 'nft' }
+      } else {
+        q = { ...q, is_token: true, token_type: 'nft' }
+      }
+      try {
+        let url = `${this.apiBaseUri}cts/utxos/${ownerAddress}`
+        if (q) {
+          url += '?' + querify(q)
+        }
+        const r = await fetch(url)
+        result = await r.json()
+        console.log('result', result)
+        return result
+      } catch (error) {
+        this.error = error
+      } finally {
+        delete this.processing
+      }
+      return result
+    }
+
+    
 }
