@@ -32,7 +32,7 @@
             :caption="AuthKey.processing" />
           <tbody v-else class="text-center">
             <tr v-for="authKey, i in authKeys" :key="'ai-rec-' + i">
-              <td>{{ i + 1 }}</td>
+              <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <TokenCategory :tokenId="authKey?.utxo?.token?.tokenId" icon-right="key" />
               </td>
@@ -115,12 +115,16 @@ const watchtower = ref<Watchtower>(new Watchtower())
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
-watch(() => pagination.value.currentPage, async (pageNumber) => {
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
-      pagination.value.offset += pagination.value.maxRowsPerPage
+      if (oldPageNumber > pageNumber) {
+        pagination.value.offset -= pagination.value.maxRowsPerPage
+      } else {
+        pagination.value.offset += pagination.value.maxRowsPerPage
+      }
     }
     paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }

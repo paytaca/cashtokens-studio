@@ -22,7 +22,7 @@
                             :caption="watchtower.processing" />
                         <tbody v-else class="text-center">
                             <tr v-for="b, i in collectibles" :key="'ai-rec-' + i">
-                                <td>{{ i + 1 }}</td>
+                                <td>{{ i + pagination.offset + 1 }}</td>
                                 <td>
                                     <TokenCategory :tokenId="b.token?.tokenId" />
                                 </td>
@@ -72,12 +72,17 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
 
 const watchtower = ref<Watchtower>(new Watchtower())
 
-watch(() => pagination.value.currentPage, async (pageNumber) => {
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     if (user.wallet) {
         if (pageNumber === 1) {
             pagination.value.offset = 0
         } else {
-            pagination.value.offset += pagination.value.maxRowsPerPage
+            if (oldPageNumber > pageNumber) {
+                pagination.value.offset -= pagination.value.maxRowsPerPage
+            } else {
+                pagination.value.offset += pagination.value.maxRowsPerPage
+            }
+
         }
         paginatedCollectibles.value = await watchtower.value.fetchNfts(
             user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }

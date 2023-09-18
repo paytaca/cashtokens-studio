@@ -27,7 +27,7 @@
             :caption="'Scanning wallet for FT reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
-              <td>{{ i + 1 }}</td>
+              <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <q-avatar v-if="identity.tokenUris?.icon">
                   <img :src="identity.tokenUris?.icon" alt="na">
@@ -97,13 +97,17 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   offset: 10,
 })
 
-watch(() => pagination.value.currentPage, async (pageNumber) => {
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
     const wt = new Watchtower()
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
-      pagination.value.offset += pagination.value.maxRowsPerPage
+      if (oldPageNumber > pageNumber) {
+        pagination.value.offset -= pagination.value.maxRowsPerPage
+      } else {
+        pagination.value.offset += pagination.value.maxRowsPerPage
+      }
     }
     watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),

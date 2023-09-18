@@ -42,7 +42,7 @@
               :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
-                <td>{{ i + 1 }}</td>
+                <td>{{ i + pagination.offset + 1 }}</td>
                 <td>
                   <q-avatar v-if="identity.tokenUris?.icon">
                     <img :src="identity.tokenUris?.icon" alt="na">
@@ -143,14 +143,18 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
-watch(() => pagination.value.currentPage, async (pageNumber) => {
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   console.log('TEST', pageNumber)
   if (user.wallet) {
     const wt = new Watchtower()
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
-      pagination.value.offset += pagination.value.maxRowsPerPage
+      if (oldPageNumber > pageNumber) {
+        pagination.value.offset -= pagination.value.maxRowsPerPage
+      } else {
+        pagination.value.offset += pagination.value.maxRowsPerPage
+      }
     }
     watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
