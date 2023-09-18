@@ -17,6 +17,11 @@ type FetchAuthchainIdentitiesQueryParams = {
   authguard?: string
 }
 
+type FetchAuthKeysParams = {
+  limit?: number, 
+  offset?: number 
+}
+
 export class Watchtower {
   apiBaseUri: string
   processing?:string
@@ -54,10 +59,6 @@ export class Watchtower {
       if (q) {
         url += '?' + querify(q)
       }
-      // url += q?.limit !== undefined || q?.offset !== undefined? '?' : ''
-      // url += q?.limit !== undefined ? `limit=${q?.limit}&`: ''
-      // url += q?.offset !== undefined ? `offset=${q?.offset}`: ''
-      console.log('URL', url)
       const r = await fetch(url)
       const result = await r.json()
       return result
@@ -68,4 +69,28 @@ export class Watchtower {
     }
     return result
   }
+
+  /**
+   * Fetches AuthKeys owned by the given address.
+   * @param {string} ownerAddress of the owner of the AuthKeys
+   * @param {object} q The query parameters
+   */
+    async fetchAuthKeys(ownerAddress: string, q?:FetchAuthKeysParams): Promise<PaginatedData> {
+      this.processing = 'Fetching authkeys'
+      let result: any
+      try {
+        let url = `${this.apiBaseUri}cts/authkeys/${ownerAddress}`
+        if (q) {
+          url += '?' + querify(q)
+        }
+        const r = await fetch(url)
+        const result = await r.json()
+        return result
+      } catch (error) {
+        this.error = error
+      } finally {
+        delete this.processing
+      }
+      return result
+    }
 }
