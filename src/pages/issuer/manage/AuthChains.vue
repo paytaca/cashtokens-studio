@@ -38,8 +38,8 @@
                 <th>Action</th>
               </tr>
             </thead>
-            <TableBodySkeleton v-if="!authchainIdentities && AuthchainIdentity.processing"
-              :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="AuthchainIdentity.processing" />
+            <TableBodySkeleton v-if="!authchainIdentities && watchtower.processing"
+              :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="watchtower.processing" />
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
                 <td>{{ i + pagination.offset + 1 }}</td>
@@ -92,12 +92,12 @@
                   </q-btn>
                 </td>
               </tr>
-              <tr v-if="authchainIdentities && AuthchainIdentity.processing">
+              <tr v-if="authchainIdentities && watchtower.processing">
                 <td :colspan="viewType === 'simple' ? 7 : 8">
                   <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
-              <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
+              <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
                 <td :colspan="viewType === 'simple' ? 7 : 8">
                   No data
                 </td>
@@ -142,11 +142,11 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
 })
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const watchtower = ref<Watchtower>(new Watchtower())
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   console.log('TEST', pageNumber)
   if (user.wallet) {
-    const wt = new Watchtower()
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
@@ -156,7 +156,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
         pagination.value.offset += pagination.value.maxRowsPerPage
       }
     }
-    watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(
+    watchtowerAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
     // populate 
@@ -202,8 +202,7 @@ onMounted(async () => {
     if (user.authchainIdentities) {
       authchainIdentities.value = user.authchainIdentities as AuthchainIdentity[]
     }
-    const wt = new Watchtower()
-    watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(user.wallet.getTokenDepositAddress())
+    watchtowerAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(user.wallet.getTokenDepositAddress())
     initPagination()
     // authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     // user.authchainIdentities = authchainIdentities.value

@@ -23,7 +23,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthchainIdentity.processing && !authchainIdentities" :col-count="4" :row-count="3"
+          <TableBodySkeleton v-if="watchtower.processing && !authchainIdentities" :col-count="6" :row-count="3"
             :caption="'Scanning wallet for FT reserves'" />
           <tbody v-else class="text-center">
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
@@ -56,12 +56,12 @@
                 </q-btn>
               </td>
             </tr>
-            <tr v-if="AuthchainIdentity.processing && authchainIdentities">
+            <tr v-if="watchtower.processing && authchainIdentities">
               <td colspan="6">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
-            <tr v-if="authchainIdentities?.length === 0 && !AuthchainIdentity.processing">
+            <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
               <td colspan="6">
                 No data
               </td>
@@ -96,10 +96,10 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   rowCount: 0,
   offset: 10,
 })
+const watchtower = ref<Watchtower>(new Watchtower())
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    const wt = new Watchtower()
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
@@ -109,7 +109,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
         pagination.value.offset += pagination.value.maxRowsPerPage
       }
     }
-    watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(
+    watchtowerAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
     )
@@ -155,8 +155,7 @@ onMounted(async () => {
     if (user.authchainIdentities) {
       authchainIdentities.value = user.authchainIdentities as AuthchainIdentity[]
     }
-    const wt = new Watchtower()
-    watchtowerAuthchainIdentities.value = await wt.fetchAuthchainIdentities(user.wallet.getTokenDepositAddress(), { token_amount__gte: 1 })
+    watchtowerAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(user.wallet.getTokenDepositAddress(), { token_amount__gte: 1 })
     initPagination()
     // authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     // user.authchainIdentities = authchainIdentities.value

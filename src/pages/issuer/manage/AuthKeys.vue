@@ -66,7 +66,7 @@
                 </q-btn>
               </td>
             </tr>
-            <tr v-if="AuthKey.processing && authKeys">
+            <tr v-if="watchtower.processing && authKeys">
               <td colspan="5">
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
