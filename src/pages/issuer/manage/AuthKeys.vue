@@ -14,7 +14,10 @@
             Don't send these keys to anyone unless you intend to give them permission to manage your tokens.
           </p>
         </q-expansion-item>
-
+        <div class="q-pa-lg flex flex-center">
+          <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
+            :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
+        </div>
         <q-markup-table>
           <thead>
             <tr>
@@ -25,7 +28,7 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="AuthKey.processing && !authKeys" :col-count="5" :row-count="3"
+          <TableBodySkeleton v-if="watchtower.processing && !authKeys" :col-count="5" :row-count="3"
             :caption="AuthKey.processing" />
           <tbody v-else class="text-center">
             <tr v-for="authKey, i in authKeys" :key="'ai-rec-' + i">
@@ -42,7 +45,7 @@
                   <q-spinner color="cyan"></q-spinner><i>{{ authKey.processing }}</i>
                 </template>
                 <template v-else>
-                  {{ authKey.unlockableTokens?.length }}
+                  {{ authKey.unlockableTokensCount }}
                 </template>
               </td>
               <td>
@@ -68,7 +71,7 @@
                 <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
               </td>
             </tr>
-            <tr v-if="authKeys?.length === 0 && !AuthKey.processing">
+            <tr v-if="authKeys?.length === 0 && !watchtower.processing">
               <td colspan="5">
                 No data
               </td>
@@ -87,32 +90,93 @@
 
 import { Wallet } from 'mainnet-js';
 import { useUser } from 'src/stores/user';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useDialogs } from 'src/composables'
-import { AuthKey } from 'src/app'
+import { AuthKey, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
 import AuthKeyCreateTokenDialog from 'src/components/dialogs/AuthKeyCreateTokenDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue';
+import { PaginatedData } from 'src/app/types';
 
 const user = useUser()
 
 const authKeys = ref<AuthKey[] | undefined>()
+const paginatedAuthKeys = ref<PaginatedData>()
+const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
+  numberOfPages: 0,
+  currentPage: 0,
+  maxRowsPerPage: 0,
+  rowCount: 0,
+  offset: 10,
+})
+const watchtower = ref<Watchtower>(new Watchtower())
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
+
+watch(() => pagination.value.currentPage, async (pageNumber) => {
+  if (user.wallet) {
+    if (pageNumber === 1) {
+      pagination.value.offset = 0
+    } else {
+      pagination.value.offset += pagination.value.maxRowsPerPage
+    }
+    paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(
+      user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+    )
+    // populate 
+    authKeys.value = []
+    const results = paginatedAuthKeys.value.results
+    for (let i = 0; i < results.length; i++) {
+      const {
+        txid,
+        vout,
+        satoshis,
+        height,
+        coinbase,
+        token,
+        unlockableTokens,
+        unlockableTokensCount
+      } = results[i]
+
+      const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
+      authKey.unlockableTokens = unlockableTokens
+      authKey.unlockableTokensCount = unlockableTokensCount
+      authKeys.value.push(authKey)
+    }
+
+
+
+  }
+})
+
+
+const initPagination = () => {
+  if (paginatedAuthKeys.value && paginatedAuthKeys.value?.count > 0) {
+    pagination.value.currentPage = Math.ceil((paginatedAuthKeys.value.offset + 1) / paginatedAuthKeys.value.limit)
+    pagination.value.maxRowsPerPage = paginatedAuthKeys.value.limit
+    pagination.value.rowCount = paginatedAuthKeys.value.count
+    pagination.value.numberOfPages = Math.ceil(paginatedAuthKeys.value.count / paginatedAuthKeys.value.limit)
+    pagination.value.offset = paginatedAuthKeys.value.offset
+  }
+}
 
 onMounted(async () => {
   if (user.authKeys) {
     authKeys.value = user.authKeys as AuthKey[]
   }
-  try {
-    authKeys.value = await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet)
-    user.authKeys = authKeys.value
-  } catch (error) {
-    console.log(error)
-  }
-  scanAuthKeysForManagedCategories()
+  // try {
+  //   authKeys.value = await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet)
+  //   user.authKeys = authKeys.value
+  // } catch (error) {
+  //   console.log(error)
+  // }
+
+  // scanAuthKeysForManagedCategories()
+  paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(user.wallet!.getTokenDepositAddress())
+  console.log('WATCHTOWER', paginatedAuthKeys.value)
+  initPagination()
 })
 
 /**
