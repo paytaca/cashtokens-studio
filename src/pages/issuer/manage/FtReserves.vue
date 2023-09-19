@@ -88,7 +88,7 @@ import { PaginatedData } from 'src/app/types';
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const paginatedFtAuthchainIdentities = ref<PaginatedData>()
-const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
@@ -225,10 +225,17 @@ onMounted(async () => {
 
 
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
-  AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-    .then((values) => {
-      authchainIdentities.value = [...values]
-    })
+  // AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
+  //   .then((values) => {
+  //     authchainIdentities.value = [...values]
+  //   })
+  refreshData().then(() => {
+    if (paginatedFtAuthchainIdentities.value) {
+      populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
+    }
+  })
+  hideDialog()
+
 }
 
 </script>
