@@ -15,6 +15,13 @@ export type TokenBalance = {
   balance: bigint
 }
 
+export type FungibleTokenBalance = {
+  tokenId: string,
+  utxoCount: number,
+  balance: bigint,
+  owner: string
+}
+
 export declare interface BcmrStorageArtifact {
   uris: {
     https: string,
@@ -31,4 +38,6 @@ export declare interface PaginatedData {
   previous: string|null
   results: any[]
 }
+
+
 
