@@ -12,8 +12,8 @@
                         <thead>
                             <tr>
                                 <th>#</th>
-                                <!-- <th>Brand</th>
-                                <th>Symbol</th> -->
+                                <th>Brand</th>
+                                <th>Symbol</th>
                                 <th>Token Id</th>
                                 <th>Capability</th>
                                 <th>Commitment</th>
@@ -25,7 +25,7 @@
                         <tbody v-else class="text-center">
                             <tr v-for="b, i in nftCollections" :key="'ai-rec-' + i">
                                 <td>{{ i + pagination.offset + 1 }}</td>
-                                <!-- <td>
+                                <td>
                                     <q-avatar v-if="b.tokenUris?.icon">
                                         <img :src="b.tokenUris?.icon" alt="na">
                                     </q-avatar>
@@ -40,7 +40,7 @@
                                         </q-chip>
                                         <span v-else>---</span>
                                     </div>
-                                </td> -->
+                                </td>
                                 <td>
                                     <TokenCategory :tokenId="b.token?.tokenId" />
                                 </td>

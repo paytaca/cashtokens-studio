@@ -12,6 +12,8 @@
             <thead>
               <tr>
                 <th>#</th>
+                <th>Brand</th>
+                <th>Symbol</th>
                 <th>Token Id</th>
                 <th>Balance</th>
                 <th>Utxo Count</th>
@@ -22,7 +24,22 @@
               :caption="watchtower.processing" />
             <tbody v-else class="text-center">
               <tr v-for="b, i in ftBalances" :key="'ai-rec-' + i">
-                <td>{{ i + 1 }}</td>
+                <td>{{ i + pagination.offset + 1 }}</td>
+                <td>
+                  <q-avatar v-if="b.tokenUris?.icon">
+                    <img :src="b.tokenUris?.icon" alt="na">
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="disabled" />
+                </td>
+                <td>
+                  <q-spinner v-if="bcmrIndexer.processing"></q-spinner>
+                  <div v-else>
+                    <q-chip v-if="b.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
+                      {{ b.tokenCategory?.symbol }}
+                    </q-chip>
+                    <span v-else>---</span>
+                  </div>
+                </td>
                 <td>
                   <TokenCategory :tokenId="b.tokenId" />
                 </td>
@@ -56,11 +73,12 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import { onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { CashToken, Watchtower } from 'src/app'
+import { Bcmr, CashToken, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import TokenSenderDialog from 'src/components/dialogs/TokenSenderDialog.vue'
 import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
+import { BcmrIndexer } from 'src/app/bcmr/BcmrIndexer';
 
 
 defineOptions({ name: 'FungibleTokens' })
@@ -78,6 +96,8 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   offset: 0,
 })
 
+const bcmrIndexer = ref<BcmrIndexer>(new BcmrIndexer())
+
 const populateFtBalances = (paginated: PaginatedData) => {
   // populate 
   ftBalances.value = []
@@ -86,6 +106,10 @@ const populateFtBalances = (paginated: PaginatedData) => {
     const ftBalance: FungibleTokenBalance = results[i]
     ftBalances.value.push(ftBalance)
   }
+  ftBalances.value.forEach(async (a) => {
+    a.tokenCategory = await bcmrIndexer.value.fetchToken(a.tokenId)
+    a.tokenUris = await bcmrIndexer.value.fetchTokenUris(a.tokenId)
+  })
 }
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
