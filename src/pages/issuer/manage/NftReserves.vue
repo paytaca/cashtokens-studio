@@ -236,6 +236,12 @@ onMounted(async () => {
 
 const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
   console.log('MINTED', minted)
+  refreshData().then(() => {
+    if (paginatedNftAuthchainIdentities.value) {
+      authchainIdentities.value = []
+      populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
+    }
+  })
   hideDialog()
 }
 

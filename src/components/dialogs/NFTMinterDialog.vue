@@ -2,7 +2,7 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Mint child NFT</q-toolbar-title>
+        <q-toolbar-title class="text-h5">Mint child NFT</q-toolbar-title>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
