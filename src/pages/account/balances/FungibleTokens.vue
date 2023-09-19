@@ -18,7 +18,7 @@
                 <!-- <th>Action</th> -->
               </tr>
             </thead>
-            <TableBodySkeleton v-if="watchtower.processing" :col-count="4" :row-count="3"
+            <TableBodySkeleton v-if="watchtower.processing && !ftBalances" :col-count="4" :row-count="3"
               :caption="watchtower.processing" />
             <tbody v-else class="text-center">
               <tr v-for="b, i in ftBalances" :key="'ai-rec-' + i">
@@ -35,6 +35,11 @@
               <tr v-if="ftBalances?.length === 0 && !watchtower.processing">
                 <td colspan="4">
                   No data
+                </td>
+              </tr>
+              <tr v-if="watchtower.processing">
+                <td colspan="4">
+                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
             </tbody>
@@ -73,6 +78,15 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   offset: 0,
 })
 
+const populateFtBalances = (paginated: PaginatedData) => {
+  // populate 
+  ftBalances.value = []
+  const results = paginated.results
+  for (let i = 0; i < results.length; i++) {
+    const ftBalance: FungibleTokenBalance = results[i]
+    ftBalances.value.push(ftBalance)
+  }
+}
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
@@ -92,12 +106,14 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     )
 
     // populate 
-    ftBalances.value = []
-    const results = paginatedFtBalances.value.results
-    for (let i = 0; i < results.length; i++) {
-      const ftBalance: FungibleTokenBalance = results[i]
-      ftBalances.value.push(ftBalance)
-    }
+    populateFtBalances(paginatedFtBalances.value)
+    // ftBalances.value = []
+    // const results = paginatedFtBalances.value.results
+    // for (let i = 0; i < results.length; i++) {
+    //   const ftBalance: FungibleTokenBalance = results[i]
+    //   ftBalances.value.push(ftBalance)
+    // }
+    user.paginatedFtBalances = paginatedFtBalances.value
   }
 })
 
@@ -110,20 +126,44 @@ const initPagination = () => {
     pagination.value.offset = paginatedFtBalances.value.offset
   }
 }
-onMounted(async () => {
+
+const refreshData = async () => {
   if (user.wallet) {
     paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
+    user.paginatedFtBalances = paginatedFtBalances.value
     initPagination()
-    // ftBalances.value = (await user.wallet.getAddressUtxos())
-    //     .filter((u: UtxoI) => u.token?.capability && !u.token?.amount)
-    //     .map((u: UtxoI) => (
-    //         { tokenId: u.token?.tokenId, capability: u.token?.capability, commitment: u.token?.commitment } as { tokenId: string, capability: NFTCapability, commitment: string }
-    //     ))
-
   }
+}
+
+onMounted(async () => {
+
+  if (user.wallet) {
+    /**
+     * Load from store by default then refresh
+     */
+    if (user.paginatedFtBalances) {
+      paginatedFtBalances.value = user.paginatedFtBalances
+      populateFtBalances(paginatedFtBalances.value)
+    }
+    refreshData()
+  }
+
+  // if (user.wallet) {
+  //   paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
+  //     user.wallet.getTokenDepositAddress(),
+  //     { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+  //   )
+  //   initPagination()
+  // ftBalances.value = (await user.wallet.getAddressUtxos())
+  //     .filter((u: UtxoI) => u.token?.capability && !u.token?.amount)
+  //     .map((u: UtxoI) => (
+  //         { tokenId: u.token?.tokenId, capability: u.token?.capability, commitment: u.token?.commitment } as { tokenId: string, capability: NFTCapability, commitment: string }
+  //     ))
+
+  // }
 })
 
 

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { UtxoI, Wallet } from 'mainnet-js';
 import { AuthKey } from 'src/app/AuthKey';
 import { AuthchainIdentity, CashToken } from 'src/app';
+import { PaginatedData } from 'src/app/types';
 
 type UserState = {
   connectedPaytacaAddress?: string,
@@ -23,7 +24,13 @@ type UserState = {
   updatingBalances?: boolean,
   authKeys?: AuthKey[],
   tokens?: CashToken[],
-  authchainIdentities?: AuthchainIdentity[]
+  authchainIdentities?: AuthchainIdentity[],
+  paginatedAuthchainIdentities?: PaginatedData,
+  paginatedFtAuthchainIdentities?: PaginatedData,
+  paginatedNftAuthchainIdentities?: PaginatedData,
+  paginatedAuthKeys?: PaginatedData,
+  paginatedFtBalances?: PaginatedData,
+  paginatedNftCollections?: PaginatedData
 }
 
 export const useUser = defineStore('user', {

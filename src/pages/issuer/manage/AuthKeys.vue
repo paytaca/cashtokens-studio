@@ -115,6 +115,30 @@ const watchtower = ref<Watchtower>(new Watchtower())
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
+
+const populateAuthKeys = (paginated: PaginatedData) => {
+  authKeys.value = []
+  const results = paginated.results
+
+  for (let i = 0; i < results.length; i++) {
+    const {
+      txid,
+      vout,
+      satoshis,
+      height,
+      coinbase,
+      token,
+      unlockableTokens,
+      unlockableTokensCount
+    } = results[i]
+
+    const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
+    authKey.unlockableTokens = unlockableTokens
+    authKey.unlockableTokensCount = unlockableTokensCount
+    authKeys.value.push(authKey)
+  }
+}
+
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
     if (pageNumber === 1) {
@@ -130,29 +154,30 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
     // populate 
-    authKeys.value = []
-    const results = paginatedAuthKeys.value.results
+    populateAuthKeys(paginatedAuthKeys.value)
+    // authKeys.value = []
+    // const results = paginatedAuthKeys.value.results
 
-    for (let i = 0; i < results.length; i++) {
-      const {
-        txid,
-        vout,
-        satoshis,
-        height,
-        coinbase,
-        token,
-        unlockableTokens,
-        unlockableTokensCount
-      } = results[i]
+    // for (let i = 0; i < results.length; i++) {
+    //   const {
+    //     txid,
+    //     vout,
+    //     satoshis,
+    //     height,
+    //     coinbase,
+    //     token,
+    //     unlockableTokens,
+    //     unlockableTokensCount
+    //   } = results[i]
 
-      const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
-      authKey.unlockableTokens = unlockableTokens
-      authKey.unlockableTokensCount = unlockableTokensCount
-      authKeys.value.push(authKey)
-    }
+    //   const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
+    //   authKey.unlockableTokens = unlockableTokens
+    //   authKey.unlockableTokensCount = unlockableTokensCount
+    //   authKeys.value.push(authKey)
+    // }
+    user.paginatedAuthKeys = paginatedAuthKeys.value
   }
 })
-
 
 const initPagination = () => {
   if (paginatedAuthKeys.value && paginatedAuthKeys.value?.count > 0) {
@@ -163,6 +188,30 @@ const initPagination = () => {
     pagination.value.offset = paginatedAuthKeys.value.offset
   }
 }
+
+const refreshData = async () => {
+  if (user.wallet) {
+    paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(
+      user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+    )
+    user.paginatedAuthKeys = paginatedAuthKeys.value
+    initPagination()
+  }
+}
+
+onMounted(async () => {
+  if (user.wallet) {
+    /**
+     * Load from store by default then refresh
+     */
+    if (user.paginatedAuthKeys) {
+      paginatedAuthKeys.value = user.paginatedAuthKeys
+      populateAuthKeys(paginatedAuthKeys.value)
+    }
+    refreshData()
+  }
+
+})
 
 onMounted(async () => {
   // if (user.authKeys) {
