@@ -24,8 +24,6 @@ type FetchUtxoQueryParams = {
   commitment?: string,
 } & PaginationQueryParams
 
-
-
 export class Watchtower {
   apiBaseUri: string
   processing?:string
@@ -57,7 +55,6 @@ export class Watchtower {
   async fetchAuthchainIdentities(address: string, q?:FetchAuthchainIdentitiesQueryParams): Promise<PaginatedData> {
     this.processing = 'Fetching authchain identities'
     let result: any
-    console.log(q)
     try {
       let url = `${this.apiBaseUri}cts/authchain-identities/${address}`
       if (q) {
@@ -129,5 +126,25 @@ export class Watchtower {
       return result
     }
 
+    async fetchFtBalance(ownerAddress: string, q?:FetchUtxoQueryParams): Promise<PaginatedData> {
+      this.processing = 'Checking fungible token balances'
+      let result: any
+      try {
+        let url = `${this.apiBaseUri}cts/balances/${ownerAddress}/fts`
+        if (q) {
+          url += '?' + querify(q)
+        }
+        const r = await fetch(url)
+        result = await r.json()
+        return result
+      } catch (error) {
+        this.error = error
+      } finally {
+        delete this.processing
+      }
+      return result
+    } 
+
+  
     
 }
