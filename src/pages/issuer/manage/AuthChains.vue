@@ -79,7 +79,7 @@
                       <q-list>
                         <q-item clickable v-close-popup
                           @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
-                          Publish Registry
+                          Publish Existing Registry
                         </q-item>
                         <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
                           Unguard Authchain

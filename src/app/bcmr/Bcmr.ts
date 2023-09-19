@@ -162,6 +162,14 @@ export class Bcmr implements Registry {
     })
   }
 
+  appendAuthGuardTokenStandardExtension(authKeyTokenId:string){
+    this.extensions = { 
+      ...this.extensions, 
+      tokenStandard: "AuthGuard",
+      authNft: authKeyTokenId
+    }
+  }
+
   /**
    * Hash of the registry
    */

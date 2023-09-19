@@ -5,8 +5,8 @@
         <q-toolbar-title>Release Authchain from Authguard</q-toolbar-title>
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
-        <div>
-          <q-icon name="warning" color="warning"></q-icon>
+        <div class="q-mx-md text-justify">
+          <q-icon name="warning" color="warning" size="md"></q-icon>
           <span>
             You are about to release the authchain's identity output from the AuthGuard covenant.
             Doing so will transfer the authchain identity token to your regular wallet address.
@@ -19,11 +19,8 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => unguardAuthchain()"
-          :busyLabel="authchainIdentity.processing"
-          label="Unguard Authchain"
-          color="primary"
-        />
+        <BusyButton @click="() => unguardAuthchain()" :busyLabel="authchainIdentity.processing" label="Unguard Authchain"
+          color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>

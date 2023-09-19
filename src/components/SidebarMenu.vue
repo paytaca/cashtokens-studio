@@ -135,14 +135,19 @@ watch(selected, (currentlySelected, previouslySelected) => {
   }
 
   if (currentlySelected && !currentlySelected.startsWith('#')) {
-    router.push(currentlySelected)
+    router.replace(currentlySelected)
     return
   }
 
   if (currentlySelected === null) {
     if (previouslySelected === lastSelectedBeforeUnselect.value) {
       let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
-      expanded.value.splice(menuIndex, 1)
+      console.log('MENU INDEX', menuIndex)
+      if (menuIndex !== -1) {
+        expanded.value.splice(menuIndex, 1)
+      }
+
+
     }
   } else {
     let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)

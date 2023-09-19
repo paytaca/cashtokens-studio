@@ -227,10 +227,11 @@ const createToken = async () => {
       bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
     }
 
+    bcmr.value.appendAuthGuardTokenStandardExtension(props.authKey.token?.tokenId || props.authKey.txid)
+
     cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
     cashToken.value.processing = 'Creating registry'
 
-    console.log('BCMR', bcmr.value.getContent())
     // let storageArtifact: BcmrStorageArtifact | undefined
     try {
       bcmrStorageArtifact.value = await bcmr.value.storeRegistry()

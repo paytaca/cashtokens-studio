@@ -52,12 +52,12 @@
                                 </td> -->
                             </tr>
                             <tr v-if="nftCollections.length === 0 && !watchtower.processing">
-                                <td colspan="4">
+                                <td colspan="6">
                                     No data
                                 </td>
                             </tr>
                             <tr v-if="watchtower.processing">
-                                <td colspan="4">
+                                <td colspan="6">
                                     <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                                 </td>
                             </tr>
