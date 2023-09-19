@@ -24,7 +24,7 @@
               <th>#</th>
               <th>AuthKey Id</th>
               <th>AuthGuard Contract Address</th>
-              <th>No. of managed tokens</th>
+              <th>No. of Locked Token Identities</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -38,7 +38,7 @@
               </td>
               <td>
                 <CashAddress :cashaddr="authKey?.authGuard?.contract?.getTokenDepositAddress()"
-                  tool-tip="Copy Contract Address" />
+                  tool-tip="Copy Contract Address" icon-right="lock" />
               </td>
               <td>
                 <template v-if="authKey.processing">

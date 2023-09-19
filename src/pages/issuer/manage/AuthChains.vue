@@ -68,7 +68,7 @@
                 </template>
                 <td>
                   <CashAddress :cashaddr="identity.authKey?.authGuard?.contract?.getTokenDepositAddress()"
-                    tool-tip="Copy Contract Address" />
+                    tool-tip="Copy Contract Address" icon-right="lock" />
                 </td>
                 <td>
                   <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
