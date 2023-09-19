@@ -2,7 +2,7 @@
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Transfer AuthKey</q-toolbar-title>
+        <q-toolbar-title class="text-h5">Transfer AuthKey</q-toolbar-title>
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-banner rounded>
@@ -22,12 +22,8 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton
-          @click="() => transferAuthKey()"
-          label="Transfer AuthKey"
-          :busyLabel="authKey.processing"
-          color="primary"
-        />
+        <BusyButton @click="() => transferAuthKey()" label="Transfer AuthKey" :busyLabel="authKey.processing"
+          color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
