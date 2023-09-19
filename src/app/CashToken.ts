@@ -506,8 +506,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     try {
       this._processing = 'Checking token registry'
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
-      const rj = await r.json()
-      this.tokenCategory = rj
+      this.tokenCategory = await r.json()
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {

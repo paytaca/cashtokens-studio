@@ -164,6 +164,7 @@ const tokenAmountWithDecimal = computed<string>(() => {
 })
 
 const isValidTokenAmount = computed<boolean>(() => {
+  if (props.tokenType === 'nft') return true
   if (!tokenAmountWithDecimal.value) {
     return false
   }

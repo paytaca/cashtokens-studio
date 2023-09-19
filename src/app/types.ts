@@ -1,4 +1,5 @@
 import { NFTCapability, TokenI, UtxoI } from "mainnet-js"
+import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema"
 
 export type GenesisOptions = {
   useAuthGuard?: boolean,                                 // use authguard, default = true
@@ -15,11 +16,16 @@ export type TokenBalance = {
   balance: bigint
 }
 
+/**
+ * Aggregated fungible token balance
+ */
 export type FungibleTokenBalance = {
   tokenId: string,
   utxoCount: number,
   balance: bigint,
-  owner: string
+  owner: string,
+  tokenUris?: URIs,
+  tokenCategory?: TokenCategory
 }
 
 export declare interface BcmrStorageArtifact {
