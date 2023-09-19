@@ -1,6 +1,6 @@
 <template>
   <q-btn @click.stop="() => copyText(cashaddr || '...')" size="sm" flat dense no-caps
-    :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'">
+    :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" color="warning">
     <template v-if="cashaddr">
       <q-chip v-if="type === 'cash'" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" dense size="sm">
         <q-avatar>

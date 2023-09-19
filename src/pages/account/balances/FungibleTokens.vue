@@ -3,6 +3,10 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">My Fungible Tokens</h5>
+        <div class="q-pa-lg flex flex-center">
+          <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
+            :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
+        </div>
         <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
@@ -11,24 +15,25 @@
                 <th>Token Id</th>
                 <th>Balance</th>
                 <th>Utxo Count</th>
-                <th>Action</th>
+                <!-- <th>Action</th> -->
               </tr>
             </thead>
-            <TableBodySkeleton v-if="loading" :col-count="5" :row-count="3" :caption="loading" />
+            <TableBodySkeleton v-if="watchtower.processing" :col-count="4" :row-count="3"
+              :caption="watchtower.processing" />
             <tbody v-else class="text-center">
-              <tr v-for="b, i in balances" :key="'ai-rec-' + i">
+              <tr v-for="b, i in ftBalances" :key="'ai-rec-' + i">
                 <td>{{ i + 1 }}</td>
                 <td>
                   <TokenCategory :tokenId="b.tokenId" />
                 </td>
                 <td>{{ b.balance || 0 }}</td>
-                <td>{{ b.sourceUtxos.length }}</td>
-                <td>
+                <td>{{ b.utxoCount }}</td>
+                <!-- <td>
                   <q-btn color="primary" dense no-caps @click="openDialog(TokenSenderDialog.__name, b)">Send</q-btn>
-                </td>
+                </td> -->
               </tr>
-              <tr v-if="balances?.length === 0 && !CashToken.processing">
-                <td colspan="5">
+              <tr v-if="ftBalances?.length === 0 && !watchtower.processing">
+                <td colspan="4">
                   No data
                 </td>
               </tr>
@@ -43,36 +48,100 @@
 </template>
 <script setup lang="ts">
 import { UtxoI, Wallet } from 'mainnet-js';
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { CashToken } from 'src/app'
+import { CashToken, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import TokenSenderDialog from 'src/components/dialogs/TokenSenderDialog.vue'
+import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
 
 
 defineOptions({ name: 'FungibleTokens' })
 
 const user = useUser()
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
-const balances = ref<{ tokenId: string, sourceUtxos: UtxoI[], balance: bigint }[]>([])
-const loading = ref<string>('')
-onMounted(async () => {
+const ftBalances = ref<FungibleTokenBalance[]>([])
+const paginatedFtBalances = ref<PaginatedData>()
+const watchtower = ref<Watchtower>(new Watchtower())
+const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
+  numberOfPages: 0,
+  currentPage: 0,
+  maxRowsPerPage: 0,
+  rowCount: 0,
+  offset: 0,
+})
+
+
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    loading.value = 'Scanning wallet for fungible tokens'
-    const utxos = await CashToken.scanWalletForTokens('ft', user.wallet as Wallet)
-    utxos.forEach((u: UtxoI) => {
-      let b = balances.value.find((b) => b.tokenId === u.token?.tokenId)
-      if (b) {
-        b.sourceUtxos.push(u)
-        b.balance += BigInt(u.token!.amount)
+    if (pageNumber === 1) {
+      pagination.value.offset = 0
+    } else {
+      if (oldPageNumber > pageNumber) {
+        pagination.value.offset -= pagination.value.maxRowsPerPage
       } else {
-        balances.value.push({ tokenId: u.token!.tokenId, sourceUtxos: [u], balance: BigInt(u.token!.amount) })
+        pagination.value.offset += pagination.value.maxRowsPerPage
       }
-    })
-    loading.value = ''
+
+    }
+
+    paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
+      user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+    )
+
+    // populate 
+    ftBalances.value = []
+    const results = paginatedFtBalances.value.results
+    for (let i = 0; i < results.length; i++) {
+      const ftBalance: FungibleTokenBalance = results[i]
+      ftBalances.value.push(ftBalance)
+    }
   }
 })
+
+const initPagination = () => {
+  if (paginatedFtBalances.value && paginatedFtBalances.value?.count > 0) {
+    pagination.value.currentPage = Math.ceil((paginatedFtBalances.value.offset + 1) / paginatedFtBalances.value.limit)
+    pagination.value.maxRowsPerPage = paginatedFtBalances.value.limit
+    pagination.value.rowCount = paginatedFtBalances.value.count
+    pagination.value.numberOfPages = Math.ceil(paginatedFtBalances.value.count / paginatedFtBalances.value.limit)
+    pagination.value.offset = paginatedFtBalances.value.offset
+  }
+}
+onMounted(async () => {
+  if (user.wallet) {
+    paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
+      user.wallet.getTokenDepositAddress(),
+      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+    )
+    initPagination()
+    // ftBalances.value = (await user.wallet.getAddressUtxos())
+    //     .filter((u: UtxoI) => u.token?.capability && !u.token?.amount)
+    //     .map((u: UtxoI) => (
+    //         { tokenId: u.token?.tokenId, capability: u.token?.capability, commitment: u.token?.commitment } as { tokenId: string, capability: NFTCapability, commitment: string }
+    //     ))
+
+  }
+})
+
+
+// onMounted(async () => {
+//   if (user.wallet) {
+//     loading.value = 'Scanning wallet for fungible tokens'
+//     const utxos = await CashToken.scanWalletForTokens('ft', user.wallet as Wallet)
+//     utxos.forEach((u: UtxoI) => {
+//       let b = ftBalances.value.find((b) => b.tokenId === u.token?.tokenId)
+//       if (b) {
+//         b.sourceUtxos.push(u)
+//         b.balance += BigInt(u.token!.amount)
+//       } else {
+//         ftBalances.value.push({ tokenId: u.token!.tokenId, sourceUtxos: [u], balance: BigInt(u.token!.amount) })
+//       }
+//     })
+//     loading.value = ''
+//   }
+// })
 
 </script>
