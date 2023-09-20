@@ -115,7 +115,7 @@ const genesisToken = ref<{
   amount: props.tokenType === 'ft' ? 1 : 0,
   tokenId: props.genesisInput.txid,
   capability: undefined,
-  commitment: undefined
+  commitment: ''
 })
 
 const genesisTokenMetadata = ref<{
@@ -232,7 +232,6 @@ const createToken = async () => {
     cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
     cashToken.value.processing = 'Creating registry'
 
-    // let storageArtifact: BcmrStorageArtifact | undefined
     try {
       bcmrStorageArtifact.value = await bcmr.value.storeRegistry()
       console.log('storage artifact:', bcmrStorageArtifact.value)
