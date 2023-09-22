@@ -4,3 +4,6 @@ export const MAX_FUNGIBLE_AMOUNT = '9223372036854770000' // - 922337203685477580
 export const CTS_MINTING_TOKEN_DEFAULT_COMMITMENT = 'feed' // actual default commitment value of minters
 export const CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT = 'ctsfeed782974771942$%&*@(&#(@&' // default commitment value in forms, because the user might actually need to use `feed`
 
+
+// EVENT BUS EVENTS
+export const ADDRESS_WATCHER_TRIGGERED = 1
