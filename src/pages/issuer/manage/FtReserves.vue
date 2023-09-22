@@ -219,9 +219,9 @@ onMounted(async () => {
     refreshData()
   }
 
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
     console.log('EVENT BUS')
-    refreshData()
+    await refreshData()
   })
 
 })
