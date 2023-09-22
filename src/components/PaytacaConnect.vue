@@ -15,15 +15,14 @@
 </template>
 
 <script setup lang="ts">
-import { useQuasar } from 'quasar'
-import { ref, onMounted, watch } from 'vue';
+import { EventBus, useQuasar } from 'quasar'
+import { ref, onMounted, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { UtxoI, Wallet } from 'mainnet-js';
 import formatAddress from 'src/app/utils/formatAddress';
 import getWalletClass from 'src/app/utils/getWalletClass';
 import { useUser } from 'src/stores/user';
-import { DEFAULT_TOKEN_VALUE } from 'src/app/constants'
-import { AuthchainIdentity } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE } from 'src/app/constants'
 
 defineOptions({ name: 'PaytacaConnect' })
 
@@ -31,6 +30,7 @@ const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
 const watching = ref()
+const eventBus = inject<EventBus>('eventBus')
 
 onMounted(async () => {
   if (window.paytaca) {
@@ -88,18 +88,16 @@ const storeBalances = (userUtxos: UtxoI[]) => {
 const watchAddress = async (address: string) => {
   user.wallet = await getWalletClass().watchOnly(address)
   watching.value = user.wallet.watchAddress(async () => {
-    console.log('Watching address')
+    eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
     user.updatingBalances = true
     user.walletBchBalance = await user.wallet?.getBalance('sat') as string
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
-
     if (userUtxos) {
       storeBalances(userUtxos)
     }
     user.updatingBalances = false
   })
-
 }
 
 
@@ -115,6 +113,11 @@ const disconnect = async () => {
 
 }
 
+onMounted(() => {
+  if (!watching.value && user.walletAddress) {
+    watchAddress(user.walletAddress)
+  }
+})
 
 
 
