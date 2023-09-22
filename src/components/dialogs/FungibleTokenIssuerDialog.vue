@@ -2,27 +2,31 @@
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="row items-center text-h5">
-          Issue Fungible Tokens
-        </q-toolbar-title>
-      </q-toolbar>
-      <q-toolbar>
-        <q-toolbar-title class="row items-center">
-          <q-avatar v-if="authchainIdentity.tokenUris?.icon">
+        <q-toolbar-title class="text-h5 row items-center">
+          <span class="q-mx-sm">Issue</span>
+          <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
+            authchainIdentity.tokenCategory.symbol : 'FT' }}</span>
+          <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
             <img :src="authchainIdentity.tokenUris?.icon" alt="">
           </q-avatar>
-          <q-icon v-else name="token" size="lg" />
-          <span class="q-ml-md text-body2"><span class="text-bold">{{ authchainIdentity.tokenCategory?.symbol || 'FT'
-          }}</span></span>
         </q-toolbar-title>
-
         <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
           <q-input :model-value="authchainIdentity.tokenCategory?.decimals || 0" label="Decimals (Metadata)" borderless
-            filled dense disable></q-input>
-
+            filled dense disable>
+            <template v-slot:append>
+              <q-icon v-if="authchainIdentity.tokenCategory?.decimals === undefined" name="warning" color="warning"
+                size="sm" flat dense>
+                <q-tooltip>
+                  Registry not found. Unable to determine value. If you already uploaded the registry, the indexer might
+                  just not have picked it
+                  up yet, you may try to refresh the page
+                </q-tooltip>
+              </q-icon>
+            </template>
+          </q-input>
           <q-input :model-value="currentFtReservesDecimal" label="Current reserve supply (decimal)" filled borderless
             dense disable bottom-slots>
             <template v-slot:hint>
@@ -45,10 +49,9 @@
               <q-btn color="warning" dense flat @click="form.recipient = user.walletTokenAddress!" label="Self" />
             </template>
           </q-input>
-          <q-input v-model="form.amount" label="Enter Token amount in decimal"
+          <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal"
             @update:model-value="() => form.tokeshiAmount = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))"
-            filled dense bottom-slots>
-
+            filled dense bottom-slots :rules="[(v) => BigInt(v) <= BigInt(currentFtReserves) || 'Amount exceeds supply']">
             <template v-slot:hint>
               <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
                 class="row justify-end text-italic q-mb-sm">
@@ -57,7 +60,8 @@
                 ignored.
               </div>
               <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-              <div class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
+              <div v-if="form.amount <= currentFtReserves"
+                class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
                 <span>Token amount </span>
                 <span class="text-weight-bold text-green-6">{{
                   form.tokeshiAmount || 0
@@ -70,14 +74,15 @@
       </q-card-section>
       <q-card-actions class="row justify-end q-my-lg">
         <BusyButton @click="() => releaseTokensFromReserveSupply()" :busyLabel="authchainIdentity.processing"
-          label="Issue Tokens" color="primary q-mt-lg" size="lg" />
+          label="Issue Tokens" color="primary q-mt-lg" size="lg"
+          :disable="Boolean(authchainIdentity.processing) || tokenAmountInputRef?.hasError" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
 
-import { useQuasar } from 'quasar';
+import { QInput, useQuasar } from 'quasar';
 import { AuthchainIdentity } from 'src/app'
 import { ref, computed } from 'vue';
 import { useUser } from 'src/stores/user'
@@ -91,7 +96,16 @@ const emit = defineEmits<{
   (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
 }>()
 
-const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
+const props = defineProps<{
+  authchainIdentity: AuthchainIdentity,
+  /**
+   * Optional, If this dialog was used to show 
+   * a particular authchainIdentity from a list or table, 
+   * the trigger can  pass the index of the authchainIdentity from that table. 
+   * Particularly helpful so we can pass this data when emitting event.
+   */
+  authchainIdentityIndex?: number
+}>()
 const $q = useQuasar()
 const user = useUser()
 const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>({
@@ -110,6 +124,8 @@ const newReserveSupplyDecimal = computed(() => {
   return v
 })
 
+const tokenAmountInputRef = ref<QInput | null>(null)
+
 const releaseTokensFromReserveSupply = async () => {
   if (!form.value || !form.value.recipient || Number(form.value.amount) <= 0) {
     return $q.notify({ type: 'negative', message: 'Error!Amount and recipient required!' })
@@ -122,7 +138,9 @@ const releaseTokensFromReserveSupply = async () => {
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
     }
-    emit('tokensIssued', { tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount })
+    emit('tokensIssued', {
+      tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
+    })
   } catch (error: any) {
     return $q.notify({ type: 'negative', message: error.message })
   }

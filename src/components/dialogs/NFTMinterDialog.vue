@@ -2,23 +2,53 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="text-h5">Mint child NFT</q-toolbar-title>
+        <q-toolbar-title class="text-h5 row items-center">
+          <span class="q-mx-sm">Mint</span>
+          <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT' }}</span>
+          <q-avatar class="q-mx-sm" v-if="minter.tokenUris?.icon">
+            <img :src="minter.tokenUris?.icon" alt="">
+          </q-avatar>
+        </q-toolbar-title>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
           <q-input :model-value="minter.token?.tokenId" label="Token ID/Category" filled dense disable>
           </q-input>
+          <q-input :model-value="form.commitmentOfLastMint"
+            :label="nftCollectionType === 'SequentialNftCollection' ? 'Commitment of Last Mint (Sequence Number)' : 'Token Commitment'"
+            filled dense disable>
+          </q-input>
           <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
             Capability <sup><code>{{ form.capability }}</code></sup>
             <q-option-group name="preferred_genre" v-model="form.capability" :options="[
-              { value: 'minting', label: 'Minting' },
+              // { value: 'minting', label: 'Minting' },
               { value: 'mutable', label: 'Mutable' },
               { value: 'none', label: 'None' }
             ]" color="primary" inline />
           </div>
-          <q-input v-model="form.commitment" label="Commitment" filled dense>
+          <q-input v-if="form.capability !== 'minting'" v-model="form.commitment"
+            :label="nftCollectionType === 'SequentialNftCollection' ? 'Token Commitment (Sequence Number)' : 'Token Commitment'"
+            :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
+            :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" dense stack-label>
+            <template v-slot:prepend>
+              <q-btn :label="form.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
+                :icon-right="form.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+            </template>
+            <template v-slot:append>
+              <q-btn @click="convertCommitment" color="warning" flat dense
+                :label="form.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
+                <q-tooltip>
+                  {{
+                    form.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                    : 'Click to convert value to a number'
+                  }}
+                </q-tooltip>
+              </q-btn>
+            </template>
           </q-input>
+          <!-- <q-input v-model="form.commitment" label="Commitment" filled dense>
+          </q-input> -->
           <q-input v-model="form.recipient" label="Recipient's Address" filled dense>
             <template v-slot:append>
               <q-btn dense flat label="Self" color="warning" @click="form.recipient = user.walletTokenAddress!" />
@@ -34,13 +64,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { NFTCapability } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { CashToken } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
+import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
+import { NftCollectionType } from 'src/app/types';
+import { shortenTokenId } from 'src/app/utils';
 
 const props = defineProps<{
   minter: CashToken,
@@ -52,11 +85,48 @@ const emit = defineEmits<{
 
 const $q = useQuasar()
 const user = useUser()
-const form = ref<{ capability: NFTCapability, commitment: string, recipient: string }>({
+/**
+ * Value of this should be resolved from bcmr, but since we're just currently supporting
+ * SequentialNftCollection, we'll use the default. ParseableNftCollection will be handled
+ * differently
+ */
+const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
+
+const form = ref<{ capability: NFTCapability, commitmentOfLastMint: string, commitment: string, recipient: string, commitmentFormat: 'decimal' | 'hex' }>({
   capability: NFTCapability.none,
+  commitmentOfLastMint: '', // Commitment of last mint (stored as commitment of the minter)
   commitment: '',
-  recipient: ''
+  recipient: '',
+  commitmentFormat: 'decimal'
 })
+
+const tokenCommmitmentPlaceholderText = computed<string>(() => {
+  if (nftCollectionType.value === 'SequentialNftCollection') {
+    return 'Enter a number'
+  }
+  return 'Enter commitment'
+})
+
+watch(() => form.value.commitment, (commitment) => {
+  if (!commitment) {
+    return form.value.commitmentFormat = 'decimal' // 
+  }
+  if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
+    form.value.commitmentFormat = 'hex'
+  }
+})
+
+
+const convertCommitment = () => {
+  if (form.value.commitment && form.value.commitmentFormat === 'decimal') {
+    form.value.commitment = BigInt(form.value.commitment).toString(16)
+    form.value.commitment = form.value.commitment.length < 2 ? form.value.commitment.padStart(2, '0') : form.value.commitment
+    form.value.commitmentFormat = 'hex'
+  } else if (form.value.commitment && form.value.commitmentFormat === 'hex') {
+    form.value.commitment = parseInt(form.value.commitment, 16).toString()
+    form.value.commitmentFormat = 'decimal'
+  }
+}
 
 const mintToken = async () => {
   if (props.minter) {
@@ -64,11 +134,24 @@ const mintToken = async () => {
       const tx = await props.minter.mintChild(form.value)
       if (tx) {
         emit('nftMinted', { tokenId: props.minter.token!.tokenId, ...form.value })
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
       }
     } catch (error: any) {
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     }
   }
 }
+
+onMounted(() => {
+  console.log(props.minter)
+  if (props.minter.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
+    const commitmentOfLastMint = convertHexLEtoBigInt(props.minter.token.commitment)
+    form.value.commitmentOfLastMint = commitmentOfLastMint.toString()
+    form.value.commitment = (commitmentOfLastMint + BigInt(1)).toString()
+    form.value.commitmentFormat = 'decimal'
+  } else {
+    form.value.commitment = '1'
+    form.value.commitmentFormat = 'decimal'
+  }
+})
 </script>

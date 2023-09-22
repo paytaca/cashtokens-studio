@@ -31,7 +31,10 @@
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
-                  <th>NFT Commitment</th>
+                  <th>
+                    NFT Commitment
+
+                  </th>
                 </template>
                 <th>AuthGuard Contract Address</th>
                 <th>AuthKey</th>
@@ -140,6 +143,8 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   rowCount: 0,
   offset: 0,
 })
+
+
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const watchtower = ref<Watchtower>(new Watchtower())

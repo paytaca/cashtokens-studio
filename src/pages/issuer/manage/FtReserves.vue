@@ -43,12 +43,14 @@
                 <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
 
-              <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td>
+              <!-- <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td> -->
+              <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup @click="openDialog(FungibleTokenIssuerDialog.__name, identity)">
+                      <q-item clickable v-close-popup
+                        @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
                         Issue Tokens
                       </q-item>
                     </q-list>
@@ -76,14 +78,17 @@
 </template>
 <script setup lang="ts">
 import { Wallet } from 'mainnet-js';
-import { onMounted, ref, watch } from 'vue';
+import { EventBus } from 'quasar';
+import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
+import { tokeshiToNumber } from 'src/app/utils';
+
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
@@ -97,6 +102,18 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   offset: 0,
 })
 const watchtower = ref<Watchtower>(new Watchtower())
+const eventBus = inject<EventBus>('eventBus')
+const formatReservedSupply = computed(() => {
+  return (authchainIdentity: AuthchainIdentity) => {
+
+    if (authchainIdentity.token!.amount && authchainIdentity.tokenCategory?.decimals) {
+      return tokeshiToNumber(
+        Number(authchainIdentity.token!.amount), authchainIdentity.tokenCategory?.decimals.toString()
+      )
+    }
+    return authchainIdentity.token?.amount
+  }
+})
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
@@ -185,23 +202,31 @@ const refreshData = async () => {
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
     )
     user.paginatedFtAuthchainIdentities = paginatedFtAuthchainIdentities.value
-    console.log('fresh', user.paginatedFtAuthchainIdentities)
     initPagination()
   }
 }
 
 onMounted(async () => {
-  if (user.wallet) {
-    /**
-     * Load from store by default then refresh
-     */
-    if (user.paginatedFtAuthchainIdentities) {
-      paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
-      populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
+  const init = () => {
+    if (user.wallet) {
+      /**
+       * Load from store by default then refresh
+       */
+      if (user.paginatedFtAuthchainIdentities) {
+        paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
+        populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
+      }
+      console.log('INIT TRIGGERED')
+      refreshData()
     }
-    refreshData()
   }
+  // eventBus?.on(ADDRESS_WATCHER_TRIGGERED, init)
+  init()
 
+})
+
+onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
 
 
@@ -229,6 +254,8 @@ const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string 
   //   .then((values) => {
   //     authchainIdentities.value = [...values]
   //   })
+
+
   refreshData().then(() => {
     if (paginatedFtAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)

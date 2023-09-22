@@ -8,14 +8,12 @@
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
-
-      <q-input v-model="genesisTokenMetadata.name" label="Token Name" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.name" label="Token Name *" :filled="true" dense aria-required />
       <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
-      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol" :filled="true" input-class="text-uppercase"
-        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Invalid symbol, value must be allcaps and starts with a letter (A to Z 0 to 9 and -)']"
+      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol *" :filled="true" input-class="text-uppercase"
+        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Required, valid values = (A to Z 0 to 9 and/or -)']"
         dense>
       </q-input>
-
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
         <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense>
@@ -40,9 +38,34 @@
       </template>
 
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
-        <q-input v-model="genesisToken.commitment" label="Token Commitment" :filled="true" dense />
+        <!-- <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+          NFT Collection Type <sup><code class="text-caption">{{ nftCollectionType }}</code></sup>
+          <q-option-group name="preferred_genre" v-model="nftCollectionType" :options="[
+            { value: 'SequentialNftCollection', label: 'Sequential NFT Collection' },
+            { value: 'ParseableNftCollection', label: 'Parseable NFT Collection (unsupported)', disable: true },
+          ]" color="primary" inline />
+        </div> -->
+        <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
+          :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
+          :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" dense stack-label>
+          <template v-slot:prepend>
+            <q-btn :label="genesisToken.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
+              :icon-right="genesisToken.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+          </template>
+          <template v-slot:append>
+            <q-btn @click="convertCommitment" color="warning" flat dense
+              :label="genesisToken.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
+              <q-tooltip>
+                {{
+                  genesisToken.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                  : 'Click to convert value to a number'
+                }}
+              </q-tooltip>
+            </q-btn>
+          </template>
+        </q-input>
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
-          Capability <sup><code>{{ genesisToken.capability }}</code></sup>
+          Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
             { value: NFTCapability.minting, label: 'Minting' },
             { value: NFTCapability.mutable, label: 'Mutable' },
@@ -50,7 +73,6 @@
           ]" color="primary" inline />
         </div>
       </template>
-
 
       <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
         :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
@@ -68,8 +90,14 @@
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
-        :force-disable="!user.wallet || !genesisInput || Boolean(busyButtonLabel) || !isValidTokenAmount" color="primary"
-        size="lg" />
+        :force-disable="(
+          !user.wallet ||
+          !genesisInput ||
+          Boolean(busyButtonLabel) ||
+          !isValidTokenAmount ||
+          !genesisTokenMetadata.name ||
+          !genesisTokenMetadata.symbol
+        )" color="primary" size="lg" />
     </div>
   </q-form>
 </template>
@@ -83,10 +111,11 @@ import BusyButton from 'src/components/BusyButton.vue'
 import shortenAddress from 'src/app/utils/shortenAddress'
 import shortenTokenId from 'src/app/utils/shortenTokenId'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
-import { BcmrStorageArtifact } from 'src/app/types'
+import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types'
 import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample'
 import { useUI } from 'src/stores/ui'
 import { useStatusBar } from 'src/composables/useStatusBar'
+import { useDialogs } from 'src/composables'
 
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
@@ -106,16 +135,24 @@ const props = defineProps<{
   ownerWallet: Wallet
 }>()
 
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
+
+const cashToken = ref<CashToken>()
+const $q = useQuasar()
+const user = useUser()
+const { setStatusProvider } = useStatusBar()
 const genesisToken = ref<{
   tokenId: string,
   amount: string | number,   // actual  amount that will be sent 
   capability: NFTCapability | undefined
   commitment: string | undefined,
+  commitmentFormat: 'decimal' | 'hex'
 }>({
   amount: props.tokenType === 'ft' ? 1 : 0,
   tokenId: props.genesisInput.txid,
   capability: undefined,
-  commitment: ''
+  commitment: '',
+  commitmentFormat: 'decimal'
 })
 
 const genesisTokenMetadata = ref<{
@@ -135,6 +172,15 @@ const genesisTokenMetadata = ref<{
     https: '',
     ipfs: ''
   }
+})
+
+const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
+
+const tokenCommmitmentPlaceholderText = computed<string>(() => {
+  if (nftCollectionType.value === 'SequentialNftCollection') {
+    return 'Enter a number'
+  }
+  return 'Enter commitment'
 })
 
 const busyButtonLabel = computed<string | undefined>(() => {
@@ -180,10 +226,27 @@ const isValidTokenAmount = computed<boolean>(() => {
   return true
 })
 
-const cashToken = ref<CashToken>()
-const $q = useQuasar()
-const user = useUser()
-const { setStatusProvider } = useStatusBar()
+
+const convertCommitment = () => {
+  if (genesisToken.value.commitment && genesisToken.value.commitmentFormat === 'decimal') {
+    genesisToken.value.commitment = BigInt(genesisToken.value.commitment).toString(16)
+    genesisToken.value.commitment = genesisToken.value.commitment.length < 2 ? genesisToken.value.commitment.padStart(2, '0') : genesisToken.value.commitment
+    genesisToken.value.commitmentFormat = 'hex'
+  } else if (genesisToken.value.commitment && genesisToken.value.commitmentFormat === 'hex') {
+    genesisToken.value.commitment = parseInt(genesisToken.value.commitment, 16).toString()
+    genesisToken.value.commitmentFormat = 'decimal'
+  }
+}
+
+
+watch(() => genesisToken.value.commitment, (commitment) => {
+  if (!commitment) {
+    return genesisToken.value.commitmentFormat = 'decimal' // 
+  }
+  if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
+    genesisToken.value.commitmentFormat = 'hex'
+  }
+})
 
 onMounted(() => {
   if (props.tokenType === 'nft') {
@@ -206,6 +269,10 @@ const setSupplyToMax = () => {
 
 
 const createToken = async () => {
+  if (nftCollectionType.value === 'SequentialNftCollection' && genesisToken.value.capability === 'minting') {
+    genesisToken.value.commitment = ''
+    genesisToken.value.commitmentFormat = 'hex'
+  }
   setStatusProvider(null)
   try {
     // Store initial registry
@@ -252,6 +319,7 @@ const createToken = async () => {
       amount: Number(tokenAmountWithDecimal.value.replace('.', '')),
       capability: genesisToken.value.capability,
       commitment: genesisToken.value.commitment,
+      commitmentFormat: genesisToken.value.commitmentFormat,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true
     })
 
