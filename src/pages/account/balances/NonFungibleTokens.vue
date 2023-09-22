@@ -67,7 +67,8 @@
 
                                     <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
                                     <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
-                                    {{ commitmentDisplay(b.token?.commitment) || '---' }}
+                                    {{ b.token?.commitment !== undefined ? commitmentDisplay(b.token?.commitment) : '---' }}
+                                    <!-- {{ b.token?.commitment }} -->
                                 </td>
                                 <!-- <td>
                                     <q-btn color="primary" dense no-caps @click="openDialog(TokenSenderDialog.__name, b)">Send</q-btn>
