@@ -244,21 +244,20 @@ const refreshData = async () => {
 
 
 onMounted(async () => {
-  const init = () => {
-    if (user.wallet) {
-      /**
-       * Load from store by default then refresh
-       */
-      if (user.paginatedNftAuthchainIdentities) {
-        paginatedNftAuthchainIdentities.value = user.paginatedNftAuthchainIdentities
-        populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-      }
-      refreshData()
+  if (user.wallet) {
+    /**
+     * Load from store by default then refresh
+     */
+    if (user.paginatedNftAuthchainIdentities) {
+      paginatedNftAuthchainIdentities.value = user.paginatedNftAuthchainIdentities
+      populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
     }
+    refreshData()
   }
 
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, init)
-  init()
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    refreshData()
+  })
 })
 
 onBeforeUnmount(() => {
@@ -287,7 +286,7 @@ onBeforeUnmount(() => {
 
 
 const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
-  authchainIdentities.value?.findIndex(item => item.token)
+
   refreshData().then(() => {
     if (paginatedNftAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)

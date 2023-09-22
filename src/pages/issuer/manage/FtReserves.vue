@@ -207,21 +207,22 @@ const refreshData = async () => {
 }
 
 onMounted(async () => {
-  const init = () => {
-    if (user.wallet) {
-      /**
-       * Load from store by default then refresh
-       */
-      if (user.paginatedFtAuthchainIdentities) {
-        paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
-        populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-      }
-      console.log('INIT TRIGGERED')
-      refreshData()
+
+  if (user.wallet) {
+    /**
+     * Load from store by default then refresh
+     */
+    if (user.paginatedFtAuthchainIdentities) {
+      paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
+      populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     }
+    refreshData()
   }
-  // eventBus?.on(ADDRESS_WATCHER_TRIGGERED, init)
-  init()
+
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    console.log('EVENT BUS')
+    refreshData()
+  })
 
 })
 
