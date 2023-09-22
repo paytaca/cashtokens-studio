@@ -2,8 +2,9 @@ import { ref } from "vue"
 
 export const useDialogs = () => {
   const dialog = ref<string>()
-  const dialogData = ref<any>()
-  const openDialog = (dialogName:string|undefined, data:any) => {
+  const dialogData = ref<any>()      // can put models here
+  const dialogOtherData = ref<any>() // arbitrary optional data, we added this so we can pass data without refactoring components using dialogData as <T> :-)
+  const openDialog = (dialogName:string|undefined, data:any, otherData?: any) => {
     console.log(dialogName)
     if (dialogName) {
       dialogData.value = data
@@ -20,7 +21,7 @@ export const useDialogs = () => {
     onHide()
   }
 
-  return { dialog, dialogData, openDialog, onHide, hideDialog }
+  return { dialog, dialogData, dialogOtherData, openDialog, onHide, hideDialog }
 }
 
 
