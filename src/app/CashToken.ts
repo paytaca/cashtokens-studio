@@ -377,6 +377,10 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw new Error('Missing recipient')
     }
 
+    if (!arg.nftCollectionType) {
+      arg.nftCollectionType = this.defaultNftCollectionType
+    }
+
     this.ensureOwnerWallet()
     this.ensureAuthKey()
     this._processing = 'Processing'

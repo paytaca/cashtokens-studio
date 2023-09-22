@@ -70,7 +70,7 @@
 
                 <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
                 <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
-                {{ commitmentDisplay(identity.token?.commitment) || '---' }}
+                {{ identity.token?.commitment ? formatCommitment(identity.token?.commitment) : '---' }}
               </td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense>
@@ -134,7 +134,7 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
 
 const watchtower = ref<Watchtower>(new Watchtower())
 const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
-const commitmentDisplay = computed(() => {
+const formatCommitment = computed(() => {
   return (commitment: string | undefined) => {
     if (commitment && commitmentFormat.value === 'decimal') {
       return binToBigIntUintLE(hexToBin(commitment))
