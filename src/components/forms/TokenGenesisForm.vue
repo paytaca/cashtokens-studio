@@ -1,5 +1,5 @@
 <template>
-  <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm">
+  <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm" :disable="cashToken?.processing">
     <q-toolbar>
       <q-toolbar-title class="text-h5">
         <slot name="title">Token Genesis</slot>
@@ -10,7 +10,7 @@
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
       <q-input ref="tokenNameRef" v-model="genesisTokenMetadata.name" label="Token Name *" :filled="true" dense
         aria-required :bottom-slots="Boolean(validationErrors.name)" :reactive-rules="true"
-        @update:model-value="(v) => { validationErrors.name = /^[a-zA-Z0-9-\s]+[a-zA-Z-0-9-\s]*$/.test(v) ? '' : 'Token Name Required'; tokenNameRef.validate(v) }">
+        @update:model-value="(v: any) => { validationErrors.name = /^[a-zA-Z0-9-\s]+[a-zA-Z-0-9-\s]*$/.test(v) ? '' : 'Token Name Required'; tokenNameRef?.validate(v) }">
         <template v-slot:hint>
           <!-- using hint slot for error, because error slot won't show -->
           <div class="text-negative">
@@ -19,10 +19,11 @@
         </template>
       </q-input>
 
-      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
+      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense
+        :disable="Boolean(cashToken?.processing)" />
       <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol *" :filled="true" input-class="text-uppercase"
-        @update:model-value="(v) => validationErrors.symbol = /^[A-Z0-9]+[A-Z0-9-]*$/.test(v.toUpperCase()) ? '' : 'Required, valid values = (A to Z 0 to 9 and/or -)'"
-        :bottom-slots="Boolean(validationErrors.symbol)" dense>
+        @update:model-value="(v: any) => validationErrors.symbol = /^[A-Z0-9]+[A-Z0-9-]*$/.test(v.toString().toUpperCase()) ? '' : 'Required, valid values = (A to Z 0 to 9 and/or -)'"
+        :bottom-slots="Boolean(validationErrors.symbol)" dense :disable="Boolean(cashToken?.processing)">
 
         <template v-slot:hint>
           <!-- using hint slot for error, because error slot won't show -->
@@ -33,8 +34,10 @@
 
       </q-input>
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
-        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
-        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense>
+        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense
+          :disable="Boolean(cashToken?.processing)" />
+        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense
+          :disable="Boolean(cashToken?.processing)">
           <template v-slot:append>
             <q-btn :color="$q.dark.isActive ? 'warning' : 'primary'" flat @click="setSupplyToMax" label="Max" />
           </template>
@@ -62,11 +65,12 @@
             { value: NFTCapability.mutable, label: 'Mutable' },
             { value: NFTCapability.none, label: 'None' }
           ]
-            " color="primary" inline />
+            " color="primary" inline :disable="Boolean(cashToken?.processing)" />
         </div>
         <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
           :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
-          :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" dense stack-label>
+          :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :disable="Boolean(cashToken?.processing)"
+          dense stack-label>
           <template v-slot:prepend>
             <q-btn :label="genesisToken.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
               :icon-right="genesisToken.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -88,7 +92,7 @@
       <div class="row justify-center">
         <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
           :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
-          style="width:100%;max-width: 100%;" />
+          style="width:100%;max-width: 100%;" :disable="Boolean(cashToken?.processing)" />
       </div>
       <div v-if="genesisTokenMetadata.iconUris.https" class="row justify-end">
         <q-btn :href="genesisTokenMetadata.iconUris.https" label="View Icon Location" target="_blank" dense flat no-caps
@@ -100,11 +104,38 @@
         <q-btn label="Download Registry" type="a" dense flat no-caps color="secondary" icon="cloud_download"
           @click="downloadBcmr" />
       </div>
-      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://" dense>
+      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://"
+        :disable="Boolean(cashToken?.processing)" dense>
         <template v-slot:prepend>
           <q-icon name="web" flat></q-icon>
         </template>
       </q-input>
+      <div class="row justify-end items-center">
+        <div v-if="genesisTokenMetadata.links">
+          <span v-for="linkName, i in Object.keys(genesisTokenMetadata.links)" :key="'link-' + i">
+            <!-- {{ Boolean(genesisTokenMetadata.links[linkName]) }} -->
+            <span v-if="Boolean(genesisTokenMetadata.links[linkName])">
+              <span v-if="linkName === 'youtube'">
+                <q-icon name="smart_display" size="sm"></q-icon>
+              </span>
+              <span v-else-if="linkName === 'blog'">
+                <q-icon name="book" size="sm"></q-icon>
+              </span>
+              <span v-else-if="linkName === 'twitter'">
+                <q-icon name="clear" size="sm"></q-icon>
+              </span>
+              <span v-else>
+                <q-icon :name="linkName" size="sm"></q-icon>
+              </span>
+            </span>
+          </span>
+        </div>
+        <q-btn @click="openDialog(AddBcmrLinkDialog.__name, {})"
+          :label="!genesisTokenMetadata.links ? 'Add Links' : 'Edit Links'" color="secondary" dense flat
+          :icon="!genesisTokenMetadata.links ? 'add' : undefined" v-close-popup>
+        </q-btn>
+      </div>
+
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
@@ -118,15 +149,21 @@
         )
           " color="primary" size="lg" />
     </div>
+    <AddBcmrLinkDialog v-if="Boolean(dialog)" :model-value="dialog == AddBcmrLinkDialog.__name" @close="hideDialog"
+      :links="genesisTokenMetadata.links" @confirm="(links) => {
+        genesisTokenMetadata.links = links;
+        hideDialog()
+      }" persistent />
   </q-form>
 </template>
 <script setup lang="ts">
 import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
-import { watch, onMounted, ref, computed } from 'vue'
+import { watch, onMounted, ref, computed, Ref } from 'vue'
 import { useUser } from 'src/stores/user'
 import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
+import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
 import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types'
 import { useUI } from 'src/stores/ui'
@@ -134,6 +171,7 @@ import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs } from 'src/composables'
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
+import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
   genesisInput: UtxoI,
@@ -162,7 +200,7 @@ const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
 const { setStatusProvider } = useStatusBar()
-const tokenNameRef = ref(null)
+const tokenNameRef = ref<Ref | undefined | null>(null)
 const genesisToken = ref<{
   tokenId: string,
   amount: string | number,   // actual  amount that will be sent 
@@ -185,7 +223,8 @@ const genesisTokenMetadata = ref<{
   symbol: string,
   decimals: number,
   iconUris: { https: string, ipfs: string },
-  website: string
+  website: string,
+  links?: URIs
 }>({
   name: '',
   description: '',
@@ -322,6 +361,14 @@ const constructAndStoreBcmr = async () => {
     bcmr.value.addUri({ web: genesisTokenMetadata.value.website })
   }
 
+  if (genesisTokenMetadata.value.links) {
+    Object.keys(genesisTokenMetadata.value.links || {}).forEach((name) => {
+      if (genesisTokenMetadata.value.links && genesisTokenMetadata.value.links[name]) {
+        bcmr.value!.addUri({ [name]: genesisTokenMetadata.value.links[name] })
+      }
+    })
+  }
+
   if (genesisToken.value.commitment || genesisToken.value.capability) {
     const nft: NftType = {
       name: genesisTokenMetadata.value.name
@@ -392,7 +439,7 @@ const createToken = async () => {
       setStatusProvider(cashToken.value)
       // await cashToken.value.buildAuthChainInChainGraph()
       buildAuthchain(cashToken.value)
-      genesisResultTxId.value = tx
+      // genesisResultTxId.value = tx
       // emit('genesisResult', { txid: tx, cashToken.value })
 
     }
@@ -422,6 +469,14 @@ const downloadBcmr = async () => {
     a.click();
     window.URL.revokeObjectURL(url);
   }
+}
+
+const openAddLinkDialog = () => {
+  openDialog(AddBcmrLinkDialog.__name, {})
+}
+
+const hideBcmrLinkAdderDialog = () => {
+  hideDialog()
 }
 
 </script>
