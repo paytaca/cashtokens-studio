@@ -21,7 +21,7 @@
           <template v-else>
             <TokenGenesisForm :token-type="(route.params.tokenType as ('ft' | 'nft' | 'fnft'))"
               :genesis-input="genesisInputUtxo" :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)"
-              :create-auth-key="true" />
+              :create-auth-key="true" @genesis-result="onGenesisResult" />
           </template>
         </div>
       </div>
@@ -83,5 +83,10 @@ const generateGenesisInputs = async () => {
   }
 
 }
+
+const onGenesisResult = async (result: any) => {
+  console.log('GENESIS RESULT', result)
+}
+
 </script>
 
