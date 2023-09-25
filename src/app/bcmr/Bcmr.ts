@@ -1,4 +1,4 @@
-import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, OffChainRegistryIdentity, Registry, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
+import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategory, NftType, OffChainRegistryIdentity, Registry, SequentialNftCollection, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
 import { AuthchainIdentity } from "../";
 import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
 import { BcmrStorageArtifact } from "../types";
@@ -117,6 +117,19 @@ export class Bcmr implements Registry {
   getToken(): TokenCategory|undefined {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       return this.identities![this.registryIdentity!][this.latestRevision!].token as TokenCategory
+    }
+  }
+
+  addNft(commitmentHex:string, nft: NftType): void {
+    if (this.getToken()) {
+      if(!this.getToken()!.nfts) {
+        this.getToken()!.nfts = {
+          parse: {
+            types: {}
+          } as SequentialNftCollection
+        } 
+      } 
+      this.getToken()!.nfts!.parse.types[commitmentHex] = nft
     }
   }
 
