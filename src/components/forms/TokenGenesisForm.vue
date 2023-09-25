@@ -8,11 +8,29 @@
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
-      <q-input v-model="genesisTokenMetadata.name" label="Token Name *" :filled="true" dense aria-required />
+      <q-input ref="tokenNameRef" v-model="genesisTokenMetadata.name" label="Token Name *" :filled="true" dense
+        aria-required :bottom-slots="Boolean(validationErrors.name)" :reactive-rules="true"
+        @update:model-value="(v) => { validationErrors.name = /^[a-zA-Z0-9-\s]+[a-zA-Z-0-9-\s]*$/.test(v) ? '' : 'Token Name Required'; tokenNameRef.validate(v) }">
+        <template v-slot:hint>
+          <!-- using hint slot for error, because error slot won't show -->
+          <div class="text-negative">
+            {{ validationErrors.name }}*
+          </div>
+        </template>
+      </q-input>
+
       <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense />
       <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol *" :filled="true" input-class="text-uppercase"
-        :rules="[v => /^[A-Z0-9]+[-A-Z0-9]*$/.test(v.toUpperCase()) || 'Required, valid values = (A to Z 0 to 9 and/or -)']"
-        dense>
+        @update:model-value="(v) => validationErrors.symbol = /^[A-Z0-9]+[A-Z0-9-]*$/.test(v.toUpperCase()) ? '' : 'Required, valid values = (A to Z 0 to 9 and/or -)'"
+        :bottom-slots="Boolean(validationErrors.symbol)" dense>
+
+        <template v-slot:hint>
+          <!-- using hint slot for error, because error slot won't show -->
+          <div class="text-negative">
+            {{ validationErrors.symbol }}*
+          </div>
+        </template>
+
       </q-input>
       <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense />
@@ -36,15 +54,16 @@
           </div>
         </div>
       </template>
-
       <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
-        <!-- <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
-          NFT Collection Type <sup><code class="text-caption">{{ nftCollectionType }}</code></sup>
-          <q-option-group name="preferred_genre" v-model="nftCollectionType" :options="[
-            { value: 'SequentialNftCollection', label: 'Sequential NFT Collection' },
-            { value: 'ParseableNftCollection', label: 'Parseable NFT Collection (unsupported)', disable: true },
-          ]" color="primary" inline />
-        </div> -->
+        <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+          Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
+          <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
+            { value: NFTCapability.minting, label: 'Minting' },
+            { value: NFTCapability.mutable, label: 'Mutable' },
+            { value: NFTCapability.none, label: 'None' }
+          ]
+            " color="primary" inline />
+        </div>
         <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
           :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
           :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" dense stack-label>
@@ -64,19 +83,13 @@
             </q-btn>
           </template>
         </q-input>
-        <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
-          Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
-          <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
-            { value: NFTCapability.minting, label: 'Minting' },
-            { value: NFTCapability.mutable, label: 'Mutable' },
-            { value: NFTCapability.none, label: 'None' }
-          ]" color="primary" inline />
-        </div>
       </template>
 
-      <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
-        :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
-        style="width:100%;max-width: 100%;" class="q-mx-xs" />
+      <div class="row justify-center">
+        <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
+          :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
+          style="width:100%;max-width: 100%;" />
+      </div>
       <div v-if="genesisTokenMetadata.iconUris.https" class="row justify-end">
         <q-btn :href="genesisTokenMetadata.iconUris.https" label="View Icon Location" target="_blank" dense flat no-caps
           color="secondary" icon="preview" />
@@ -87,6 +100,11 @@
         <q-btn label="Download Registry" type="a" dense flat no-caps color="secondary" icon="cloud_download"
           @click="downloadBcmr" />
       </div>
+      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://" dense>
+        <template v-slot:prepend>
+          <q-icon name="web" flat></q-icon>
+        </template>
+      </q-input>
     </template>
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
@@ -97,7 +115,8 @@
           !isValidTokenAmount ||
           !genesisTokenMetadata.name ||
           !genesisTokenMetadata.symbol
-        )" color="primary" size="lg" />
+        )
+          " color="primary" size="lg" />
     </div>
   </q-form>
 </template>
@@ -108,15 +127,13 @@ import { watch, onMounted, ref, computed } from 'vue'
 import { useUser } from 'src/stores/user'
 import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
-import shortenAddress from 'src/app/utils/shortenAddress'
-import shortenTokenId from 'src/app/utils/shortenTokenId'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
 import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types'
-import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample'
 import { useUI } from 'src/stores/ui'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs } from 'src/composables'
-
+import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
+import { buildAuthchain } from 'src/app/globalfunctions'
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
   genesisInput: UtxoI,
@@ -135,12 +152,17 @@ const props = defineProps<{
   ownerWallet: Wallet
 }>()
 
+const emit = defineEmits<{
+  (e: 'genesisResult', val: { txid: string, tokenSymbol?: string }): void
+}>()
+
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
 const { setStatusProvider } = useStatusBar()
+const tokenNameRef = ref(null)
 const genesisToken = ref<{
   tokenId: string,
   amount: string | number,   // actual  amount that will be sent 
@@ -155,13 +177,15 @@ const genesisToken = ref<{
   commitmentFormat: 'decimal'
 })
 
+
 const genesisTokenMetadata = ref<{
   name: string,
   description: string,
   icon: string,
   symbol: string,
   decimals: number,
-  iconUris: { https: string, ipfs: string }
+  iconUris: { https: string, ipfs: string },
+  website: string
 }>({
   name: '',
   description: '',
@@ -171,7 +195,13 @@ const genesisTokenMetadata = ref<{
   iconUris: {
     https: '',
     ipfs: ''
-  }
+  },
+  website: ''
+})
+
+const validationErrors = ref<{ name: string, symbol: string }>({
+  name: '',
+  symbol: ''
 })
 
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
@@ -267,6 +297,57 @@ const setSupplyToMax = () => {
   genesisToken.value.amount = MAX_FUNGIBLE_AMOUNT
 }
 
+const constructAndStoreBcmr = async () => {
+  bcmr.value = new Bcmr({
+    version: { major: 0, minor: 1, patch: 0 },
+    registryIdentity: genesisToken.value.tokenId,
+    latestRevision: new Date().toISOString()
+  })
+
+  bcmr.value.setRegistryName(genesisTokenMetadata.value.name || `Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
+  bcmr.value.setRegistryDescription(genesisTokenMetadata.value.description)
+  bcmr.value.setTokenSymbol(genesisTokenMetadata.value.symbol)
+
+  if (genesisTokenMetadata.value.decimals) {
+    bcmr.value.setTokenDecimals(genesisTokenMetadata.value.decimals)
+  }
+
+  if (genesisTokenMetadata.value.iconUris.https) {
+    bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.https)
+  } else if (genesisTokenMetadata.value.iconUris.ipfs) {
+    bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
+  }
+
+  if (genesisTokenMetadata.value.website) {
+    bcmr.value.addUri({ web: genesisTokenMetadata.value.website })
+  }
+
+  if (genesisToken.value.commitment || genesisToken.value.capability) {
+    const nft: NftType = {
+      name: genesisTokenMetadata.value.name
+    }
+    let commitment = genesisToken.value.commitment
+    if (commitment) {
+      // will use commitment as types key in BCMR,
+      // converting to hex little endian
+      if (genesisToken.value.commitmentFormat === 'decimal') {
+        nft.name += `-${commitment}`
+        commitment = convertBigIntToHexLE(BigInt(commitment))
+      }
+      if (genesisToken.value.commitmentFormat === 'hex') {
+        nft.name += `-${parseInt(commitment, 16)}`
+        if (nftCollectionType.value === 'SequentialNftCollection') {
+          commitment = parseInt(commitment, 16).toString()
+          commitment = convertBigIntToHexLE(BigInt(commitment))
+        }
+      }
+      bcmr.value.addNft(commitment, nft)
+    }
+  }
+
+  bcmr.value.appendAuthGuardTokenStandardExtension(props.authKey.token?.tokenId || props.authKey.txid)
+  return await bcmr.value.storeRegistry()
+}
 
 const createToken = async () => {
   if (nftCollectionType.value === 'SequentialNftCollection' && genesisToken.value.capability === 'minting') {
@@ -274,42 +355,19 @@ const createToken = async () => {
     genesisToken.value.commitmentFormat = 'hex'
   }
   setStatusProvider(null)
+  cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
   try {
-    // Store initial registry
-    bcmr.value = new Bcmr({
-      version: { major: 0, minor: 1, patch: 0 },
-      registryIdentity: genesisToken.value.tokenId,
-      latestRevision: new Date().toISOString()
-    })
-
-    bcmr.value.setRegistryName(genesisTokenMetadata.value.name || `Registry of ${genesisTokenMetadata.value.symbol || genesisToken.value.tokenId}`)
-    bcmr.value.setRegistryDescription(genesisTokenMetadata.value.description)
-    bcmr.value.setTokenSymbol(genesisTokenMetadata.value.symbol)
-    if (genesisTokenMetadata.value.decimals) {
-      bcmr.value.setTokenDecimals(genesisTokenMetadata.value.decimals)
-    }
-    if (genesisTokenMetadata.value.iconUris.https) {
-      bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.https)
-    } else if (genesisTokenMetadata.value.iconUris.ipfs) {
-      bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
-    }
-
-    bcmr.value.appendAuthGuardTokenStandardExtension(props.authKey.token?.tokenId || props.authKey.txid)
-
-    cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
     cashToken.value.processing = 'Creating registry'
-
-    try {
-      bcmrStorageArtifact.value = await bcmr.value.storeRegistry()
-      console.log('storage artifact:', bcmrStorageArtifact.value)
-    } catch (error) {
-      console.log(error)
-      $q.notify({ type: 'negative', message: 'Failed to create registry.Please try again later!' })
-      return
-    }
-
+    bcmrStorageArtifact.value = await constructAndStoreBcmr()
     cashToken.value.processing = 'Registry created!'
+    console.log('storage artifact:', bcmrStorageArtifact.value)
+  } catch (error) {
+    console.log(error)
+    $q.notify({ type: 'negative', message: 'Failed to create registry.Please try again later!' })
+    return
+  }
 
+  try {
     cashToken.value.registry = {
       uri: [bcmrStorageArtifact.value!.uris.https, bcmrStorageArtifact.value!.uris.ipfs],
       contentHash: bcmrStorageArtifact.value!.contentHash
@@ -332,7 +390,11 @@ const createToken = async () => {
       }
       user.tokens?.push(cashToken.value)
       setStatusProvider(cashToken.value)
-      await cashToken.value.buildAuthChainInChainGraph()
+      // await cashToken.value.buildAuthChainInChainGraph()
+      buildAuthchain(cashToken.value)
+      genesisResultTxId.value = tx
+      // emit('genesisResult', { txid: tx, cashToken.value })
+
     }
     setStatusProvider(null)
   } catch (error: any) {
