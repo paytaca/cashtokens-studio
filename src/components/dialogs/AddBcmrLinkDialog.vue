@@ -2,7 +2,7 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="text-h5">Add Links</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Add Links</q-toolbar-title>
       </q-toolbar>
       <q-card-section>
         <q-input v-model="form.support" dense flat label="Support" clearable>

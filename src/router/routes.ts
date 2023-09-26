@@ -32,6 +32,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'collectibles', component: () => import('pages/account/balances/NonFungibleTokens.vue')},
     ],
   },
+  {
+    path: '/account',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it

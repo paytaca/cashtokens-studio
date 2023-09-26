@@ -81,7 +81,7 @@
       </div>
     </div>
     <AuthKeyTransferDialog v-if="dialog" :auth-key="dialogData" :model-value="dialog === AuthKeyTransferDialog.__name"
-      @hide="onHide" />
+      @hide="onHide" @auth-key-transferred="onAuthKeyTransfer" />
     <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType"
       :model-value="dialog === AuthKeyCreateTokenDialog.__name" @hide="onHide" />
   </q-page>
@@ -260,5 +260,12 @@ const wOpenAuthKeyCreateTokenDialog = (dialogName: string | undefined, dialogDat
   openDialog(dialogName, dialogData)
 }
 
+const onAuthKeyTransfer = () => {
+  refreshData().then(() => {
+    if (paginatedAuthKeys.value) {
+      populateAuthKeys(paginatedAuthKeys.value)
+    }
+  })
+}
 
 </script>

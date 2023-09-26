@@ -49,5 +49,24 @@ export declare interface PaginatedData {
   results: any[]
 }
 
+export type CashTokenTransactionType = 
+  'AuthKey.transfer'|
+  'AuthKey.createGenesis' |
+  'AuthchainIdentity.unguard' |
+  'AuthchainIdentity.publishRegistry' |
+  'AuthchainIdentity.releaseTokensFromReserveSupply' | 
+  'Cashtoken.mintChild' |
+  'Cashtoken.createGenesis' |
+  'GenesisInput.generate' 
+
+
+export declare interface CashTokenTransaction {
+  txid: string,
+  txType: CashTokenTransactionType,
+  timestamp: number,
+  successMsg?: string,
+  errorMsg?: string,
+}
+
 
 

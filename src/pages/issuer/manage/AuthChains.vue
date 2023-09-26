@@ -111,9 +111,9 @@
         <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
       </div>
     </div>
   </q-page>
@@ -247,5 +247,24 @@ onMounted(async () => {
   }
 
 })
+
+
+
+
+const onUnguard = () => {
+  refreshData().then(() => {
+    if (paginatedAuthchainIdentities.value) {
+      populateAuthchainIdentities(paginatedAuthchainIdentities.value)
+    }
+  })
+}
+
+const onBurn = () => {
+  refreshData().then(() => {
+    if (paginatedAuthchainIdentities.value) {
+      populateAuthchainIdentities(paginatedAuthchainIdentities.value)
+    }
+  })
+}
 
 </script>

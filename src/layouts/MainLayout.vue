@@ -1,5 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf">
+    <TransactionLogger />
     <q-header elevated>
       <q-toolbar class="bg-teal-10 q-py-sm">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
@@ -55,6 +56,7 @@ import PaytacaConnect from 'components/PaytacaConnect.vue';
 import { useUser } from 'src/stores/user'
 import { useUI } from 'src/stores/ui';
 import CashAddress from 'src/components/CashAddress.vue'
+import TransactionLogger from 'src/components/TransactionLogger.vue'
 import getAppEnv from 'src/app/utils/getAppEnv'
 import { useRoute, useRouter } from 'vue-router'
 export default defineComponent({
@@ -63,7 +65,8 @@ export default defineComponent({
     SidebarMenu,
     LightSwitch,
     PaytacaConnect,
-    CashAddress
+    CashAddress,
+    TransactionLogger
   },
 
   setup() {

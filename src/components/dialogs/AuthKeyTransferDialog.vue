@@ -1,8 +1,8 @@
 <template>
-  <q-dialog>
+  <q-dialog ref="authKeyTransferDialog">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="text-h5">Transfer AuthKey</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Transfer AuthKey</q-toolbar-title>
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-banner rounded>
@@ -23,7 +23,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => transferAuthKey()" label="Transfer AuthKey" :busyLabel="authKey.processing"
-          color="primary" />
+          color="primary" :disable="!Boolean(form.recipient)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -34,15 +34,18 @@ import { AuthKey } from 'src/app';
 import { ref } from 'vue';
 import BusyButton from 'src/components/BusyButton.vue'
 import { useUser } from 'src/stores/user';
-import { Wallet } from 'mainnet-js';
+import { Wallet, fromUtxoId } from 'mainnet-js';
 import shortenTokenId from 'src/app/utils/shortenTokenId';
+import { useEventBus } from 'src/composables';
+import { shortenAddress } from 'src/app/utils';
 
 defineOptions({ name: 'FungibleTokenIssuerDialog' })
 const $q = useQuasar()
-const user = useUser()
+const { $ebus } = useEventBus()
 const props = defineProps<{ authKey: AuthKey }>()
-defineEmits<{
-  (e: 'authKeyTransferred', val: { tokenId: string, to: string, amount: string }): void
+const authKeyTransferDialog = ref()
+const emit = defineEmits<{
+  (e: 'authKeyTransferred'): void
 }>()
 
 const form = ref<{ recipient: string }>({
@@ -51,9 +54,20 @@ const form = ref<{ recipient: string }>({
 
 const transferAuthKey = async () => {
   try {
+
     const tx = await props.authKey.transfer(form.value.recipient)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx' + shortenTokenId(tx) })
+
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
+        timestamp: new Date().getTime(),
+        successMsg: `Transferred AuthKey, id=${shortenTokenId(props.authKey.token!.tokenId)} to ${shortenAddress(form.value.recipient)}`
+      })
+      emit('authKeyTransferred')
+      authKeyTransferDialog.value.hide()
+
     }
   } catch (error: any) {
     console.log(error)

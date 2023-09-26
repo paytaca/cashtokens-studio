@@ -36,7 +36,8 @@
                 :icon-right="form.commitmentFormat === 'decimal' ? 'pin' : undefined" />
             </template>
             <template v-slot:append>
-              <q-btn @click="convertCommitment" color="warning" flat dense
+              <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
+                :class="$q.dark.isActive ? '' : 'text-black'"
                 :label="form.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
                 <q-tooltip>
                   {{
@@ -51,7 +52,8 @@
           </q-input> -->
           <q-input v-model="form.recipient" label="Recipient's Address" filled dense>
             <template v-slot:append>
-              <q-btn dense flat label="Self" color="warning" @click="form.recipient = user.walletTokenAddress!" />
+              <q-btn dense :flat="$q.dark.isActive ? true : false" label="Self" color="warning"
+                :class="$q.dark.isActive ? '' : 'text-black'" @click="form.recipient = user.walletTokenAddress!" />
             </template>
           </q-input>
         </q-form>
@@ -74,6 +76,7 @@ import BusyButton from 'src/components/BusyButton.vue'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
 import { shortenTokenId } from 'src/app/utils';
+import { useEventBus } from 'src/composables';
 
 const props = defineProps<{
   minter: CashToken,
@@ -84,6 +87,7 @@ const emit = defineEmits<{
 }>()
 
 const $q = useQuasar()
+const { $ebus } = useEventBus()
 const user = useUser()
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
@@ -135,6 +139,12 @@ const mintToken = async () => {
       if (tx) {
         emit('nftMinted', { tokenId: props.minter.token!.tokenId, ...form.value })
         $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'CashToken.mintChild',
+          timestamp: new Date().getTime(),
+          successMsg: `Minted new ${props.minter?.tokenCategory?.symbol || shortenTokenId(props.minter.token!.tokenId)} NFT`
+        })
       }
     } catch (error: any) {
       $q.notify({ type: 'negative', message: 'Error!' + error.message })

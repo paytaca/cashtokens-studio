@@ -1,7 +1,7 @@
 <template>
   <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm" :disable="cashToken?.processing">
     <q-toolbar>
-      <q-toolbar-title class="text-h5">
+      <q-toolbar-title class="text-h5 text-bold">
         <slot name="title">Token Genesis</slot>
       </q-toolbar-title>
     </q-toolbar>
@@ -39,7 +39,8 @@
         <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense
           :disable="Boolean(cashToken?.processing)">
           <template v-slot:append>
-            <q-btn :color="$q.dark.isActive ? 'warning' : 'primary'" flat @click="setSupplyToMax" label="Max" />
+            <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
+              @click="setSupplyToMax" label="Max" />
           </template>
           <template v-slot:hint>
             {{ !isValidTokenAmount ? 'Invalid amount' : '' }}
@@ -166,12 +167,12 @@ import BusyButton from 'src/components/BusyButton.vue'
 import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
 import { Bcmr } from 'src/app/bcmr/Bcmr'
 import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types'
-import { useUI } from 'src/stores/ui'
 import { useStatusBar } from 'src/composables/useStatusBar'
-import { useDialogs } from 'src/composables'
+import { useDialogs, useEventBus } from 'src/composables'
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
+import { shortenTx } from 'src/app/utils'
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft',
   genesisInput: UtxoI,
@@ -199,6 +200,7 @@ const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
+const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
 const tokenNameRef = ref<Ref | undefined | null>(null)
 const genesisToken = ref<{
@@ -321,6 +323,9 @@ onMounted(() => {
   if (props.tokenType === 'nft') {
     genesisToken.value.capability = NFTCapability.minting
   }
+  if (props.tokenType === 'ft') {
+    genesisToken.value.amount = MAX_FUNGIBLE_AMOUNT
+  }
 })
 
 const onTokenIconUpload = (info: any) => {
@@ -431,16 +436,20 @@ const createToken = async () => {
     await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
 
     if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + tx })
+      $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + shortenTx(tx) })
       if (!user.tokens) {
         user.tokens = []
       }
       user.tokens?.push(cashToken.value)
       setStatusProvider(cashToken.value)
-      // await cashToken.value.buildAuthChainInChainGraph()
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'CashToken.createGenesis',
+        timestamp: new Date().getTime(),
+        successMsg: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)`
+      })
+      emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
       buildAuthchain(cashToken.value)
-      // genesisResultTxId.value = tx
-      // emit('genesisResult', { txid: tx, cashToken.value })
 
     }
     setStatusProvider(null)

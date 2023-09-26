@@ -46,7 +46,8 @@
           </q-input>
           <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense>
             <template v-slot:append>
-              <q-btn color="warning" dense flat @click="form.recipient = user.walletTokenAddress!" label="Self" />
+              <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
+                @click="form.recipient = user.walletTokenAddress!" label="Self" dense />
             </template>
           </q-input>
           <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal"
@@ -86,11 +87,11 @@ import { QInput, useQuasar } from 'quasar';
 import { AuthchainIdentity } from 'src/app'
 import { ref, computed } from 'vue';
 import { useUser } from 'src/stores/user'
-import { numberToTokeshi, tokeshiToNumber } from 'src/app/utils'
+import { numberToTokeshi, shortenAddress, tokeshiToNumber } from 'src/app/utils'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import shortenTokenId from 'src/app/utils/shortenTokenId';
-
+import { useEventBus } from 'src/composables';
 
 const emit = defineEmits<{
   (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
@@ -107,6 +108,7 @@ const props = defineProps<{
   authchainIdentityIndex?: number
 }>()
 const $q = useQuasar()
+const { $ebus } = useEventBus()
 const user = useUser()
 const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>({
   recipient: '',
@@ -140,6 +142,12 @@ const releaseTokensFromReserveSupply = async () => {
     }
     emit('tokensIssued', {
       tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
+    })
+    $ebus?.emit('transaction', {
+      txid: tx,
+      txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
+      timestamp: new Date().getTime(),
+      successMsg: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
     })
   } catch (error: any) {
     return $q.notify({ type: 'negative', message: error.message })
