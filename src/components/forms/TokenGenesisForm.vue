@@ -130,9 +130,9 @@
             </span>
           </span>
         </div>
-        <q-btn @click="openDialog(AddBcmrLinkDialog.__name, {})"
+        <q-btn @click="openAddLinkDialog(AddBcmrLinkDialog.__name, {})"
           :label="!genesisTokenMetadata.links ? 'Add Links' : 'Edit Links'" color="secondary" dense flat
-          :icon="!genesisTokenMetadata.links ? 'add' : undefined" v-close-popup>
+          :icon="!genesisTokenMetadata.links ? 'add' : undefined">
         </q-btn>
       </div>
 
@@ -149,10 +149,10 @@
         )
           " color="primary" size="lg" />
     </div>
-    <AddBcmrLinkDialog v-if="Boolean(dialog)" :model-value="dialog == AddBcmrLinkDialog.__name" @close="hideDialog"
-      :links="genesisTokenMetadata.links" @confirm="(links) => {
+    <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)" :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name"
+      @close="hideBcmrLinkAdderDialog" :links="genesisTokenMetadata.links" @confirm="(links) => {
         genesisTokenMetadata.links = links;
-        hideDialog()
+        hideBcmrLinkAdderDialog()
       }" persistent />
   </q-form>
 </template>
@@ -194,7 +194,7 @@ const emit = defineEmits<{
   (e: 'genesisResult', val: { txid: string, tokenSymbol?: string }): void
 }>()
 
-const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
+const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: hideBcmrLinkAdderDialog } = useDialogs()
 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
@@ -471,12 +471,5 @@ const downloadBcmr = async () => {
   }
 }
 
-const openAddLinkDialog = () => {
-  openDialog(AddBcmrLinkDialog.__name, {})
-}
-
-const hideBcmrLinkAdderDialog = () => {
-  hideDialog()
-}
 
 </script>
