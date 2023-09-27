@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 
 type UIState = {
-  statusMessage?: string
+  statusMessage?: string,
+  transactionLogs?: any[]
 }
 
 export const useUI = defineStore('ui', {

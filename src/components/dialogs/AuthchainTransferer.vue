@@ -2,7 +2,7 @@
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Transfer Authchain Ownership</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Transfer Authchain Ownership</q-toolbar-title>
       </q-toolbar>
       <q-card-section>
         <q-form>
@@ -19,7 +19,7 @@
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import {AuthchainIdentity} from 'src/app'
+import { AuthchainIdentity } from 'src/app'
 import { ref } from 'vue'
 import BusyButton from 'src/components/BusyButton.vue'
 

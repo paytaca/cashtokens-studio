@@ -1,7 +1,7 @@
 <template>
   <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm">
     <q-toolbar>
-      <q-toolbar-title>Create AuthKey</q-toolbar-title>
+      <q-toolbar-title class="text-h5 text-bold">Create AuthKey</q-toolbar-title>
     </q-toolbar>
     <!-- <template v-if="authKey && authKey.processing">
       <q-spinner-grid></q-spinner-grid>
@@ -23,6 +23,8 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue';
 import { useQuasar } from 'quasar';
 import { ref, onMounted } from 'vue';
+import { useEventBus } from 'src/composables';
+import shortenTx from 'src/app/utils/shortenTx';
 
 const props = defineProps<{
   /**
@@ -31,6 +33,12 @@ const props = defineProps<{
   genesisInput?: UtxoI,
   ownerWallet?: Wallet
 }>()
+
+const emit = defineEmits<{
+  (e: 'authKeyCreated'): void
+}>()
+
+const { $ebus } = useEventBus()
 const authKey = ref<AuthKey>()
 const $q = useQuasar()
 const user = useUser()
@@ -46,11 +54,18 @@ const createAuthKeyGenesis = async () => {
     authKey.value = new AuthKey({ ...props.genesisInput!, ownerWallet: props.ownerWallet })
     const tx = await authKey?.value.createGenesis({ commitment: '00', capability: 'none' })
     if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!Auth NFT created.Tx=' + tx })
+      $q.notify({ type: 'positive', message: 'Success!Auth NFT created.Tx=' + shortenTx(tx) })
       if (!user.authKeys) {
         user.authKeys = []
       }
       user.authKeys?.push(authKey.value as AuthKey)
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthKey.createGenesis',
+        timestamp: new Date().getTime(),
+        successMsg: 'AuthKey created'
+      })
+      emit('authKeyCreated')
     }
   } catch (error: any) {
     $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })

@@ -41,7 +41,7 @@ onMounted(async () => {
       user.walletTokenAddress = user.wallet.getTokenDepositAddress()
       user.walletBchBalance = String(await user.wallet.getBalance('sat'))
       const userUtxos = await user.wallet.getAddressUtxos()
-      storeBalances(userUtxos)
+      filterAndStoreGenesisInputs(userUtxos)
       watchAddress(user.walletAddress)
       return
     }
@@ -73,11 +73,11 @@ const connect = async () => {
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     user.walletBchBalance = String(await user.wallet.getBalance('sat'))
     const userUtxos = await user.wallet.getAddressUtxos()
-    storeBalances(userUtxos)
+    filterAndStoreGenesisInputs(userUtxos)
   }
 }
 
-const storeBalances = (userUtxos: UtxoI[]) => {
+const filterAndStoreGenesisInputs = (userUtxos: UtxoI[]) => {
   user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => {
     return Boolean(!utxo.token) &&
       utxo.vout === 0 &&
@@ -94,7 +94,7 @@ const watchAddress = async (address: string) => {
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
     if (userUtxos) {
-      storeBalances(userUtxos)
+      filterAndStoreGenesisInputs(userUtxos)
     }
     user.updatingBalances = false
   })
