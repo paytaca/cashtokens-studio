@@ -39,6 +39,13 @@ const routes: RouteRecordRaw[] = [
       { path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
     ],
   },
+  {
+    path: '/',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
+    ],
+  },
 
   // Always leave this as last one,
   // but you can also remove it
