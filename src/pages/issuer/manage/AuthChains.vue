@@ -31,7 +31,10 @@
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
-                  <th>NFT Commitment</th>
+                  <th>
+                    NFT Commitment
+
+                  </th>
                 </template>
                 <th>AuthGuard Contract Address</th>
                 <th>AuthKey</th>
@@ -108,9 +111,9 @@
         <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
       </div>
     </div>
   </q-page>
@@ -140,6 +143,8 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   rowCount: 0,
   offset: 0,
 })
+
+
 
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const watchtower = ref<Watchtower>(new Watchtower())
@@ -242,5 +247,24 @@ onMounted(async () => {
   }
 
 })
+
+
+
+
+const onUnguard = () => {
+  refreshData().then(() => {
+    if (paginatedAuthchainIdentities.value) {
+      populateAuthchainIdentities(paginatedAuthchainIdentities.value)
+    }
+  })
+}
+
+const onBurn = () => {
+  refreshData().then(() => {
+    if (paginatedAuthchainIdentities.value) {
+      populateAuthchainIdentities(paginatedAuthchainIdentities.value)
+    }
+  })
+}
 
 </script>

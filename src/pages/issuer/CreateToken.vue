@@ -8,10 +8,11 @@
               <template v-slot:avatar>
                 <q-icon name="warning" color="warning" size="xs" />
               </template>
-              Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
+              Your wallet has <span :class="!user.genesisInputs?.length ? 'text-red' : 'text-green'">{{
+                user.genesisInputs?.length || 0 }}</span> vout-0 utxo.
               This operation will create a Token and an AuthKey so it requires 2 vout-0
-              utxos as genesis inputs. If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys"
-                label="Click Here" size="md" color="secondary" dense flat no-caps />
+              utxos (as genesis inputs). If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys"
+                label="Click Here" size="md" color="secondary" flat no-caps />
               <template v-slot:action>
                 <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
@@ -21,7 +22,7 @@
           <template v-else>
             <TokenGenesisForm :token-type="(route.params.tokenType as ('ft' | 'nft' | 'fnft'))"
               :genesis-input="genesisInputUtxo" :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)"
-              :create-auth-key="true" />
+              :create-auth-key="true" @genesis-result="onGenesisResult" />
           </template>
         </div>
       </div>
@@ -40,14 +41,17 @@ import BusyButton from 'src/components/BusyButton.vue'
 import { GenesisInput, AuthKey } from 'src/app'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useStatusBar } from 'src/composables/useStatusBar'
+import { useEventBus } from 'src/composables';
 
 const $q = useQuasar()
 const user = useUser()
 const route = useRoute()
+const { $ebus } = useEventBus()
 const authKey = ref<AuthKey>()
 const genesisInputUtxo = ref<UtxoI>()
 const genesisInputInstance = ref<GenesisInput>()
 const { setStatusProvider } = useStatusBar()
+
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 2) {
@@ -76,6 +80,12 @@ const generateGenesisInputs = async () => {
     const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 2)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'GenesisInput.generate',
+        timestamp: new Date().getTime(),
+        successMsg: 'Generated genesis input(v-out 0 utxo)'
+      })
     }
   } catch (error) {
     console.log(error)
@@ -83,5 +93,10 @@ const generateGenesisInputs = async () => {
   }
 
 }
+
+const onGenesisResult = async (result: any) => {
+  console.log('GENESIS RESULT', result)
+}
+
 </script>
 

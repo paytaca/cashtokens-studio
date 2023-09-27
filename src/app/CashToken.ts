@@ -1,15 +1,16 @@
 import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, DEFAULT_TOKEN_VALUE } from '.'
-import { GenesisOptions } from "./types";
+import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE } from '.'
+import { GenesisOptions, NftCollectionType } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
+import { binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
+import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
@@ -45,6 +46,7 @@ export class CashToken implements UtxoI, PartialBcmr {
    * method
    */
   includeAuthKeyGenesis: boolean
+  defaultNftCollectionType: NftCollectionType
   private _processing?: string
   private static _processing?: string
   constructor(
@@ -60,6 +62,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       registry?: { uri: string, contentHash: string }
     }
   ){
+    this.defaultNftCollectionType = 'SequentialNftCollection'
     if (u) {
       this.vout = u.vout
       this.txid = u.txid
@@ -223,11 +226,17 @@ export class CashToken implements UtxoI, PartialBcmr {
     return {encodedTransaction, sourceOutputs}
   }
 
+
   async createGenesis(opt: GenesisOptions): Promise<string|undefined> {
     this.ensureTxid()
     this.ensureOwnerWallet()
     this._processing = 'Processing'
-    opt = { useAuthGuard: this.useAuthGuard, includeAuthKeyGenesis: this.includeAuthKeyGenesis, ...opt}
+    opt = { 
+      useAuthGuard: this.useAuthGuard, 
+      includeAuthKeyGenesis: this.includeAuthKeyGenesis, 
+      nftCollectionType: this.defaultNftCollectionType,
+      ...opt
+    }
     const requests = []
     let tokenRecipient = this.ownerWallet!.getTokenDepositAddress()
     if (opt.useAuthGuard) { // Use authguard by default
@@ -237,6 +246,28 @@ export class CashToken implements UtxoI, PartialBcmr {
       this.authKey.ownerWallet = this.ownerWallet
       tokenRecipient = this.authKey?.authGuard.contract!.getTokenDepositAddress()
     }
+
+    console.log('OPT', opt)
+    let commitment = opt.commitment
+
+    if (commitment && opt.commitmentFormat === 'decimal') {
+      commitment = convertBigIntToHexLE(BigInt(commitment))
+    } 
+    
+    if (commitment && opt.commitmentFormat === 'hex') {
+      if (opt.nftCollectionType === 'SequentialNftCollection') { 
+        // if (commitment === CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT) {
+        //   commitment = 'feed'
+        // } else {
+        //   // this means commitment is a BE number, convert to LE
+        //   commitment = parseInt(commitment, 16).toString()
+        //   commitment = convertBigIntToHexLE(BigInt(commitment))
+        // }
+        commitment = parseInt(commitment, 16).toString()
+        commitment = convertBigIntToHexLE(BigInt(commitment))
+      } 
+    } /*else commitment is raw hex provided by user*/
+
     requests.push(this.prepareGenesisAuthchainIdentityReq({
       recipient: tokenRecipient,
       token: {
@@ -246,7 +277,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         // i.e. For fungible tokens continued issuance, store the reserve supply/genesis supply
         // ...  in the identity output and set capability to 'mutable'
         capability: opt.amount && BigInt(opt.amount) > 0 && !opt.capability ? NFTCapability.mutable: opt.capability,
-        commitment: opt.commitment
+        commitment: commitment
       }
     }))
 
@@ -336,7 +367,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   }
 
-  async mintChild(arg:{ capability: NFTCapability, commitment: string, recipient: string }): Promise<string|undefined>{
+  async mintChild(arg:{ capability: NFTCapability, commitment: string, commitmentFormat: 'decimal'|'hex', nftCollectionType?: NftCollectionType, recipient: string, }): Promise<string|undefined>{
     
     if (this.token?.capability !== NFTCapability.minting) {
       throw new Error('No capability to mint')
@@ -346,11 +377,16 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw new Error('Missing recipient')
     }
 
+    if (!arg.nftCollectionType) {
+      arg.nftCollectionType = this.defaultNftCollectionType
+    }
+
     this.ensureOwnerWallet()
     this.ensureAuthKey()
     this._processing = 'Processing'
     const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3})
     const mintCost = minerFee + DEFAULT_TOKEN_VALUE
+    // TODO: use watchtower
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost).map(toCashScript)[0]
 
     if (!funderInput) {
@@ -364,8 +400,24 @@ export class CashToken implements UtxoI, PartialBcmr {
     const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
     const tokenOwner = this.ownerWallet!.getDepositAddress()
 
+    let commitment = arg.commitment
+    if (commitment && arg.commitmentFormat === 'decimal') {
+      commitment = convertBigIntToHexLE(BigInt(commitment))
+    } 
+    
+    if (commitment && arg.commitmentFormat === 'hex') {
+      if (arg.nftCollectionType === 'SequentialNftCollection') { 
+        commitment = parseInt(commitment, 16).toString()
+        commitment = convertBigIntToHexLE(BigInt(commitment))
+      } 
+    } /*else commitment is raw hex provided by user*/
+    
     let transaction
     let decoded
+    // track the commitment of last minted child NFT
+    // by storing the commitment in parent usually CashToken with minting capability
+    // TODO: test using mutable token as parent
+    authchainIdentityOutput.token!.nft!.commitment = commitment 
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')(true)
@@ -392,7 +444,7 @@ export class CashToken implements UtxoI, PartialBcmr {
               amount: BigInt(0),
               category: authchainIdentityOutput.token!.category,
               nft: {
-                commitment: arg.commitment,
+                commitment: commitment,
                 capability: arg.capability
               }
             }

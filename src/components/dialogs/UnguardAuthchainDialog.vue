@@ -1,15 +1,15 @@
 <template>
-  <q-dialog v-close-popup>
+  <q-dialog ref="dialogElRef" v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Release Authchain from Authguard</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Release Authchain from Authguard</q-toolbar-title>
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <div class="q-mx-md text-justify">
           <q-icon name="warning" color="warning" size="md"></q-icon>
-          <span>
+          <span class="text-wrap">
             You are about to release the authchain's identity output from the AuthGuard covenant.
-            Doing so will transfer the authchain identity token to your regular wallet address.
+            Doing so will transfer the authchain identity token to your regular token wallet address.
           </span>
         </div>
         <q-form class="q-gutter-sm">
@@ -30,15 +30,32 @@ import { AuthchainIdentity } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useQuasar } from 'quasar';
 import shortenTx from 'src/app/utils/shortenTx';
+import { useEventBus } from 'src/composables';
+import { shortenTokenId } from 'src/app/utils';
+import { Ref, ref } from 'vue';
 
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
+const emit = defineEmits<{
+  (e: 'identityUnguarded'): void
+}>()
 const $q = useQuasar()
+const { $ebus } = useEventBus()
+const dialogElRef = ref()
+
 const unguardAuthchain = async () => {
   try {
     const tx = await props.authchainIdentity.unguard()
     if (tx) {
-      // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
-      $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+      $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthchainIdentity.unguard',
+        timestamp: new Date().getTime(),
+        successMsg: `Released ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} from AuthGuard`
+      })
+      emit('identityUnguarded')
+      dialogElRef.value?.hide()
+
     }
   } catch (error: any) {
     console.log(error)

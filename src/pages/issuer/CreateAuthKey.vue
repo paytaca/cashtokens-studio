@@ -8,17 +8,19 @@
               <template v-slot:avatar>
                 <q-icon name="warning" color="warning" size="xs" />
               </template>
-              Your wallet has {{ user.genesisInputs?.length || 0 }} vout-0 utxo.
+              Your wallet has <span :class="!user.genesisInputs?.length ? 'text-red' : 'text-green'">{{
+                user.genesisInputs?.length || 0 }}</span> vout-0 utxo.
               Cashtoken Studio requires 1 vout-0
-              utxo to create an AuthKey.
+              utxo (as genesis input) to create an AuthKey.
               <template v-slot:action>
-                <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
+                <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
               </template>
             </q-banner>
           </template>
           <template v-else>
-            <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)" />
+            <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)"
+              @auth-key-created="onCreateAuthKey" />
           </template>
         </div>
       </div>
@@ -39,6 +41,7 @@ import AuthKeyForm from 'src/components/forms/AuthKeyForm.vue'
 const $q = useQuasar()
 const user = useUser()
 const genesisInput = ref<UtxoI>()
+const genesisInputInstance = ref<GenesisInput>()
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 1) {
@@ -59,7 +62,8 @@ const generateGenesisInputs = async () => {
     return
   }
   try {
-    const tx = await GenesisInput.generate(user.wallet! as Wallet, 1)
+    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }) // 
+    const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 1)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
     }
@@ -67,6 +71,11 @@ const generateGenesisInputs = async () => {
     console.log(error)
     $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
   }
+}
+
+const onCreateAuthKey = () => {
+  console.log('AuthKeyCreated')
+  genesisInput.value = undefined
 }
 </script>
 

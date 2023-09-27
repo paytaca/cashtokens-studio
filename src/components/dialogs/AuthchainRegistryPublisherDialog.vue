@@ -2,7 +2,7 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title>Publish Registry</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Publish Registry</q-toolbar-title>
         <TokenCategory :token-id="authchainIdentity?.token?.tokenId" />
       </q-toolbar>
       <q-card-section>
@@ -40,22 +40,28 @@ import { fetchBcmrContentHash } from 'src/app/bcmr'
 import shortenTx from 'src/app/utils/shortenTx';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
-
-
+import { useEventBus } from 'src/composables';
+import { shortenTokenId } from 'src/app/utils';
 
 const $q = useQuasar()
+const { $ebus } = useEventBus()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean }>({
   url: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json',
   contentHash: ''
 })
 const publish = async () => {
-  console.log('IDENTITY', props.authchainIdentity)
   try {
     const tx = await props.authchainIdentity.publish({ url: form.value.url, contentHash: form.value.contentHash })
     if (tx) {
       // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
-      $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+      $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthchainIdentity.publish',
+        timestamp: new Date().getTime(),
+        successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
+      })
     }
   } catch (error: any) {
     console.log(error)

@@ -80,7 +80,7 @@ const menu = computed<any[]>(() => {
     },
     {
       label: 'Account',
-      href: '#Balance',
+      href: '#Account',
       icon: 'account_balance_wallet',
       disabled: Boolean(user.walletAddress) === false,
       children: [
@@ -119,8 +119,12 @@ const menu = computed<any[]>(() => {
             //   avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
             // }
           ]
+        },
+        {
+          label: 'Recent Transactions',
+          href: '/account/recent-transactions',
+          icon: 'receipt',
         }
-
       ]
     }
   ]

@@ -16,7 +16,22 @@
                                 <th>Symbol</th>
                                 <th>Token Id</th>
                                 <th>Capability</th>
-                                <th>Commitment</th>
+                                <th>
+                                    <sup>
+                                        <q-icon name="info" size="xs">
+                                            <q-tooltip>
+                                                If the token is a minting token. Value would be the commitment of the last
+                                                minted
+                                                child. Value shown here are the decimal format of value on-chain.
+                                            </q-tooltip>
+                                        </q-icon>
+                                    </sup>
+                                    Commitment
+                                    <q-btn-toggle v-model="commitmentFormat" push toggle-color="teal" :options="[
+                                        { label: '0x', value: 'hex' },
+                                        { label: '123', value: 'decimal' },
+                                    ]" size="sm" dense no-caps />
+                                </th>
                                 <!-- <th>Action</th> -->
                             </tr>
                         </thead>
@@ -46,7 +61,15 @@
                                 </td>
 
                                 <td>{{ b.token?.capability }}</td>
-                                <td>{{ b.token?.commitment }}</td>
+                                <!-- <td>{{ b.token?.commitment }}</td> -->
+                                <!-- <td>{{ b.token?.commitment ? binToBigIntUintLE(hexToBin(b.token.commitment)) : '---' }}</td> -->
+                                <td>
+
+                                    <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
+                                    <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
+                                    {{ b.token?.commitment !== undefined ? commitmentDisplay(b.token?.commitment) : '---' }}
+                                    <!-- {{ b.token?.commitment }} -->
+                                </td>
                                 <!-- <td>
                                     <q-btn color="primary" dense no-caps @click="openDialog(TokenSenderDialog.__name, b)">Send</q-btn>
                                 </td> -->
@@ -70,13 +93,14 @@
     </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onMounted, ref, watch, computed } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
 import { CashToken, PartialBcmr, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { PaginatedData } from 'src/app/types';
+import { binToBigIntUintLE, binToBigIntUint64LE, binToNumberInt32LE, binToNumberUint16LE, hexToBin } from '@bitauth/libauth';
 
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
@@ -91,7 +115,15 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
     rowCount: 0,
     offset: 0,
 })
-
+const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
+const commitmentDisplay = computed(() => {
+    return (commitment: string | undefined) => {
+        if (commitment && commitmentFormat.value === 'decimal') {
+            return binToBigIntUintLE(hexToBin(commitment))
+        }
+        return commitment
+    }
+})
 const watchtower = ref<Watchtower>(new Watchtower())
 
 const populateNftCollections = (paginated: PaginatedData) => {

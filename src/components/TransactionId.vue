@@ -1,0 +1,16 @@
+<template>
+  <q-btn @click.stop="() => copyText(txid || '...')" size="sm" flat dense no-caps
+    :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" color="warning" style="white-space: nowrap;min-width: 120px">
+    <code v-if="txid">{{ txid.replace(txid.substring(5, 60), '...') }}
+                                              <q-tooltip>Copy Transaction Id</q-tooltip>
+                                          </code>
+    <code v-else :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-8'">{{ '...' }}
+                                                  <q-tooltip>N/A</q-tooltip>
+                                              </code>
+  </q-btn>
+</template>
+<script setup lang="ts">
+import copyText from 'src/app/utils/copyText'
+defineOptions({ name: 'TransactionId' })
+defineProps<{ txid?: string }>()
+</script>

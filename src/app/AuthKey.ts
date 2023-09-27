@@ -134,20 +134,20 @@ export class AuthKey implements UtxoI {
 
   protected async buildTokenGenesisTransaction(genesisRequests:(TokenSendRequest|SendRequest|OpReturnData)[]): Promise<{encodedTransaction:any, sourceOutputs:any}>{
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
-    const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
-      return Boolean(!u.token) &&
-        (u.txid !== this.txid) && // Exclude the utxo that we're using as genesis inputs
-          u.satoshis > this.genesisCost
-    })[0]
+    // const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
+    //   return Boolean(!u.token) &&
+    //     (u.txid !== this.txid) && // Exclude the utxo that we're using as genesis inputs
+    //       u.satoshis > this.genesisCost
+    // })[0]
 
-    if (!funderUtxo) {
-      throw new Error('Insufficient balance to fund the transaction')
-    }
+    // if (!funderUtxo) {
+    //   throw new Error('Insufficient balance to fund the transaction')
+    // }
 
     // const useThisUtxos = this.authKey? [this.utxo, this.authKey!.utxo!, funderUtxo]: [this.utxo, funderUtxo]
-    const utxoExpenses = [this.utxo, funderUtxo]
-    
-    utxoExpenses.push(funderUtxo)
+      // const utxoExpenses = [this.utxo, funderUtxo]
+      
+      // utxoExpenses.push(funderUtxo)
 
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
@@ -156,8 +156,8 @@ export class AuthKey implements UtxoI {
         tokenOperation: 'genesis',
         checkTokenQuantities: false,
         buildUnsigned: true,
-        utxoIds: utxoExpenses, // this.utxo as genesis input
-        ensureUtxos: utxoExpenses
+        // utxoIds: utxoExpenses, // this.utxo as genesis input
+        // ensureUtxos: utxoExpenses
       }
     )
     delete this._processing
@@ -185,13 +185,22 @@ export class AuthKey implements UtxoI {
       })
     ]
     // requests.push(...this.prepareChangeReq(this.utxo))
-    const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
-    this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
-    this._processing = 'Creating AuthKey'
-    const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
-    delete this._processing
-    return tx
+    
+    try {
+      const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
+      this._processing = 'Waiting for signature'
+      const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
+      this._processing = 'Creating AuthKey'
+      const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
+      return tx
+    } catch (error) {
+
+      throw error
+    } finally {
+      delete this._processing
+    }
+    
+    
   }
 
   /**
