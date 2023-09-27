@@ -44,7 +44,7 @@
             <TableBodySkeleton v-if="!authchainIdentities && watchtower.processing"
               :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="watchtower.processing" />
             <tbody v-else class="text-center">
-              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
+              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i" @click="() => viewToken(identity)">
                 <td>{{ i + pagination.offset + 1 }}</td>
                 <td>
                   <q-avatar v-if="identity.tokenUris?.icon">
@@ -122,8 +122,9 @@
 import { Wallet } from 'mainnet-js';
 import { onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
+import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
-import { AuthKey, AuthchainIdentity, Watchtower } from 'src/app';
+import { AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -131,8 +132,13 @@ import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialo
 import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import { PaginatedData } from 'src/app/types';
+import { uid } from 'quasar';
+import { useRouter } from 'vue-router';
+
 
 const user = useUser()
+const ui = useUI()
+const router = useRouter()
 const viewType = ref<string>('simple')
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const paginatedAuthchainIdentities = ref<PaginatedData>()
@@ -265,6 +271,11 @@ const onBurn = () => {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
     }
   })
+}
+
+const viewToken = (token: AuthchainIdentity) => {
+  ui.tokenInView = token
+  router.push(`/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
 }
 
 </script>
