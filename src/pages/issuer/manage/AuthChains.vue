@@ -44,7 +44,8 @@
             <TableBodySkeleton v-if="!authchainIdentities && watchtower.processing"
               :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="watchtower.processing" />
             <tbody v-else class="text-center">
-              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i" @click="() => viewToken(identity)">
+              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i"
+                @click="(b: any) => viewToken(identity, b)">
                 <td>{{ i + pagination.offset + 1 }}</td>
                 <td>
                   <q-avatar v-if="identity.tokenUris?.icon">
@@ -76,18 +77,18 @@
                 <td>
                   <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
                 </td>
-                <td>
-                  <q-btn icon="more_vert" size="md" round flat dense>
+                <td class="col-action">
+                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense>
                     <q-menu>
                       <q-list>
                         <q-item clickable v-close-popup
-                          @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
+                          @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
                           Publish Existing Registry
                         </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
+                        <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, identity)">
                           Unguard Authchain
                         </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(AuthchainBurnerDialog.__name, identity)">
+                        <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, identity)">
                           Burn Authchain
                         </q-item>
                       </q-list>
@@ -273,9 +274,11 @@ const onBurn = () => {
   })
 }
 
-const viewToken = (token: AuthchainIdentity) => {
-  ui.tokenInView = token
-  router.push(`/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
+const viewToken = (token: AuthchainIdentity, b: any) => {
+  if (b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) {
+    ui.tokenInView = token
+    router.push(`/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
+  }
 }
 
 </script>
