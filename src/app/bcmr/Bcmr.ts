@@ -19,6 +19,7 @@ export class Bcmr implements Registry {
   private _versionString?: string
   private _originalContentHash?: string // To track if content changed
   authchainIdentity?: AuthchainIdentity
+  private _processing?:string
   constructor(instance: {
     $schema?: string | undefined;
     version: { major: number; minor: number; patch: number; };
@@ -79,6 +80,9 @@ export class Bcmr implements Registry {
     return false
   }
 
+  get processing():string|undefined {
+    return this._processing
+  }
   initIdentities(instance:Registry){
     
     if (typeof (this.registryIdentity) === 'string' && !this.identities && !instance?.identities) {
@@ -261,6 +265,7 @@ export class Bcmr implements Registry {
    * that the registry uri can be populated.
    */
   async storeRegistry(): Promise<BcmrStorageArtifact|undefined> {
+    this._processing = 'Storing in IPFS'
     try {
       console.log('content', this.getContent())
       const resp = await fetch('/api/tokens/registry/storage', {
@@ -271,6 +276,8 @@ export class Bcmr implements Registry {
       return respJson.artifact
     } catch (error) {
       console.log(error)
+    } finally {
+      delete this._processing
     }
   }
 

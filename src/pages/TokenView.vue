@@ -2,7 +2,7 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <q-banner rounded :class="!$q.dark.isActive ? 'bg-grey-3' : ''">
+        <q-banner class="shadow-3" :class="!$q.dark.isActive ? 'bg-grey-5' : ''" style="border-radius: 1em;">
           <div class="row q-px-md q-py-md flex justify-center">
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
               <div>
@@ -13,7 +13,7 @@
               </div>
             </div>
             <div class="col-xs-10 col-sm-9 justify-left">
-              <q-markup-table dense flat :class="!$q.dark.isActive ? 'bg-grey-3' : ''">
+              <q-markup-table dense flat :class="!$q.dark.isActive ? 'bg-grey-5' : ''">
                 <tbody>
                   <tr>
                     <td class="text-bold">Category</td>
