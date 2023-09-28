@@ -12,11 +12,12 @@
           <span v-if="$q.screen.gt.xs" class="q-ml-xs">Undo Changes</span>
         </template>
       </q-btn>
-      <q-btn v-if="bcmr?.isModified" color="primary" size="md" icon="cloud_upload"
+      <q-btn v-if="bcmr?.isModified" color="primary" size="md"
         @click="() => $q.notify({ message: 'Feature under construction', color: 'negative', icon: 'handyman' })" dense
-        no-caps>
+        no-caps icon="handyman" disable>
         <template v-slot:default>
           <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Update</span>
+          <q-tooltip>Feature under construction</q-tooltip>
         </template>
       </q-btn>
     </div>
