@@ -83,6 +83,7 @@ onMounted(async () => {
       if (bcmrContents) {
         bcmr.value = new Bcmr(bcmrContents)
         bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
+        console.log('BCMR', bcmr.value)
       }
     } catch (error) {
       console.log('Error downloading bcmr contents')
