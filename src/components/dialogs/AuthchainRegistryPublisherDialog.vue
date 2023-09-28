@@ -27,7 +27,7 @@
         </template>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton :busy-label="authchainIdentity.processing" label="Publish" color="primary" @click="publish" />
+        <BusyButton :busy-label="authchainIdentity?.processing" label="Publish" color="primary" @click="publish" />
       </q-card-actions>
     </q-card>
   </q-dialog>

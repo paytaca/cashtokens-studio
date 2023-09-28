@@ -67,7 +67,7 @@ import { onMounted, ref, reactive } from 'vue';
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TokenSymbol from 'src/components/TokenSymbol.vue';
-import { Bcmr, BcmrIndexer } from 'src/app';
+import { AuthchainIdentity, Bcmr, BcmrIndexer } from 'src/app';
 import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import BcmrForm from 'src/components/forms/BcmrForm.vue'
 
@@ -82,6 +82,7 @@ onMounted(async () => {
       const bcmrContents: Registry | undefined = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
       if (bcmrContents) {
         bcmr.value = new Bcmr(bcmrContents)
+        bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
       }
     } catch (error) {
       console.log('Error downloading bcmr contents')

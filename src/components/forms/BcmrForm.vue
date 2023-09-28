@@ -29,7 +29,7 @@
           </template>
         </q-btn>
         <q-btn v-if="bcmr?.isModified" color="primary" size="md"
-          @click="() => $q.notify({ message: 'Feature under construction', color: 'negative', icon: 'handyman' })" dense
+          @click="() => openBcmrPublisherDialog(AuthchainRegistryPublisherDialog.__name, bcmr?.authchainIdentity)" dense
           no-caps icon="handyman" disable>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Update</span>
@@ -68,25 +68,49 @@
         </div>
       </q-expansion-item>
     </q-banner>
+    <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
+      :authchain-identity="(dialogData as AuthchainIdentity)" :url="savedArtifact?.artifact?.uris?.https"
+      :content-hash="savedArtifact?.contentHash" @hide="onHide" />
   </q-form>
 </template>
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { Bcmr } from 'src/app';
+import { AuthchainIdentity, Bcmr } from 'src/app';
 import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
+import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
+import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 const $q = useQuasar()
+const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
 const props = defineProps<{ registry?: Bcmr }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
+
 const saved = computed(() => {
   if (bcmr.value && registryStorageArtifacts.value) {
     return Boolean(registryStorageArtifacts.value?.find(a => a.contentHash === bcmr.value!.getContentHash()))
   }
   return false
 })
+
+/**
+ * If user saved the BCMR in ipfs, this'll return the artifact of 
+ * the save operation. This is so the UI is aware if the current
+ * modification of the BCMR is already available in IPFS.
+ * 
+ * This is done by saving the content hash of the BCMR in 
+ * local storage.
+ * 
+ */
+const savedArtifact = computed(() => {
+  if (bcmr.value && registryStorageArtifacts.value) {
+    return registryStorageArtifacts.value?.find(a => a.contentHash === bcmr.value!.getContentHash())
+  }
+  return null
+})
+
 
 onMounted(() => {
   if (props.registry) {
@@ -102,8 +126,8 @@ onMounted(() => {
 })
 
 onBeforeUnmount(() => {
-  if (registryStorageArtifacts.value) {
-    localStorage.setItem('registryStorageArtifacts', JSON.stringify(registryStorageArtifacts))
+  if (registryStorageArtifacts.value && registryStorageArtifacts.value.length > 0) {
+    localStorage.setItem('registryStorageArtifacts', JSON.stringify(registryStorageArtifacts.value))
   }
 })
 
