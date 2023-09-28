@@ -1,22 +1,22 @@
 <template>
   <q-form>
     <div v-if="bcmr" class="row q-mb-lg  shadow-3 rounded-borders"
-      :class="!$q.dark.isActive ? 'bg-grey-5' : 'bg-grey-10'">
+      :class="!$q.dark.isActive ? 'bg-grey-4' : 'bg-grey-10'">
       <div class="col-12 q-gutter-sm q-py-sm row items-center justify-end">
-        <q-btn type="a" dense no-caps color="secondary" icon="cloud_download" @click="downloadBcmr">
+        <q-btn type="a" dense no-caps color="secondary" icon="cloud_download" @click="downloadBcmr" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Download Registry</span>
           </template>
         </q-btn>
         <q-btn v-if="bcmr?.isModified" color="negative" size="md" icon="replay"
-          @click="bcmr = new Bcmr(registry as Registry)" dense no-caps :disable="Boolean(bcmr?.processing)">
+          @click="bcmr = new Bcmr(registry as Registry)" dense no-caps flat :disable="Boolean(bcmr?.processing)">
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Undo Changes</span>
           </template>
         </q-btn>
         <q-btn v-if="bcmr?.isModified" color="primary" size="md" @click="storeRegistryInIpfs" dense no-caps
           :icon="!saved ? 'save_as' : 'done_all'" :loading="Boolean(bcmr?.processing)" class="overflow-hidden"
-          :disable="Boolean(bcmr?.processing)">
+          :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs" style="width:100px;text-overflow: ellipsis;">
               {{ saved ? 'Saved' : 'Save in IPFS' }}
@@ -30,10 +30,9 @@
         </q-btn>
         <q-btn v-if="bcmr?.isModified" color="primary" size="md"
           @click="() => openBcmrPublisherDialog(AuthchainRegistryPublisherDialog.__name, bcmr?.authchainIdentity)" dense
-          no-caps icon="handyman" disable>
+          no-caps icon="publish" :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Update</span>
-            <q-tooltip>Feature under construction</q-tooltip>
           </template>
         </q-btn>
       </div>
@@ -82,6 +81,7 @@ import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount } from 'vue';
 import { onBeforeRouteUpdate } from 'vue-router';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
+import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample';
 const $q = useQuasar()
 const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
 const props = defineProps<{ registry?: Bcmr }>()
@@ -115,6 +115,7 @@ const savedArtifact = computed(() => {
 onMounted(() => {
   if (props.registry) {
     bcmr.value = new Bcmr(props.registry)
+    bcmr.value.authchainIdentity = props.registry.authchainIdentity
   }
   const s = localStorage.getItem('registryStorageArtifacts')
   if (s !== 'undefined' && s !== undefined && s !== null) {
