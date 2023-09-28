@@ -2,6 +2,7 @@ import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategor
 import { AuthchainIdentity } from "../";
 import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
 import { BcmrStorageArtifact } from "../types";
+import { Token } from "nft.storage";
 
 export class Bcmr implements Registry {
 
@@ -15,7 +16,8 @@ export class Bcmr implements Registry {
   chains?: { [splitId: string]: ChainHistory; } | undefined;
   license?: string | undefined;
   extensions?: Extensions | undefined;
-
+  private _versionString?: string
+  private _originalContentHash?: string // To track if content changed
   authchainIdentity?: AuthchainIdentity
   constructor(instance: {
     $schema?: string | undefined;
@@ -34,15 +36,57 @@ export class Bcmr implements Registry {
     this.latestRevision = instance.latestRevision
     this.registryIdentity = instance.registryIdentity
     this.authchainIdentity = authchainIdentity
-    this.initIdentities()
+    this.initIdentities(instance)
+    this._originalContentHash = this.getContentHash()
   }
 
-  initIdentities(){
-    if (typeof (this.registryIdentity) === 'string' && !this.identities) {
+  get versionString():string {
+    this._versionString = `${this.version.major}.${this.version.minor}.${this.version.patch}`
+    return this._versionString
+  }
+
+  set versionString(ver:string) {
+    const [ major, minor, patch ]= ver.split('.')
+    this.version = {major:Number(major||0), minor:Number(minor||0), patch:Number(patch||0)}
+  }
+
+  /**
+   * Convenient getter for the deeply embedded IdentitySnapshot
+   */
+  get identitySnapshot(): IdentitySnapshot|undefined {
+    if (this.registryIdentity && typeof(this.registryIdentity) === 'string') {
+      if (this.identities && this.identities[this.registryIdentity] && this.identities[this.registryIdentity][this.latestRevision]) {
+        return this.identities[this.registryIdentity][this.latestRevision]
+      }
+    }
+    return
+  }
+
+  /**
+   * Convenient getter for the deeply embedded TokenCategory
+   */
+  get token(): TokenCategory|undefined {
+    return this.identitySnapshot?.token
+  }
+
+  /**
+   * Returns true if the content has been modified
+   */
+  get isModified(): boolean {
+    if (this._originalContentHash !== this.getContentHash()) {
+      return true
+    }
+    return false
+  }
+
+  initIdentities(instance:Registry){
+    
+    if (typeof (this.registryIdentity) === 'string' && !this.identities && !instance?.identities) {
       this.identities = {
         [this.registryIdentity]: {
           [this.latestRevision]: {
             name: '',
+            description: '',
             token: {
               category: this.registryIdentity,
               symbol: '',
@@ -51,7 +95,17 @@ export class Bcmr implements Registry {
           } as IdentitySnapshot
         } as IdentityHistory
       }
+    }else {
+      this.identities = instance?.identities
     }
+  }
+
+  setSchema(s:string){
+    this.$schema = s
+  }
+
+  setLicense(l:string) {
+    this.license = l
   }
 
   setVersion(version: string) {
@@ -101,6 +155,18 @@ export class Bcmr implements Registry {
        = {...this.identities![this.registryIdentity!][this.latestRevision!].uris, ...uri}
     }
   }
+
+  /**
+   * IdentitySnapshot URI
+   */
+  setUri(name:string, uri:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities && this.latestRevision) {
+      if(this.identities![this.registryIdentity!][this.latestRevision!].uris?.[name]) {
+        this.identities![this.registryIdentity!][this.latestRevision!].uris![name] = uri
+      } 
+    }
+  }
+
 
   getRegistryUri(): string|undefined {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
