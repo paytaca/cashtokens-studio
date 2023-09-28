@@ -1,4 +1,5 @@
-import { TokenCategory, URIs } from "./bcmr-v2.schema"
+import { Bcmr } from "./Bcmr"
+import { Registry, TokenCategory, URIs } from "./bcmr-v2.schema"
 
 
 export class BcmrIndexer {
@@ -39,5 +40,21 @@ export class BcmrIndexer {
     } finally {
       delete this.processing
     }
+  }
+
+  /**
+   * Download entire BCMR content from BCMR indexer
+   */
+  async fetchBcmrContents(tokenId:string): Promise<Registry|undefined> {
+    try {
+      this.processing = 'Downloading token registry'
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${tokenId}`)  
+      return await r.json()
+    } catch (error) {
+      console.log(`Error downloading registry of ${tokenId} from indexer`, error)
+    } finally {
+      delete this.processing
+    }
+    return
   }
 }
