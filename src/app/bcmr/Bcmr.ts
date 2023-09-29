@@ -212,7 +212,6 @@ export class Bcmr implements Registry {
     if (!this.authchainIdentity) {
       throw new Error('Authchain identity required')
     }
-    console.log(this)
     if (!this.getToken()) {
       throw new Error('Token not set')
     }
@@ -225,7 +224,6 @@ export class Bcmr implements Registry {
         url: this.getRegistryUri() as string,
         contentHash: binToHex(utf8ToBin(JSON.stringify(clean)))
       })
-      console.log(JSON.stringify(clean))
     } catch (error) {
 
     }
@@ -272,7 +270,6 @@ export class Bcmr implements Registry {
   async storeRegistry(): Promise<BcmrStorageArtifact|undefined> {
     this._processing = 'Storing in IPFS'
     try {
-      console.log('content', this.getContent())
       const resp = await fetch('/api/tokens/registry/storage', {
         method: 'POST', body: this.getContent(),
         headers: { 'Content-Type': 'application/json' }

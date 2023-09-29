@@ -80,9 +80,7 @@ import { AuthchainIdentity, Bcmr } from 'src/app';
 import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount } from 'vue';
-import { onBeforeRouteUpdate } from 'vue-router';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
-import bcmrV2Sample from 'src/app/bcmr/bcmr-v2.sample';
 const $q = useQuasar()
 const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
 const props = defineProps<{ registry?: Bcmr }>()
