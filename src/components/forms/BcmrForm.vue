@@ -49,6 +49,7 @@
           <q-input @update:model-value="(v: any) => bcmr?.setLicense(v)" :model-value="bcmr?.license" label="License"
             placeholder="Example: CC0-1.0" aria-placeholder="Example: CC0-1.0" filled dense></q-input>
         </div>
+        {{ bcmr }}
       </q-expansion-item>
       <q-expansion-item label="Token Info" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
