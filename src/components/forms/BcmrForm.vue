@@ -72,6 +72,9 @@
             :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Token category symbol" filled dense></q-input>
           <q-input @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
             :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
+          <q-input v-if="Number(bcmr?.authchainIdentity?.token?.amount) > 0"
+            @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
+            :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
         </div>
       </q-expansion-item>
     </q-banner>
