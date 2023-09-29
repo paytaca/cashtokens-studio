@@ -2,6 +2,7 @@ import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategor
 import { AuthchainIdentity } from "../";
 import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
 import { BcmrStorageArtifact } from "../types";
+import { Token } from "nft.storage";
 
 export class Bcmr implements Registry {
 
@@ -15,8 +16,10 @@ export class Bcmr implements Registry {
   chains?: { [splitId: string]: ChainHistory; } | undefined;
   license?: string | undefined;
   extensions?: Extensions | undefined;
-
+  private _versionString?: string
+  private _originalContentHash?: string // To track if content changed
   authchainIdentity?: AuthchainIdentity
+  private _processing?:string
   constructor(instance: {
     $schema?: string | undefined;
     version: { major: number; minor: number; patch: number; };
@@ -34,15 +37,66 @@ export class Bcmr implements Registry {
     this.latestRevision = instance.latestRevision
     this.registryIdentity = instance.registryIdentity
     this.authchainIdentity = authchainIdentity
-    this.initIdentities()
+    this.identities = instance.identities
+    this.tags = instance.tags
+    this.defaultChain = instance.defaultChain
+    this.license = instance.license
+    this.extensions = instance.extensions
+    this.initIdentities(instance)
+    this._originalContentHash = this.getContentHash()
   }
 
-  initIdentities(){
-    if (typeof (this.registryIdentity) === 'string' && !this.identities) {
+  get versionString():string {
+    this._versionString = `${this.version.major}.${this.version.minor}.${this.version.patch}`
+    return this._versionString
+  }
+
+  set versionString(ver:string) {
+    const [ major, minor, patch ]= ver.split('.')
+    this.version = {major:Number(major||0), minor:Number(minor||0), patch:Number(patch||0)}
+  }
+
+  /**
+   * Convenient getter for the deeply embedded IdentitySnapshot
+   */
+  get identitySnapshot(): IdentitySnapshot|undefined {
+    if (this.registryIdentity && typeof(this.registryIdentity) === 'string') {
+      if (this.identities && this.identities[this.registryIdentity] && this.identities[this.registryIdentity][this.latestRevision]) {
+        return this.identities[this.registryIdentity][this.latestRevision]
+      }
+    }
+    return
+  }
+
+  /**
+   * Convenient getter for the deeply embedded TokenCategory
+   */
+  get token(): TokenCategory|undefined {
+    return this.identitySnapshot?.token
+  }
+
+  /**
+   * Returns true if the content has been modified
+   */
+  get isModified(): boolean {
+    if (this._originalContentHash !== this.getContentHash()) {
+      return true
+    }
+    return false
+  }
+
+  get processing():string|undefined {
+    return this._processing
+  }
+
+  initIdentities(instance:Registry){
+    
+    if (typeof (this.registryIdentity) === 'string' && !this.identities && !instance?.identities) {
       this.identities = {
         [this.registryIdentity]: {
           [this.latestRevision]: {
             name: '',
+            description: '',
             token: {
               category: this.registryIdentity,
               symbol: '',
@@ -51,7 +105,31 @@ export class Bcmr implements Registry {
           } as IdentitySnapshot
         } as IdentityHistory
       }
+    }else {
+      this.identities = instance?.identities
     }
+  }
+  
+  /**
+   * Use this to set latestRevision don't modify directly. Otherwise the IdentitySnapshot will not be updated
+   */
+  setLatestRevision(r:string){
+    if (this.identitySnapshot) {
+      if (typeof(this.registryIdentity) === 'string') {
+        const copy = Object.assign({}, this.identities![this.registryIdentity][this.latestRevision])
+        this.identities![this.registryIdentity][r]=copy
+        
+      }
+    }
+    this.latestRevision = r
+  }
+
+  setSchema(s:string){
+    this.$schema = s
+  }
+
+  setLicense(l:string) {
+    this.license = l
   }
 
   setVersion(version: string) {
@@ -59,13 +137,31 @@ export class Bcmr implements Registry {
     this.version = { major, minor, patch }
   }
 
+  /**
+   * Deprecate this, use setTokenIdentityName
+   */
   setRegistryName(name:string) {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       this.identities![this.registryIdentity!][this.latestRevision!].name = name
     }
   }
 
+  /**
+   * Deprecate this, use setTokenIdentityDescription
+   */
   setRegistryDescription(description:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities) {
+      this.identities![this.registryIdentity!][this.latestRevision!].description = description
+    }
+  }
+
+  setTokenIdentityName(name:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities) {
+      this.identities![this.registryIdentity!][this.latestRevision!].name = name
+    }
+  }
+
+  setTokenIdentityDescription(description:string) {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       this.identities![this.registryIdentity!][this.latestRevision!].description = description
     }
@@ -102,6 +198,18 @@ export class Bcmr implements Registry {
     }
   }
 
+  /**
+   * IdentitySnapshot URI
+   */
+  setUri(name:string, uri:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities && this.latestRevision) {
+      if(this.identities![this.registryIdentity!][this.latestRevision!].uris?.[name]) {
+        this.identities![this.registryIdentity!][this.latestRevision!].uris![name] = uri
+      } 
+    }
+  }
+
+
   getRegistryUri(): string|undefined {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       return this.identities![this.registryIdentity!][this.latestRevision!].uris?.registry
@@ -137,7 +245,6 @@ export class Bcmr implements Registry {
     if (!this.authchainIdentity) {
       throw new Error('Authchain identity required')
     }
-    console.log(this)
     if (!this.getToken()) {
       throw new Error('Token not set')
     }
@@ -150,7 +257,6 @@ export class Bcmr implements Registry {
         url: this.getRegistryUri() as string,
         contentHash: binToHex(utf8ToBin(JSON.stringify(clean)))
       })
-      console.log(JSON.stringify(clean))
     } catch (error) {
 
     }
@@ -195,8 +301,8 @@ export class Bcmr implements Registry {
    * that the registry uri can be populated.
    */
   async storeRegistry(): Promise<BcmrStorageArtifact|undefined> {
+    this._processing = 'Storing in IPFS'
     try {
-      console.log('content', this.getContent())
       const resp = await fetch('/api/tokens/registry/storage', {
         method: 'POST', body: this.getContent(),
         headers: { 'Content-Type': 'application/json' }
@@ -205,6 +311,8 @@ export class Bcmr implements Registry {
       return respJson.artifact
     } catch (error) {
       console.log(error)
+    } finally {
+      delete this._processing
     }
   }
 

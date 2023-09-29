@@ -7,6 +7,7 @@ export * from './AuthchainIdentity'
 export * from './CashToken'
 export * from './Watchtower'
 export * from './bcmr/Bcmr'
+export * from './bcmr/BcmrIndexer'
 
 
 
