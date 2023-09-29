@@ -21,7 +21,8 @@ const routes: RouteRecordRaw[] = [
       { name: 'authchains', path: 'authchains', component: () => import('pages/issuer/manage/AuthChains.vue') },
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
-      { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') }
+      { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
+      { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
     ],
   },
   {
@@ -39,14 +40,6 @@ const routes: RouteRecordRaw[] = [
       { path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
     ],
   },
-  {
-    path: '/',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [
-      { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
-    ],
-  },
-
   // Always leave this as last one,
   // but you can also remove it
   {

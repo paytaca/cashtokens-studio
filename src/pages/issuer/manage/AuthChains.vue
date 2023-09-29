@@ -277,7 +277,7 @@ const onBurn = () => {
 const viewToken = (token: AuthchainIdentity, b: any) => {
   if (b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) {
     ui.tokenInView = token
-    router.push(`/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
+    router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
   }
 }
 
