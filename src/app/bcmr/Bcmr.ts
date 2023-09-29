@@ -37,6 +37,11 @@ export class Bcmr implements Registry {
     this.latestRevision = instance.latestRevision
     this.registryIdentity = instance.registryIdentity
     this.authchainIdentity = authchainIdentity
+    this.identities = instance.identities
+    this.tags = instance.tags
+    this.defaultChain = instance.defaultChain
+    this.license = instance.license
+    this.extensions = instance.extensions
     this.initIdentities(instance)
     this._originalContentHash = this.getContentHash()
   }
