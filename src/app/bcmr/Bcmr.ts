@@ -88,6 +88,7 @@ export class Bcmr implements Registry {
   get processing():string|undefined {
     return this._processing
   }
+
   initIdentities(instance:Registry){
     
     if (typeof (this.registryIdentity) === 'string' && !this.identities && !instance?.identities) {
@@ -108,6 +109,20 @@ export class Bcmr implements Registry {
       this.identities = instance?.identities
     }
   }
+  
+  /**
+   * Use this to set latestRevision don't modify directly. Otherwise the IdentitySnapshot will not be updated
+   */
+  setLatestRevision(r:string){
+    if (this.identitySnapshot) {
+      if (typeof(this.registryIdentity) === 'string') {
+        const copy = Object.assign({}, this.identities![this.registryIdentity][this.latestRevision])
+        this.identities![this.registryIdentity][r]=copy
+        
+      }
+    }
+    this.latestRevision = r
+  }
 
   setSchema(s:string){
     this.$schema = s
@@ -122,13 +137,31 @@ export class Bcmr implements Registry {
     this.version = { major, minor, patch }
   }
 
+  /**
+   * Deprecate this, use setTokenIdentityName
+   */
   setRegistryName(name:string) {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       this.identities![this.registryIdentity!][this.latestRevision!].name = name
     }
   }
 
+  /**
+   * Deprecate this, use setTokenIdentityDescription
+   */
   setRegistryDescription(description:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities) {
+      this.identities![this.registryIdentity!][this.latestRevision!].description = description
+    }
+  }
+
+  setTokenIdentityName(name:string) {
+    if (typeof (this.registryIdentity) === 'string' && this.identities) {
+      this.identities![this.registryIdentity!][this.latestRevision!].name = name
+    }
+  }
+
+  setTokenIdentityDescription(description:string) {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
       this.identities![this.registryIdentity!][this.latestRevision!].description = description
     }

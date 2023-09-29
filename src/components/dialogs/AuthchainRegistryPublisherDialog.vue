@@ -1,7 +1,6 @@
 <template>
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
-      {{ authchainIdentity }}
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">Publish Registry</q-toolbar-title>
         <TokenCategory :token-id="authchainIdentity?.token?.tokenId" />
