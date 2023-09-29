@@ -27,14 +27,14 @@
         </template>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton :busy-label="authchainIdentity.processing" label="Publish" color="primary" @click="publish" />
+        <BusyButton :busy-label="authchainIdentity?.processing" label="Publish" color="primary" @click="publish" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { AuthchainIdentity } from 'src/app';
 import { fetchBcmrContentHash } from 'src/app/bcmr'
 import shortenTx from 'src/app/utils/shortenTx';
@@ -45,10 +45,19 @@ import { shortenTokenId } from 'src/app/utils';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
-const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
+const props = defineProps<{ authchainIdentity: AuthchainIdentity, url?: string, contentHash?: string }>()
 const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean }>({
   url: 'https://example.com/.well-known/bitcoin-cash-metadata-registry.json',
   contentHash: ''
+})
+
+onMounted(() => {
+  if (props.url) {
+    form.value.url = props.url
+  }
+  if (props.contentHash) {
+    form.value.contentHash = props.contentHash
+  }
 })
 const publish = async () => {
   try {

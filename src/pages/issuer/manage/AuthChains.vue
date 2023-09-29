@@ -44,7 +44,8 @@
             <TableBodySkeleton v-if="!authchainIdentities && watchtower.processing"
               :col-count="viewType === 'simple' ? 7 : 8" :row-count="3" :caption="watchtower.processing" />
             <tbody v-else class="text-center">
-              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
+              <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i"
+                @click="(b: any) => viewToken(identity, b)">
                 <td>{{ i + pagination.offset + 1 }}</td>
                 <td>
                   <q-avatar v-if="identity.tokenUris?.icon">
@@ -76,18 +77,18 @@
                 <td>
                   <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
                 </td>
-                <td>
-                  <q-btn icon="more_vert" size="md" round flat dense>
+                <td class="col-action">
+                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense>
                     <q-menu>
                       <q-list>
                         <q-item clickable v-close-popup
-                          @click="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
+                          @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
                           Publish Existing Registry
                         </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(UnguardAuthchainDialog.__name, identity)">
+                        <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, identity)">
                           Unguard Authchain
                         </q-item>
-                        <q-item clickable v-close-popup @click="openDialog(AuthchainBurnerDialog.__name, identity)">
+                        <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, identity)">
                           Burn Authchain
                         </q-item>
                       </q-list>
@@ -122,8 +123,9 @@
 import { Wallet } from 'mainnet-js';
 import { onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
+import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
-import { AuthKey, AuthchainIdentity, Watchtower } from 'src/app';
+import { AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -131,8 +133,13 @@ import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialo
 import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import { PaginatedData } from 'src/app/types';
+import { uid } from 'quasar';
+import { useRouter } from 'vue-router';
+
 
 const user = useUser()
+const ui = useUI()
+const router = useRouter()
 const viewType = ref<string>('simple')
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const paginatedAuthchainIdentities = ref<PaginatedData>()
@@ -265,6 +272,13 @@ const onBurn = () => {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
     }
   })
+}
+
+const viewToken = (token: AuthchainIdentity, b: any) => {
+  if (b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) {
+    ui.tokenInView = token
+    router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
+  }
 }
 
 </script>
