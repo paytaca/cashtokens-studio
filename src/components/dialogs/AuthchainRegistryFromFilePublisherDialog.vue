@@ -8,7 +8,8 @@
       <div class="q-mx-md text-justify">
         <q-icon name="info" color="secondary" size="md"></q-icon>
         <span>
-          This action stores the registry file that you selected in IPFS and publishes the uri and content hash on-chain.
+          This dialog allows you to store a registry from file to IPFS and then publish it's URI and content hash
+          on-chain.
         </span>
       </div>
       <q-card-section>
@@ -103,7 +104,7 @@ const publish = async () => {
     return $q.notify({ type: 'negative', message: 'Missing registry content hash' })
   }
   try {
-    const tx = await props.authchainIdentity.publish({ url: uploadArtifact.value!.uris.https!, contentHash: form.value.contentHash })
+    const tx = await props.authchainIdentity.publish({ url: uploadArtifact.value!.uris.https!, contentHash: uploadArtifact.value.contentHash })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
       $ebus?.emit('transaction', {
