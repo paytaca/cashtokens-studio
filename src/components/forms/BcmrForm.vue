@@ -75,8 +75,8 @@
         </div>
       </q-expansion-item>
 
-      <q-expansion-item label="Token Category NFTs" class="q-px-md q-pt-sm q-my-sm scroll overflow-auto" icon="token"
-        style="max-width: 100%;">
+      <q-expansion-item v-if="bcmr?.nfts && bcmr?.nfts.length > 0" label="Token Category NFTs"
+        class="q-px-md q-pt-sm q-my-sm scroll overflow-auto" icon="token" style="max-width: 100%;">
         <div class="col-xs-12 scroll overflow-auto">
           <div class="q-pa-lg flex flex-center">
             <q-pagination v-model="nftsPagination.currentPage" :max="nftsPagination.numberOfPages"
@@ -229,6 +229,7 @@ onMounted(() => {
   } else {
     registryStorageArtifacts.value = []
   }
+  updateNftPage()
   initNftsPagination()
 })
 
