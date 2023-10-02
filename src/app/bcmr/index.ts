@@ -3,7 +3,7 @@ import { binToHex, sha256, utf8ToBin } from '@bitauth/libauth'
 export const fetchBcmr = async (url: string):Promise<string|undefined> => {
   try {
     const r = await fetch(url)
-    return await r.json()
+    return await r.text() // !SHOULD BE .text() not .json()
   } catch (error) {
     console.log(`Error fetching BCMR from ${url}`)
   }
