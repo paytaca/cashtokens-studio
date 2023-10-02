@@ -1,4 +1,4 @@
-import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategory, NftType, OffChainRegistryIdentity, Registry, SequentialNftCollection, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
+import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategory, NftType, OffChainRegistryIdentity, ParsableNftCollection, Registry, SequentialNftCollection, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
 import { AuthchainIdentity } from "../";
 import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
 import { BcmrStorageArtifact } from "../types";
@@ -64,6 +64,20 @@ export class Bcmr implements Registry {
       if (this.identities && this.identities[this.registryIdentity] && this.identities[this.registryIdentity][this.latestRevision]) {
         return this.identities[this.registryIdentity][this.latestRevision]
       }
+    } else if (this.registryIdentity && typeof(this.registryIdentity) !== 'string') { 
+      // OffchainRegistry identity BUT there is actually an authchain identities like Bitcats (which is probably a mistake)
+      // this is anomally
+      if (this.identities) {
+        // since the token category isn't in the registryIdentity where it's supposed to be
+        // we'll just assume the key of the identities field is the token category (like Bitcats)
+        const registryIdentity = Object.keys(this.identities)[0]
+        console.log(registryIdentity)
+        if (this.identities && this.identities[registryIdentity] && this.identities[registryIdentity][this.latestRevision]) {
+          return this.identities[registryIdentity][this.latestRevision]
+        }
+      } 
+      // TODO: Here below we should add correct handling if registryIdentity is an OffchainRegistry
+      // meaning this.identities should be undefined here
     }
     return
   }
@@ -87,6 +101,25 @@ export class Bcmr implements Registry {
 
   get processing():string|undefined {
     return this._processing
+  }
+
+  get nftCategory(): NftCategory|undefined {
+    return this.getToken()?.nfts
+  }
+
+  get nftCollection(): SequentialNftCollection|ParsableNftCollection|undefined{
+    return this.nftCategory?.parse
+  }
+
+  /**
+   * Converts the SequentialNftCollection.types|ParsableNftCollection.types to array of NftType(s) so 
+   * it's easier to work with.
+   */
+  get nfts(): [{[commitmentHex: string]: NftType}]|[] {
+    if (this.nftCollection?.types) {
+      return Object.entries(this.nftCollection?.types).map(nftType=>({[nftType[0]]:nftType[1]})) as [{[commitmentHex: string]: NftType}]// convert array of arrays to array of objects
+    }
+    return []
   }
 
   initIdentities(instance:Registry){
@@ -223,9 +256,13 @@ export class Bcmr implements Registry {
   }
 
   getToken(): TokenCategory|undefined {
-    if (typeof (this.registryIdentity) === 'string' && this.identities) {
-      return this.identities![this.registryIdentity!][this.latestRevision!].token as TokenCategory
-    }
+    return this.token
+    // if (typeof (this.registryIdentity) === 'string' && this.identities) {
+    //   return this.identities![this.registryIdentity!][this.latestRevision!].token as TokenCategory
+    // } else if (typeof (this.registryIdentity) !== 'string' && this.identities) {
+    //   // OffchainRegistry but it has identities(just so we can handle something like bitcats)
+
+    // }
   }
 
   addNft(commitmentHex:string, nft: NftType): void {
