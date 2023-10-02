@@ -62,7 +62,6 @@
 </template>
 
 <script setup lang="ts">
-import { useRoute } from 'vue-router';
 import { onMounted, ref, reactive } from 'vue';
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
@@ -72,7 +71,6 @@ import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import BcmrForm from 'src/components/forms/BcmrForm.vue'
 
 const ui = useUI()
-const route = useRoute()
 const bcmr = ref<Bcmr>()
 const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
 
