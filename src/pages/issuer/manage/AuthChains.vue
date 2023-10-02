@@ -143,7 +143,6 @@ import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 import { PaginatedData } from 'src/app/types';
-import { uid } from 'quasar';
 import { useRouter } from 'vue-router';
 
 

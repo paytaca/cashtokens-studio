@@ -46,6 +46,42 @@
               </q-markup-table>
             </div>
           </div>
+          <div>
+            <q-btn id="authchain-action-buttons" icon="menu" size="md" round flat dense
+              @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
+              <q-menu>
+                <q-list>
+                  <q-item clickable v-close-popup
+                    @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    Publish Registry From URL
+                  </q-item>
+                  <q-item clickable v-close-popup
+                    @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    Publish Registry From File
+                  </q-item>
+                  <q-item clickable v-close-popup
+                    @click.stop="openDialog(UnguardAuthchainDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    Unguard Authchain
+                  </q-item>
+                  <q-item clickable v-close-popup
+                    @click.stop="openDialog(AuthchainBurnerDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    Burn Authchain
+                  </q-item>
+                </q-list>
+              </q-menu>
+            </q-btn>
+          </div>
+          <AuthchainRegistryPublisherDialog v-if="dialog"
+            :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          <AuthchainRegistryFromFilePublisherDialog v-if="dialog"
+            :model-value="dialog === AuthchainRegistryFromFilePublisherDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
+          <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
+
         </q-banner>
       </div>
       <div class="col-xs-12 col-md-10 q-py-md">
@@ -63,16 +99,24 @@
 
 <script setup lang="ts">
 import { onMounted, ref, reactive } from 'vue';
+import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TokenSymbol from 'src/components/TokenSymbol.vue';
 import { AuthchainIdentity, Bcmr, BcmrIndexer } from 'src/app';
 import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import BcmrForm from 'src/components/forms/BcmrForm.vue'
+import { useDialogs } from 'src/composables/useDialogs';
+import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
+import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
+import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
+import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 
 const ui = useUI()
+const router = useRouter()
 const bcmr = ref<Bcmr>()
 const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
+const { dialog, dialogData, openDialog, onHide } = useDialogs()
 
 onMounted(async () => {
   if (ui.tokenInView?.token?.tokenId) {
@@ -89,5 +133,13 @@ onMounted(async () => {
   }
 
 })
+
+const onUnguard = () => {
+  console.log('Implement onUnguard')
+}
+
+const onBurn = () => {
+  router.back()
+}
 
 </script>
