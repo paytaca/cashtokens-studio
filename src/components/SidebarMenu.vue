@@ -7,18 +7,30 @@
 
 <script setup lang="ts">
 
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUser } from 'src/stores/user'
 import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
 const qtree = ref()
+const route = useRoute()
 const router = useRouter()
 const user = useUser()
-const lastSelectedBeforeUnselect = ref<string | null>(null)
 const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
+const hrefs = {
+  createAuthKey: '/issuer/tokens/create/authkey',
+  createFT: '/issuer/tokens/create/ft',
+  createNFT: '/issuer/tokens/create/nft',
+  manageFTReserves: '/issuer/manage/ft-reserves',
+  manageNFTReserves: '/issuer/manage/nft-reserves',
+  manageAuthchains: '/issuer/manage/authchains',
+  manageAuthKeys: '/issuer/manage/authkeys',
+  accountFungibles: '/account/balance/fungibletokens',
+  accountCollectibles: '/account/balance/collectibles',
+  recentTransactions: '/account/recent-transactions'
+}
 
 const menu = computed<any[]>(() => {
   return [
@@ -30,24 +42,19 @@ const menu = computed<any[]>(() => {
       children: [
         {
           label: 'Create AuthKey',
-          href: '/issuer/tokens/create/authkey',
+          href: hrefs.createAuthKey,
           icon: 'add',
         },
         {
           label: 'Create FT',
-          href: '/issuer/tokens/create/ft',
+          href: hrefs.createFT,
           icon: 'add',
         },
         {
           label: 'Create NFT',
-          href: '/issuer/tokens/create/nft',
+          href: hrefs.createNFT,
           icon: 'add',
         },
-        // {
-        //   label: 'Create BCMR',
-        //   href: '/issuer/create/bcmr',
-        //   icon: 'add',
-        // },
         {
           label: 'Manage',
           href: '#Manage',
@@ -55,22 +62,22 @@ const menu = computed<any[]>(() => {
           children: [
             {
               label: 'FT Reserves',
-              href: '/issuer/manage/ft-reserves',
+              href: hrefs.manageFTReserves,
               icon: 'token',
             },
             {
               label: 'NFT Reserves',
-              href: '/issuer/manage/nft-reserves',
+              href: hrefs.manageNFTReserves,
               icon: 'token',
             },
             {
               label: 'AuthChains',
-              href: '/issuer/manage/authchains',
+              href: hrefs.manageAuthchains,
               icon: 'token',
             },
             {
               label: 'AuthKeys',
-              href: '/issuer/manage/authkeys',
+              href: hrefs.manageAuthKeys,
               icon: 'token',
             }
 
@@ -104,25 +111,19 @@ const menu = computed<any[]>(() => {
           children: [
             {
               label: 'Fungibles (FTs)',
-              href: '/account/balance/fungibletokens',
+              href: hrefs.accountFungibles,
               icon: 'token'
-              // avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
             },
             {
               label: 'Collectibles (NFTs)',
-              href: '/account/balance/collectibles',
+              href: hrefs.accountCollectibles,
               icon: 'token'
             },
-            // {
-            //   label: 'Hybrids (FNFTs)',
-            //   href: '/account/balance/fungibletokens',
-            //   avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
-            // }
           ]
         },
         {
           label: 'Recent Transactions',
-          href: '/account/recent-transactions',
+          href: hrefs.recentTransactions,
           icon: 'receipt',
         }
       ]
@@ -130,36 +131,28 @@ const menu = computed<any[]>(() => {
   ]
 })
 
-watch(selected, (currentlySelected, previouslySelected) => {
-  /**
-   * Toggle Expand / Collapse of menu with children on select
-   */
-  if (currentlySelected !== null) {
-    lastSelectedBeforeUnselect.value = currentlySelected
+watch(() => selected.value, (currentlySelected, previouslySelected) => {
+  const previouslySelectedIndex = expanded.value?.findIndex((exp) => exp === previouslySelected)
+  const currentlySelectedIndex = expanded.value?.findIndex((exp) => exp === currentlySelected)
+  if (!currentlySelected && previouslySelected?.startsWith('#') && previouslySelectedIndex !== -1) {
+    // toggling, collapse menu
+    expanded.value.splice(previouslySelectedIndex, 1)
+  } else if (currentlySelected && currentlySelected.startsWith('#') && currentlySelectedIndex === -1) {
+    expanded.value.push(currentlySelected)
+  } else if (currentlySelected && currentlySelectedIndex !== -1) {
+    expanded.value.splice(currentlySelectedIndex, 1)
+  } else if (!currentlySelected && previouslySelected?.startsWith('#') && previouslySelectedIndex === -1) {
+    // toggling, expand previously selected
+    expanded.value.push(previouslySelected)
   }
-
   if (currentlySelected && !currentlySelected.startsWith('#')) {
     router.replace(currentlySelected)
-    return
   }
+})
 
-  if (currentlySelected === null) {
-    if (previouslySelected === lastSelectedBeforeUnselect.value) {
-      let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
-      console.log('MENU INDEX', menuIndex)
-      if (menuIndex !== -1) {
-        expanded.value.splice(menuIndex, 1)
-      }
-
-
-    }
-  } else {
-    let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)
-    if (indexOfCurrentlySelected === -1) {
-      expanded.value.push(currentlySelected)
-    } else {
-      expanded.value.splice(indexOfCurrentlySelected, 1)
-    }
+watch(() => route.path, (currentPath) => {
+  if (!Object.values(hrefs).includes(currentPath)) {
+    selected.value = null
   }
 })
 
