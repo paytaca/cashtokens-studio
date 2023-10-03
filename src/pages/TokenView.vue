@@ -39,7 +39,8 @@
                   <tr v-if="ui.tokenInView?.token?.capability">
                     <td class="text-bold">Capability</td>
                     <td>
-                      <code>{{ ui.tokenInView?.token?.capability }}</code>
+                      <!-- <code>{{ ui.tokenInView?.token?.capability }}</code> -->
+                      {{ ui.tokenInView?.token?.capability }}
                     </td>
                   </tr>
                 </tbody>
@@ -111,6 +112,7 @@ import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRe
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
+import { shortenTokenId, copyText } from 'src/app/utils';
 
 const ui = useUI()
 const router = useRouter()

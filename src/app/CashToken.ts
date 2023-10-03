@@ -11,6 +11,7 @@ import toCashScript from "./utils/toCashScript";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
+import { ProcessingMessage } from "."
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
@@ -320,8 +321,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     
   } 
 
-  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet}):Promise<string|undefined> {
+  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
+    arg?.processingMessage?.setProcessing('Processing')
     
     const requests = [
       new TokenSendRequest({
@@ -347,6 +349,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     )
 
     CashToken._processing = 'Waiting for signature'
+    arg?.processingMessage?.setProcessing('Waiting for signature')  
     let signResult
     try {
       signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
@@ -354,7 +357,8 @@ export class CashToken implements UtxoI, PartialBcmr {
       console.log(error)
       throw error
     }
-    CashToken._processing = `Sending ${arg.amount} tokens`
+    CashToken._processing = `Sending tokens`
+    arg?.processingMessage?.setProcessing(`Sending tokens`)  
     try {
       return await submitTransaction(signResult, arg.ownerWallet)
     } catch (error) {
@@ -363,6 +367,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw error
     } finally {
       delete CashToken._processing
+      arg?.processingMessage?.deleteProcessing()  
     }
 
   }

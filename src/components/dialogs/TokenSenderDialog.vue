@@ -43,8 +43,10 @@ import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
+import { tokeshiToNumber } from 'src/app/utils';
 
 const props = defineProps<{
+  decimals?: string,
   tokenBalance: TokenBalance
 }>()
 
