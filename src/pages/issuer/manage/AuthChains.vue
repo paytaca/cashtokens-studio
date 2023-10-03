@@ -74,16 +74,21 @@
                   <CashAddress :cashaddr="identity.authKey?.authGuard?.contract?.getTokenDepositAddress()"
                     tool-tip="Copy Contract Address" icon-right="lock" />
                 </td>
-                <td>
+                <td class="col-authkey">
                   <TokenCategory :token-id="identity.authKey?.token?.tokenId" icon-right="key" />
                 </td>
                 <td class="col-action">
-                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense>
+                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
+                    @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
                     <q-menu>
                       <q-list>
                         <q-item clickable v-close-popup
                           @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, identity)">
-                          Publish Existing Registry
+                          Publish Registry From URL
+                        </q-item>
+                        <q-item clickable v-close-popup
+                          @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, identity)">
+                          Publish Registry From File
                         </q-item>
                         <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, identity)">
                           Unguard Authchain
@@ -111,10 +116,14 @@
         </q-scroll-area>
         <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+        <AuthchainRegistryFromFilePublisherDialog v-if="dialog"
+          :model-value="dialog === AuthchainRegistryFromFilePublisherDialog.__name"
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
+
       </div>
     </div>
   </q-page>
@@ -132,8 +141,8 @@ import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRe
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
+import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 import { PaginatedData } from 'src/app/types';
-import { uid } from 'quasar';
 import { useRouter } from 'vue-router';
 
 
@@ -275,7 +284,7 @@ const onBurn = () => {
 }
 
 const viewToken = (token: AuthchainIdentity, b: any) => {
-  if (b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) {
+  if ((b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) && !b.target.className?.includes('col-authkey')) {
     ui.tokenInView = token
     router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
   }
