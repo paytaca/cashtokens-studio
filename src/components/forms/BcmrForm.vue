@@ -65,17 +65,62 @@
           </div>
         </div>
       </q-expansion-item>
-
       <q-expansion-item label="Token Category Info" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
           <q-input @update:model-value="(v: any) => bcmr?.setTokenSymbol(v)"
             :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Token category symbol" filled dense></q-input>
-          <q-input @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
-            :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
           <q-input v-if="Number(bcmr?.authchainIdentity?.token?.amount) > 0"
             @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
             :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
         </div>
+      </q-expansion-item>
+
+      <q-expansion-item v-if="bcmr?.nfts && bcmr?.nfts.length > 0" label="Token Category NFTs"
+        class="q-px-md q-pt-sm q-my-sm scroll overflow-auto" icon="token" style="max-width: 100%;">
+        <div class="col-xs-12 scroll overflow-auto">
+          <div class="q-pa-lg flex flex-center">
+            <q-pagination v-model="nftsPagination.currentPage" :max="nftsPagination.numberOfPages"
+              :max-pages="nftsPagination.maxRowsPerPage" :boundary-numbers="false" />
+          </div>
+          <q-markup-table style="max-width: 100%;" class="overflow-auto text-wrap text-center">
+            <thead>
+              <th>#</th>
+              <th>Image</th>
+              <th>Commitment</th>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Uris</th>
+              <th>Extensions</th>
+            </thead>
+            <tbody>
+              <tr v-for="nft, i in nftPage" :key="Object.keys(nft)[0] + i">
+                <td>{{ i + 1 }}</td>
+                <td>
+                  <q-avatar v-if="parsedNft(nft)?.nft?.uris?.icon">
+                    <img :src="parsedNft(nft)?.nft?.uris?.icon" alt="">
+                  </q-avatar>
+                  <q-icon v-else name="broken_image"></q-icon>
+                </td>
+                <td>{{ parsedNft(nft)?.commitment }}</td>
+                <td>{{ parsedNft(nft)?.nft?.name }}</td>
+                <td style="max-width:10em;text-wrap: wrap;">{{ parsedNft(nft)?.nft?.description }}</td>
+                <td style="max-width:10em;text-wrap: wrap;">
+                  <q-btn icon="handyman" disable>
+                    Uris
+                    <q-tooltip>Feature under construction</q-tooltip>
+                  </q-btn>
+                </td>
+                <td style="max-width:10em;text-wrap: wrap;">
+                  <q-btn icon="handyman" disable>
+                    Extensions
+                    <q-tooltip>Feature under construction</q-tooltip>
+                  </q-btn>
+                </td>
+              </tr>
+            </tbody>
+          </q-markup-table>
+        </div>
+
       </q-expansion-item>
     </q-banner>
     <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
@@ -87,7 +132,7 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
 import { AuthchainIdentity, Bcmr } from 'src/app';
-import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
+import { NftType, Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount, watch } from 'vue';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -97,11 +142,35 @@ const props = defineProps<{ registry?: Bcmr }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
 
+
 const saved = computed(() => {
   if (bcmr.value && registryStorageArtifacts.value) {
     return Boolean(registryStorageArtifacts.value?.find(a => a.contentHash === bcmr.value!.getContentHash()))
   }
   return false
+})
+
+const parsedNft = computed(() => {
+  return (type: { [commitmentHex: string]: NftType }) => {
+    const commitment = Object.keys(type)[0]
+    const nft = type[commitment]
+    return {
+      commitment,
+      nft
+    }
+  }
+})
+
+const nftPage = ref<[{ [commitmentHex: string]: NftType }] | []>()
+
+const nftsPagination = ref<{
+  currentPage: number,
+  maxRowsPerPage: number,
+  numberOfPages: number
+}>({
+  currentPage: 1,
+  maxRowsPerPage: 10,
+  numberOfPages: 0
 })
 
 /**
@@ -120,6 +189,34 @@ const savedArtifact = computed(() => {
   return null
 })
 
+const initNftsPagination = () => {
+  if (bcmr.value?.nfts && bcmr.value.nfts.length > 0) {
+    if (bcmr.value.nfts.length > 10) {
+      nftsPagination.value.numberOfPages = Math.ceil(bcmr.value.nfts.length / nftsPagination.value.maxRowsPerPage)
+    } else {
+      nftsPagination.value.numberOfPages = 1
+    }
+  }
+}
+
+const updateNftPage = () => {
+  if (nftsPagination.value.numberOfPages <= 1) {
+    nftPage.value = bcmr.value?.nfts || []
+  } else {
+    nftPage.value = bcmr.value!.nfts!.slice(
+      nftsPagination.value.currentPage * nftsPagination.value.maxRowsPerPage,
+      (nftsPagination.value.currentPage * nftsPagination.value.maxRowsPerPage) + nftsPagination.value.maxRowsPerPage
+    ) as [{ [commitmentHex: string]: NftType }]
+
+  }
+
+}
+
+watch(() => nftsPagination.value.currentPage, (v) => {
+  console.log(v)
+  updateNftPage()
+})
+
 onMounted(() => {
   if (props.registry) {
     bcmr.value = new Bcmr(props.registry)
@@ -132,6 +229,8 @@ onMounted(() => {
   } else {
     registryStorageArtifacts.value = []
   }
+  updateNftPage()
+  initNftsPagination()
 })
 
 onBeforeUnmount(() => {

@@ -83,7 +83,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
   })
 
   /**
-   * Stores the Registry(BCMR) in nft.storage
+   * Stores the Registry(BCMR) json payload in nft.storage
    */
   app.post('/api/tokens/registry/storage', bodyParser.json(), async (req:any, res:any) => {
 
@@ -114,6 +114,53 @@ export default ssrMiddleware(async ({ app, resolve }) => {
               ipfs: `ipfs://${json.value.cid}`
             },
             contentHash: hash.update(jsonString).digest('hex')
+          }
+        })
+      }
+
+    } catch (error) {
+      res.status(400).send(error)
+    }
+  })
+
+  /**
+   * Stores the Registry(BCMR) file in nft.storage
+   */
+  app.post('/api/tokens/registry-file/storage', upload.single('registryFile'), bodyParser.json(), async (req:any, res:any) => {
+    if (!req.query.tokenId) {
+      return res.status(400).json({
+        error: 'Missing tokenId from query parameter'
+      })
+    }
+
+
+
+    const headers = {
+      'Authorization': `Bearer ${process.env.NFT_STORAGE_API_KEY}`,
+      'Content-Type': 'application/json'
+    };
+
+    let registryJsonFile = new File(
+      [req.file.buffer],
+      `${req.query.tokenId}.json`,
+      { type: 'application/json' }
+    )
+    console.log('sent', req.file.buffer.toString('utf-8'))
+    const hash = crypto.createHash('sha256')
+    const contentHash = hash.update(req.file.buffer.toString('utf-8')).digest('hex')
+
+    try {
+      const resp:any = await fetch('https://api.nft.storage/upload', {method: 'POST', headers, body: registryJsonFile})
+      const json = await resp.json()
+      console.log('CID', json)
+      if (json.ok) {
+        res.status(200).send({
+          artifact: {
+            uris: {
+              https: `https://nftstorage.link/ipfs/${json.value.cid}`,
+              ipfs: `ipfs://${json.value.cid}`
+            },
+            contentHash
           }
         })
       }

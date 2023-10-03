@@ -50,7 +50,7 @@ const burn = async () => {
   try {
     const tx = await props.authchainIdentity.burn()
     if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!' + shortenTx(tx) })
+      $q.notify({ type: 'positive', message: `${props.authchainIdentity.tokenCategory?.symbol || 'Token'} Burned!Tx=` + shortenTx(tx) })
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.burn',
