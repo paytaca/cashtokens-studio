@@ -68,5 +68,7 @@ export declare interface CashTokenTransaction {
   errorMsg?: string,
 }
 
+export type HexString = string & { __hexStringBrand: never };
+
 
 
