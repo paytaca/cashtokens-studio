@@ -86,9 +86,9 @@
       </div>
       <div class="col-xs-12 col-md-10 q-py-md">
         <div v-if="bcmrIndexer.processing" class="row justify-center">
-          <q-spinner-grid class="col-2" size="xl" color="primary" />
+          <q-spinner-grid size="sm" class="q-my-xl" />
           <span class="col-12 text-center">
-            {{ bcmrIndexer.processing }}
+            <i>{{ bcmrIndexer.processing }}</i>
           </span>
         </div>
         <BcmrForm v-if="bcmr" :registry="bcmr" />
