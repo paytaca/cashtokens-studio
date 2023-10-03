@@ -2,7 +2,7 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">My Fungible Tokens</h5>
+        <h5 class="text-center">Fungible Token Balances</h5>
         <div class="q-pa-lg flex flex-center">
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
             :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
@@ -17,7 +17,7 @@
                 <th>Token Id</th>
                 <th>Balance</th>
                 <th>Utxo Count</th>
-                <!-- <th>Action</th> -->
+                <th>Action</th>
               </tr>
             </thead>
             <TableBodySkeleton v-if="watchtower.processing && !ftBalances" :col-count="4" :row-count="3"
@@ -43,25 +43,27 @@
                 <td>
                   <TokenCategory :tokenId="b.tokenId" />
                 </td>
-                <td>{{ b.balance || 0 }}</td>
+                <td>{{ tokeshiToNumber(Number(b.balance), String(b.tokenCategory?.decimals || 0)) }}</td>
                 <td>{{ b.utxoCount }}</td>
-                <!-- <td>
-                  <q-btn color="primary" dense no-caps @click="openDialog(TokenSenderDialog.__name, b)">Send</q-btn>
-                </td> -->
+                <td>
+                  <q-btn color="primary" dense no-caps @click="openDialog(FtBalanceTransferDialog.__name, b)">Send</q-btn>
+                </td>
               </tr>
               <tr v-if="ftBalances?.length === 0 && !watchtower.processing">
-                <td colspan="6">
+                <td colspan="7">
                   No data
                 </td>
               </tr>
               <tr v-if="watchtower.processing">
-                <td colspan="6">
+                <td colspan="7">
                   <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
             </tbody>
           </q-markup-table>
-          <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData"
+          <!-- <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData"
+            @hide="onHide" /> -->
+          <FtBalanceTransferDialog :model-value="dialog === FtBalanceTransferDialog.__name" :token-balance="dialogData"
             @hide="onHide" />
         </q-scroll-area>
       </div>
@@ -79,6 +81,8 @@ import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import TokenSenderDialog from 'src/components/dialogs/TokenSenderDialog.vue'
 import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
 import { BcmrIndexer } from 'src/app/bcmr/BcmrIndexer';
+import { tokeshiToNumber } from 'src/app/utils';
+import FtBalanceTransferDialog from 'src/components/dialogs/FtBalanceTransferDialog.vue';
 
 
 defineOptions({ name: 'FungibleTokens' })

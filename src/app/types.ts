@@ -25,6 +25,7 @@ export type TokenBalance = {
  */
 export type FungibleTokenBalance = {
   tokenId: string,
+  utxos?: UtxoI[],
   utxoCount: number,
   balance: bigint,
   owner: string,

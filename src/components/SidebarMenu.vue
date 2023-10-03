@@ -21,73 +21,61 @@ const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
-  createFT: '/issuer/tokens/create/ft',
-  createNFT: '/issuer/tokens/create/nft',
+  // createFT: '/issuer/tokens/create/ft',
+  // createNFT: '/issuer/tokens/create/nft',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
   accountFungibles: '/account/balance/fungibletokens',
   accountCollectibles: '/account/balance/collectibles',
-  recentTransactions: '/account/recent-transactions'
+  recentTransactions: '/account/recent-transactions',
+  createNewToken: '/issuer/tokens/create',
 }
 
 const menu = computed<any[]>(() => {
   return [
     {
-      label: 'Issuer',
-      href: '#Issuer',
-      icon: 'domain_add',
-      disabled: Boolean(user.walletAddress) === false,
+      label: 'Create New Token',
+      href: hrefs.createNewToken,
+      icon: 'add',
+    },
+    {
+      label: 'Create New AuthKey',
+      href: hrefs.createAuthKey,
+      icon: 'add',
+    },
+    {
+      label: 'Manage',
+      href: '#Manage',
+      icon: 'token',
       children: [
         {
-          label: 'Create AuthKey',
-          href: hrefs.createAuthKey,
-          icon: 'add',
-        },
-        {
-          label: 'Create FT',
-          href: hrefs.createFT,
-          icon: 'add',
-        },
-        {
-          label: 'Create NFT',
-          href: hrefs.createNFT,
-          icon: 'add',
-        },
-        {
-          label: 'Manage',
-          href: '#Manage',
+          label: 'FT Reserves',
+          href: hrefs.manageFTReserves,
           icon: 'token',
-          children: [
-            {
-              label: 'FT Reserves',
-              href: hrefs.manageFTReserves,
-              icon: 'token',
-            },
-            {
-              label: 'NFT Reserves',
-              href: hrefs.manageNFTReserves,
-              icon: 'token',
-            },
-            {
-              label: 'AuthChains',
-              href: hrefs.manageAuthchains,
-              icon: 'token',
-            },
-            {
-              label: 'AuthKeys',
-              href: hrefs.manageAuthKeys,
-              icon: 'token',
-            }
-
-          ]
+        },
+        {
+          label: 'NFT Reserves',
+          href: hrefs.manageNFTReserves,
+          icon: 'token',
+        },
+        {
+          label: 'Token Categories',
+          href: hrefs.manageAuthchains,
+          icon: 'token',
+        },
+        {
+          label: 'AuthKeys',
+          href: hrefs.manageAuthKeys,
+          icon: 'token',
         }
+
       ]
     },
     {
-      label: 'Account',
-      href: '#Account',
+      label: 'Wallet',
+      href: '#Wallet',
       icon: 'account_balance_wallet',
       disabled: Boolean(user.walletAddress) === false,
       children: [
