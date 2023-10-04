@@ -17,11 +17,12 @@ type FetchAuthchainIdentitiesQueryParams = {
   authguard?: string
 } & PaginationQueryParams
 
-type FetchUtxoQueryParams = {
+export type FetchUtxoQueryParams = {
   is_token?: boolean,
   token_type?: 'ft' | 'nft' | 'hybrid',
   capability?: string,
   commitment?: string,
+  commitment_ne?: string,
 } & PaginationQueryParams
 
 export class Watchtower {
