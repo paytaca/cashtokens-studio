@@ -164,8 +164,8 @@ export class Watchtower {
         this.error = error
       } finally {
         delete this.processing
+        return {}
       }
-      return {}
     } 
 
   
