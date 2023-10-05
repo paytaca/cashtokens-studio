@@ -14,7 +14,8 @@
                 output(v-out 0) of a previous transaction.
               </p>
               <p>
-                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length }}</span> utxo that
+                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length || 0 }}</span> utxo
+                that
                 we can use as genesis input. This
                 operation <span class="text-positive">requires 1</span> genesis input. You can create a genesis input by
                 clicking the button below.
