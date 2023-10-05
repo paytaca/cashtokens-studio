@@ -33,6 +33,11 @@ export type FungibleTokenBalance = {
   tokenCategory?: TokenCategory
 }
 
+export type NonFungibleTokenBalance = {
+  capability: NFTCapability,
+  commitment?: string
+} & FungibleTokenBalance
+
 export declare interface BcmrStorageArtifact {
   uris: {
     https: string,

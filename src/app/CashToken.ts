@@ -81,6 +81,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
     this.includeAuthKeyGenesis = true
     this.useAuthGuard = true
+    delete this._processing
   }
 
   get utxo():UtxoI {
@@ -593,4 +594,57 @@ export class CashToken implements UtxoI, PartialBcmr {
     return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token) || []
   }
 
+  async transferNFT(arg:{newOwner: string}){
+    this._processing = 'Processing'
+
+    if (!arg.newOwner) {
+      throw new Error('Missing address of recipient!')
+    }
+    if (!this.token?.capability) {
+      throw new Error('Token is not an NFT')
+    }
+
+    const requests = [
+      new TokenSendRequest({
+        cashaddr: arg.newOwner,
+        value: DEFAULT_TOKEN_VALUE,
+        amount: Number(this.token?.amount) || 0, // !change to bigint once mainnet-js supports it
+        tokenId: this.token!.tokenId,
+        capability: this.token?.capability,
+        commitment: this.token?.commitment || ''
+      })
+    ]
+    
+    let signResult
+    try {
+      const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
+        requests,
+        false,
+        {
+          tokenOperation: 'send',
+          checkTokenQuantities: false,
+          buildUnsigned: true
+        }
+      )
+      this._processing = 'Waiting for signature'
+      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+    } catch (error) {
+      console.log(error)
+      throw error
+    } finally {
+      delete this._processing
+    }
+
+    this._processing = 'Transferring'
+    try {
+      return await submitTransaction(signResult, this.ownerWallet as Wallet)
+    } catch (error) {
+      this._processing = ''
+      console.log(error)
+      throw error
+    } finally {
+      delete this._processing
+    }
+
+  }
 }

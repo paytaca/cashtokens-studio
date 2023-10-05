@@ -19,7 +19,7 @@
                     <q-markup-table>
                         <thead>
                             <tr v-if="watchtower.processing">
-                                <th colspan="6">
+                                <th colspan="7">
                                     <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                                 </th>
                             </tr>
@@ -45,7 +45,7 @@
                                         { label: '123', value: 'decimal' },
                                     ]" size="sm" dense no-caps />
                                 </th>
-                                <!-- <th>Action</th> -->
+                                <th>Action</th>
                             </tr>
                         </thead>
                         <TableBodySkeleton v-if="watchtower.processing && !nftCollections" :col-count="4" :row-count="3"
@@ -75,32 +75,24 @@
                                 </td>
 
                                 <td>{{ b.token?.capability }}</td>
-                                <!-- <td>{{ b.token?.commitment }}</td> -->
-                                <!-- <td>{{ b.token?.commitment ? binToBigIntUintLE(hexToBin(b.token.commitment)) : '---' }}</td> -->
                                 <td>
-
-                                    <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
-                                    <!-- {{ identity.token?.commitment ? binToBigIntUintLE(hexToBin(identity.token.commitment)) : '---' }} -->
                                     {{ b.token?.commitment !== undefined ? commitmentDisplay(b.token?.commitment) : '---' }}
-                                    <!-- {{ b.token?.commitment }} -->
                                 </td>
-                                <!-- <td>
-                                    <q-btn color="primary" dense no-caps @click="openDialog(TokenSenderDialog.__name, b)">Send</q-btn>
-                                </td> -->
+                                <td>
+                                    <q-btn color="primary" dense no-caps
+                                        @click="() => openNFTTransferDialog(b as CashToken)">Transfer
+                                        NFT</q-btn>
+                                </td>
                             </tr>
                             <tr v-if="nftCollections.length === 0 && !watchtower.processing">
-                                <td colspan="6">
+                                <td colspan="7">
                                     No data
-                                </td>
-                            </tr>
-                            <tr v-if="watchtower.processing">
-                                <td colspan="6">
-                                    <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                                 </td>
                             </tr>
                         </tbody>
                     </q-markup-table>
-                    <!-- <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData" /> -->
+                    <NFTOwnershipTransferDialog :model-value="dialog === NFTOwnershipTransferDialog.__name"
+                        :nft="dialogData" @hide="onHide" @nft-transferred="onNftTransfer" />
                 </q-scroll-area>
             </div>
         </div>
@@ -110,15 +102,17 @@
 import { onMounted, ref, watch, computed } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { CashToken, PartialBcmr, Watchtower } from 'src/app'
+import { CashToken, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { PaginatedData } from 'src/app/types';
-import { binToBigIntUintLE, binToBigIntUint64LE, binToNumberInt32LE, binToNumberUint16LE, hexToBin } from '@bitauth/libauth';
+import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
+import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
+import { Wallet } from 'mainnet-js';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
-const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const nftCollections = ref<CashToken[]>([])
 const paginatedNftCollections = ref<PaginatedData>()
 
@@ -200,9 +194,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
 })
 
 watch(() => excludePossibleAuthKeys.value, async (v) => {
-    console.log(v)
     refreshData()
-    initPagination()
 })
 
 const initPagination = () => {
@@ -233,6 +225,17 @@ const refreshData = async () => {
     }
 }
 
+const openNFTTransferDialog = (nft: CashToken) => {
+    nft.ownerWallet = user.wallet as Wallet // embedding wallet
+    nft.processing = ''
+
+    openDialog(NFTOwnershipTransferDialog.__name, nft)
+}
+
+const onNftTransfer = () => {
+    hideDialog()
+    refreshData()
+}
 
 onMounted(async () => {
     if (user.wallet) {

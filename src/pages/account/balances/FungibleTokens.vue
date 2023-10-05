@@ -10,6 +10,11 @@
         <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
+              <tr v-if="watchtower.processing">
+                <th colspan="7">
+                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
+                </th>
+              </tr>
               <tr>
                 <th>#</th>
                 <th>Brand</th>
@@ -46,7 +51,7 @@
                 <td>{{ tokeshiToNumber(Number(b.balance), String(b.tokenCategory?.decimals || 0)) }}</td>
                 <td>{{ b.utxoCount }}</td>
                 <td>
-                  <q-btn color="primary" dense no-caps @click="openDialog(FtBalanceTransferDialog.__name, b)">Send</q-btn>
+                  <q-btn color="primary" dense no-caps @click="openDialog(FTBalanceTransferDialog.__name, b)">Send</q-btn>
                 </td>
               </tr>
               <tr v-if="ftBalances?.length === 0 && !watchtower.processing">
@@ -54,16 +59,11 @@
                   No data
                 </td>
               </tr>
-              <tr v-if="watchtower.processing">
-                <td colspan="7">
-                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
-                </td>
-              </tr>
             </tbody>
           </q-markup-table>
           <!-- <TokenSenderDialog :model-value="dialog === TokenSenderDialog.__name" :token-balance="dialogData"
             @hide="onHide" /> -->
-          <FtBalanceTransferDialog :model-value="dialog === FtBalanceTransferDialog.__name" :token-balance="dialogData"
+          <FTBalanceTransferDialog :model-value="dialog === FTBalanceTransferDialog.__name" :token-balance="dialogData"
             @hide="onHide" />
         </q-scroll-area>
       </div>
@@ -82,7 +82,7 @@ import TokenSenderDialog from 'src/components/dialogs/TokenSenderDialog.vue'
 import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
 import { BcmrIndexer } from 'src/app/bcmr/BcmrIndexer';
 import { tokeshiToNumber } from 'src/app/utils';
-import FtBalanceTransferDialog from 'src/components/dialogs/FtBalanceTransferDialog.vue';
+import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
 
 
 defineOptions({ name: 'FungibleTokens' })
