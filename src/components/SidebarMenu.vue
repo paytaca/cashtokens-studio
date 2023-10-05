@@ -39,16 +39,19 @@ const menu = computed<any[]>(() => {
       label: 'Create New Token',
       href: hrefs.createNewToken,
       icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
     },
     {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
       icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
     },
     {
       label: 'Manage',
       href: '#Manage',
       icon: 'token',
+      disabled: Boolean(user.walletAddress) === false,
       children: [
         {
           label: 'FT Reserves',
@@ -86,7 +89,7 @@ const menu = computed<any[]>(() => {
           children: [
             {
               href: '#',
-              label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
+              label: user.walletBchBalance ? Number(user.walletBchBalance) : '?',
               avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
             }
           ]
@@ -144,7 +147,7 @@ watch(() => route.path, (currentPath) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   console.log(qtree.value.expandAll())
 })
 
