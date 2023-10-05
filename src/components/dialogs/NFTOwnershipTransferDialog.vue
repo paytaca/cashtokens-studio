@@ -47,10 +47,9 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
-import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenAddress, shortenTokenId } from 'src/app/utils';
 
 const props = defineProps<{
   decimals?: string,
@@ -92,7 +91,7 @@ const transferNFT = async () => {
           txid: tx,
           txType: 'CashToken.transferNFT',
           timestamp: new Date().getTime(),
-          successMsg: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'}`
+          successMsg: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`
         })
         emit('nftTransferred', { tokenId: props.nft.token.tokenId, recipient: form.value.to })
       }

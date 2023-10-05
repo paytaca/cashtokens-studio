@@ -2,44 +2,42 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <q-banner class="shadow-3" :class="!$q.dark.isActive ? 'bg-grey-5' : ''" style="border-radius: 1em;">
+        <q-banner :class="!$q.dark.isActive ? 'bg-grey-4' : ''" style="border-radius: 1em;">
           <div class="row q-px-md q-py-md flex justify-center">
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
-              <div>
-                <q-avatar size="8em">
+              <div class="row justify-center q-px-sm q-py-sm" style="border-radius: 1em;">
+                <q-avatar class="col-12 q-mb-sm" size="8em">
                   <img v-if="ui.tokenInView?.tokenUris?.icon" :src="ui.tokenInView?.tokenUris?.icon" alt="">
                   <q-icon v-else name="token" color="grey-8"></q-icon>
                 </q-avatar>
+                <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
+                  :symbol="ui.tokenInView?.tokenCategory?.symbol" />
               </div>
             </div>
-            <div class="col-xs-10 col-sm-9 justify-left">
-              <q-markup-table dense flat :class="!$q.dark.isActive ? 'bg-grey-5' : ''">
+            <div class="col-xs-10 col-sm-9 q-mx-xs row justify-center items-center">
+              <q-markup-table dense flat :class="!$q.dark.isActive ? 'bg-grey-4' : ''">
                 <tbody>
                   <tr>
-                    <td class="text-bold">Category</td>
-                    <td>
-                      <TokenCategory :token-id="ui.tokenInView?.token?.tokenId" />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td class="text-bold">Symbol</td>
-                    <td>
-                      <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
-                        :symbol="ui.tokenInView?.tokenCategory?.symbol" />
+                    <td class="text-h6 text-bold">Category</td>
+                    <td class="text-h6 cursor-pointer" @click="copyText(ui.tokenInView?.token?.tokenId || '')">
+                      <q-btn size="md" @click="copyText(ui.tokenInView?.token?.tokenId || '')" flat dense no-caps>
+                        {{ $q.screen.lt.sm ? shortenTokenId(ui.tokenInView?.token?.tokenId || '') :
+                          ui.tokenInView?.token?.tokenId }}
+                      </q-btn>
+                      <q-tooltip>Click to copy</q-tooltip>
                     </td>
                   </tr>
                   <tr v-if="ui.tokenInView?.token?.amount">
-                    <td class="text-bold">Fungible Amount</td>
+                    <td class="text-h6 text-bold">Fungible Amount</td>
                     <td>{{ ui.tokenInView?.token?.amount }}</td>
                   </tr>
                   <tr v-if="ui.tokenInView?.tokenCategory?.decimals">
-                    <td class="text-bold">Decimals</td>
+                    <td class="text-h6 text-bold">Decimals</td>
                     <td>{{ ui.tokenInView?.tokenCategory?.decimals }}</td>
                   </tr>
                   <tr v-if="ui.tokenInView?.token?.capability">
-                    <td class="text-bold">Capability</td>
+                    <td class="text-h6 text-bold">Capability</td>
                     <td>
-                      <!-- <code>{{ ui.tokenInView?.token?.capability }}</code> -->
                       {{ ui.tokenInView?.token?.capability }}
                     </td>
                   </tr>
