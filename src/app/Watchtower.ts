@@ -17,11 +17,19 @@ type FetchAuthchainIdentitiesQueryParams = {
   authguard?: string
 } & PaginationQueryParams
 
-type FetchUtxoQueryParams = {
+type BchBalance = {
+  valid?:boolean,
+  address?: string,
+  spendable?: number,
+  balance?: number
+}
+
+export type FetchUtxoQueryParams = {
   is_token?: boolean,
   token_type?: 'ft' | 'nft' | 'hybrid',
   capability?: string,
   commitment?: string,
+  commitment_ne?: string,
 } & PaginationQueryParams
 
 export class Watchtower {
@@ -143,6 +151,21 @@ export class Watchtower {
         delete this.processing
       }
       return result
+    } 
+
+    /**
+     * Get the address' BCH balance from watchtower
+     */
+    async fetchBchBalance(ownerAddress: string): Promise<BchBalance> {
+      try {
+        const r = await fetch(`${this.apiBaseUri}balance/bch/${ownerAddress}`)
+        return await r.json()
+      } catch (error) {
+        this.error = error
+      } finally {
+        delete this.processing
+        return {}
+      }
     } 
 
   

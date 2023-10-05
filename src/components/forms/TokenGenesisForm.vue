@@ -2,9 +2,17 @@
   <q-form class="col-xs-12 col-sm-10 col-md-8 q-gutter-sm q-my-sm" :disable="cashToken?.processing">
     <q-toolbar>
       <q-toolbar-title class="text-h5 text-bold">
-        <slot name="title">Token Genesis</slot>
+        <slot name="title">Create New Token</slot>
       </q-toolbar-title>
     </q-toolbar>
+    <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+      Select a token type: <sup><code class="text-caption">{{ tType }}</code></sup>
+      <q-option-group name="preferred_genre" v-model="tType" :options="[
+        { value: 'ft', label: 'Fungible Token(FT)' },
+        { value: 'nft', label: 'Non Fungible Token(NFT)' },
+      ]
+        " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+    </div>
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
       <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
@@ -33,7 +41,7 @@
         </template>
 
       </q-input>
-      <template v-if="tokenType === 'ft' || tokenType === 'fnft'">
+      <template v-if="tType === 'ft' || tType === 'fnft'">
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense
           :disable="Boolean(cashToken?.processing)" />
         <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense
@@ -58,7 +66,7 @@
           </div>
         </div>
       </template>
-      <template v-if="tokenType === 'nft' || tokenType === 'fnft'">
+      <template v-if="tType === 'nft' || tType === 'fnft'">
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
@@ -197,12 +205,14 @@ const emit = defineEmits<{
 
 const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: hideBcmrLinkAdderDialog } = useDialogs()
 
+
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
 const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
 const tokenNameRef = ref<Ref | undefined | null>(null)
+const tType = ref<'ft' | 'nft' | 'fnft'>('ft')
 const genesisToken = ref<{
   tokenId: string,
   amount: string | number,   // actual  amount that will be sent 
@@ -210,7 +220,7 @@ const genesisToken = ref<{
   commitment: string | undefined,
   commitmentFormat: 'decimal' | 'hex'
 }>({
-  amount: props.tokenType === 'ft' ? 1 : 0,
+  amount: tType.value === 'ft' ? 1 : 0,
   tokenId: props.genesisInput.txid,
   capability: undefined,
   commitment: '',
@@ -281,7 +291,7 @@ const tokenAmountWithDecimal = computed<string>(() => {
 })
 
 const isValidTokenAmount = computed<boolean>(() => {
-  if (props.tokenType === 'nft') return true
+  if (tType.value === 'nft') return true
   if (!tokenAmountWithDecimal.value) {
     return false
   }
@@ -320,10 +330,10 @@ watch(() => genesisToken.value.commitment, (commitment) => {
 })
 
 onMounted(() => {
-  if (props.tokenType === 'nft') {
+  if (tType.value === 'nft') {
     genesisToken.value.capability = NFTCapability.minting
   }
-  if (props.tokenType === 'ft') {
+  if (tType.value === 'ft') {
     genesisToken.value.amount = MAX_FUNGIBLE_AMOUNT
   }
 })

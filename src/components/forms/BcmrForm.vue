@@ -65,7 +65,7 @@
           </div>
         </div>
       </q-expansion-item>
-      <q-expansion-item label="Token Category Info" class="q-px-md q-pt-sm q-my-sm" icon="token">
+      <q-expansion-item label="Token Category Details" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
           <q-input @update:model-value="(v: any) => bcmr?.setTokenSymbol(v)"
             :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Token category symbol" filled dense></q-input>
@@ -120,7 +120,6 @@
             </tbody>
           </q-markup-table>
         </div>
-
       </q-expansion-item>
     </q-banner>
     <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"

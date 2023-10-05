@@ -11,6 +11,7 @@ import toCashScript from "./utils/toCashScript";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
+import { ProcessingMessage } from "."
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
@@ -80,6 +81,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
     this.includeAuthKeyGenesis = true
     this.useAuthGuard = true
+    delete this._processing
   }
 
   get utxo():UtxoI {
@@ -320,8 +322,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     
   } 
 
-  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet}):Promise<string|undefined> {
+  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
+    arg?.processingMessage?.setProcessing('Processing')
     
     const requests = [
       new TokenSendRequest({
@@ -347,6 +350,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     )
 
     CashToken._processing = 'Waiting for signature'
+    arg?.processingMessage?.setProcessing('Waiting for signature')  
     let signResult
     try {
       signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
@@ -354,7 +358,8 @@ export class CashToken implements UtxoI, PartialBcmr {
       console.log(error)
       throw error
     }
-    CashToken._processing = `Sending ${arg.amount} tokens`
+    CashToken._processing = `Sending tokens`
+    arg?.processingMessage?.setProcessing(`Sending tokens`)  
     try {
       return await submitTransaction(signResult, arg.ownerWallet)
     } catch (error) {
@@ -363,6 +368,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw error
     } finally {
       delete CashToken._processing
+      arg?.processingMessage?.deleteProcessing()  
     }
 
   }
@@ -588,4 +594,57 @@ export class CashToken implements UtxoI, PartialBcmr {
     return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token) || []
   }
 
+  async transferNFT(arg:{newOwner: string}){
+    this._processing = 'Processing'
+
+    if (!arg.newOwner) {
+      throw new Error('Missing address of recipient!')
+    }
+    if (!this.token?.capability) {
+      throw new Error('Token is not an NFT')
+    }
+
+    const requests = [
+      new TokenSendRequest({
+        cashaddr: arg.newOwner,
+        value: DEFAULT_TOKEN_VALUE,
+        amount: Number(this.token?.amount) || 0, // !change to bigint once mainnet-js supports it
+        tokenId: this.token!.tokenId,
+        capability: this.token?.capability,
+        commitment: this.token?.commitment || ''
+      })
+    ]
+    
+    let signResult
+    try {
+      const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
+        requests,
+        false,
+        {
+          tokenOperation: 'send',
+          checkTokenQuantities: false,
+          buildUnsigned: true
+        }
+      )
+      this._processing = 'Waiting for signature'
+      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+    } catch (error) {
+      console.log(error)
+      throw error
+    } finally {
+      delete this._processing
+    }
+
+    this._processing = 'Transferring'
+    try {
+      return await submitTransaction(signResult, this.ownerWallet as Wallet)
+    } catch (error) {
+      this._processing = ''
+      console.log(error)
+      throw error
+    } finally {
+      delete this._processing
+    }
+
+  }
 }

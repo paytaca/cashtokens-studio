@@ -21,73 +21,64 @@ const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
-  createFT: '/issuer/tokens/create/ft',
-  createNFT: '/issuer/tokens/create/nft',
+  // createFT: '/issuer/tokens/create/ft',
+  // createNFT: '/issuer/tokens/create/nft',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
   accountFungibles: '/account/balance/fungibletokens',
   accountCollectibles: '/account/balance/collectibles',
-  recentTransactions: '/account/recent-transactions'
+  recentTransactions: '/account/recent-transactions',
+  createNewToken: '/issuer/tokens/create',
 }
 
 const menu = computed<any[]>(() => {
   return [
     {
-      label: 'Issuer',
-      href: '#Issuer',
-      icon: 'domain_add',
+      label: 'Create New Token',
+      href: hrefs.createNewToken,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Create New AuthKey',
+      href: hrefs.createAuthKey,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Manage',
+      href: '#Manage',
+      icon: 'token',
       disabled: Boolean(user.walletAddress) === false,
       children: [
         {
-          label: 'Create AuthKey',
-          href: hrefs.createAuthKey,
-          icon: 'add',
-        },
-        {
-          label: 'Create FT',
-          href: hrefs.createFT,
-          icon: 'add',
-        },
-        {
-          label: 'Create NFT',
-          href: hrefs.createNFT,
-          icon: 'add',
-        },
-        {
-          label: 'Manage',
-          href: '#Manage',
+          label: 'FT Reserves',
+          href: hrefs.manageFTReserves,
           icon: 'token',
-          children: [
-            {
-              label: 'FT Reserves',
-              href: hrefs.manageFTReserves,
-              icon: 'token',
-            },
-            {
-              label: 'NFT Reserves',
-              href: hrefs.manageNFTReserves,
-              icon: 'token',
-            },
-            {
-              label: 'AuthChains',
-              href: hrefs.manageAuthchains,
-              icon: 'token',
-            },
-            {
-              label: 'AuthKeys',
-              href: hrefs.manageAuthKeys,
-              icon: 'token',
-            }
-
-          ]
+        },
+        {
+          label: 'NFT Reserves',
+          href: hrefs.manageNFTReserves,
+          icon: 'token',
+        },
+        {
+          label: 'Token Categories',
+          href: hrefs.manageAuthchains,
+          icon: 'token',
+        },
+        {
+          label: 'AuthKeys',
+          href: hrefs.manageAuthKeys,
+          icon: 'token',
         }
+
       ]
     },
     {
-      label: 'Account',
-      href: '#Account',
+      label: 'Wallet',
+      href: '#Wallet',
       icon: 'account_balance_wallet',
       disabled: Boolean(user.walletAddress) === false,
       children: [
@@ -98,7 +89,7 @@ const menu = computed<any[]>(() => {
           children: [
             {
               href: '#',
-              label: user.walletBchBalance ? Number(user.walletBchBalance) / 1e8 : '',
+              label: user.walletBchBalance ? Number(user.walletBchBalance) : '?',
               avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
             }
           ]
@@ -156,8 +147,16 @@ watch(() => route.path, (currentPath) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   console.log(qtree.value.expandAll())
 })
 
 </script>
+
+<style lang="scss">
+/* q-tree__node-header relative-position row no-wrap items-center q-tree__node--link q-hoverable q-focusable q-tree__node--selected {} */
+.q-tree__node--selected {
+  color: rgb(212, 210, 210);
+  background: linear-gradient(90deg, rgba(4, 30, 90, 0.9779411764705882) 0%, rgba(7, 41, 102, 1) 42%, rgba(9, 56, 121, 1) 77%, rgba(1, 114, 205, 1) 100%);
+}
+</style>

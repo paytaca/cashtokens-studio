@@ -2,23 +2,17 @@
   <q-page class="q-pa-sm">
     <div class="row justify-center">
       <div class="col-xs-12 col-sm-10 col-lg-9">
-        <div class="row justify-center q-my-lg q-px-lg q-py-lg">
+        <div class="row justify-center q-my-lg">
           <template v-if="!genesisInputUtxo || !authKey">
-            <q-banner class="q-mt-lg q-pb-lg" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
+            <q-banner class="q-mt-lg" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
               <template v-slot:avatar>
-                <q-icon name="info" size="lg" />
+                <q-icon name="warning" color="warning" size="xs" />
               </template>
-              <p>
-                Creating a new token requires a "genesis input". A valid genesis input is just a utxo that is the
-                first
-                output(v-out 0) of a previous transaction.
-              </p>
-              <p>
-                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length }}</span> utxo that
-                we can use as genesis input. This
-                operation <span class="text-positive">requires 2</span> genesis input
-                (1 for your token, 1 for an AuthKey token). You can create a genesis input by clicking the button below.
-              </p>
+              Your wallet has <span :class="!user.genesisInputs?.length ? 'text-red' : 'text-green'">{{
+                user.genesisInputs?.length || 0 }}</span> vout-0 utxo.
+              This operation will create a Token and an AuthKey so it requires 2 vout-0
+              utxos (as genesis inputs). If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys"
+                label="Click Here" size="md" color="secondary" flat no-caps />
               <template v-slot:action>
                 <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />

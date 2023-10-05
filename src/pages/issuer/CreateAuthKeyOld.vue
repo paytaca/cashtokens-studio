@@ -4,46 +4,20 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row justify-center q-my-lg">
           <template v-if="!genesisInput">
-            <q-banner class="q-mt-lg q-pb-lg" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
+            <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
               <template v-slot:avatar>
-                <q-icon name="info" size="lg" />
+                <q-icon name="warning" color="warning" size="xs" />
               </template>
-              <p>
-                Creating a new AuthKey requires a "genesis input". A valid genesis input is just a utxo that is the
-                first
-                output(v-out 0) of a previous transaction.
-              </p>
-              <p>
-                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length || 0 }}</span> utxo
-                that
-                we can use as genesis input. This
-                operation <span class="text-positive">requires 1</span> genesis input. You can create a genesis input by
-                clicking the button below.
-              </p>
-              <q-expansion-item label="What's an AuthKey?">
-                <p>
-                  When you create a new token (genesis) in CashTokens Studio it's locked in a contract called an
-                  <q-btn href="https://github.com/mr-zwets/AuthGuard" target="_blank" color="secondary" flat dense
-                    label="AuthGuard" no-caps style="text-indent:0" />.
-                  An AuthKey is an NFT that let's the holder manage the locked tokens.
-                  Holder of the AuthKey can manage the authchain, can publish registry updates, issue tokens from fungible
-                  reserves or mint new NFTs
-                  if the token created was a `minting` NFT.
-                </p>
-                <q-icon name="warning" color="warning"></q-icon>
-                <p>
-                  Don't send an AuthKey to anyone unless you intend to give them
-                  permission to manage your tokens.
-                </p>
-              </q-expansion-item>
+              Your wallet has <span :class="!user.genesisInputs?.length ? 'text-red' : 'text-green'">{{
+                user.genesisInputs?.length || 0 }}</span> vout-0 utxo.
+              Cashtoken Studio requires 1 vout-0
+              utxo (as genesis input) to create an AuthKey.
               <template v-slot:action>
                 <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
               </template>
             </q-banner>
-
           </template>
-
           <template v-else>
             <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)"
               @auth-key-created="onCreateAuthKey" />
