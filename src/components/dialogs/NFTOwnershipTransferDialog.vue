@@ -3,7 +3,7 @@
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
-          Transfer {{ nft?.tokenCategory?.symbol }}
+          Transfer {{ nftMetadata?.name || nft?.tokenCategory?.symbol }}
         </q-toolbar-title>
         <TokenCategory v-if="nft.token?.tokenId" :token-id="nft.token.tokenId" />
       </q-toolbar>
@@ -50,6 +50,7 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
 import { shortenAddress, shortenTokenId } from 'src/app/utils';
+import { NftType } from 'src/app/bcmr/bcmr-v2.schema';
 
 const props = defineProps<{
   decimals?: string,
@@ -61,7 +62,7 @@ const emit = defineEmits<{
 }>()
 
 const $q = useQuasar()
-const user = useUser()
+const nftMetadata = ref<NftType>()
 const commitmentCopy = ref<string>()
 const commitmentFormat = ref<'decimal' | 'hex'>('hex')
 const form = ref<{ to: string, amount: string | number }>({
@@ -102,9 +103,17 @@ const transferNFT = async () => {
   }
 }
 
-const beforeShow = () => {
+const beforeShow = async () => {
   form.value.amount = props.nft?.token?.amount ? String(props.nft.token!.amount) : 0
   commitmentCopy.value = props.nft?.token?.commitment
+  if (props.nft?.token?.tokenId && props.nft?.token?.commitment) {
+    try {
+      const resp = await fetch(`${process.env.BCMR_API}bcmr/${props.nft?.token?.tokenId}/token/nfts/${props.nft?.token?.commitment}`)
+      nftMetadata.value = await resp.json()
+    } catch (error) {
+      console.log(error)
+    }
+  }
 
 }
 
