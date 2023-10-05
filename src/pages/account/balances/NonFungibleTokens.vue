@@ -2,7 +2,12 @@
     <q-page class="q-ma-lg">
         <div class="row justify-center q-mx-sm">
             <div class="col-xs-12 col-md-10">
-                <h5 class="text-center">My Collectibles(NFTs)</h5>
+                <h5 class="text-center">
+                    My Collectibles(NFTs)
+                    <q-badge color="blue-5" text-color="black" align="top" rounded>
+                        {{ paginatedNftCollections?.count }}
+                    </q-badge>
+                </h5>
                 <div class="q-pa-lg flex flex-center">
                     <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
                         :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
