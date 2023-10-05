@@ -157,30 +157,6 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     )
 
     populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-    // populate 
-    // authchainIdentities.value = []
-    // const results = paginatedFtAuthchainIdentities.value.results
-    // for (let i = 0; i < results.length; i++) {
-    //   const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    //   const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
-    //   const {
-    //     txid,
-    //     vout,
-    //     satoshis,
-    //     height,
-    //     coinbase,
-    //     token
-    //   } = results[i]
-
-    //   const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
-    //   authchainIdentities.value.push(authchainIdentity)
-    // }
-
-    // authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    //   await a.resolveTokenCategory()
-    //   await a.resolveTokenUris()
-    // })
-
     user.paginatedFtAuthchainIdentities = paginatedFtAuthchainIdentities.value
   }
 })
