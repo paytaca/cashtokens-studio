@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-close-popup @before-hide="form.amount = ''">
+  <q-dialog v-close-popup @before-hide="form.amount = ''" @before-show="beforeShow">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
@@ -64,14 +64,19 @@ import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { numberToTokeshi, shortenTx, tokeshiToNumber } from 'src/app/utils';
+import { numberToTokeshi, shortenAddress, shortenTokenId, shortenTx, tokeshiToNumber } from 'src/app/utils';
 import { ProcessingMessage } from 'src/app'
+import { useEventBus } from 'src/composables';
 const props = defineProps<{
   tokenBalance: FungibleTokenBalance
+}>()
+const emit = defineEmits<{
+  (e: 'ftTransferred', val: { tokenId: string, recipient: string }): void
 }>()
 
 const $q = useQuasar()
 const user = useUser()
+const { $ebus } = useEventBus()
 const currentBalanceWithDecimal = computed(() => {
   if (props.tokenBalance.tokenCategory?.decimals) {
     return Number(tokeshiToNumber(Number(props.tokenBalance.balance), props.tokenBalance.tokenCategory?.decimals?.toString())) - Number(form.value.amount)// !change to string if mainnetjs supports bigint
@@ -105,10 +110,22 @@ const send = async () => {
         type: 'positive',
         message: `${props.tokenBalance?.tokenCategory?.symbol || 'Tokens'} sent!Tx=${shortenTx(tx)}`
       })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'CashToken.transferFT',
+        timestamp: new Date().getTime(),
+        successMsg: `Transferred ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
+      })
+      emit('ftTransferred', { tokenId: props.tokenBalance.tokenId, recipient: form.value.to })
     }
   } catch (error) {
     console.log(error)
   }
+}
+
+const beforeShow = () => {
+  form.value.amount = ''
+  form.value.to = ''
 }
 
 </script>
