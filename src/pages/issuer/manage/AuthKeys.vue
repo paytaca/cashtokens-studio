@@ -10,7 +10,7 @@
               no-caps style="text-indent:0" />.
             An AuthKey (or Minting Baton) is an NFT that let's the holder manage the locked tokens.
             Holder of the AuthKey can manage the authchain, issue tokens from fungible reserves or mint new NFTs
-            if the token created was a <code>minting</code> NFT.
+            if the token created was a `minting` NFT.
             Don't send these keys to anyone unless you intend to give them permission to manage your tokens.
           </p>
         </q-expansion-item>

@@ -16,13 +16,14 @@
 
 <script setup lang="ts">
 import { EventBus, useQuasar } from 'quasar'
-import { ref, onMounted, watch, inject } from 'vue';
+import { ref, onMounted, watch, inject, onBeforeMount } from 'vue';
 import { useRouter } from 'vue-router';
 import { UtxoI, Wallet } from 'mainnet-js';
 import formatAddress from 'src/app/utils/formatAddress';
 import getWalletClass from 'src/app/utils/getWalletClass';
 import { useUser } from 'src/stores/user';
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE } from 'src/app/constants'
+import { Watchtower } from 'src/app/Watchtower';
 
 defineOptions({ name: 'PaytacaConnect' })
 
@@ -31,6 +32,7 @@ const router = useRouter()
 const user = useUser()
 const watching = ref()
 const eventBus = inject<EventBus>('eventBus')
+const watchtower = ref<Watchtower>(new Watchtower())
 
 onMounted(async () => {
   if (window.paytaca) {
@@ -43,6 +45,9 @@ onMounted(async () => {
       const userUtxos = await user.wallet.getAddressUtxos()
       filterAndStoreGenesisInputs(userUtxos)
       watchAddress(user.walletAddress)
+      if (!watching.value && user.walletAddress) {
+        watchAddress(user.walletAddress)
+      }
       return
     }
   }
@@ -71,7 +76,8 @@ const connect = async () => {
 
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
-    user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+    // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet.getDepositAddress()))?.spendable
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
   }
@@ -90,7 +96,8 @@ const watchAddress = async (address: string) => {
   watching.value = user.wallet.watchAddress(async () => {
     eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
     user.updatingBalances = true
-    user.walletBchBalance = await user.wallet?.getBalance('sat') as string
+    // user.walletBchBalance = await user.wallet?.getBalance('sat') as string
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet!.getDepositAddress()))?.spendable
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
     if (userUtxos) {
@@ -113,11 +120,11 @@ const disconnect = async () => {
 
 }
 
-onMounted(() => {
-  if (!watching.value && user.walletAddress) {
-    watchAddress(user.walletAddress)
-  }
-})
+// onMounted(() => {
+//   if (!watching.value && user.walletAddress) {
+//     watchAddress(user.walletAddress)
+//   }
+// })
 
 
 

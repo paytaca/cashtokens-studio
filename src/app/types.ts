@@ -25,12 +25,18 @@ export type TokenBalance = {
  */
 export type FungibleTokenBalance = {
   tokenId: string,
+  utxos?: UtxoI[],
   utxoCount: number,
   balance: bigint,
   owner: string,
   tokenUris?: URIs,
   tokenCategory?: TokenCategory
 }
+
+export type NonFungibleTokenBalance = {
+  capability: NFTCapability,
+  commitment?: string
+} & FungibleTokenBalance
 
 export declare interface BcmrStorageArtifact {
   uris: {

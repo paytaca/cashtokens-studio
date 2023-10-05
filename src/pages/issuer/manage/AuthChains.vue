@@ -3,12 +3,14 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
-          Authchain Identities
+          Your Tokens
           <q-badge color="blue-5" text-color="black" align="top" rounded>
             {{ paginatedAuthchainIdentities?.count }}
           </q-badge>
         </h5>
-        <p class="text-center">List of authchain identity outputs. You can use this to manage the authchain of your tokens
+        <p class="text-center">
+          These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
+          listed here. Click an item on this list to view the token details.
         </p>
         <div class="row justify-end q-my-sm">
           <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
@@ -46,14 +48,14 @@
             <tbody v-else class="text-center">
               <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i"
                 @click="(b: any) => viewToken(identity, b)">
-                <td>{{ i + pagination.offset + 1 }}</td>
-                <td>
+                <td class="cursor-pointer">{{ i + pagination.offset + 1 }}</td>
+                <td class="cursor-pointer">
                   <q-avatar v-if="identity.tokenUris?.icon">
                     <img :src="identity.tokenUris?.icon" alt="na">
                   </q-avatar>
                   <q-icon v-else name="token" size="xl" color="disabled" />
                 </td>
-                <td>
+                <td class="cursor-pointer">
                   <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
                   <div v-else>
                     <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
