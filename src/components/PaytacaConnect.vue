@@ -16,7 +16,7 @@
 
 <script setup lang="ts">
 import { EventBus, useQuasar } from 'quasar'
-import { ref, onMounted, watch, inject } from 'vue';
+import { ref, onMounted, watch, inject, onBeforeMount } from 'vue';
 import { useRouter } from 'vue-router';
 import { UtxoI, Wallet } from 'mainnet-js';
 import formatAddress from 'src/app/utils/formatAddress';
@@ -45,6 +45,9 @@ onMounted(async () => {
       const userUtxos = await user.wallet.getAddressUtxos()
       filterAndStoreGenesisInputs(userUtxos)
       watchAddress(user.walletAddress)
+      if (!watching.value && user.walletAddress) {
+        watchAddress(user.walletAddress)
+      }
       return
     }
   }
@@ -117,11 +120,11 @@ const disconnect = async () => {
 
 }
 
-onMounted(() => {
-  if (!watching.value && user.walletAddress) {
-    watchAddress(user.walletAddress)
-  }
-})
+// onMounted(() => {
+//   if (!watching.value && user.walletAddress) {
+//     watchAddress(user.walletAddress)
+//   }
+// })
 
 
 
