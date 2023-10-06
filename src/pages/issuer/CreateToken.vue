@@ -45,22 +45,23 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { UtxoI, Wallet } from 'mainnet-js';
-import { useQuasar } from 'quasar';
+import { uid, useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { GenesisInput, AuthKey } from 'src/app'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useEventBus } from 'src/composables';
+import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
 const user = useUser()
+const ui = useUI()
 const route = useRoute()
 const { $ebus } = useEventBus()
-const authKey = ref<AuthKey>()
-const genesisInputUtxo = ref<UtxoI>()
+const authKey = ref<AuthKey | null>()
+const genesisInputUtxo = ref<UtxoI | null>()
 const genesisInputInstance = ref<GenesisInput>()
-const { setStatusProvider } = useStatusBar()
 
 
 watch(() => user.genesisInputs, (value) => {
@@ -68,6 +69,10 @@ watch(() => user.genesisInputs, (value) => {
     // use first for AuthKey
     genesisInputUtxo.value = value[0]
     authKey.value = new AuthKey({ ...value[1] })
+  }
+  if (!value || value.length === 0) {
+    genesisInputUtxo.value = null
+    authKey.value = null
   }
 })
 
@@ -79,14 +84,12 @@ onMounted(async () => {
 })
 
 const generateGenesisInputs = async () => {
-
   if (!user.wallet) {
     $q.notify({ type: 'negative', message: 'Wallet not connected' })
     return
   }
   try {
     genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }) // 
-    setStatusProvider(genesisInputInstance.value)
     const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 2)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
