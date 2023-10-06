@@ -99,7 +99,8 @@
       </template>
 
       <div class="row justify-center">
-        <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
+        <q-uploader ref="iconUploader" @uploaded="onTokenIconUpload" field-name="icon"
+          :label="iconUploader?.uploadProgressLabel === '100.00%' ? 'Icon Uploaded' : 'Upload Token Icon'"
           :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
           style="width:100%;max-width: 100%;" :disable="Boolean(cashToken?.processing)" />
       </div>
@@ -154,7 +155,8 @@
           Boolean(busyButtonLabel) ||
           !isValidTokenAmount ||
           !genesisTokenMetadata.name ||
-          !genesisTokenMetadata.symbol
+          !genesisTokenMetadata.symbol ||
+          iconUploader?.isUploading
         )
           " color="primary" size="lg" />
     </div>
@@ -182,7 +184,7 @@ import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
 import { shortenTx } from 'src/app/utils'
 const props = defineProps<{
-  tokenType: 'ft' | 'nft' | 'fnft',
+  tokenType: 'ft' | 'nft' | 'fnft', // deprecated
   genesisInput: UtxoI,
   authKey: AuthKey,
   /**
@@ -209,6 +211,7 @@ const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
+const iconUploader = ref()
 const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
 const tokenNameRef = ref<Ref | undefined | null>(null)
@@ -318,7 +321,6 @@ const convertCommitment = () => {
     genesisToken.value.commitmentFormat = 'decimal'
   }
 }
-
 
 watch(() => genesisToken.value.commitment, (commitment) => {
   if (!commitment) {
