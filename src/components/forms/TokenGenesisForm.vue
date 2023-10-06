@@ -458,10 +458,14 @@ const createToken = async () => {
         txid: tx,
         txType: 'CashToken.createGenesis',
         timestamp: new Date().getTime(),
-        successMsg: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)`
+        successMsg: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token (genesis)`
       })
       emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
-      ui.setStatusMessage({ statusMessage: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)` })
+      ui.setStatusMessage({
+        statusMessage: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
       buildAuthchain(cashToken.value)
     }
     // setStatusProvider(null)
