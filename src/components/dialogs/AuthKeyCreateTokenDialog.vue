@@ -17,13 +17,9 @@
           </q-banner>
         </template>
         <template v-else>
-          <TokenGenesisForm
-            :token-type="(tokenType as ('ft'|'nft'))"
-            :genesis-input="genesisInput"
-            :auth-key="authKey"
-            :owner-wallet="(user.wallet! as Wallet)"
-            :create-auth-key="false"
-            />
+          <TokenGenesisForm :token-type="(tokenType as ('ft' | 'nft'))" :genesis-input="genesisInput" :auth-key="authKey"
+            :owner-wallet="(user.wallet! as Wallet)" :create-auth-key="false"
+            @genesis-result="(r) => emit('genesisResult', r)" />
 
         </template>
       </q-card-section>
@@ -41,10 +37,15 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { GenesisInput, AuthKey } from 'src/app'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
+import { useEventBus } from 'src/composables';
 
-defineProps<{tokenType: 'ft'|'nft', authKey: AuthKey}>()
-
+defineProps<{ tokenType: 'ft' | 'nft', authKey: AuthKey }>()
+const emit = defineEmits<{
+  // Just so we can forward event from TokenGenesisForm 
+  (e: 'genesisResult', val: { txid: string, tokenSymbol?: string }): void
+}>()
 const $q = useQuasar()
+const { $ebus } = useEventBus()
 const user = useUser()
 const genesisInput = ref<UtxoI>()
 
@@ -69,6 +70,12 @@ const generateGenesisInputs = async () => {
     const tx = await GenesisInput.generate(user.wallet! as Wallet, 1)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'GenesisInput.generate',
+        timestamp: new Date().getTime(),
+        successMsg: 'Generated genesis input(v-out 0 utxo)'
+      })
     }
   } catch (error) {
     console.log(error)
