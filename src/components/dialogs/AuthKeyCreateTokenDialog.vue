@@ -11,7 +11,7 @@
             This operation requires 1 vout-0 utxo. Click the button below to
             generate.
             <template v-slot:action>
-              <BusyButton :busy-label="GenesisInput.processing" label="Generate genesis input"
+              <BusyButton :busy-label="genesisInputInstance.processing" label="Generate genesis input"
                 @click="generateGenesisInputs" color="primary" />
             </template>
           </q-banner>
@@ -48,6 +48,7 @@ const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
 const genesisInput = ref<UtxoI>()
+const genesisInputInstance = ref<GenesisInput>(new GenesisInput({ vout: 0, satoshis: 0, txid: '' }))
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 1) {
@@ -67,7 +68,7 @@ const generateGenesisInputs = async () => {
     return
   }
   try {
-    const tx = await GenesisInput.generate(user.wallet! as Wallet, 1)
+    const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 1)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
       $ebus?.emit('transaction', {
