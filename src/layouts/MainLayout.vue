@@ -39,17 +39,13 @@
         <!-- <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
           label-style="font-size: 1.1em" /> -->
       </q-page-container>
-      <q-footer class="text-grey text-right q-px-md q-pb-sm text-italic" reveal style="background-color: unset;">
-        <template v-if="ui.statusMessage">
-          <span class="q-mr-sm">{{ ui.statusMessage }}</span><q-spinner-dots></q-spinner-dots>
-        </template>
-      </q-footer>
     </q-scroll-area>
+    <MessageDialog v-model="messageDialog" />
   </q-layout>
 </template>
 
-<script lang="ts">
-import { defineComponent, ref } from 'vue';
+<script setup lang="ts">
+import { defineComponent, ref, watch } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
@@ -59,33 +55,29 @@ import CashAddress from 'src/components/CashAddress.vue'
 import TransactionLogger from 'src/components/TransactionLogger.vue'
 import getAppEnv from 'src/app/utils/getAppEnv'
 import { useRoute, useRouter } from 'vue-router'
-export default defineComponent({
-  name: 'MainLayout',
-  components: {
-    SidebarMenu,
-    LightSwitch,
-    PaytacaConnect,
-    CashAddress,
-    TransactionLogger
-  },
+import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
+import { useDialogs } from 'src/composables';
 
-  setup() {
-    const leftDrawerOpen = ref(false)
-    const user = useUser()
-    const ui = useUI()
-    const route = useRoute()
-    const router = useRouter()
-    return {
-      leftDrawerOpen,
-      toggleLeftDrawer() {
-        leftDrawerOpen.value = !leftDrawerOpen.value
-      },
-      user,
-      ui,
-      getAppEnv,
-      route,
-      router
-    }
+const leftDrawerOpen = ref(false)
+const user = useUser()
+const ui = useUI()
+const route = useRoute()
+const router = useRouter()
+const { dialog, dialogData, dialogOtherData, openDialog, onHide, hideDialog } = useDialogs()
+const messageDialog = ref<boolean>(false)
+const toggleLeftDrawer = () => {
+  leftDrawerOpen.value = !leftDrawerOpen.value
+}
+
+watch(() => route.path, () => {
+  ui.clearStatusMessage()
+})
+
+watch(() => ui.statusMessage, (value) => {
+  console.log('CHANGED')
+  if (value) {
+    console.log('value')
+    messageDialog.value = true
   }
-});
+})
 </script>
