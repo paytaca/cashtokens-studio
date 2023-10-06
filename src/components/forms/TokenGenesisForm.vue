@@ -99,7 +99,8 @@
       </template>
 
       <div class="row justify-center">
-        <q-uploader @uploaded="onTokenIconUpload" field-name="icon" label="Token Icon"
+        <q-uploader ref="iconUploader" @uploaded="onTokenIconUpload" field-name="icon"
+          :label="iconUploader?.uploadProgressLabel === '100.00%' ? 'Icon Uploaded' : 'Upload Token Icon'"
           :url="`api/tokens/icon/upload?tokenId=${genesisInput.txid}`" auto-upload flat dense size="sm"
           style="width:100%;max-width: 100%;" :disable="Boolean(cashToken?.processing)" />
       </div>
@@ -154,7 +155,8 @@
           Boolean(busyButtonLabel) ||
           !isValidTokenAmount ||
           !genesisTokenMetadata.name ||
-          !genesisTokenMetadata.symbol
+          !genesisTokenMetadata.symbol ||
+          iconUploader?.isUploading
         )
           " color="primary" size="lg" />
     </div>
@@ -181,8 +183,9 @@ import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
 import { shortenTx } from 'src/app/utils'
+import { useUI } from 'src/stores/ui'
 const props = defineProps<{
-  tokenType: 'ft' | 'nft' | 'fnft',
+  tokenType: 'ft' | 'nft' | 'fnft', // deprecated
   genesisInput: UtxoI,
   authKey: AuthKey,
   /**
@@ -209,6 +212,8 @@ const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
+const ui = useUI()
+const iconUploader = ref()
 const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
 const tokenNameRef = ref<Ref | undefined | null>(null)
@@ -319,7 +324,6 @@ const convertCommitment = () => {
   }
 }
 
-
 watch(() => genesisToken.value.commitment, (commitment) => {
   if (!commitment) {
     return genesisToken.value.commitmentFormat = 'decimal' // 
@@ -416,13 +420,11 @@ const createToken = async () => {
     genesisToken.value.commitment = ''
     genesisToken.value.commitmentFormat = 'hex'
   }
-  setStatusProvider(null)
   cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
   try {
     cashToken.value.processing = 'Creating registry'
     bcmrStorageArtifact.value = await constructAndStoreBcmr()
     cashToken.value.processing = 'Registry created!'
-    console.log('storage artifact:', bcmrStorageArtifact.value)
   } catch (error) {
     console.log(error)
     $q.notify({ type: 'negative', message: 'Failed to create registry.Please try again later!' })
@@ -451,20 +453,24 @@ const createToken = async () => {
         user.tokens = []
       }
       user.tokens?.push(cashToken.value)
-      setStatusProvider(cashToken.value)
+      // setStatusProvider(cashToken.value)
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'CashToken.createGenesis',
         timestamp: new Date().getTime(),
-        successMsg: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)`
+        successMsg: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token (genesis)`
       })
       emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
+      ui.setStatusMessage({
+        statusMessage: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
       buildAuthchain(cashToken.value)
-
     }
-    setStatusProvider(null)
+    // setStatusProvider(null)
   } catch (error: any) {
-    setStatusProvider(null)
+    // setStatusProvider(null)
     return $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
 
