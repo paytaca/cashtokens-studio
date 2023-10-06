@@ -39,12 +39,6 @@
         <!-- <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
           label-style="font-size: 1.1em" /> -->
       </q-page-container>
-      <q-footer class="text-grey text-right q-px-md q-pb-sm text-italic" reveal style="background-color: unset;">
-        <!-- <template v-if="ui.statusMessage">
-          <span class="q-mr-sm">{{ ui.statusMessage }}</span><q-spinner-dots
-            v-if="ui.statusMessageSpinner"></q-spinner-dots>
-        </template> -->
-      </q-footer>
     </q-scroll-area>
     <MessageDialog v-model="messageDialog" />
   </q-layout>
@@ -86,34 +80,4 @@ watch(() => ui.statusMessage, (value) => {
     messageDialog.value = true
   }
 })
-
-// export default defineComponent({
-//   name: 'MainLayout',
-//   components: {
-//     SidebarMenu,
-//     LightSwitch,
-//     PaytacaConnect,
-//     CashAddress,
-//     TransactionLogger
-//   },
-
-//   setup() {
-//     const leftDrawerOpen = ref(false)
-//     const user = useUser()
-//     const ui = useUI()
-//     const route = useRoute()
-//     const router = useRouter()
-//     return {
-//       leftDrawerOpen,
-//       toggleLeftDrawer() {
-//         leftDrawerOpen.value = !leftDrawerOpen.value
-//       },
-//       user,
-//       ui,
-//       getAppEnv,
-//       route,
-//       router
-//     }
-//   },
-// });
 </script>
