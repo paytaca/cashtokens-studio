@@ -83,7 +83,7 @@
     <AuthKeyTransferDialog v-if="dialog" :auth-key="dialogData" :model-value="dialog === AuthKeyTransferDialog.__name"
       @hide="onHide" @auth-key-transferred="onAuthKeyTransfer" />
     <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType"
-      :model-value="dialog === AuthKeyCreateTokenDialog.__name" @hide="onHide" />
+      :model-value="dialog === AuthKeyCreateTokenDialog.__name" @hide="onHide" @genesis-result="onTokenCreate" />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -113,7 +113,7 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
 })
 const watchtower = ref<Watchtower>(new Watchtower())
 
-const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
 
 const populateAuthKeys = (paginated: PaginatedData) => {
@@ -139,6 +139,11 @@ const populateAuthKeys = (paginated: PaginatedData) => {
   }
 }
 
+const onTokenCreate = () => {
+  refreshData()
+  hideDialog()
+}
+
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
     if (pageNumber === 1) {
@@ -155,26 +160,6 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     )
     // populate 
     populateAuthKeys(paginatedAuthKeys.value)
-    // authKeys.value = []
-    // const results = paginatedAuthKeys.value.results
-
-    // for (let i = 0; i < results.length; i++) {
-    //   const {
-    //     txid,
-    //     vout,
-    //     satoshis,
-    //     height,
-    //     coinbase,
-    //     token,
-    //     unlockableTokens,
-    //     unlockableTokensCount
-    //   } = results[i]
-
-    //   const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
-    //   authKey.unlockableTokens = unlockableTokens
-    //   authKey.unlockableTokensCount = unlockableTokensCount
-    //   authKeys.value.push(authKey)
-    // }
     user.paginatedAuthKeys = paginatedAuthKeys.value
   }
 })
@@ -196,6 +181,7 @@ const refreshData = async () => {
     )
     user.paginatedAuthKeys = paginatedAuthKeys.value
     initPagination()
+    populateAuthKeys(paginatedAuthKeys.value)
   }
 }
 
@@ -213,22 +199,6 @@ onMounted(async () => {
 
 })
 
-onMounted(async () => {
-  // if (user.authKeys) {
-  //   authKeys.value = user.authKeys as AuthKey[]
-  // }
-  // try {
-  //   authKeys.value = await AuthKey.scanWalletForAuthKeys(user.wallet as Wallet)
-  //   user.authKeys = authKeys.value
-  // } catch (error) {
-  //   console.log(error)
-  // }
-
-  // scanAuthKeysForManagedCategories()
-  paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(user.wallet!.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset })
-  console.log('WATCHTOWER', paginatedAuthKeys.value)
-  initPagination()
-})
 
 /**
  * Checks and loads the managed token categories of each AuthKey.
