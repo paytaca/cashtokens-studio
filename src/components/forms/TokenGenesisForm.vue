@@ -183,6 +183,7 @@ import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
 import { shortenTx } from 'src/app/utils'
+import { useUI } from 'src/stores/ui'
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft', // deprecated
   genesisInput: UtxoI,
@@ -211,6 +212,7 @@ const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: 
 const cashToken = ref<CashToken>()
 const $q = useQuasar()
 const user = useUser()
+const ui = useUI()
 const iconUploader = ref()
 const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
@@ -418,13 +420,11 @@ const createToken = async () => {
     genesisToken.value.commitment = ''
     genesisToken.value.commitmentFormat = 'hex'
   }
-  setStatusProvider(null)
   cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
   try {
     cashToken.value.processing = 'Creating registry'
     bcmrStorageArtifact.value = await constructAndStoreBcmr()
     cashToken.value.processing = 'Registry created!'
-    console.log('storage artifact:', bcmrStorageArtifact.value)
   } catch (error) {
     console.log(error)
     $q.notify({ type: 'negative', message: 'Failed to create registry.Please try again later!' })
@@ -453,7 +453,7 @@ const createToken = async () => {
         user.tokens = []
       }
       user.tokens?.push(cashToken.value)
-      setStatusProvider(cashToken.value)
+      // setStatusProvider(cashToken.value)
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'CashToken.createGenesis',
@@ -461,12 +461,12 @@ const createToken = async () => {
         successMsg: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)`
       })
       emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
+      ui.setStatusMessage({ statusMessage: `Created ${cashToken.value.tokenCategory?.symbol || props.genesisInput.txid} token (genesis)` })
       buildAuthchain(cashToken.value)
-
     }
-    setStatusProvider(null)
+    // setStatusProvider(null)
   } catch (error: any) {
-    setStatusProvider(null)
+    // setStatusProvider(null)
     return $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
 
