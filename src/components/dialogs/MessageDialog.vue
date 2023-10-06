@@ -9,8 +9,17 @@
           <q-avatar size="5em" class="col-12">
             <q-icon size="2em" :name="icon.name" :color="icon.color"></q-icon>
           </q-avatar>
-          <div class="col-12 text-center q-px-lg text-wrap" style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
+          <div class="col-12 text-center q-px-lg text-wrap q-py-sm q-py-sm"
+            style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             {{ ui.statusMessage }}
+          </div>
+          <div class="col-12 text-center q-px-lg text-wrap q-py-sm"
+            style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
+            <q-btn v-if="ui.statusMessageTxid" :href="explore(ui.statusMessageTxid)" target="_blank" flat dense
+              color="secondary" label="View Tx in Explorer" />
+            <div>Tx: {{ shortenTx(ui.statusMessageTxid) }} <q-btn dense icon="content_copy" size="xs"
+                @click.stop="copyText(ui.statusMessageTxid)"></q-btn>
+            </div>
           </div>
         </div>
       </q-card-section>
@@ -23,7 +32,9 @@
 <script setup lang="ts">
 import { useUI } from 'src/stores/ui';
 import { computed, ref } from 'vue';
+import { shortenTx, copyText } from 'src/app/utils';
 const ui = useUI()
+
 const messageDialog = ref()
 const icon = computed(() => {
   switch (ui.statusMessageType) {
@@ -35,6 +46,12 @@ const icon = computed(() => {
       return { name: 'warning_amber', color: 'warning' }
   }
   return { name: 'info', color: 'secondary' }
+})
+
+const explore = computed(() => {
+  return (txid: string) => {
+    return `${process.env.TX_EXPLORER_BASE_URL}tx/${txid}`
+  }
 })
 
 const onBeforeHide = () => {
