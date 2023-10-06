@@ -13,12 +13,16 @@
                 first
                 output(v-out 0) of a previous transaction.
               </p>
+
               <p>
                 Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length }}</span> utxo that
                 we can use as genesis input. This
                 operation <span class="text-positive">requires 2</span> genesis input
                 (1 for your token, 1 for an AuthKey token). You can create a genesis input by clicking the button below.
+                If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys" flat color="secondary" dense
+                  no-caps class="q-pl-0" label="Click Here" style="text-indent:0px !important" />
               </p>
+
               <template v-slot:action>
                 <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
