@@ -5,11 +5,13 @@
         <q-toolbar-title class="text-h5 text-bold text-center">{{ ui.statusMessageType }}</q-toolbar-title>
       </q-toolbar>
       <q-card-section>
-        <div class="text-center">
-          <q-avatar size="5em">
+        <div class="row justify-center text-center">
+          <q-avatar size="5em" class="col-12">
             <q-icon size="2em" :name="icon.name" :color="icon.color"></q-icon>
           </q-avatar>
-          <div class="text-center q-px-lg">{{ ui.statusMessage }}</div>
+          <div class="col-12 text-center q-px-lg text-wrap" style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
+            {{ ui.statusMessage }}
+          </div>
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
