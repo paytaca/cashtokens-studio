@@ -119,6 +119,7 @@ export class GenesisInput implements UtxoI {
       })
     } catch (error) {
       console.log(error)
+      delete this._processing
     } finally {
       delete this._processing
     }
