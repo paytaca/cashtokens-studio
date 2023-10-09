@@ -45,6 +45,9 @@ export const useUser = defineStore('user', {
     paginatedAuthKeys: {count: 0,limit: 0,offset: 0,next: null,previous: null,results: []},
     paginatedFtBalances: {count: 0,limit: 0,offset: 0,next: null,previous: null,results: []},
     paginatedNftCollections: {count: 0,limit: 0,offset: 0,next: null,previous: null,results: []},
+    walletBchBalance: '',
+    walletAddress: '',
+    walletTokenAddress: '',
   }),
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){

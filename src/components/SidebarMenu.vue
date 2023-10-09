@@ -89,7 +89,7 @@ const menu = computed<any[]>(() => {
           children: [
             {
               href: '#',
-              label: user.walletBchBalance ? Number(user.walletBchBalance) : '?',
+              label: user.walletBchBalance,
               avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
             }
           ]
@@ -148,7 +148,7 @@ watch(() => route.path, (currentPath) => {
 })
 
 onMounted(async () => {
-  console.log(qtree.value.expandAll())
+  qtree.value.expandAll()
 })
 
 </script>

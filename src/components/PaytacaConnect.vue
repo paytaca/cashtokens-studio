@@ -41,7 +41,8 @@ onMounted(async () => {
       user.walletAddress = formatAddress(await window.paytaca.address('bch'))
       user.wallet = await getWalletClass().watchOnly(user.walletAddress)
       user.walletTokenAddress = user.wallet.getTokenDepositAddress()
-      user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+      // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+      user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet.getDepositAddress()))?.spendable
       const userUtxos = await user.wallet.getAddressUtxos()
       filterAndStoreGenesisInputs(userUtxos)
       watchAddress(user.walletAddress)
@@ -55,8 +56,12 @@ onMounted(async () => {
 })
 
 watch(() => user.walletAddress, async (address) => {
-  if (address && !watching.value) {
-    watchAddress(address)
+  if (address) {
+
+    if (!watching.value) {
+      watchAddress(address)
+    }
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet!.getDepositAddress()))?.spendable
   }
 })
 
@@ -78,6 +83,7 @@ const connect = async () => {
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
     user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet.getDepositAddress()))?.spendable
+
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
   }
