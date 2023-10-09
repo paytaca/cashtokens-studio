@@ -12,7 +12,8 @@
           <q-input :model-value="nft.token?.tokenId" label="Token ID/Category" filled dense disable stack-label></q-input>
           <q-input :model-value="nft.token?.capability" label="Token Capability" filled dense disable
             stack-label></q-input>
-          <q-input :model-value="commitmentCopy" label="Token Commitment (read only)" filled dense stack-label>
+          <q-input :model-value="commitmentCopy" label="Token Commitment (read only)" filled dense stack-label
+            :disable="Boolean(nft.processing)">
             <template v-slot:prepend>
               <q-btn :label="commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
                 :icon-right="commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -30,7 +31,7 @@
               </q-btn>
             </template>
           </q-input>
-          <q-input v-model="form.to" label="Recipient's Address*" filled dense />
+          <q-input v-model="form.to" label="Recipient's Address*" filled dense :disable="Boolean(nft.processing)" />
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">

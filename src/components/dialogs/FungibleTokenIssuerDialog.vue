@@ -39,9 +39,8 @@
             label="New reserve supply (decimal)" filled dense disable bottom-slots>
             <template v-slot:hint>
               <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-              <div class="row justify-end text-italic">{{ String(BigInt(currentFtReserves) -
-                BigInt(form.tokeshiAmount ||
-                  form.amount)) }} (Raw FT Amount)</div>
+              <div class="row justify-end text-italic">{{ BigInt(currentFtReserves) -
+                BigInt(amountToSendRaw) }} (Raw FT Amount)</div>
             </template>
           </q-input>
           <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense>
@@ -52,7 +51,7 @@
           </q-input>
           <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal"
             @update:model-value="() => form.tokeshiAmount = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))"
-            filled dense bottom-slots :rules="[(v) => BigInt(v) <= BigInt(currentFtReserves) || 'Amount exceeds supply']">
+            filled dense bottom-slots :rules="[(v) => v <= currentFtReserves || 'Amount exceeds supply']">
             <template v-slot:hint>
               <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
                 class="row justify-end text-italic q-mb-sm">
@@ -65,7 +64,7 @@
                 class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
                 <span>Token amount </span>
                 <span class="text-weight-bold text-green-6">{{
-                  form.tokeshiAmount || 0
+                  amountToSendRaw
                 }}</span>
                 <span>(Raw FT Amount)</span>
               </div>
@@ -115,7 +114,7 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>({
   recipient: '',
-  amount: '0',
+  amount: '0'
 })
 
 
@@ -131,15 +130,22 @@ const newReserveSupplyDecimal = computed(() => {
 
 const tokenAmountInputRef = ref<QInput | null>(null)
 
+const amountToSendRaw = computed(() => {
+  if (props.authchainIdentity.tokenCategory?.decimals) {
+    console.log('d', props.authchainIdentity.tokenCategory?.decimals)
+    return numberToTokeshi(Number(form.value.amount), props.authchainIdentity.tokenCategory?.decimals?.toString())
+  }
+  return form.value.amount
+})
+
 const releaseTokensFromReserveSupply = async () => {
   if (!form.value || !form.value.recipient || Number(form.value.amount) <= 0) {
     return $q.notify({ type: 'negative', message: 'Error!Amount and recipient required!' })
   }
 
   try {
-    const amountToSend = form.value.tokeshiAmount ? form.value.tokeshiAmount : form.value.amount
-    console.log('Amount to send', amountToSend)
-    const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: amountToSend })
+
+    const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: amountToSendRaw.value.toString() })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
       emit('tokensIssued', {
@@ -149,10 +155,10 @@ const releaseTokensFromReserveSupply = async () => {
         txid: tx,
         txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
         timestamp: new Date().getTime(),
-        successMsg: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
+        successMsg: `Issued ${String(form.value.amount)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
       })
       ui.setStatusMessage({
-        statusMessage: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
+        statusMessage: `Issued ${String(form.value.amount)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
