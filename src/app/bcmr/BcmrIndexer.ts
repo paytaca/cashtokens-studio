@@ -45,7 +45,7 @@ export class BcmrIndexer {
   /**
    * Download entire BCMR content from BCMR indexer
    */
-  async fetchBcmrContents(tokenId:string): Promise<Registry|undefined> {
+  async fetchBcmrContents(tokenId:string): Promise<Registry|undefined|{error: string}> {
     try {
       this.processing = 'Downloading token registry'
       const r = await fetch(`${process.env.BCMR_API}bcmr/${tokenId}`)  

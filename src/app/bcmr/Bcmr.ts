@@ -47,7 +47,7 @@ export class Bcmr implements Registry {
   }
 
   get versionString():string {
-    this._versionString = `${this.version.major}.${this.version.minor}.${this.version.patch}`
+    this._versionString = `${this.version?.major || 0 }.${this.version?.minor || 0 }.${this.version?.patch || 0 }`
     return this._versionString
   }
 

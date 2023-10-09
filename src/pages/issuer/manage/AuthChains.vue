@@ -16,7 +16,7 @@
           <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
             { label: 'Simple View', value: 'simple' },
             { label: 'Detailed View', value: 'detailed' },
-          ]" size="md" dense no-caps />
+          ]" size="md" dense no-caps flat />
         </div>
         <div class="q-pa-lg flex flex-center">
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
@@ -289,7 +289,7 @@ const viewToken = (token: AuthchainIdentity, b: any) => {
   if ((b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) && !b.target.className?.includes('col-authkey')) {
     ui.tokenInView = token
     // router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
-    router.push(`/issuer/manage/token/${token.tokenCategory?.category}`)
+    router.push(`/issuer/manage/token/${token.token?.tokenId}`)
   }
 }
 
