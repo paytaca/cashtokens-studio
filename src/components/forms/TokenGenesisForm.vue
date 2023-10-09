@@ -118,6 +118,37 @@
           </i>
         </div>
       </template>
+      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://"
+        :disable="Boolean(cashToken?.processing)" dense>
+        <template v-slot:prepend>
+          <q-icon name="web" flat></q-icon>
+        </template>
+      </q-input>
+      <div class="row justify-end items-center">
+        <div v-if="genesisTokenMetadata.links">
+          <span v-for="linkName, i in Object.keys(genesisTokenMetadata.links)" :key="'link-' + i">
+            <!-- {{ Boolean(genesisTokenMetadata.links[linkName]) }} -->
+            <span v-if="Boolean(genesisTokenMetadata.links[linkName])">
+              <span v-if="linkName === 'youtube'">
+                <q-icon name="smart_display" size="sm"></q-icon>
+              </span>
+              <span v-else-if="linkName === 'blog'">
+                <q-icon name="book" size="sm"></q-icon>
+              </span>
+              <span v-else-if="linkName === 'twitter'">
+                <q-icon name="clear" size="sm"></q-icon>
+              </span>
+              <span v-else>
+                <q-icon :name="linkName" size="sm"></q-icon>
+              </span>
+            </span>
+          </span>
+        </div>
+        <q-btn @click="openAddLinkDialog(AddBcmrLinkDialog.__name, {})"
+          :label="!genesisTokenMetadata.links ? 'Add Links' : 'Edit Links'" color="secondary" dense flat
+          :icon="!genesisTokenMetadata.links ? 'add' : undefined">
+        </q-btn>
+      </div>
 
       <div class="row justify-center">
         <q-uploader ref="iconUploader" @uploaded="onTokenIconUpload" field-name="icon"
@@ -151,7 +182,7 @@
           " color="primary" size="lg" />
     </div>
     <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)" :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name"
-      @close="hideBcmrLinkAdderDialog" :links="genesisTokenMetadata.links" @confirm="(links) => {
+      @close="hideBcmrLinkAdderDialog" @confirm="(links) => {
         genesisTokenMetadata.links = links;
         hideBcmrLinkAdderDialog()
       }" persistent />

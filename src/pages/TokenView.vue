@@ -3,13 +3,21 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <q-banner :class="!$q.dark.isActive ? 'bg-grey-4' : ''" style="border-radius: 1em;">
+          <div class="row justify-end">
+            <q-btn color="negative" icon="close" @click.stop="router.back()" flat>
+              <q-tooltip>Close</q-tooltip>
+            </q-btn>
+          </div>
           <div class="row q-px-md q-py-md flex justify-center">
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
               <div class="row justify-center q-px-sm q-py-sm" style="border-radius: 1em;">
-                <q-avatar class="col-12 q-mb-sm" size="8em">
-                  <img v-if="ui.tokenInView?.tokenUris?.icon" :src="ui.tokenInView?.tokenUris?.icon" alt="">
-                  <q-icon v-else name="token" color="grey-8"></q-icon>
-                </q-avatar>
+                <div>
+                  <q-avatar class="col-12 q-mb-sm" size="8em">
+                    <img v-if="ui.tokenInView?.tokenUris?.icon" :src="ui.tokenInView?.tokenUris?.icon" alt="">
+                    <q-icon v-else name="token" color="grey-8"></q-icon>
+                  </q-avatar>
+
+                </div>
                 <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
                   :symbol="ui.tokenInView?.tokenCategory?.symbol" />
               </div>
@@ -45,7 +53,7 @@
               </q-markup-table>
             </div>
           </div>
-          <div>
+          <div v-if="status === 'active'">
             <q-btn id="authchain-action-buttons" icon="menu" size="md" round flat dense
               @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
               <q-menu>
@@ -70,6 +78,9 @@
               </q-menu>
             </q-btn>
           </div>
+          <q-icon v-if="status === 'burned'" name="local_fire_department" color="negative" size="lg">
+            <q-tooltip>This is token is burned</q-tooltip>
+          </q-icon>
           <AuthchainRegistryPublisherDialog v-if="dialog"
             :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
             :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
@@ -90,8 +101,10 @@
             <i>{{ bcmrIndexer.processing }}</i>
           </span>
         </div>
-        <BcmrForm v-if="bcmr" :registry="bcmr" />
+        <BcmrForm v-if="bcmr" :registry="bcmr" :registry-loading="Boolean(bcmrIndexer.processing)"
+          :authchain-identity="(ui.tokenInView as AuthchainIdentity)" />
       </div>
+
     </div>
   </q-page>
 </template>
@@ -117,11 +130,15 @@ const router = useRouter()
 const bcmr = ref<Bcmr>()
 const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const status = ref<'burned' | 'active' | 'unguarded'>('active')
 
 onMounted(async () => {
   if (ui.tokenInView?.token?.tokenId) {
     try {
-      const bcmrContents: Registry | undefined = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
+      const bcmrContents: any = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
+      if (!bcmrContents || bcmrContents?.error) {
+        return
+      }
       if (bcmrContents) {
         bcmr.value = new Bcmr(bcmrContents)
         bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
@@ -131,15 +148,14 @@ onMounted(async () => {
     }
 
   }
-
 })
 
 const onUnguard = () => {
-  console.log('Implement onUnguard')
+  status.value = 'unguarded'
 }
 
 const onBurn = () => {
-  router.back()
+  status.value = 'burned'
 }
 
 </script>
