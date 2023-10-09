@@ -5,11 +5,11 @@
         <q-btn type="a" dense no-caps @click="readOnly = !readOnly" flat :color="readOnly ? 'negative' : 'secondary'">
           <template v-slot:default>
             <span v-if="!readOnly"><q-icon name="edit"></q-icon>
-              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to disable editing</q-tooltip>
+              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to disable edit</q-tooltip>
             </span>
             <span v-else><q-icon name="edit_off"> </q-icon>
               (Read only)
-              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to enable editing</q-tooltip>
+              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to edit</q-tooltip>
             </span>
 
           </template>
