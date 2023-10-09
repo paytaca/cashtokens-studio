@@ -71,13 +71,36 @@
             :model-value="bcmr?.identitySnapshot?.description" label="Token identity description" filled dense></q-input>
         </div>
       </q-expansion-item>
-      <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
+      <!-- <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
         <div class="q-mx-md q-gutter-sm q-my-md">
           <div v-for=" uriName, i  in  Object.keys(bcmr?.identitySnapshot?.uris || {}) " :key="i">
             <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setUri(uriName, v)"
               :model-value="bcmr?.identitySnapshot?.uris?.[uriName]" :label="uriName" filled dense />
           </div>
         </div>
+      </q-expansion-item> -->
+      <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
+        <div class="q-mx-md q-gutter-sm q-my-md">
+          <div v-for=" uriName, i  in  Object.keys(bcmr?.identitySnapshot?.uris || {}) " :key="i">
+            <q-input input-class="registry-field" @update:model-value="(v: any) => bcmr?.setUri(uriName, v)"
+              :model-value="bcmr?.identitySnapshot?.uris?.[uriName]" :label="uriName" filled dense />
+          </div>
+        </div>
+        <div class="text-right">
+          <q-btn @click="openAddLinkDialog(AddBcmrLinkDialog.__name, {})"
+            :label="!bcmr?.identitySnapshot?.uris ? 'Add Links' : 'Edit Links'" color="secondary" dense flat
+            :icon="!bcmr?.identitySnapshot?.uris ? 'add' : undefined">
+          </q-btn>
+        </div>
+
+        <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)"
+          :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name" @close="hideBcmrLinkAdderDialog"
+          :links="bcmr?.identitySnapshot?.uris" @confirm="(links) => {
+            if (Object.keys(links).length > 0) {
+              bcmr?.addUri(links);
+            }
+            hideBcmrLinkAdderDialog()
+          }" persistent />
       </q-expansion-item>
       <q-expansion-item label="Token Category Details" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
@@ -149,12 +172,13 @@ import { NftType, Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
+import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
 const $q = useQuasar()
 const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
 const props = defineProps<{ registry?: Bcmr }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
-
+const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: hideBcmrLinkAdderDialog } = useDialogs()
 
 const readOnly = ref<boolean>(true)
 

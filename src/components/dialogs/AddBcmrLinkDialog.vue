@@ -5,6 +5,11 @@
         <q-toolbar-title class="text-h5 text-bold">Add Links</q-toolbar-title>
       </q-toolbar>
       <q-card-section>
+        <q-input v-model="form.web" dense flat label="Web" clearable>
+          <template v-slot:prepend>
+            <q-icon name="web"></q-icon>
+          </template>
+        </q-input>
         <q-input v-model="form.support" dense flat label="Support" clearable>
           <template v-slot:prepend>
             <q-icon name="support"></q-icon>
@@ -60,6 +65,7 @@ import { onMounted, ref } from 'vue';
 
 const props = defineProps<{
   links?: {
+    web?: string,
     telegram?: string,
     youtube?: string,
     twitter?: string,
@@ -73,6 +79,7 @@ const props = defineProps<{
 }>()
 
 const form = ref<{
+  web?: string,
   telegram: string,
   youtube: string,
   twitter: string,
@@ -83,6 +90,7 @@ const form = ref<{
   chat: string,
   support: string,
 }>({
+  web: '',
   telegram: '',
   youtube: '',
   twitter: '',
@@ -97,6 +105,7 @@ const form = ref<{
 onMounted(() => {
   if (props.links) {
     form.value = {
+      web: '',
       telegram: '',
       youtube: '',
       twitter: '',
