@@ -79,7 +79,7 @@
             </q-btn>
           </div>
           <q-icon v-if="status === 'burned'" name="local_fire_department" color="negative" size="lg">
-            <q-tooltip>This is token is burned</q-tooltip>
+            <q-tooltip>This token is burned</q-tooltip>
           </q-icon>
           <AuthchainRegistryPublisherDialog v-if="dialog"
             :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
