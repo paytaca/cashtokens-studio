@@ -43,8 +43,10 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
 import { shortenTokenId } from 'src/app/utils';
+import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
+const ui = useUI()
 const { $ebus } = useEventBus()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity, url?: string, contentHash?: string }>()
 const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean }>({
@@ -72,9 +74,18 @@ const publish = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
       })
+      ui.setStatusMessage({
+        statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
     }
   } catch (error: any) {
     console.log(error)
+    ui.setStatusMessage({
+      statusMessage: `Error! ${error.message}`,
+      statusMessageType: 'error',
+    })
     $q.notify({ type: 'negative', message: error.message })
   }
 }

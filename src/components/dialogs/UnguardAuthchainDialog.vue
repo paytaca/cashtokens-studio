@@ -26,19 +26,22 @@
   </q-dialog>
 </template>
 <script setup lang="ts">
+import { Ref, ref } from 'vue';
 import { AuthchainIdentity } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useQuasar } from 'quasar';
 import shortenTx from 'src/app/utils/shortenTx';
 import { useEventBus } from 'src/composables';
 import { shortenTokenId } from 'src/app/utils';
-import { Ref, ref } from 'vue';
+import { useUI } from 'src/stores/ui';
+
 
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const emit = defineEmits<{
   (e: 'identityUnguarded'): void
 }>()
 const $q = useQuasar()
+const ui = useUI()
 const { $ebus } = useEventBus()
 const dialogElRef = ref()
 
@@ -55,10 +58,18 @@ const unguardAuthchain = async () => {
       })
       emit('identityUnguarded')
       dialogElRef.value?.hide()
-
+      ui.setStatusMessage({
+        statusMessage: `Released ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} from AuthGuard`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
     }
   } catch (error: any) {
     console.log(error)
+    ui.setStatusMessage({
+      statusMessage: `Error! ${error.message}`,
+      statusMessageType: 'error',
+    })
     $q.notify({ type: 'positive', message: 'Txn Failed ' + error.message })
   }
 

@@ -92,10 +92,13 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import shortenTokenId from 'src/app/utils/shortenTokenId';
 import { useEventBus } from 'src/composables';
+import { useUI } from 'src/stores/ui'
 
 const emit = defineEmits<{
   (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
 }>()
+
+const ui = useUI()
 
 const props = defineProps<{
   authchainIdentity: AuthchainIdentity,
@@ -139,17 +142,27 @@ const releaseTokensFromReserveSupply = async () => {
     const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: amountToSend })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+      emit('tokensIssued', {
+        tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
+      })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
+        timestamp: new Date().getTime(),
+        successMsg: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
+      })
+      ui.setStatusMessage({
+        statusMessage: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
     }
-    emit('tokensIssued', {
-      tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
-    })
-    $ebus?.emit('transaction', {
-      txid: tx,
-      txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
-      timestamp: new Date().getTime(),
-      successMsg: `Issued ${String(amountToSend)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
-    })
   } catch (error: any) {
+
+    ui.setStatusMessage({
+      statusMessage: error.message,
+      statusMessageType: 'error'
+    })
     return $q.notify({ type: 'negative', message: error.message })
   }
 

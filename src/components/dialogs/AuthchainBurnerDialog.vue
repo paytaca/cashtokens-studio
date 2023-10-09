@@ -35,11 +35,13 @@ import { shortenTokenId } from 'src/app/utils';
 import shortenTx from 'src/app/utils/shortenTx';
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
+import { useUI } from 'src/stores/ui';
 import { ref } from 'vue';
 defineOptions({ name: 'AuthchainBurner' })
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
+const ui = useUI()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const authchainBurnerDialogRef = ref()
 const emit = defineEmits<{
@@ -59,11 +61,18 @@ const burn = async () => {
       })
       emit('identityBurned')
       authchainBurnerDialogRef.value?.hide()
-
+      ui.setStatusMessage({
+        statusMessage: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s authchain identity`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
 
     }
   } catch (error: any) {
-    console.log(error)
+    ui.setStatusMessage({
+      statusMessage: `Error! ${error.message}`,
+      statusMessageType: 'error',
+    })
     $q.notify({ type: 'negative', message: 'Failed!' + error.message })
   }
 }
