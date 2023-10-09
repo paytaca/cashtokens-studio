@@ -1,7 +1,19 @@
 <template>
-  <q-form>
+  <q-form disable>
     <div v-if="bcmr" class="row q-mb-md rounded-borders" :class="!$q.dark.isActive ? 'bg-grey-4' : 'bg-grey-10'">
       <div class="col-12 q-gutter-sm q-py-sm row items-center justify-end">
+        <q-btn type="a" dense no-caps @click="readOnly = !readOnly" flat :color="readOnly ? 'negative' : 'secondary'">
+          <template v-slot:default>
+            <span v-if="!readOnly"><q-icon name="edit"></q-icon>
+              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to disable editing</q-tooltip>
+            </span>
+            <span v-else><q-icon name="edit_off"> </q-icon>
+              (Read only)
+              <q-tooltip anchor="top middle" self="top middle" :offset="[10, 10]">Click to enable editing</q-tooltip>
+            </span>
+
+          </template>
+        </q-btn>
         <q-btn type="a" dense no-caps color="secondary" icon="cloud_download" @click="downloadBcmr" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Download Registry</span>
@@ -40,36 +52,38 @@
     <q-banner class="border-rounded" :class="!$q.dark.isActive ? 'bg-grey-3' : 'bg-grey-10'" rounded>
       <q-expansion-item label="Registry" class="q-px-md q-pt-sm q-my-sm" icon="menu_book">
         <div class="q-mx-md q-gutter-sm q-my-md">
-          <q-input @update:model-value="(v: any) => bcmr?.setSchema(v)" :model-value="bcmr?.$schema" label="Schema" filled
-            dense disable></q-input>
-          <q-input @update:model-value="(v: any) => bcmr?.setVersion(v)" :model-value="bcmr?.versionString"
-            label="Registry Version" filled dense></q-input>
-          <q-input :model-value="bcmr?.latestRevision" label="Latest Revision" disable filled dense></q-input>
-          <q-input @update:model-value="(v: any) => bcmr?.setLicense(v)" :model-value="bcmr?.license" label="License"
-            placeholder="Example: CC0-1.0" aria-placeholder="Example: CC0-1.0" filled dense></q-input>
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setSchema(v)"
+            :model-value="bcmr?.$schema" label="Schema" filled dense disable></q-input>
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setVersion(v)"
+            :model-value="bcmr?.versionString" label="Registry Version" filled dense></q-input>
+          <q-input class="registry-field" :model-value="bcmr?.latestRevision" label="Latest Revision" disable filled
+            dense></q-input>
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setLicense(v)"
+            :model-value="bcmr?.license" label="License" placeholder="Example: CC0-1.0"
+            aria-placeholder="Example: CC0-1.0" filled dense></q-input>
         </div>
       </q-expansion-item>
       <q-expansion-item label="Token Identity" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
-          <q-input @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
             :model-value="bcmr?.identitySnapshot?.name" label="Token identity name" filled dense></q-input>
-          <q-input @update:model-value="(v: any) => bcmr?.setTokenIdentityDescription(v)"
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityDescription(v)"
             :model-value="bcmr?.identitySnapshot?.description" label="Token identity description" filled dense></q-input>
         </div>
       </q-expansion-item>
       <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
         <div class="q-mx-md q-gutter-sm q-my-md">
           <div v-for=" uriName, i  in  Object.keys(bcmr?.identitySnapshot?.uris || {}) " :key="i">
-            <q-input @update:model-value="(v: any) => bcmr?.setUri(uriName, v)"
+            <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setUri(uriName, v)"
               :model-value="bcmr?.identitySnapshot?.uris?.[uriName]" :label="uriName" filled dense />
           </div>
         </div>
       </q-expansion-item>
       <q-expansion-item label="Token Category Details" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
-          <q-input @update:model-value="(v: any) => bcmr?.setTokenSymbol(v)"
+          <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenSymbol(v)"
             :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Token category symbol" filled dense></q-input>
-          <q-input v-if="Number(bcmr?.authchainIdentity?.token?.amount) > 0"
+          <q-input class="registry-field" v-if="Number(bcmr?.authchainIdentity?.token?.amount) > 0"
             @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
             :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
         </div>
@@ -133,7 +147,7 @@ import { useQuasar } from 'quasar'
 import { AuthchainIdentity, Bcmr } from 'src/app';
 import { NftType, Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import { useDialogs } from 'src/composables';
-import { onMounted, ref, computed, onBeforeUnmount, watch } from 'vue';
+import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 const $q = useQuasar()
 const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
@@ -141,6 +155,8 @@ const props = defineProps<{ registry?: Bcmr }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
 
+
+const readOnly = ref<boolean>(true)
 
 const saved = computed(() => {
   if (bcmr.value && registryStorageArtifacts.value) {
@@ -208,12 +224,28 @@ const updateNftPage = () => {
     ) as [{ [commitmentHex: string]: NftType }]
 
   }
+}
 
+const setFormToWritableOrReadOnly = () => {
+  const inputs: any = document.getElementsByClassName("registry-field")
+  if (readOnly.value) {
+    for (let i of inputs) {
+      i.setAttribute("disabled", "true")
+    }
+  } else {
+    for (let i of inputs) {
+      i.removeAttribute("disabled")
+    }
+  }
 }
 
 watch(() => nftsPagination.value.currentPage, (v) => {
   console.log(v)
   updateNftPage()
+})
+
+watch(() => readOnly.value, () => {
+  setFormToWritableOrReadOnly()
 })
 
 onMounted(() => {
@@ -230,7 +262,10 @@ onMounted(() => {
   }
   updateNftPage()
   initNftsPagination()
+  setFormToWritableOrReadOnly()
 })
+
+
 
 onBeforeUnmount(() => {
   if (registryStorageArtifacts.value && registryStorageArtifacts.value.length > 0) {
