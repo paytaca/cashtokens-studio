@@ -23,7 +23,8 @@
           </q-input>
           <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense>
             <template v-slot:append>
-              <q-btn color="warning" flat dense @click="form.amount = String(tokenBalance.balance)">Send
+              <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
+                dense @click="form.amount = String(tokenBalance.balance)">Send
                 all</q-btn>
             </template>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
@@ -40,7 +41,8 @@
           </div>
           <q-input v-model="form.to" label="Recipient's Address" filled dense>
             <template v-slot:append>
-              <q-btn color="warning" flat dense @click="form.to = (user.wallet?.getTokenDepositAddress() as string)">Send
+              <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
+                dense @click="form.to = (user.wallet?.getTokenDepositAddress() as string)">Send
                 to
                 self</q-btn>
             </template>
@@ -67,6 +69,7 @@ import { useQuasar } from 'quasar';
 import { numberToTokeshi, shortenAddress, shortenTokenId, shortenTx, tokeshiToNumber } from 'src/app/utils';
 import { ProcessingMessage } from 'src/app'
 import { useEventBus } from 'src/composables';
+import { useUI } from 'src/stores/ui'
 const props = defineProps<{
   tokenBalance: FungibleTokenBalance
 }>()
@@ -76,6 +79,7 @@ const emit = defineEmits<{
 
 const $q = useQuasar()
 const user = useUser()
+const ui = useUI()
 const { $ebus } = useEventBus()
 const currentBalanceWithDecimal = computed(() => {
   if (props.tokenBalance.tokenCategory?.decimals) {
@@ -114,12 +118,24 @@ const send = async () => {
         txid: tx,
         txType: 'CashToken.transferFT',
         timestamp: new Date().getTime(),
-        successMsg: `Transferred ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
+        successMsg: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
       })
       emit('ftTransferred', { tokenId: props.tokenBalance.tokenId, recipient: form.value.to })
+      ui.setStatusMessage({
+        statusMessage: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
+
     }
-  } catch (error) {
+  } catch (error: any) {
     console.log(error)
+    ui.setStatusMessage({
+      statusMessage: error.message,
+      statusMessageType: 'error'
+    })
+
+    $q.notify({ type: 'negative', message: error.message })
   }
 }
 

@@ -51,7 +51,7 @@ import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
 import { shortenAddress, shortenTokenId } from 'src/app/utils';
 import { NftType } from 'src/app/bcmr/bcmr-v2.schema';
-
+import { useUI } from 'src/stores/ui'
 const props = defineProps<{
   decimals?: string,
   nft: CashToken
@@ -62,6 +62,7 @@ const emit = defineEmits<{
 }>()
 
 const $q = useQuasar()
+const ui = useUI()
 const nftMetadata = ref<NftType>()
 const commitmentCopy = ref<string>()
 const commitmentFormat = ref<'decimal' | 'hex'>('hex')
@@ -95,10 +96,20 @@ const transferNFT = async () => {
           successMsg: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`
         })
         emit('nftTransferred', { tokenId: props.nft.token.tokenId, recipient: form.value.to })
+        ui.setStatusMessage({
+          statusMessage: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`,
+          statusMessageType: 'success',
+          statusMessageTxid: tx
+        })
       }
     } catch (error: any) {
-      $q.notify({ type: 'negative', message: error.message })
       console.log(error)
+      ui.setStatusMessage({
+        statusMessage: error.message,
+        statusMessageType: 'error'
+      })
+      $q.notify({ type: 'negative', message: error.message })
+
     }
   }
 }

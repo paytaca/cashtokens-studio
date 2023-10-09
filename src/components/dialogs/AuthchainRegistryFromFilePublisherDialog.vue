@@ -69,9 +69,11 @@ import { useEventBus } from 'src/composables';
 import { shortenTokenId } from 'src/app/utils';
 import { BcmrStorageArtifact } from 'src/app/types';
 import { copyText } from 'src/app/utils';
+import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
+const ui = useUI()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const uploaded = ref<boolean>(false)
 const uploadArtifact = ref<BcmrStorageArtifact>()
@@ -112,6 +114,11 @@ const publish = async () => {
         txType: 'AuthchainIdentity.publish',
         timestamp: new Date().getTime(),
         successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
+      })
+      ui.setStatusMessage({
+        statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
       })
     }
   } catch (error: any) {

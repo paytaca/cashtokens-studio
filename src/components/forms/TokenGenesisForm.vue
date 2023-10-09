@@ -85,7 +85,8 @@
               :icon-right="genesisToken.commitmentFormat === 'decimal' ? 'pin' : undefined" />
           </template>
           <template v-slot:append>
-            <q-btn @click="convertCommitment" color="warning" flat dense
+            <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
+              :class="$q.dark.isActive ? '' : 'text-black'"
               :label="genesisToken.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
               <q-tooltip>
                 {{
@@ -96,6 +97,26 @@
             </q-btn>
           </template>
         </q-input>
+        <div
+          v-if="genesisToken.capability === 'none' && genesisToken.commitment && genesisToken.commitmentFormat === 'hex'"
+          class="row justify-end items-center">
+          <code>{{ convertBigIntToHexLE(BigInt(parseInt(genesisToken.commitment, 16))) }}</code>
+          <i>(Raw commitment value)
+            <q-icon name="info">
+              <q-tooltip>The actual value on-chain.</q-tooltip>
+            </q-icon>
+          </i>
+        </div>
+        <div
+          v-if="genesisToken.capability === 'none' && genesisToken.commitment && genesisToken.commitmentFormat === 'decimal'"
+          class="row justify-end items-center">
+          <code>{{ convertBigIntToHexLE(BigInt(genesisToken.commitment)) }}</code>
+          <i>(Raw commitment value)
+            <q-icon name="info">
+              <q-tooltip>The actual value on-chain.</q-tooltip>
+            </q-icon>
+          </i>
+        </div>
       </template>
 
       <div class="row justify-center">
@@ -113,37 +134,6 @@
           color="secondary" icon="preview" />
         <q-btn label="Download Registry" type="a" dense flat no-caps color="secondary" icon="cloud_download"
           @click="downloadBcmr" />
-      </div>
-      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://"
-        :disable="Boolean(cashToken?.processing)" dense>
-        <template v-slot:prepend>
-          <q-icon name="web" flat></q-icon>
-        </template>
-      </q-input>
-      <div class="row justify-end items-center">
-        <div v-if="genesisTokenMetadata.links">
-          <span v-for="linkName, i in Object.keys(genesisTokenMetadata.links)" :key="'link-' + i">
-            <!-- {{ Boolean(genesisTokenMetadata.links[linkName]) }} -->
-            <span v-if="Boolean(genesisTokenMetadata.links[linkName])">
-              <span v-if="linkName === 'youtube'">
-                <q-icon name="smart_display" size="sm"></q-icon>
-              </span>
-              <span v-else-if="linkName === 'blog'">
-                <q-icon name="book" size="sm"></q-icon>
-              </span>
-              <span v-else-if="linkName === 'twitter'">
-                <q-icon name="clear" size="sm"></q-icon>
-              </span>
-              <span v-else>
-                <q-icon :name="linkName" size="sm"></q-icon>
-              </span>
-            </span>
-          </span>
-        </div>
-        <q-btn @click="openAddLinkDialog(AddBcmrLinkDialog.__name, {})"
-          :label="!genesisTokenMetadata.links ? 'Add Links' : 'Edit Links'" color="secondary" dense flat
-          :icon="!genesisTokenMetadata.links ? 'add' : undefined">
-        </q-btn>
       </div>
 
     </template>
@@ -182,7 +172,7 @@ import { useDialogs, useEventBus } from 'src/composables'
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
-import { shortenTx } from 'src/app/utils'
+import { numberToTokeshi, shortenTx } from 'src/app/utils'
 import { useUI } from 'src/stores/ui'
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft', // deprecated
@@ -330,6 +320,12 @@ watch(() => genesisToken.value.commitment, (commitment) => {
   }
   if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
     genesisToken.value.commitmentFormat = 'hex'
+  }
+})
+
+watch(() => tType.value, (tokenType) => {
+  if (tokenType === 'ft') {
+    genesisToken.value.commitment = ''
   }
 })
 

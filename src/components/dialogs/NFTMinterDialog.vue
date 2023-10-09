@@ -48,6 +48,24 @@
               </q-btn>
             </template>
           </q-input>
+          <div v-if="form.capability === 'none' && form.commitment && form.commitmentFormat === 'hex'"
+            class="row justify-end items-center">
+            <code>{{ convertBigIntToHexLE(BigInt(parseInt(form.commitment, 16))) }}</code>
+            <i>(Raw commitment value)
+              <q-icon name="info">
+                <q-tooltip>The actual value on-chain.</q-tooltip>
+              </q-icon>
+            </i>
+          </div>
+          <div v-if="form.capability === 'none' && form.commitment && form.commitmentFormat === 'decimal'"
+            class="row justify-end items-center">
+            <code>{{ convertBigIntToHexLE(BigInt(form.commitment)) }}</code>
+            <i>(Raw commitment value)
+              <q-icon name="info">
+                <q-tooltip>The actual value on-chain.</q-tooltip>
+              </q-icon>
+            </i>
+          </div>
           <!-- <q-input v-model="form.commitment" label="Commitment" filled dense>
           </q-input> -->
           <q-input v-model="form.recipient" label="Recipient's Address" filled dense>
@@ -76,11 +94,15 @@ import BusyButton from 'src/components/BusyButton.vue'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
 import { shortenTokenId } from 'src/app/utils';
+import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
+import { useUI } from 'src/stores/ui';
 
 const props = defineProps<{
   minter: CashToken,
 }>()
+
+
 
 const emit = defineEmits<{
   (e: 'nftMinted', val: { tokenId: string, recipient: string, capability: NFTCapability, commitment: string }): void
@@ -89,6 +111,7 @@ const emit = defineEmits<{
 const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
+const ui = useUI()
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParseableNftCollection will be handled
@@ -145,8 +168,17 @@ const mintToken = async () => {
           timestamp: new Date().getTime(),
           successMsg: `Minted new ${props.minter?.tokenCategory?.symbol || shortenTokenId(props.minter.token!.tokenId)} NFT`
         })
+        ui.setStatusMessage({
+          statusMessage: `Minted new ${props.minter?.tokenCategory?.symbol || shortenTokenId(props.minter.token!.tokenId)} NFT`,
+          statusMessageType: 'success',
+          statusMessageTxid: tx
+        })
       }
     } catch (error: any) {
+      ui.setStatusMessage({
+        statusMessage: `Error! ${error.message}`,
+        statusMessageType: 'error',
+      })
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     }
   }
