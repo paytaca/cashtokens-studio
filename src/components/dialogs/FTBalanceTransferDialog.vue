@@ -21,7 +21,8 @@
               </q-avatar>
             </template>
           </q-input>
-          <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense>
+          <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense
+            :disable="Boolean(processingMessage?.processing)">
             <template v-slot:append>
               <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
                 dense @click="form.amount = String(tokenBalance.balance)">Send
@@ -39,10 +40,12 @@
             }}</span>
             <span>(Raw FT Amount)</span>
           </div>
-          <q-input v-model="form.to" label="Recipient's Address" filled dense>
+          <q-input v-model="form.to" label="Recipient's Address" filled dense
+            :disable="Boolean(processingMessage?.processing)">
             <template v-slot:append>
               <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
-                dense @click="form.to = (user.wallet?.getTokenDepositAddress() as string)">Send
+                dense @click="form.to = (user.wallet?.getTokenDepositAddress() as string)"
+                :disable="Boolean(processingMessage?.processing)">Send
                 to
                 self</q-btn>
             </template>
@@ -51,7 +54,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="processingMessage?.processing" color="primary"
-          :disable="currentBalanceWithDecimal < 0" />
+          :disable="currentBalanceWithDecimal < 0 || Boolean(processingMessage?.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
