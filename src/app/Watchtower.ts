@@ -157,15 +157,16 @@ export class Watchtower {
      * Get the address' BCH balance from watchtower
      */
     async fetchBchBalance(ownerAddress: string): Promise<BchBalance> {
+      let b
       try {
         const r = await fetch(`${this.apiBaseUri}balance/bch/${ownerAddress}`)
-        return await r.json()
+        b = await r.json()
       } catch (error) {
         this.error = error
       } finally {
         delete this.processing
-        return {}
       }
+      return b
     } 
 
   
