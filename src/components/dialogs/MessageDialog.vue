@@ -23,7 +23,7 @@
           </div>
         </div>
       </q-card-section>
-      <q-card-actions class="row justify-end">
+      <q-card-actions class="row justify-center">
         <q-btn color="primary" size="lg" v-close-popup>Ok</q-btn>
       </q-card-actions>
     </q-card>
