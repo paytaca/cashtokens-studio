@@ -38,12 +38,24 @@ export type NonFungibleTokenBalance = {
   commitment?: string
 } & FungibleTokenBalance
 
+
 export declare interface BcmrStorageArtifact {
   uris: {
     https: string,
     ipfs: string
   },
   contentHash: string
+}
+
+export declare interface IconStorageArtifact {
+  uris: {
+    https: string,
+    ipfs: string
+  },
+  nftStorageMetadata: {
+    ipnft: string,
+    url: string
+  }
 }
 
 export declare interface PaginatedData {
