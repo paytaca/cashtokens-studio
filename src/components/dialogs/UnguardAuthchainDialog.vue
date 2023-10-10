@@ -1,14 +1,17 @@
 <template>
   <q-dialog ref="dialogElRef" v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold">Release Authchain from Authguard</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold" style="text-wrap: wrap;">Release Authchain from
+          Authguard</q-toolbar-title>
+        <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <div class="q-mx-md text-justify">
           <q-icon name="warning" color="warning" size="md"></q-icon>
           <span class="text-wrap">
-            You are about to release the authchain's identity output from the AuthGuard covenant.
+            You are about to release the authchain's identity output from the AuthGuard contract.
             Doing so will transfer the authchain identity token to your regular token wallet address.
           </span>
         </div>
@@ -34,6 +37,7 @@ import shortenTx from 'src/app/utils/shortenTx';
 import { useEventBus } from 'src/composables';
 import { shortenTokenId } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
+import TokenCategory from 'src/components/TokenCategory.vue'
 
 
 const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
