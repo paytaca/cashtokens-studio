@@ -25,6 +25,11 @@
         <q-scroll-area style="position:relative; height:200vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
           <q-markup-table>
             <thead>
+              <tr v-if="authchainIdentities && watchtower.processing">
+                <th :colspan="viewType === 'simple' ? 7 : 8">
+                  <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+                </th>
+              </tr>
               <tr>
                 <th>#</th>
                 <th>Brand</th>
@@ -101,11 +106,6 @@
                       </q-list>
                     </q-menu>
                   </q-btn>
-                </td>
-              </tr>
-              <tr v-if="authchainIdentities && watchtower.processing">
-                <td :colspan="viewType === 'simple' ? 7 : 8">
-                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
                 </td>
               </tr>
               <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
@@ -193,6 +193,9 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
+    if (paginatedAuthchainIdentities.value) {
+      authchainIdentities.value = []
+    }
     if (pageNumber === 1) {
       pagination.value.offset = 0
     } else {
@@ -207,28 +210,6 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     )
     // populate 
     populateAuthchainIdentities(paginatedAuthchainIdentities.value)
-    // authchainIdentities.value = []
-    // const results = paginatedAuthchainIdentities.value.results
-    // for (let i = 0; i < results.length; i++) {
-    //   const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    //   const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
-    //   const {
-    //     txid,
-    //     vout,
-    //     satoshis,
-    //     height,
-    //     coinbase,
-    //     token
-    //   } = results[i]
-
-    //   const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
-    //   authchainIdentities.value.push(authchainIdentity)
-    // }
-
-    // authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    //   await a.resolveTokenCategory()
-    //   await a.resolveTokenUris()
-    // })
   }
 })
 

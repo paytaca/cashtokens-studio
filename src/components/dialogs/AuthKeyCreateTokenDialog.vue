@@ -1,6 +1,7 @@
 <template>
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-card-section>
         <template v-if="!genesisInput || !authKey">
           <q-banner :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>

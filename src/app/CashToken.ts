@@ -299,8 +299,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)
       return tx
-    } catch (error) {
+    } catch (error:any) {
       console.log(error)
+      throw new Error(error.message)
     } finally {
       delete this._processing
     }
@@ -551,8 +552,9 @@ export class CashToken implements UtxoI, PartialBcmr {
         }, 2000)
       }
       return tx
-    } catch (error) {
+    } catch (error: any) {
       console.log('Error:CashToken@mintChild', error)
+      throw new Error(error.message)
     } finally {
       delete this._processing
     }

@@ -111,6 +111,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
    * Burn the authchain identity output
    */
   async burn(): Promise<string | undefined> {
+    
+    
     this.ensureOwnerWallet()
     this._processing = 'Processing'
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > this.burningCost).map(toCashScript)[0]
@@ -166,6 +168,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       throw new Error('Error building transaction')
     }
     this._processing = 'Waiting for signature'
+    
     let signingResult
     try {
 
@@ -233,11 +236,13 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
 
     this._processing = 'Burning'
+    
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
-    } catch (error) {
+    } catch (error:any) {
       console.log('Error:AuthchainIdentity@', error)
+      throw new Error(error.message)
     } finally {
       delete this._processing
     }
@@ -541,8 +546,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
-    } catch (error) {
+    } catch (error:any) {
+      
       console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
+      throw new Error(error.message)
     } finally {
       delete this._processing
     }
@@ -687,8 +694,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     try {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
-    } catch (error) {
+    } catch (error:any) {
       console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
+      throw new Error(error.message)
     } finally {
       delete this._processing
     }
@@ -715,7 +723,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       this._processing = 'Checking token registry'
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
       this.tokenUris = await r.json()
-    } catch (error) {
+    } catch (error:any) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
       delete this._processing

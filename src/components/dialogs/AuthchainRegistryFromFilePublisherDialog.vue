@@ -1,8 +1,10 @@
 <template>
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold">Upload and Publish Registry</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold q-mb-md" style="text-wrap:wrap">Upload and Publish
+          Registry</q-toolbar-title>
         <TokenCategory :token-id="authchainIdentity?.token?.tokenId" />
       </q-toolbar>
       <div class="q-mx-md text-justify">
