@@ -45,7 +45,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, onMounted, ref, watch } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
@@ -78,6 +78,12 @@ watch(() => ui.statusMessage, (value) => {
   if (value) {
     console.log('value')
     messageDialog.value = true
+  }
+})
+
+onMounted(() => {
+  window.onbeforeunload = () => {
+    router.push('/')
   }
 })
 </script>

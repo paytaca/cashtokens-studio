@@ -42,7 +42,7 @@ onMounted(async () => {
       user.wallet = await getWalletClass().watchOnly(user.walletAddress)
       user.walletTokenAddress = user.wallet.getTokenDepositAddress()
       // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-      user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet.getDepositAddress()))?.spendable
+      user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
       const userUtxos = await user.wallet.getAddressUtxos()
       filterAndStoreGenesisInputs(userUtxos)
       watchAddress(user.walletAddress)
@@ -82,7 +82,7 @@ const connect = async () => {
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet.getDepositAddress()))?.spendable
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet?.getDepositAddress()))?.spendable
 
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
