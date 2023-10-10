@@ -92,15 +92,9 @@
             :icon="!bcmr?.identitySnapshot?.uris ? 'add' : undefined">
           </q-btn>
         </div>
-
         <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)"
           :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name" @close="hideBcmrLinkAdderDialog"
-          :links="bcmr?.identitySnapshot?.uris" @confirm="(links) => {
-            if (Object.keys(links).length > 0) {
-              bcmr?.addUri(links);
-            }
-            hideBcmrLinkAdderDialog()
-          }" persistent />
+          :links="bcmr?.identitySnapshot?.uris" @confirm="onConfirmAddLink" persistent />
       </q-expansion-item>
       <q-expansion-item label="Token Category Details" class="q-px-md q-pt-sm q-my-sm" icon="token">
         <div class="q-mx-md q-gutter-sm q-my-md">
@@ -168,19 +162,19 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
 import { AuthchainIdentity, Bcmr } from 'src/app';
-import { NftType, Registry } from 'src/app/bcmr/bcmr-v2.schema';
+import { NftType, Registry, URIs } from 'src/app/bcmr/bcmr-v2.schema';
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
 const $q = useQuasar()
 const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
-const props = defineProps<{ registry?: Bcmr }>()
+const props = defineProps<{ registry?: Bcmr, readOnly?: boolean }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
 const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: hideBcmrLinkAdderDialog } = useDialogs()
 
-const readOnly = ref<boolean>(true)
+const readOnly = ref<boolean>(props.readOnly !== undefined ? props.readOnly : true)
 
 const saved = computed(() => {
   if (bcmr.value && registryStorageArtifacts.value) {
@@ -263,6 +257,18 @@ const setFormToWritableOrReadOnly = () => {
   }
 }
 
+const onConfirmAddLink = (uris: URIs) => {
+  if (Object.keys(uris).length > 0) {
+    Object.keys(uris).forEach((uriName, i) => {
+      if (uris[uriName].length) {
+        bcmr.value?.addUri({ [uriName]: uris[uriName] })
+      }
+    })
+
+  }
+  hideBcmrLinkAdderDialog()
+}
+
 watch(() => nftsPagination.value.currentPage, (v) => {
   console.log(v)
   updateNftPage()
@@ -300,6 +306,9 @@ onBeforeUnmount(() => {
 const storeRegistryInIpfs = async () => {
   try {
     bcmr.value!.setLatestRevision(new Date().toISOString())
+    if (bcmr.value?.authchainIdentity?.authKey?.token?.tokenId) {
+      bcmr.value!.appendAuthGuardTokenStandardExtension(bcmr.value?.authchainIdentity?.authKey?.token?.tokenId)
+    }
     const artifact = await bcmr.value?.storeRegistry()
     if (artifact) {
       registryStorageArtifacts.value?.push({ contentHash: bcmr.value!.getContentHash(), artifact })
