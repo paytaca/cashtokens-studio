@@ -12,11 +12,10 @@
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
               <div class="row justify-center q-px-sm q-py-sm" style="border-radius: 1em;">
                 <div>
-                  <q-avatar class="col-12 q-mb-sm" size="8em">
+                  <q-avatar class="col-12 q-mb-sm" size="8em" style="visibility: visible !important;">
                     <img v-if="ui.tokenInView?.tokenUris?.icon" :src="ui.tokenInView?.tokenUris?.icon" alt="">
                     <q-icon v-else name="token" color="grey-8"></q-icon>
                   </q-avatar>
-
                 </div>
                 <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
                   :symbol="ui.tokenInView?.tokenCategory?.symbol" />
@@ -102,7 +101,15 @@
           </span>
         </div>
         <BcmrForm v-if="bcmr" :registry="bcmr" :registry-loading="Boolean(bcmrIndexer.processing)"
-          :authchain-identity="(ui.tokenInView as AuthchainIdentity)" />
+          :authchain-identity="(ui.tokenInView as AuthchainIdentity)" :read-only="bcmrReadOnly" />
+        <div v-else-if="!bcmr && Boolean(!bcmrIndexer.processing)" class="row justify-center q-gutter-sm items-center">
+          <span><q-icon name="warning" color="warning" class="q-mr-sm"></q-icon>Registry not found!</span>
+          <q-btn color="primary" @click.stop="createNewRegistry">
+            Create Registry
+            <q-tooltip>If you've just published and the registry still doesn't appear please wait awhile, the BCMR indexer
+              may not have picked it up yet.</q-tooltip>
+          </q-btn>
+        </div>
       </div>
 
     </div>
@@ -110,7 +117,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive } from 'vue';
+import { onMounted, ref, reactive, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
@@ -129,8 +136,11 @@ const ui = useUI()
 const router = useRouter()
 const bcmr = ref<Bcmr>()
 const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
+const bcmrReadOnly = ref<boolean>(true)
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const status = ref<'burned' | 'active' | 'unguarded'>('active')
+const bcmrIcon = ref()
+const newTokenIconPreview = ref()
 
 onMounted(async () => {
   if (ui.tokenInView?.token?.tokenId) {
@@ -146,9 +156,25 @@ onMounted(async () => {
     } catch (error) {
       console.log('Error downloading bcmr contents')
     }
-
   }
 })
+
+watch(() => bcmrIcon.value, (b) => {
+  if (b) {
+    newTokenIconPreview.value = URL.createObjectURL(b)
+  }
+})
+
+const createNewRegistry = () => {
+  bcmrReadOnly.value = false
+  bcmr.value = new Bcmr({
+    version: { major: 1, minor: 0, patch: 0 },
+    registryIdentity: ui.tokenInView!.token!.tokenId,
+    latestRevision: new Date().toISOString()
+  })
+  bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
+
+}
 
 const onUnguard = () => {
   status.value = 'unguarded'
