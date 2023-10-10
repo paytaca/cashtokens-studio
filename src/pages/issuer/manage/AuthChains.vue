@@ -101,7 +101,7 @@
                           Unguard Authchain
                         </q-item>
                         <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, identity)">
-                          Burn Authchain
+                          Burn Token
                         </q-item>
                       </q-list>
                     </q-menu>
