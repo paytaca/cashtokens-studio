@@ -7,10 +7,10 @@ import { PaginatedData } from 'src/app/types';
 type UserState = {
   connectedPaytacaAddress?: string,
   connectedPaytacaWalletBchBalance?: string | number,
-  walletBchBalance?: string | number,
-  walletAddress?: string,
-  walletTokenAddress?: string,
-  wallet?: Wallet,
+  walletBchBalance: string | number | undefined
+  walletAddress: string,
+  walletTokenAddress: string,
+  wallet: Wallet | undefined,
   /**
    * True if wallet is being watched
    */
@@ -48,6 +48,7 @@ export const useUser = defineStore('user', {
     walletBchBalance: '',
     walletAddress: '',
     walletTokenAddress: '',
+    wallet: undefined
   }),
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){

@@ -1,8 +1,8 @@
 <template>
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
-        <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
         <q-toolbar-title class="text-h5 row items-center">
           <span class="q-mx-sm">Mint</span>
           <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT' }}</span>

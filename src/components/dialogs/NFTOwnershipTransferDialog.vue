@@ -97,12 +97,13 @@ const transferNFT = async () => {
           timestamp: new Date().getTime(),
           successMsg: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`
         })
-        emit('nftTransferred', { tokenId: props.nft.token.tokenId, recipient: form.value.to })
+
         ui.setStatusMessage({
           statusMessage: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`,
           statusMessageType: 'success',
           statusMessageTxid: tx
         })
+        emit('nftTransferred', { tokenId: props.nft.token.tokenId, recipient: form.value.to })
       }
     } catch (error: any) {
       console.log(error)

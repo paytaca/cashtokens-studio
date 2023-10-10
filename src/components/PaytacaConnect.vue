@@ -61,7 +61,7 @@ watch(() => user.walletAddress, async (address) => {
     if (!watching.value) {
       watchAddress(address)
     }
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet!.getDepositAddress()))?.spendable
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
   }
 })
 
@@ -82,7 +82,7 @@ const connect = async () => {
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet?.getDepositAddress()))?.spendable
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
 
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
@@ -103,7 +103,7 @@ const watchAddress = async (address: string) => {
     eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
     user.updatingBalances = true
     // user.walletBchBalance = await user.wallet?.getBalance('sat') as string
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.wallet!.getDepositAddress()))?.spendable
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
     const userUtxos = await user.wallet?.getAddressUtxos()
     if (userUtxos) {

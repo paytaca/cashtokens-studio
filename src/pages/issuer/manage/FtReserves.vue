@@ -8,6 +8,16 @@
             {{ paginatedFtAuthchainIdentities?.count }}
           </q-badge>
         </h5>
+        <q-expansion-item label="Description">
+          <p>
+            These are the FT identities (utxos) that are locked in the <q-btn href="https://github.com/mr-zwets/AuthGuard"
+              target="_blank" color="secondary" flat dense label="AuthGuard" no-caps style="text-indent:0" /> contract,
+            of which you own the AuthKey. Any FT you create in CashTokens Studio will be listed here. The amount held by
+            each of the FT identity is considered as reserve supply. You can issue or release any amount from the reserve
+            supply
+            here.
+          </p>
+        </q-expansion-item>
         <div class="q-pa-lg flex flex-center">
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
             :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
@@ -51,15 +61,16 @@
               <!-- <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td> -->
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
-                <q-btn icon="more_vert" size="md" round flat dense>
-                  <q-menu>
+                <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
+                  <!-- <q-menu>
                     <q-list>
                       <q-item clickable v-close-popup
                         @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
                         Issue Tokens
                       </q-item>
                     </q-list>
-                  </q-menu>
+                  </q-menu> -->
                 </q-btn>
               </td>
             </tr>
@@ -232,13 +243,14 @@ const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string 
   //     authchainIdentities.value = [...values]
   //   })
 
-
+  console.log('TOKENS ISSUED')
+  hideDialog()
   refreshData().then(() => {
     if (paginatedFtAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     }
   })
-  hideDialog()
+
 
 }
 
