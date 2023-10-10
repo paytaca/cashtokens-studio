@@ -14,6 +14,11 @@
         </div>
         <q-markup-table>
           <thead>
+            <tr v-if="watchtower.processing && authchainIdentities">
+              <th colspan="6">
+                <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+              </th>
+            </tr>
             <tr>
               <th>#</th>
               <th>Brand</th>
@@ -58,11 +63,7 @@
                 </q-btn>
               </td>
             </tr>
-            <tr v-if="watchtower.processing && authchainIdentities">
-              <td colspan="6">
-                <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
-              </td>
-            </tr>
+
             <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
               <td colspan="6">
                 No data
