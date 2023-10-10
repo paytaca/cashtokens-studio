@@ -30,7 +30,7 @@
           :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs" style="width:100px;text-overflow: ellipsis;">
-              {{ saved ? 'Saved' : 'Store BCMR in IPFS' }}
+              {{ saved ? 'Saved in IPFS' : 'Save in IPFS' }}
             </span>
           </template>
           <template v-slot:loading>

@@ -124,12 +124,13 @@ const send = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
       })
-      emit('ftTransferred', { tokenId: props.tokenBalance.tokenId, recipient: form.value.to })
+
       ui.setStatusMessage({
         statusMessage: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
+      emit('ftTransferred', { tokenId: props.tokenBalance.tokenId, recipient: form.value.to })
 
     }
   } catch (error: any) {

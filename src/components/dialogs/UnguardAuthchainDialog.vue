@@ -60,13 +60,14 @@ const unguardAuthchain = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Released ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} from AuthGuard`
       })
-      emit('identityUnguarded')
+
       dialogElRef.value?.hide()
       ui.setStatusMessage({
         statusMessage: `Released ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} from AuthGuard`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
+      emit('identityUnguarded')
     }
   } catch (error: any) {
     console.log(error)

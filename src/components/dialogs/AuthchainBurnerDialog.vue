@@ -60,13 +60,14 @@ const burn = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s authchain identity`
       })
-      emit('identityBurned')
+
       authchainBurnerDialogRef.value?.hide()
       ui.setStatusMessage({
         statusMessage: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s authchain identity`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
+      emit('identityBurned')
 
     }
   } catch (error: any) {

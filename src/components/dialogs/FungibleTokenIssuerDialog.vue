@@ -1,8 +1,8 @@
 <template>
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
-        <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
         <q-toolbar-title class="text-h5 row items-center">
           <span class="q-mx-sm">Issue</span>
           <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
@@ -51,8 +51,8 @@
             </template>
           </q-input>
           <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal"
-            @update:model-value="() => form.tokeshiAmount = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))"
-            filled dense bottom-slots :rules="[(v) => v <= currentFtReserves || 'Amount exceeds supply']">
+            @update:model-value="() => amountToSendRaw = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))"
+            filled dense bottom-slots :rules="[(v) => Number(v) <= Number(currentFtReserves) || 'Amount exceeds supply']">
             <template v-slot:hint>
               <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
                 class="row justify-end text-italic q-mb-sm">
@@ -61,7 +61,7 @@
                 ignored.
               </div>
               <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-              <div v-if="form.amount <= currentFtReserves"
+              <div v-if="Number(form.amount) <= Number(currentFtReserves)"
                 class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
                 <span>Token amount </span>
                 <span class="text-weight-bold text-green-6">{{
@@ -69,6 +69,11 @@
                 }}</span>
                 <span>(Raw FT Amount)</span>
               </div>
+            </template>
+            <template v-if="authchainIdentity?.tokenUris?.icon" v-slot:prepend>
+              <q-avatar>
+                <img :src="authchainIdentity.tokenUris.icon" alt="">
+              </q-avatar>
             </template>
           </q-input>
         </q-form>
@@ -115,7 +120,7 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>({
   recipient: '',
-  amount: '0'
+  amount: ''
 })
 
 
@@ -149,9 +154,7 @@ const releaseTokensFromReserveSupply = async () => {
     const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: amountToSendRaw.value.toString() })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
-      emit('tokensIssued', {
-        tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
-      })
+
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
@@ -162,6 +165,9 @@ const releaseTokensFromReserveSupply = async () => {
         statusMessage: `Issued ${String(form.value.amount)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
         statusMessageType: 'success',
         statusMessageTxid: tx
+      })
+      emit('tokensIssued', {
+        tokenId: props.authchainIdentity.token!.tokenId, to: form.value.recipient, amount: form.value.amount
       })
     }
   } catch (error: any) {

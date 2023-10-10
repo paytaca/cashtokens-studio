@@ -4,7 +4,7 @@
       <div class="col-xs-12 col-md-10">
         <q-banner :class="!$q.dark.isActive ? 'bg-grey-4' : ''" style="border-radius: 1em;">
           <div class="row justify-end">
-            <q-btn color="negative" icon="close" @click.stop="router.back()" flat>
+            <q-btn color="negative" icon="close" @click.stop="router.replace('/issuer/manage/authchains')" flat>
               <q-tooltip>Close</q-tooltip>
             </q-btn>
           </div>

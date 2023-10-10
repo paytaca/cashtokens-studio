@@ -78,12 +78,13 @@ const publish = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
       })
-      emit('registryPublished', { tokenId: props.authchainIdentity!.token!.tokenId })
+
       ui.setStatusMessage({
         statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
+      emit('registryPublished', { tokenId: props.authchainIdentity!.token!.tokenId })
     }
   } catch (error: any) {
     console.log(error)
