@@ -24,8 +24,7 @@
     <template v-if="form.tokenIdSelected">
       <q-input v-model="form.genesisSupply" label="Genesis Supply" placeholder="0" :filled="true" dense square>
         <template v-slot:append>
-          <q-btn size="md" color="warning" dense flat
-            @click="form.genesisSupply = MAX_FUNGIBLE_AMOUNT">Max</q-btn>
+          <q-btn size="md" color="warning" dense flat @click="form.genesisSupply = MAX_FUNGIBLE_AMOUNT">Max</q-btn>
         </template>
       </q-input>
       <div class="row items-center">
@@ -171,12 +170,12 @@ const loadRegistryHashFromUrl = () => {
   if (form.value.tokenRegistry?.contentHash) {
     const endNotif = $q.notify({ spinner: true, message: 'Checking hash of URL\'s content', type: 'info' })
     fetchBcmrContentHash(form.value.tokenRegistry.url)
-      .then((v:any) => {
+      .then((v: any) => {
         if (form.value.tokenRegistry) {
           form.value.tokenRegistry.contentHash = v || ''
         }
       })
-      .catch((e:any) => console.log(e))
+      .catch((e: any) => console.log(e))
       .finally(() => {
         endNotif()
         form.value.isLoadingRegistry = false

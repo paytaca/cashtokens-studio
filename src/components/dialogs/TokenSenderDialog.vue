@@ -1,6 +1,7 @@
 <template>
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
+      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">Send Tokens</q-toolbar-title>
         <TokenCategory v-if="tokenBalance.tokenId" :token-id="tokenBalance.tokenId" />
