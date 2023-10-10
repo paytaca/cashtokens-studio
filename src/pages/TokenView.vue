@@ -10,12 +10,31 @@
           </div>
           <div class="row q-px-md q-py-md flex justify-center">
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
-              <div class="row justify-center q-px-sm q-py-sm" style="border-radius: 1em;">
-                <div>
-                  <q-avatar class="col-12 q-mb-sm" size="8em" style="visibility: visible !important;">
-                    <img v-if="ui.tokenInView?.tokenUris?.icon" :src="ui.tokenInView?.tokenUris?.icon" alt="">
-                    <q-icon v-else name="token" color="grey-8"></q-icon>
-                  </q-avatar>
+              <div class="row justify-center q-px-sm q-py-sm border" style="border-radius: 1em;">
+                <div v-if="newTokenIconPreview" class="col-12">
+                  <span class="text-grey" style="font-family: monospace;">Preview</span>
+                </div>
+                <div class="col-12 relative-position">
+                  <q-file v-model="newTokenIconFile" accept=".jpg,.png, image/*" @rejected="() => console.log('rejected')"
+                    style="visibility: hidden;" class="relative-position">
+                    <q-avatar class="col-12 q-mb-sm" size="8em" style="visibility: visible !important; cursor: pointer;">
+                      <img v-if="newTokenIconPreview || ui.tokenInView?.tokenUris?.icon"
+                        :src="newTokenIconPreview || ui.tokenInView?.tokenUris?.icon" alt="">
+                      <q-icon v-else name="token" color="grey-8"></q-icon>
+                    </q-avatar>
+                    <q-tooltip>Click to change icon</q-tooltip>
+                  </q-file>
+                  <q-inner-loading :showing="newTokenIconUploading">
+                    <q-spinner-box size="50px" color="primary" />
+                    uploading...
+                  </q-inner-loading>
+                </div>
+                <div v-if="newTokenIconPreview && !newTokenIconUploading" class="col-12 q-mb-sm">
+                  <q-btn :icon="!newTokenIconUploadArtifact ? 'upload_file' : 'done_all'" flat color="secondary"
+                    :label="!newTokenIconUploadArtifact ? 'Store Icon In IPFS' : 'Icon Stored in IPFS'" no-caps
+                    @click.stop="saveNewIconInIPFS">
+                    <q-tooltip>Click to upload the new icon to IPFS.</q-tooltip>
+                  </q-btn>
                 </div>
                 <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
                   :symbol="ui.tokenInView?.tokenCategory?.symbol" />
@@ -50,6 +69,7 @@
                   </tr>
                 </tbody>
               </q-markup-table>
+
             </div>
           </div>
           <div v-if="status === 'active'">
@@ -111,7 +131,6 @@
           </q-btn>
         </div>
       </div>
-
     </div>
   </q-page>
 </template>
@@ -131,6 +150,7 @@ import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialo
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 import { shortenTokenId, copyText } from 'src/app/utils';
+import { BcmrStorageArtifact, IconStorageArtifact } from 'src/app/types';
 
 const ui = useUI()
 const router = useRouter()
@@ -139,8 +159,10 @@ const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
 const bcmrReadOnly = ref<boolean>(true)
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const status = ref<'burned' | 'active' | 'unguarded'>('active')
-const bcmrIcon = ref()
+const newTokenIconFile = ref()
 const newTokenIconPreview = ref()
+const newTokenIconUploading = ref<boolean>(false)
+const newTokenIconUploadArtifact = ref<IconStorageArtifact>()
 
 onMounted(async () => {
   if (ui.tokenInView?.token?.tokenId) {
@@ -159,11 +181,34 @@ onMounted(async () => {
   }
 })
 
-watch(() => bcmrIcon.value, (b) => {
+watch(() => newTokenIconFile.value, (b) => {
   if (b) {
     newTokenIconPreview.value = URL.createObjectURL(b)
+    newTokenIconUploadArtifact.value = undefined
   }
 })
+
+const saveNewIconInIPFS = async () => {
+  if (newTokenIconFile.value) {
+    try {
+      const formData = new FormData();
+      formData.append('icon', newTokenIconFile.value);
+      newTokenIconUploading.value = true
+      const resp = await fetch(`api/tokens/icon/upload?tokenId=${ui.tokenInView?.token?.tokenId}`, {
+        method: 'POST', body: formData
+      })
+      const respJson = await resp.json()
+      if (respJson.iconUris?.https) {
+        bcmr.value?.addIconUri(respJson.iconUris?.https)
+      }
+      newTokenIconUploadArtifact.value = respJson
+    } catch (error) {
+      console.log(error)
+    } finally {
+      newTokenIconUploading.value = false
+    }
+  }
+}
 
 const createNewRegistry = () => {
   bcmrReadOnly.value = false

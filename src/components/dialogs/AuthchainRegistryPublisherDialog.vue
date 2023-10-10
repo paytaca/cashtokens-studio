@@ -47,6 +47,9 @@ import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
 const ui = useUI()
+const emit = defineEmits<{
+  (e: 'registryPublished', val: { tokenId: string }): void
+}>()
 const { $ebus } = useEventBus()
 const props = defineProps<{ authchainIdentity: AuthchainIdentity, url?: string, contentHash?: string }>()
 const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean }>({
@@ -74,6 +77,7 @@ const publish = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
       })
+      emit('registryPublished', { tokenId: props.authchainIdentity!.token!.tokenId })
       ui.setStatusMessage({
         statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
         statusMessageType: 'success',
