@@ -17,8 +17,8 @@
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             <q-btn v-if="ui.statusMessageTxid" :href="explore(ui.statusMessageTxid)" target="_blank" flat dense
               color="secondary" label="View Tx in Explorer" />
-            <div>Tx: {{ shortenTx(ui.statusMessageTxid) }} <q-btn dense icon="content_copy" size="xs"
-                @click.stop="copyText(ui.statusMessageTxid)"></q-btn>
+            <div v-if="ui.statusMessageTxid">Tx: {{ shortenTx(ui.statusMessageTxid) }} <q-btn dense icon="content_copy"
+                size="xs" @click.stop="copyText(ui.statusMessageTxid)"></q-btn>
             </div>
           </div>
         </div>
