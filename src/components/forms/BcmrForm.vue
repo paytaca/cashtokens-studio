@@ -19,18 +19,18 @@
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Download Registry</span>
           </template>
         </q-btn>
-        <q-btn v-if="bcmr?.isModified" color="negative" size="md" icon="replay"
+        <!-- <q-btn v-if="bcmr?.isModified" color="negative" size="md" icon="replay"
           @click="bcmr = new Bcmr(registry as Registry)" dense no-caps flat :disable="Boolean(bcmr?.processing)">
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Undo Changes</span>
           </template>
-        </q-btn>
+        </q-btn> -->
         <q-btn v-if="bcmr?.isModified" color="primary" size="md" @click="storeRegistryInIpfs" dense no-caps
           :icon="!saved ? 'save_as' : 'done_all'" :loading="Boolean(bcmr?.processing)" class="overflow-hidden"
           :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs" style="width:100px;text-overflow: ellipsis;">
-              {{ saved ? 'Saved' : 'Save in IPFS' }}
+              {{ saved ? 'Saved' : 'Store BCMR in IPFS' }}
             </span>
           </template>
           <template v-slot:loading>
@@ -39,9 +39,9 @@
             </div>
           </template>
         </q-btn>
-        <q-btn v-if="bcmr?.isModified" color="primary" size="md"
+        <q-btn v-if="bcmr?.isModified && saved" color="primary" size="md"
           @click="() => openBcmrPublisherDialog(AuthchainRegistryPublisherDialog.__name, bcmr?.authchainIdentity)" dense
-          no-caps icon="publish" :disable="Boolean(bcmr?.processing)" flat>
+          no-caps :icon="updatePublished ? 'done_all' : 'publish'" :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
             <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Update</span>
           </template>
@@ -155,7 +155,7 @@
     </q-banner>
     <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
       :authchain-identity="(dialogData as AuthchainIdentity)" :url="savedArtifact?.artifact?.uris?.https"
-      :content-hash="savedArtifact?.contentHash" @hide="onHide" />
+      :content-hash="savedArtifact?.contentHash" @hide="onHide" @registry-published="onRegistryPublished" />
   </q-form>
 </template>
 
@@ -168,12 +168,11 @@ import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
 const $q = useQuasar()
-const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide } = useDialogs()
+const { dialog, dialogData, openDialog: openBcmrPublisherDialog, onHide, hideDialog: hideBcmrPublisherDialog } = useDialogs()
 const props = defineProps<{ registry?: Bcmr, readOnly?: boolean }>()
 const bcmr = ref<Bcmr>()
 const registryStorageArtifacts = ref<{ contentHash: string, artifact: any }[] | null>()
 const { dialog: bcmrLinkAdderDialog, openDialog: openAddLinkDialog, hideDialog: hideBcmrLinkAdderDialog } = useDialogs()
-
 const readOnly = ref<boolean>(props.readOnly !== undefined ? props.readOnly : true)
 
 const saved = computed(() => {
@@ -182,6 +181,8 @@ const saved = computed(() => {
   }
   return false
 })
+
+const updatePublished = ref<boolean>(false)
 
 const parsedNft = computed(() => {
   return (type: { [commitmentHex: string]: NftType }) => {
@@ -193,6 +194,7 @@ const parsedNft = computed(() => {
     }
   }
 })
+
 
 const nftPage = ref<[{ [commitmentHex: string]: NftType }] | []>()
 
@@ -221,6 +223,11 @@ const savedArtifact = computed(() => {
   }
   return null
 })
+
+const onRegistryPublished = () => {
+  updatePublished.value = true
+  hideBcmrPublisherDialog()
+}
 
 const initNftsPagination = () => {
   if (bcmr.value?.nfts && bcmr.value.nfts.length > 0) {
