@@ -91,7 +91,7 @@
                   </q-item>
                   <q-item clickable v-close-popup
                     @click.stop="openDialog(AuthchainBurnerDialog.__name, ui.tokenInView as AuthchainIdentity)">
-                    Burn Authchain
+                    Burn Token
                   </q-item>
                 </q-list>
               </q-menu>
