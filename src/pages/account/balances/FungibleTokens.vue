@@ -69,24 +69,33 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
 import { BcmrIndexer } from 'src/app/bcmr/BcmrIndexer';
-import { tokeshiToNumber } from 'src/app/utils';
+import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
 import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
+import { EventBus } from 'quasar';
 
 
 defineOptions({ name: 'FungibleTokens' })
 
 const user = useUser()
+const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const ftBalances = ref<FungibleTokenBalance[]>([])
-const paginatedFtBalances = ref<PaginatedData>()
+const paginatedFtBalances = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: '',
+  previous: '',
+  results: []
+})
 const watchtower = ref<Watchtower>(new Watchtower())
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
@@ -160,8 +169,22 @@ const refreshData = async () => {
 
 const onFTTransferred = () => {
   hideDialog()
-  refreshData()
+  // refreshData()
 }
+
+watch(() => user.walletAddress, async (v) => {
+  if (v) {
+    // keep so page survives reload
+    user.wallet = await getWalletClass().watchOnly(v)
+    refreshData()
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+      refreshData()
+    })
+  } else {
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+  }
+
+})
 
 onMounted(async () => {
 
@@ -175,5 +198,9 @@ onMounted(async () => {
     }
     refreshData()
   }
+})
+
+onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
 </script>

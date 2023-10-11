@@ -249,11 +249,11 @@ onBeforeUnmount(() => {
 })
 
 const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
-  refreshData().then(() => {
-    if (paginatedNftAuthchainIdentities.value) {
-      populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-    }
-  })
+  // refreshData().then(() => {
+  //   if (paginatedNftAuthchainIdentities.value) {
+  //     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
+  //   }
+  // })
   hideDialog()
 }
 

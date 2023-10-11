@@ -197,6 +197,7 @@ const refreshData = async () => {
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
     )
     user.paginatedFtAuthchainIdentities = paginatedFtAuthchainIdentities.value
+    populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     initPagination()
   }
 }
@@ -216,7 +217,6 @@ watch(() => user.walletAddress, async (v) => {
 })
 
 onMounted(async () => {
-
   if (user.wallet) {
     /**
      * Load from store by default then refresh
@@ -238,13 +238,11 @@ onBeforeUnmount(() => {
 
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
   hideDialog()
-  refreshData().then(() => {
-    if (paginatedFtAuthchainIdentities.value) {
-      populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-    }
-  })
-
-
+  // refreshData().then(() => {
+  //   if (paginatedFtAuthchainIdentities.value) {
+  //     populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
+  //   }
+  // })
 }
 
 </script>
