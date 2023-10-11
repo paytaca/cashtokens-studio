@@ -51,17 +51,20 @@ onMounted(async () => {
       }
       return
     }
+    router.push('/')
   }
   router.push('/')
 })
 
 watch(() => user.walletAddress, async (address) => {
   if (address) {
-
     if (!watching.value) {
       watchAddress(address)
     }
     user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
+    user.wallet = await getWalletClass().watchOnly(address)
+  } else {
+    router.push('/')
   }
 })
 
