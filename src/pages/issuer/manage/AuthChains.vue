@@ -132,11 +132,12 @@
 </template>
 <script setup lang="ts">
 import { Wallet } from 'mainnet-js';
-import { onMounted, ref, watch } from 'vue';
+import { EventBus } from 'quasar';
+import { onMounted, ref, watch, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
-import { AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -146,6 +147,7 @@ import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 import { PaginatedData } from 'src/app/types';
 import { useRouter } from 'vue-router';
+import { getWalletClass } from 'src/app/utils';
 
 
 const user = useUser()
@@ -153,7 +155,14 @@ const ui = useUI()
 const router = useRouter()
 const viewType = ref<string>('simple')
 const authchainIdentities = ref<AuthchainIdentity[]>()
-const paginatedAuthchainIdentities = ref<PaginatedData>()
+const paginatedAuthchainIdentities = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: '',
+  previous: '',
+  results: []
+})
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
@@ -162,8 +171,7 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   offset: 0,
 })
 
-
-
+const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const watchtower = ref<Watchtower>(new Watchtower())
 
@@ -233,6 +241,21 @@ const refreshData = async () => {
   }
 }
 
+watch(() => user.walletAddress, async (v) => {
+  if (v) {
+    // keep so page survives reload
+    user.wallet = await getWalletClass().watchOnly(v)
+    refreshData()
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+      // refreshes data if the address watcher is triggered
+      refreshData()
+    })
+  } else {
+    // turn off
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+  }
+})
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -245,9 +268,15 @@ onMounted(async () => {
     refreshData()
   }
 
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    refreshData()
+  })
+
 })
 
-
+onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+})
 
 
 const onUnguard = () => {

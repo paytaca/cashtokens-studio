@@ -239,7 +239,11 @@ const openNFTTransferDialog = (nft: CashToken) => {
 
 const onNftTransfer = () => {
     hideDialog()
-    refreshData()
+    refreshData().then(() => {
+        if (paginatedNftCollections.value) {
+            populateNftCollections(paginatedNftCollections.value)
+        }
+    })
 }
 
 onMounted(async () => {

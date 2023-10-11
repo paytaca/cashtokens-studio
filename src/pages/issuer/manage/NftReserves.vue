@@ -105,7 +105,7 @@
 </template>
 <script setup lang="ts">
 import { NFTCapability, Wallet } from 'mainnet-js';
-import { onMounted, ref, computed, watch, inject, onBeforeMount, onBeforeUnmount } from 'vue';
+import { onMounted, ref, computed, watch, inject, onBeforeMount, onBeforeUnmount, nextTick } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app';
@@ -119,11 +119,21 @@ import { binToBigIntUintLE, binToBigIntUint64LE, binToNumberInt32LE, binToNumber
 import convertBigIntToHexLE from 'src/app/utils/convertBigIntToHexLE';
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { EventBus } from 'quasar';
+import { getWalletClass } from 'src/app/utils';
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
+const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-const paginatedNftAuthchainIdentities = ref<PaginatedData>()
+const paginatedNftAuthchainIdentities = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: '',
+  previous: '',
+  results: []
+})
+
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
@@ -142,7 +152,7 @@ const formatCommitment = computed(() => {
     return commitment
   }
 })
-const eventBus = inject<EventBus>('eventBus')
+// const eventBus = inject<EventBus>('eventBus')
 
 const openMintChildDialog = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity })
@@ -174,6 +184,41 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
     await a.resolveTokenUris()
   })
 }
+
+const initPagination = () => {
+  if (paginatedNftAuthchainIdentities.value && paginatedNftAuthchainIdentities.value?.count > 0) {
+    pagination.value.currentPage = Math.ceil((paginatedNftAuthchainIdentities.value.offset + 1) / paginatedNftAuthchainIdentities.value.limit)
+    pagination.value.maxRowsPerPage = paginatedNftAuthchainIdentities.value.limit
+    pagination.value.rowCount = paginatedNftAuthchainIdentities.value.count
+    pagination.value.numberOfPages = Math.ceil(paginatedNftAuthchainIdentities.value.count / paginatedNftAuthchainIdentities.value.limit)
+    pagination.value.offset = paginatedNftAuthchainIdentities.value.offset
+  }
+}
+
+const refreshData = async () => {
+  if (user.wallet) {
+    paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
+      user.wallet.getTokenDepositAddress(),
+      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
+    )
+    user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
+    initPagination()
+  }
+}
+
+watch(() => user.walletAddress, async (v) => {
+  if (v) {
+    // keep so page survives reload
+    user.wallet = await getWalletClass().watchOnly(v)
+    refreshData()
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+      refreshData()
+    })
+  } else {
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+  }
+
+})
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
@@ -221,26 +266,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
 })
 
 
-const initPagination = () => {
-  if (paginatedNftAuthchainIdentities.value && paginatedNftAuthchainIdentities.value?.count > 0) {
-    pagination.value.currentPage = Math.ceil((paginatedNftAuthchainIdentities.value.offset + 1) / paginatedNftAuthchainIdentities.value.limit)
-    pagination.value.maxRowsPerPage = paginatedNftAuthchainIdentities.value.limit
-    pagination.value.rowCount = paginatedNftAuthchainIdentities.value.count
-    pagination.value.numberOfPages = Math.ceil(paginatedNftAuthchainIdentities.value.count / paginatedNftAuthchainIdentities.value.limit)
-    pagination.value.offset = paginatedNftAuthchainIdentities.value.offset
-  }
-}
 
-const refreshData = async () => {
-  if (user.wallet) {
-    paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
-      user.wallet.getTokenDepositAddress(),
-      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
-    )
-    user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
-    initPagination()
-  }
-}
 
 
 onMounted(async () => {
@@ -254,7 +280,6 @@ onMounted(async () => {
     }
     refreshData()
   }
-
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
   })

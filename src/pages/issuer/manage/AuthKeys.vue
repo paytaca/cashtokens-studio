@@ -91,20 +91,30 @@
 
 import { Wallet } from 'mainnet-js';
 import { useUser } from 'src/stores/user';
-import { onMounted, ref, watch } from 'vue';
+import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useDialogs } from 'src/composables'
-import { AuthKey, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
 import AuthKeyCreateTokenDialog from 'src/components/dialogs/AuthKeyCreateTokenDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue';
 import { PaginatedData } from 'src/app/types';
+import { getWalletClass } from 'src/app/utils';
+import { EventBus } from 'quasar';
 
 const user = useUser()
 
 const authKeys = ref<AuthKey[] | undefined>()
-const paginatedAuthKeys = ref<PaginatedData>()
+const paginatedAuthKeys = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: '',
+  previous: '',
+  results: []
+})
+const eventBus = inject<EventBus>('eventBus')
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
@@ -144,6 +154,20 @@ const onTokenCreate = () => {
   refreshData()
   hideDialog()
 }
+
+watch(() => user.walletAddress, async (v) => {
+  if (v) {
+    // keep so page survives reload
+    user.wallet = await getWalletClass().watchOnly(v)
+    refreshData()
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+      refreshData()
+    })
+  } else {
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+  }
+
+})
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
@@ -198,10 +222,19 @@ onMounted(async () => {
     refreshData()
   }
 
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    refreshData()
+  })
+
 })
 
+onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+})
 
-/**
+/**onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+})
  * Checks and loads the managed token categories of each AuthKey.
  * Basically just checking each AuthKey's associated
  * AuthGuard contract token address for tokens.

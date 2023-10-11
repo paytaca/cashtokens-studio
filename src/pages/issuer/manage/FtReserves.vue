@@ -99,12 +99,19 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
-import { tokeshiToNumber } from 'src/app/utils';
+import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
 
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
-const paginatedFtAuthchainIdentities = ref<PaginatedData>()
+const paginatedFtAuthchainIdentities = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: '',
+  previous: '',
+  results: []
+})
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
@@ -194,56 +201,42 @@ const refreshData = async () => {
   }
 }
 
+watch(() => user.walletAddress, async (v) => {
+  if (v) {
+    // keep so page survives reload
+    user.wallet = await getWalletClass().watchOnly(v)
+    refreshData()
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+      refreshData()
+    })
+  } else {
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+  }
+
+})
+
 onMounted(async () => {
 
   if (user.wallet) {
     /**
      * Load from store by default then refresh
      */
-    if (user.paginatedFtAuthchainIdentities) {
+    if (user.paginatedFtAuthchainIdentities?.results) {
       paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
       populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     }
     refreshData()
   }
-
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
   })
-
 })
 
 onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
 
-
-// onMounted(async () => {
-//   if (user.wallet) {
-//     if (user.authchainIdentities) {
-//       authchainIdentities.value = user.authchainIdentities as AuthchainIdentity[]
-//     }
-//     paginatedFtAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(user.wallet.getTokenDepositAddress(), { token_amount__gte: 1 })
-//     initPagination()
-//     // authchainIdentities.value = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-//     // user.authchainIdentities = authchainIdentities.value
-
-//     // authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-//     //   await a.resolveTokenCategory()
-//     //   await a.resolveTokenUris()
-//     // })
-//   }
-
-// })
-
-
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
-  // AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-  //   .then((values) => {
-  //     authchainIdentities.value = [...values]
-  //   })
-
-  console.log('TOKENS ISSUED')
   hideDialog()
   refreshData().then(() => {
     if (paginatedFtAuthchainIdentities.value) {
