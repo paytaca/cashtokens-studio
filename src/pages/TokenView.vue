@@ -164,29 +164,6 @@ const newTokenIconPreview = ref()
 const newTokenIconUploading = ref<boolean>(false)
 const newTokenIconUploadArtifact = ref<IconStorageArtifact>()
 
-onMounted(async () => {
-  if (ui.tokenInView?.token?.tokenId) {
-    try {
-      const bcmrContents: any = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
-      if (!bcmrContents || bcmrContents?.error) {
-        return
-      }
-      if (bcmrContents) {
-        bcmr.value = new Bcmr(bcmrContents)
-        bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
-      }
-    } catch (error) {
-      console.log('Error downloading bcmr contents')
-    }
-  }
-})
-
-watch(() => newTokenIconFile.value, (b) => {
-  if (b) {
-    newTokenIconPreview.value = URL.createObjectURL(b)
-    newTokenIconUploadArtifact.value = undefined
-  }
-})
 
 const saveNewIconInIPFS = async () => {
   if (newTokenIconFile.value) {
@@ -228,5 +205,31 @@ const onUnguard = () => {
 const onBurn = () => {
   status.value = 'burned'
 }
+
+
+watch(() => newTokenIconFile.value, (b) => {
+  if (b) {
+    newTokenIconPreview.value = URL.createObjectURL(b)
+    newTokenIconUploadArtifact.value = undefined
+  }
+})
+
+onMounted(async () => {
+  if (ui.tokenInView?.token?.tokenId) {
+    try {
+      const bcmrContents: any = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
+      if (!bcmrContents || bcmrContents?.error) {
+        return
+      }
+      if (bcmrContents) {
+        bcmr.value = new Bcmr(bcmrContents)
+        bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
+      }
+    } catch (error) {
+      console.log('Error downloading bcmr contents')
+    }
+  }
+})
+
 
 </script>
