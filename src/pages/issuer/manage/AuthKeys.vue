@@ -151,7 +151,48 @@ const populateAuthKeys = (paginated: PaginatedData) => {
 }
 
 const onTokenCreate = () => {
-  refreshData()
+  // refreshData()
+  hideDialog()
+}
+
+/**onBeforeUnmount(() => {
+  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+})
+ * Checks and loads the managed token categories of each AuthKey.
+ * Basically just checking each AuthKey's associated
+ * AuthGuard contract token address for tokens.
+ */
+const scanAuthKeysForManagedCategories = async () => {
+  if (authKeys.value) {
+    for (let i = 0; i < authKeys.value.length; i++) {
+      authKeys.value[i].ownerWallet = user.wallet as Wallet
+      await authKeys.value[i].loadUnlockableTokens()
+    }
+  }
+}
+
+/**
+ * Just a wrapper to openDialog so we can attach the wallet to the authKey object
+ */
+const wOpenAuthKeyTransferDialog = (dialogName: string | undefined, authKey: AuthKey) => {
+  authKey.ownerWallet = user.wallet! as Wallet
+  openDialog(dialogName, authKey)
+}
+
+/**
+ * Just a wrapper to openDialog so we can attach the wallet to the authKey object
+ */
+const wOpenAuthKeyCreateTokenDialog = (dialogName: string | undefined, dialogData: { authKey: AuthKey, tokenType: 'ft' | 'nft' }) => {
+  dialogData.authKey.ownerWallet = user.wallet! as Wallet
+  openDialog(dialogName, dialogData)
+}
+
+const onAuthKeyTransfer = () => {
+  // refreshData().then(() => {
+  //   if (paginatedAuthKeys.value) {
+  //     populateAuthKeys(paginatedAuthKeys.value)
+  //   }
+  // })
   hideDialog()
 }
 
@@ -232,44 +273,6 @@ onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
 
-/**onBeforeUnmount(() => {
-  eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
-})
- * Checks and loads the managed token categories of each AuthKey.
- * Basically just checking each AuthKey's associated
- * AuthGuard contract token address for tokens.
- */
-const scanAuthKeysForManagedCategories = async () => {
-  if (authKeys.value) {
-    for (let i = 0; i < authKeys.value.length; i++) {
-      authKeys.value[i].ownerWallet = user.wallet as Wallet
-      await authKeys.value[i].loadUnlockableTokens()
-    }
-  }
-}
 
-/**
- * Just a wrapper to openDialog so we can attach the wallet to the authKey object
- */
-const wOpenAuthKeyTransferDialog = (dialogName: string | undefined, authKey: AuthKey) => {
-  authKey.ownerWallet = user.wallet! as Wallet
-  openDialog(dialogName, authKey)
-}
-
-/**
- * Just a wrapper to openDialog so we can attach the wallet to the authKey object
- */
-const wOpenAuthKeyCreateTokenDialog = (dialogName: string | undefined, dialogData: { authKey: AuthKey, tokenType: 'ft' | 'nft' }) => {
-  dialogData.authKey.ownerWallet = user.wallet! as Wallet
-  openDialog(dialogName, dialogData)
-}
-
-const onAuthKeyTransfer = () => {
-  refreshData().then(() => {
-    if (paginatedAuthKeys.value) {
-      populateAuthKeys(paginatedAuthKeys.value)
-    }
-  })
-}
 
 </script>

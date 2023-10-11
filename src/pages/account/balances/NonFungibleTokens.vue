@@ -104,10 +104,10 @@
     </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch, computed } from 'vue';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { CashToken, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, CashToken, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { PaginatedData } from 'src/app/types';
@@ -115,12 +115,21 @@ import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { Wallet } from 'mainnet-js';
+import { getWalletClass } from 'src/app/utils';
+import { EventBus } from 'quasar';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
+const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const nftCollections = ref<CashToken[]>([])
-const paginatedNftCollections = ref<PaginatedData>()
-
+const paginatedNftCollections = ref<PaginatedData>({
+    count: 0,
+    limit: 10,
+    offset: 0,
+    next: '',
+    previous: '',
+    results: []
+})
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
     numberOfPages: 0,
     currentPage: 0,
@@ -128,7 +137,6 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
     rowCount: 0,
     offset: 0,
 })
-
 const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
 const watchtower = ref<Watchtower>(new Watchtower())
 const excludePossibleAuthKeys = ref<boolean>(true)
@@ -140,7 +148,6 @@ const commitmentDisplay = computed(() => {
         return commitment
     }
 })
-
 
 const populateNftCollections = (paginated: PaginatedData) => {
     // populate 
@@ -172,36 +179,6 @@ const populateNftCollections = (paginated: PaginatedData) => {
     })
 }
 
-watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
-    if (user.wallet) {
-        if (pageNumber === 1) {
-            pagination.value.offset = 0
-        } else {
-            if (oldPageNumber > pageNumber) {
-                pagination.value.offset -= pagination.value.maxRowsPerPage
-            } else {
-                pagination.value.offset += pagination.value.maxRowsPerPage
-            }
-
-        }
-        let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
-        if (excludePossibleAuthKeys.value) {
-            query.commitment_ne = '00'
-            console.log('excluding', query)
-        }
-
-        paginatedNftCollections.value = await watchtower.value.fetchNfts(
-            user.wallet.getTokenDepositAddress(), query
-        )
-        populateNftCollections(paginatedNftCollections.value)
-        user.paginatedNftCollections = paginatedNftCollections.value
-    }
-})
-
-watch(() => excludePossibleAuthKeys.value, async (v) => {
-    refreshData()
-})
-
 const initPagination = () => {
     if (paginatedNftCollections.value && paginatedNftCollections.value?.count > 0) {
         pagination.value.currentPage = Math.ceil((paginatedNftCollections.value.offset + 1) / paginatedNftCollections.value.limit)
@@ -217,14 +194,12 @@ const refreshData = async () => {
         let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
         if (excludePossibleAuthKeys.value) {
             query.commitment_ne = '00'
-            console.log('excluding', query)
         }
         paginatedNftCollections.value = await watchtower.value.fetchNfts(
             user.wallet.getTokenDepositAddress(),
             query
         )
         user.paginatedNftCollections = paginatedNftCollections.value
-        console.log('DATA', paginatedNftCollections.value)
         populateNftCollections(paginatedNftCollections.value)
         initPagination()
     }
@@ -233,18 +208,60 @@ const refreshData = async () => {
 const openNFTTransferDialog = (nft: CashToken) => {
     nft.ownerWallet = user.wallet as Wallet // embedding wallet
     nft.processing = ''
-
     openDialog(NFTOwnershipTransferDialog.__name, nft)
 }
 
 const onNftTransfer = () => {
     hideDialog()
-    refreshData().then(() => {
-        if (paginatedNftCollections.value) {
-            populateNftCollections(paginatedNftCollections.value)
-        }
-    })
+    // refreshData().then(() => {
+    //     if (paginatedNftCollections.value) {
+    //         populateNftCollections(paginatedNftCollections.value)
+    //     }
+    // })
 }
+
+watch(() => user.walletAddress, async (v) => {
+    if (v) {
+        // keep so page survives reload
+        user.wallet = await getWalletClass().watchOnly(v)
+        refreshData()
+        eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+            refreshData()
+        })
+    } else {
+        eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+    }
+
+})
+
+watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
+    if (user.wallet) {
+        if (pageNumber === 1) {
+            pagination.value.offset = 0
+        } else {
+            if (oldPageNumber > pageNumber) {
+                pagination.value.offset -= pagination.value.maxRowsPerPage
+            } else {
+                pagination.value.offset += pagination.value.maxRowsPerPage
+            }
+
+        }
+        let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+        if (excludePossibleAuthKeys.value) {
+            query.commitment_ne = '00'
+        }
+
+        paginatedNftCollections.value = await watchtower.value.fetchNfts(
+            user.wallet.getTokenDepositAddress(), query
+        )
+        populateNftCollections(paginatedNftCollections.value)
+        user.paginatedNftCollections = paginatedNftCollections.value
+    }
+})
+
+watch(() => excludePossibleAuthKeys.value, async (v) => {
+    refreshData()
+})
 
 onMounted(async () => {
     if (user.wallet) {
@@ -255,4 +272,9 @@ onMounted(async () => {
         refreshData()
     }
 })
+
+onBeforeUnmount(() => {
+    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
+})
+
 </script>
