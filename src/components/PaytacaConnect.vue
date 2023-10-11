@@ -1,11 +1,4 @@
 <template>
-  <!-- <div class="row q-my-sm q-mx-sm" @click.stop="user.walletAddress ? disconnect() : connect()">
-    <q-btn size="md" icon="img:images/paytaca-128x128.png" class="q-px-md" align="center" stack dense>
-      <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
-        style="width:.15em;height:.10em"></q-icon>
-      <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
-    </q-btn>
-  </div> -->
   <q-btn icon="img:images/paytaca-128x128.png" class="q-px-md" align="center"
     @click.stop="user.walletAddress ? disconnect() : connect()" stack dense>
     <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
@@ -16,7 +9,7 @@
 
 <script setup lang="ts">
 import { EventBus, useQuasar } from 'quasar'
-import { ref, onMounted, watch, inject, onBeforeMount } from 'vue';
+import { ref, onMounted, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
 import { UtxoI, Wallet } from 'mainnet-js';
 import formatAddress from 'src/app/utils/formatAddress';
@@ -33,40 +26,7 @@ const user = useUser()
 const watching = ref()
 const eventBus = inject<EventBus>('eventBus')
 const watchtower = ref<Watchtower>(new Watchtower())
-
-onMounted(async () => {
-  if (window.paytaca) {
-    const connected = await window.paytaca.connected()
-    if (connected) {
-      user.walletAddress = formatAddress(await window.paytaca.address('bch'))
-      user.wallet = await getWalletClass().watchOnly(user.walletAddress)
-      user.walletTokenAddress = user.wallet.getTokenDepositAddress()
-      // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-      user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
-      const userUtxos = await user.wallet.getAddressUtxos()
-      filterAndStoreGenesisInputs(userUtxos)
-      watchAddress(user.walletAddress)
-      if (!watching.value && user.walletAddress) {
-        watchAddress(user.walletAddress)
-      }
-      return
-    }
-    router.push('/')
-  }
-  router.push('/')
-})
-
-watch(() => user.walletAddress, async (address) => {
-  if (address) {
-    if (!watching.value) {
-      watchAddress(address)
-    }
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
-    user.wallet = await getWalletClass().watchOnly(address)
-  } else {
-    router.push('/')
-  }
-})
+const connected = ref<boolean>(false)
 
 const connect = async () => {
   const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
@@ -121,7 +81,7 @@ const disconnect = async () => {
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   user.walletAddress = ''
   if (watching.value) {
-    watching.value()
+    watching.value() // stop watching wallet ddress
     watching.value = null
   }
   await window.paytaca!.disconnect()
@@ -129,12 +89,50 @@ const disconnect = async () => {
 
 }
 
-// onMounted(() => {
-//   if (!watching.value && user.walletAddress) {
-//     watchAddress(user.walletAddress)
-//   }
-// })
+watch(() => connected.value, async (c) => {
+  if (c) {
+    user.walletAddress = formatAddress(await window.paytaca.address('bch'))
+    user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+    user.walletTokenAddress = user.wallet.getTokenDepositAddress()
+    // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
+    const userUtxos = await user.wallet.getAddressUtxos()
+    filterAndStoreGenesisInputs(userUtxos)
+    watchAddress(user.walletAddress)
+    if (!watching.value && user.walletAddress) {
+      watchAddress(user.walletAddress)
+    }
+  } else {
+    user.walletAddress = ''
+    if (watching.value) {
+      watching.value()
+      watching.value = null
+    }
+  }
+})
 
+watch(() => user.walletAddress, async (address) => {
+  if (address) {
+    if (!watching.value) {
+      watchAddress(address)
+    }
+    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
+    user.wallet = await getWalletClass().watchOnly(address)
+  } else {
+    router.push('/')
+  }
+})
+
+onMounted(async () => {
+  if (window.paytaca) {
+    connected.value = await window.paytaca.connected()
+    if (connected.value) {
+      return
+    }
+    router.push('/')
+  }
+  router.push('/')
+})
 
 
 </script>
