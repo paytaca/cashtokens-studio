@@ -198,6 +198,9 @@ onMounted(async () => {
     }
     refreshData()
   }
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    refreshData()
+  })
 })
 
 onBeforeUnmount(() => {
