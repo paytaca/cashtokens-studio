@@ -82,6 +82,10 @@
                         @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
+                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                        @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
+                        Deploy a Minting Contract
+                      </q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -96,6 +100,9 @@
         </q-markup-table>
         <NFTMinterDialog v-if="dialog" :model-value="dialog === NFTMinterDialog.__name"
           :minter="(dialogData as CashToken)" @hide="onHide" @nft-minted="onMint" />
+        <NFTMintingContractDeployerDialog v-if="dialog" :model-value="dialog === NFTMintingContractDeployerDialog.__name"
+          :minter="(dialogData as CashToken)" @hide="onHide" />
+
       </div>
     </div>
   </q-page>
@@ -115,6 +122,8 @@ import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { EventBus } from 'quasar';
 import { getWalletClass } from 'src/app/utils';
+import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+
 
 const user = useUser()
 const authchainIdentities = ref<AuthchainIdentity[]>()
@@ -150,6 +159,12 @@ const openMintChildDialog = (identity: AuthchainIdentity) => {
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
   openDialog(NFTMinterDialog.__name, ct)
+}
+const openMintingContractDeployerDialog = (identity: AuthchainIdentity) => {
+  const ct = new CashToken({ ...identity })
+  ct.tokenCategory = identity.tokenCategory
+  ct.tokenUris = identity.tokenUris
+  openDialog(NFTMintingContractDeployerDialog.__name, ct)
 }
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
