@@ -75,17 +75,18 @@
                 {{ identity.token?.commitment ? formatCommitment(identity.token?.commitment) : '---' }}
               </td>
               <td>
-                <q-btn icon="more_vert" size="md" round flat dense>
+                <q-btn icon="more_vert" size="md" round flat dense
+                  :disable="identity.token?.capability !== NFTCapability.minting">
                   <q-menu>
                     <q-list>
                       <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Deploy a Minting Contract
-                      </q-item>
+                      </q-item> -->
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -102,13 +103,12 @@
           :minter="(dialogData as CashToken)" @hide="onHide" @nft-minted="onMint" />
         <NFTMintingContractDeployerDialog v-if="dialog" :model-value="dialog === NFTMintingContractDeployerDialog.__name"
           :minter="(dialogData as CashToken)" @hide="onHide" />
-
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
-import { NFTCapability, Wallet } from 'mainnet-js';
+import { NFTCapability, Wallet, delay } from 'mainnet-js';
 import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
@@ -120,12 +120,14 @@ import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
 import { CashToken } from 'src/app'
 import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
-import { EventBus } from 'quasar';
-import { getWalletClass } from 'src/app/utils';
+import { EventBus, uid } from 'quasar';
+import { getWalletClass, shortenTokenId } from 'src/app/utils';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+import { useUI } from 'src/stores/ui';
 
 
 const user = useUser()
+const ui = useUI()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
@@ -160,10 +162,34 @@ const openMintChildDialog = (identity: AuthchainIdentity) => {
   ct.tokenUris = identity.tokenUris
   openDialog(NFTMinterDialog.__name, ct)
 }
-const openMintingContractDeployerDialog = (identity: AuthchainIdentity) => {
+const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
+  // check if wallet has a minter
+  if (!identity.tokenCategory) {
+    ui.setStatusMessage({
+      statusMessage: `Sorry, we only allow deploying a minting contract if the token has a valid registry`,
+      statusMessageType: 'error',
+    })
+    return
+  }
+  ui.setStatusMessage({
+    statusMessage: `Checking if you have a minter for ${identity.tokenCategory!.symbol} token in your wallet...`,
+    statusMessageType: 'info',
+    statusMessageSpinner: true
+  })
+  await delay(1500)
+  const utxos = await user.wallet!.getAddressUtxos()
+  const minter = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
+  if (!minter) {
+    ui.setStatusMessage({
+      statusMessage: `The contract requires you to have a minter for token ${shortenTokenId(identity.token!.tokenId)} ${identity.tokenCategory!.symbol ? `(${identity.tokenCategory!.symbol})` : ''} in your wallet which currently you don't have. Although you own the NFT reserve, it is not in your wallet it's in the AuthGuard contract. Don't worry you can create a minter from the Mint Child NFT menu.`,
+      statusMessageType: 'error',
+    })
+    return
+  }
   const ct = new CashToken({ ...identity })
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
+  ui.clearStatusMessage()
   openDialog(NFTMintingContractDeployerDialog.__name, ct)
 }
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
