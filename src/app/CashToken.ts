@@ -249,7 +249,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       tokenRecipient = this.authKey?.authGuard.contract!.getTokenDepositAddress()
     }
 
-    console.log('OPT', opt)
     let commitment = opt.commitment
 
     if (commitment && opt.commitmentFormat === 'decimal') {
