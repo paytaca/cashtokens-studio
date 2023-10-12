@@ -6,7 +6,7 @@
         <q-toolbar-title class="text-h5 text-bold">Burn Token Identity</q-toolbar-title>
       </q-toolbar>
       <div class="q-mx-md text-justify">
-        <q-icon name="warning" color="warning" size="md"></q-icon>
+        <q-icon name="warning" color="warning" size="sm"></q-icon>
         <span>
           Warning! This action will burn this token (token of the utxo will be discarded).
           Any fungible token amount and/or minting capability will be lost. This will also
@@ -17,10 +17,13 @@
         </span>
       </div>
       <q-card-section>
-        <q-form>
-          <q-input :model-value="authchainIdentity.token?.tokenId" disable label="Token ID/Category"></q-input>
-          <q-input :model-value="authchainIdentity.token?.amount" disable label="Fungible Reserves"></q-input>
-          <q-input :model-value="authchainIdentity.token?.capability" disable label="NFT Capability"></q-input>
+        <q-form class="row q-gutter-sm">
+          <q-input class="col-12" :model-value="authchainIdentity.token?.tokenId" disable label="Token ID/Category"
+            filled></q-input>
+          <q-input class="col-12" :model-value="authchainIdentity.token?.amount" disable label="Fungible Reserves"
+            filled></q-input>
+          <q-input class="col-12" :model-value="authchainIdentity.token?.capability" disable label="NFT Capability"
+            filled></q-input>
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
@@ -58,12 +61,12 @@ const burn = async () => {
         txid: tx,
         txType: 'AuthchainIdentity.burn',
         timestamp: new Date().getTime(),
-        successMsg: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s authchain identity`
+        successMsg: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s token category`
       })
 
       authchainBurnerDialogRef.value?.hide()
       ui.setStatusMessage({
-        statusMessage: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s authchain identity`,
+        statusMessage: `Burned ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s token category`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
