@@ -502,6 +502,10 @@ const createToken = async () => {
     // setStatusProvider(null)
   } catch (error: any) {
     // setStatusProvider(null)
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
     return $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
 

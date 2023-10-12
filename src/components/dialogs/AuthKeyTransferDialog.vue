@@ -24,7 +24,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => transferAuthKey()" label="Transfer AuthKey" :busyLabel="authKey.processing"
-          color="primary" :disable="!Boolean(form.recipient)" />
+          color="primary" :disable="!Boolean(form.recipient) || Boolean(authKey.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -39,9 +39,11 @@ import { Wallet, fromUtxoId } from 'mainnet-js';
 import shortenTokenId from 'src/app/utils/shortenTokenId';
 import { useEventBus } from 'src/composables';
 import { shortenAddress } from 'src/app/utils';
+import { useUI } from 'src/stores/ui';
 
 defineOptions({ name: 'FungibleTokenIssuerDialog' })
 const $q = useQuasar()
+const ui = useUI()
 const { $ebus } = useEventBus()
 const props = defineProps<{ authKey: AuthKey }>()
 const authKeyTransferDialog = ref()
@@ -66,12 +68,24 @@ const transferAuthKey = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Transferred AuthKey, id=${shortenTokenId(props.authKey.token!.tokenId)} to ${shortenAddress(form.value.recipient)}`
       })
+
+      ui.setStatusMessage({
+        statusMessage: `Transferred AuthKey, id=${shortenTokenId(props.authKey.token!.tokenId)} to ${shortenAddress(form.value.recipient)}`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
+
       emit('authKeyTransferred')
+
       authKeyTransferDialog.value.hide()
 
     }
   } catch (error: any) {
     console.log(error)
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
     $q.notify({ type: 'negative', message: 'Error!' + error.message })
   }
 }

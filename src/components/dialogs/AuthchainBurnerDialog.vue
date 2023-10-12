@@ -72,7 +72,7 @@ const burn = async () => {
     }
   } catch (error: any) {
     ui.setStatusMessage({
-      statusMessage: `Error! ${error.message}`,
+      statusMessage: error,
       statusMessageType: 'error',
     })
     $q.notify({ type: 'negative', message: 'Failed!' + error.message })

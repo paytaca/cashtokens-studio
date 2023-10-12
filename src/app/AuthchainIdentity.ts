@@ -165,7 +165,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     } catch (error) {
       console.log(error)
       delete this._processing
-      throw new Error('Error building transaction')
+      throw error
     }
     this._processing = 'Waiting for signature'
     
@@ -242,7 +242,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       return tx
     } catch (error:any) {
       console.log('Error:AuthchainIdentity@', error)
-      throw new Error(error.message)
+      throw error
     } finally {
       delete this._processing
     }
@@ -309,7 +309,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     } catch (error) {
       console.log(error)
       delete this._processing
-      throw new Error('Error building transaction')
+      throw error
     }
     this._processing = 'Waiting for signature'
     let signingResult
@@ -389,6 +389,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       return tx
     } catch (error) {
       console.log('Error:AuthChainGuard@publish', error)
+      throw error
     } finally {
       delete this._processing
     }
@@ -473,7 +474,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     } catch (error) {
       console.log(error)
       delete this._processing
-      throw new Error('Error building transaction')
+      throw error
     }
     this._processing = 'Waiting for signature'
     let signingResult

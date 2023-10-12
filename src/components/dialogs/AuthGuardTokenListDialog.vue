@@ -23,7 +23,7 @@
             </tr>
           </tbody>
         </q-markup-table>
-        <q-markup-table dense flat bordered separator="cell">
+        <q-markup-table v-if="lockedCashTokens.length > 0" flat bordered separator="cell" class="q-my-md">
           <thead class="text-left">
             <tr>
               <th>#</th>
@@ -50,6 +50,7 @@
             </tr>
           </tbody>
         </q-markup-table>
+        <div v-else class="row justify-center q-my-md">No Locked Tokens</div>
         <!-- </q-scroll-area> -->
       </q-card-section>
       <q-card-actions class="row justify-end">

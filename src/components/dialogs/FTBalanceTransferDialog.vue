@@ -136,7 +136,7 @@ const send = async () => {
   } catch (error: any) {
     console.log(error)
     ui.setStatusMessage({
-      statusMessage: error.message,
+      statusMessage: error,
       statusMessageType: 'error'
     })
 

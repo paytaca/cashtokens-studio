@@ -170,9 +170,8 @@ const releaseTokensFromReserveSupply = async () => {
       })
     }
   } catch (error: any) {
-
     ui.setStatusMessage({
-      statusMessage: error.message,
+      statusMessage: error,
       statusMessageType: 'error'
     })
     return $q.notify({ type: 'negative', message: error.message })
