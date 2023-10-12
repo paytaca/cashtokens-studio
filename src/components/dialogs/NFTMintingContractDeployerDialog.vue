@@ -22,15 +22,21 @@
       </div>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
-          <q-input v-model="form.mintPrice" label="Mint price" placeholder="How much it cost to mint your NFT"></q-input>
+          <q-input v-model="form.mintPrice" label="Mint price" placeholder="How much it cost to mint your NFT?">
+            <template v-slot:prepend>
+              <q-avatar size="sm">
+                <q-img src="https://chipnet.imaginary.cash/img/logo/bch.svg"></q-img>
+              </q-avatar>
+            </template>
+          </q-input>
           <q-input v-model="form.collectionSize" label="Collection size"
-            placeholder="The total number of NFTs in this collection"></q-input>
+            placeholder="The total number of NFTs mintable in this collection"></q-input>
           <!-- <q-input v-model="form.threadCount" label="Number of threads"
             placeholder="You don't have to change this value"></q-input> -->
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => console.log('OK')" label="Deploy Contract" :busyLabel="minter.processing"
+        <BusyButton @click="deployMintingContract" label="Deploy Contract" :busyLabel="minter.processing"
           color="primary" />
       </q-card-actions>
     </q-card>
@@ -39,9 +45,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
-import { NFTCapability } from 'mainnet-js';
+import { NFTCapability, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { CashToken } from 'src/app';
+import { CashToken, ProcessingMessage } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
@@ -51,10 +57,14 @@ import { shortenTokenId } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
+import { MultiThreadedMinter } from 'src/app/mintingcontracts/MultiThreadedMinter';
+import { ProcessingMessageHandler } from 'src/app'
 
 const props = defineProps<{
-  minter: CashToken,
+  minter: CashToken, // this is actually the authchain
 }>()
+
+const m = ref<ProcessingMessageHandler>(new ProcessingMessageHandler())
 
 const form = ref<{
   mintPrice: number | string,
@@ -70,9 +80,26 @@ const emit = defineEmits<{
   (e: 'mintingContractDeployed', val: { tokenId: string, recipient: string, capability: NFTCapability, commitment: string }): void
 }>()
 
-const $q = useQuasar()
 const { $ebus } = useEventBus()
+const $q = useQuasar()
 const user = useUser()
 const ui = useUI()
+const deployMintingContract = () => {
+  const mintPriceSat = Number(form.value.mintPrice) * 1e8
+  const m = new MultiThreadedMinter({
+    parentMinter: props.minter.utxo,
+    mintPrice: mintPriceSat,
+    nftCollectionSize: Number(form.value.collectionSize),
+    numberOfThreads: 5,
+    network: user.wallet!.network,
+    ownerWallet: user.wallet as Wallet
+  })
+  window.m = m
+  console.log(m)
+}
+
+onMounted(() => {
+  ui.clearStatusMessage()
+})
 
 </script>
