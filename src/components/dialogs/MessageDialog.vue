@@ -7,9 +7,10 @@
       </q-toolbar>
       <q-card-section>
         <div class="row justify-center text-center">
-          <q-avatar size="5em" class="col-12">
+          <q-avatar v-if="!ui.statusMessageSpinner" size="5em" class="col-12">
             <q-icon size="2em" :name="icon.name" :color="icon.color"></q-icon>
           </q-avatar>
+          <q-spinner v-if="ui.statusMessageSpinner" size="5em" color="info"></q-spinner>
           <div class="col-12 text-center q-px-lg text-wrap q-py-sm q-py-sm"
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             {{ ui.statusMessage }}
@@ -24,7 +25,7 @@
           </div>
         </div>
       </q-card-section>
-      <q-card-actions class="row justify-center">
+      <q-card-actions v-if="!ui.statusMessageSpinner" class="row justify-center">
         <q-btn color="primary" size="lg" v-close-popup>Ok</q-btn>
       </q-card-actions>
     </q-card>
@@ -32,7 +33,7 @@
 </template>
 <script setup lang="ts">
 import { useUI } from 'src/stores/ui';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { shortenTx, copyText } from 'src/app/utils';
 const ui = useUI()
 
@@ -54,7 +55,11 @@ const explore = computed(() => {
     return `${process.env.TX_EXPLORER_BASE_URL}tx/${txid}`
   }
 })
-
+watch(() => ui.statusMessage, (hasMessage) => {
+  if (!hasMessage) {
+    messageDialog.value.hide()
+  }
+})
 const onBeforeHide = () => {
   ui.clearStatusMessage()
 }
