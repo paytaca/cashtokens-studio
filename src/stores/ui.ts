@@ -54,7 +54,7 @@ export const useUI = defineStore('ui', {
         statusMessageRecipient?: string,
     }) {
       this.statusMessage = m.statusMessage
-      this.statusMessageType = m.statusMessageType || 'success'
+      this.statusMessageType = m.statusMessageType || ''
       this.statusMessageTxid = m.statusMessageTxid || ''
       this.statusMessageSpinner = m.statusMessageSpinner || false
       this.statusMessageContext = m.statusMessageContext || ''

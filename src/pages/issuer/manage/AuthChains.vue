@@ -3,7 +3,7 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
-          Your Tokens
+          Token Categories
           <q-badge color="blue-5" text-color="black" align="top" rounded>
             {{ paginatedAuthchainIdentities?.count }}
           </q-badge>
@@ -12,6 +12,15 @@
           These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
           listed here. Click an item on this list to view the token details.
         </p>
+        <q-expansion-item label="More Info">
+          <p>
+            The token categories here are utxos that are authheads of these token categories' authchain. So, we can use
+            this
+            to manage the token's metadata and fungible reserves. These are the same utxos listed in the FT Reserves and
+            NFT Reserves
+            page. These are locked with the AuthGuard contract so you don't accidentally misuse these utxos.
+          </p>
+        </q-expansion-item>
         <div class="row justify-end q-my-sm">
           <q-btn-toggle v-model="viewType" push toggle-color="teal" :options="[
             { label: 'Simple View', value: 'simple' },

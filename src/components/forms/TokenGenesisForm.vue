@@ -14,10 +14,10 @@
         " color="primary" inline :disable="Boolean(cashToken?.processing)" />
     </div>
     <template v-if="genesisInput">
-      <q-input :model-value="genesisInput.txid" label="Token ID(Category)" :filled="true" disable dense />
-      <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" :filled="true" disable dense />
-      <q-input ref="tokenNameRef" v-model="genesisTokenMetadata.name" label="Token Name *" :filled="true" dense
-        aria-required :bottom-slots="Boolean(validationErrors.name)" :reactive-rules="true"
+      <q-input :model-value="genesisInput.txid" label="Token ID(Category)" filled disable dense />
+      <q-input :model-value="authKey.token?.tokenId || authKey.txid" label="Auth Key" filled disable dense />
+      <q-input ref="tokenNameRef" v-model="genesisTokenMetadata.name" label="Token Name *" filled dense aria-required
+        :bottom-slots="Boolean(validationErrors.name)" :reactive-rules="true"
         @update:model-value="(v: any) => { validationErrors.name = /^[a-zA-Z0-9-\s]+[a-zA-Z-0-9-\s]*$/.test(v) ? '' : 'Token Name Required'; tokenNameRef?.validate(v) }">
         <template v-slot:hint>
           <!-- using hint slot for error, because error slot won't show -->
@@ -27,9 +27,9 @@
         </template>
       </q-input>
 
-      <q-input v-model="genesisTokenMetadata.description" label="Description" :filled="true" dense
+      <q-input v-model="genesisTokenMetadata.description" label="Description" filled dense
         :disable="Boolean(cashToken?.processing)" />
-      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol *" :filled="true" input-class="text-uppercase"
+      <q-input v-model="genesisTokenMetadata.symbol" label="Token Symbol *" filled input-class="text-uppercase"
         @update:model-value="(v: any) => validationErrors.symbol = /^[A-Z0-9]+[A-Z0-9-]*$/.test(v.toString().toUpperCase()) ? '' : 'Required, valid values = (A to Z 0 to 9 and/or -)'"
         :bottom-slots="Boolean(validationErrors.symbol)" dense :disable="Boolean(cashToken?.processing)">
 
@@ -42,9 +42,9 @@
 
       </q-input>
       <template v-if="tType === 'ft' || tType === 'fnft'">
-        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" :filled="true" dense
+        <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" filled dense
           :disable="Boolean(cashToken?.processing)" />
-        <q-input v-model="genesisToken.amount" label="Maximum Supply" :filled="true" dense
+        <q-input v-model="genesisToken.amount" label="Maximum Supply" filled dense
           :disable="Boolean(cashToken?.processing)">
           <template v-slot:append>
             <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
@@ -77,7 +77,7 @@
             " color="primary" inline :disable="Boolean(cashToken?.processing)" />
         </div>
         <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
-          :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
+          filled :placeholder="tokenCommmitmentPlaceholderText"
           :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :disable="Boolean(cashToken?.processing)"
           dense stack-label>
           <template v-slot:prepend>
@@ -118,7 +118,7 @@
           </i>
         </div>
       </template>
-      <q-input v-model="genesisTokenMetadata.website" label="Website" :filled="true" placeholder="https://"
+      <q-input v-model="genesisTokenMetadata.website" label="Website" filled placeholder="https://"
         :disable="Boolean(cashToken?.processing)" dense>
         <template v-slot:prepend>
           <q-icon name="web" flat></q-icon>
