@@ -49,7 +49,7 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import { uid, useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { GenesisInput, AuthKey } from 'src/app'
+import { GenesisInput, AuthKey, DEFAULT_TOKEN_VALUE } from 'src/app'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useEventBus } from 'src/composables';
@@ -63,26 +63,8 @@ const { $ebus } = useEventBus()
 const authKey = ref<AuthKey | null>()
 const genesisInputUtxo = ref<UtxoI | null>()
 const genesisInputInstance = ref<GenesisInput>()
+const genesisInputScanDone = ref<boolean>(false)
 
-
-watch(() => user.genesisInputs, (value) => {
-  if (value && value.length >= 2) {
-    // use first for AuthKey
-    genesisInputUtxo.value = value[0]
-    authKey.value = new AuthKey({ ...value[1] })
-  }
-  if (!value || value.length === 0) {
-    genesisInputUtxo.value = null
-    authKey.value = null
-  }
-})
-
-onMounted(async () => {
-  if (user.genesisInputs && user.genesisInputs?.length >= 2) {
-    genesisInputUtxo.value = user.genesisInputs[0]
-    authKey.value = new AuthKey({ ...user.genesisInputs[1] })
-  }
-})
 
 const generateGenesisInputs = async () => {
   if (!user.wallet) {
@@ -111,6 +93,48 @@ const generateGenesisInputs = async () => {
 const onGenesisResult = async (result: any) => {
   console.log('GENESIS RESULT', result)
 }
+
+const filterAndStoreGenesisInputs = (userUtxos: UtxoI[]) => {
+  user.genesisInputs = userUtxos?.filter((utxo: UtxoI) => {
+    return Boolean(!utxo.token) &&
+      utxo.vout === 0 &&
+      utxo.satoshis >= DEFAULT_TOKEN_VALUE
+  }).slice(0, 5)
+}
+
+watch(() => user.genesisInputs, (value) => {
+  genesisInputScanDone.value = true
+  if (value && value.length >= 2) {
+    // use first for AuthKey
+    genesisInputUtxo.value = value[0]
+    authKey.value = new AuthKey({ ...value[1] })
+  }
+  if (!value || value.length === 0) {
+    genesisInputUtxo.value = null
+    authKey.value = null
+  }
+})
+
+watch(() => user.wallet, async (userWallet) => {
+  if (userWallet) {
+    ui.setStatusMessage({
+      statusMessage: 'Scanning your wallet for valid genesis inputs',
+      statusMessageType: undefined,
+      statusMessageSpinner: true
+    })
+    const userUtxos = await userWallet.getAddressUtxos()
+    ui.clearStatusMessage()
+    filterAndStoreGenesisInputs(userUtxos)
+  }
+})
+
+onMounted(async () => {
+  if (user.genesisInputs && user.genesisInputs?.length >= 2) {
+    genesisInputUtxo.value = user.genesisInputs[0]
+    authKey.value = new AuthKey({ ...user.genesisInputs[1] })
+  }
+})
+
 
 </script>
 

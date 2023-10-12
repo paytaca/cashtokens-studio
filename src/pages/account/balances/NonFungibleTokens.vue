@@ -21,7 +21,7 @@
                     </q-checkbox>
                 </div>
                 <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
-                    <q-markup-table>
+                    <q-markup-table grid>
                         <thead>
                             <tr v-if="watchtower.processing">
                                 <th colspan="7">
@@ -200,8 +200,11 @@ const refreshData = async () => {
             query
         )
         user.paginatedNftCollections = paginatedNftCollections.value
-        populateNftCollections(paginatedNftCollections.value)
-        initPagination()
+        if (paginatedNftCollections.value) {
+            populateNftCollections(paginatedNftCollections.value)
+            initPagination()
+        }
+
     }
 }
 

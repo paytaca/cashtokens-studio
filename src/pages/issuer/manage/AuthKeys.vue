@@ -2,7 +2,7 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">My AuthKeys</h5>
+        <h5 class="text-center">AuthKeys</h5>
         <q-expansion-item label="Description">
           <p>
             When you create a token (genesis) in CSStudio it's locked in a contract called an <q-btn
@@ -50,7 +50,11 @@
                   <q-spinner color="cyan"></q-spinner><i>{{ authKey.processing }}</i>
                 </template>
                 <template v-else>
-                  {{ authKey.unlockableTokensCount }}
+                  <q-btn
+                    @click.stop="() => wOpenAuthGuardTokenListDialog(AuthGuardTokenListDialog.__name, { authKey: authKey, authGuard: authKey.authGuard })"
+                    flat dense color="primary">
+                    {{ authKey.unlockableTokensCount }}
+                  </q-btn>
                 </template>
               </td>
               <td>
@@ -66,6 +70,10 @@
                       <q-item clickable v-close-popup
                         @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer
                         AuthKey</q-item>
+                      <q-item clickable v-close-popup
+                        @click="wOpenAuthGuardTokenListDialog(AuthGuardTokenListDialog.__name, { authKey: authKey, authGuard: authKey.authGuard })">
+                        View Locked tokens
+                      </q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -85,6 +93,8 @@
       @hide="onHide" @auth-key-transferred="onAuthKeyTransfer" />
     <AuthKeyCreateTokenDialog v-if="dialog" :auth-key="dialogData.authKey" :tokenType="dialogData.tokenType"
       :model-value="dialog === AuthKeyCreateTokenDialog.__name" @hide="onHide" @genesis-result="onTokenCreate" />
+    <AuthGuardTokenListDialog v-if="dialog" :model-value="dialog === AuthGuardTokenListDialog.__name"
+      :auth-guard="(dialogData.authGuard as AuthGuard)" :auth-key="(dialogData.authKey as AuthKey)" @hide="onHide" />
   </q-page>
 </template>
 <script setup lang="ts">
@@ -93,7 +103,7 @@ import { Wallet } from 'mainnet-js';
 import { useUser } from 'src/stores/user';
 import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthGuard, AuthKey, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
@@ -102,6 +112,7 @@ import CashAddress from 'src/components/CashAddress.vue';
 import { PaginatedData } from 'src/app/types';
 import { getWalletClass } from 'src/app/utils';
 import { EventBus } from 'quasar';
+import AuthGuardTokenListDialog from 'src/components/dialogs/AuthGuardTokenListDialog.vue';
 
 const user = useUser()
 
@@ -184,6 +195,10 @@ const wOpenAuthKeyTransferDialog = (dialogName: string | undefined, authKey: Aut
  */
 const wOpenAuthKeyCreateTokenDialog = (dialogName: string | undefined, dialogData: { authKey: AuthKey, tokenType: 'ft' | 'nft' }) => {
   dialogData.authKey.ownerWallet = user.wallet! as Wallet
+  openDialog(dialogName, dialogData)
+}
+
+const wOpenAuthGuardTokenListDialog = (dialogName: string | undefined, dialogData: { authKey: AuthKey, authGuard: AuthGuard }) => {
   openDialog(dialogName, dialogData)
 }
 

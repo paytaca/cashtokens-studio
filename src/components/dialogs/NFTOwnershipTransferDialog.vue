@@ -4,16 +4,18 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
-          Transfer {{ nftMetadata?.name || nft?.tokenCategory?.symbol }}
+          Transfer {{ nftMetadata?.name || nft?.tokenCategory?.symbol }} NFT
         </q-toolbar-title>
         <TokenCategory v-if="nft?.token?.tokenId" :token-id="nft.token.tokenId" />
       </q-toolbar>
-      <div v-if="nftIsUsedAuthKey?.isAuthKey" class="q-mx-md text-justify q-my-md">
+      <div v-if="nftIsAuthKey?.isAuthKey" class="q-mx-md text-justify q-my-md">
         <q-icon name="warning" color="warning" size="sm"></q-icon>
         <span>
-          Warning! This NFT is an AuthGuard AuthKey (<q-icon name="key" color="warning"></q-icon>) for {{
-            nftIsUsedAuthKey.lockedTokens?.length || 0 }} locked token identity.
-          If you transfer this NFT you'll no longer be able to manage the token(s) locked by this AuthKey.
+          Warning! This NFT is an AuthKey (<q-icon name="key" color="warning"></q-icon>) to an AuthGuard with {{
+            nftIsAuthKey.lockedTokens?.length || 0 }} locked token identity.
+          If you transfer this NFT you'll no longer be able to manage the token(s) locked by the AuthGuard contract.
+          <q-btn @click.stop="_openLockedTokensDialog" flat color="secondary" no-caps>View the
+            locked tokens</q-btn>
         </span>
       </div>
       <q-card-section class="q-gutter-sm">
@@ -45,6 +47,10 @@
           :disable="!form.to || Boolean(nft.processing)" />
       </q-card-actions>
     </q-card>
+    <AuthGuardTokenListDialog v-if="authGuardTokenListDialog"
+      :model-value="authGuardTokenListDialog === AuthGuardTokenListDialog.__name"
+      :auth-guard="(authGuardAndAuthKey.authGuard as AuthGuard)" :auth-key="(authGuardAndAuthKey.authKey as AuthKey)"
+      @hide="hideLockedTokensDialog" />
   </q-dialog>
 </template>
 
@@ -52,7 +58,7 @@
 import { ref, onMounted, onUpdated } from 'vue';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { AuthKey, CashToken } from 'src/app';
+import { AuthGuard, AuthKey, CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
@@ -60,9 +66,10 @@ import { shortenAddress, shortenTokenId, shortenTx } from 'src/app/utils';
 import { NftType } from 'src/app/bcmr/bcmr-v2.schema';
 import { useUI } from 'src/stores/ui'
 import { UtxoI, Wallet, delay } from 'mainnet-js';
-import { userInfo } from 'os';
+import { useDialogs } from 'src/composables'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import convertBigIntToHexLE from 'src/app/utils/convertBigIntToHexLE';
+import AuthGuardTokenListDialog from './AuthGuardTokenListDialog.vue';
 const props = defineProps<{
   decimals?: string,
   nft: CashToken
@@ -76,13 +83,15 @@ const $q = useQuasar()
 const ui = useUI()
 const user = useUser()
 const nftMetadata = ref<NftType>()
-const nftIsUsedAuthKey = ref<{ isAuthKey: boolean, lockedTokens?: UtxoI[] }>({ isAuthKey: false })
+const { dialog: authGuardTokenListDialog, dialogData: authGuardAndAuthKey, openDialog: openLockedTokensDialog, onHide: hideLockedTokensDialog } = useDialogs()
+const nftIsAuthKey = ref<{ isAuthKey: boolean, lockedTokens?: UtxoI[], authKeyInstance?: AuthKey }>({ isAuthKey: false })
 const commitmentCopy = ref<string>()
 const commitmentFormat = ref<'decimal' | 'hex'>('hex')
 const form = ref<{ to: string, amount: string | number }>({
   to: '',
   amount: ''
 })
+
 
 const transferNFT = async () => {
   if (props.nft?.token?.tokenId) {
@@ -116,11 +125,15 @@ const transferNFT = async () => {
   }
 }
 
+const _openLockedTokensDialog = () => {
+  openLockedTokensDialog(AuthGuardTokenListDialog.__name, { authGuard: nftIsAuthKey.value.authKeyInstance?.authGuard, authKey: nftIsAuthKey.value.authKeyInstance })
+}
+
 const beforeHide = async () => {
   // Reset dialog
   form.value.amount = ''
   commitmentCopy.value = ''
-  nftIsUsedAuthKey.value.isAuthKey = false
+  nftIsAuthKey.value.isAuthKey = false
   form.value.to = ''
   // commitmentFormat.value = 'hex'
 }
@@ -148,12 +161,13 @@ onUpdated(async () => {
     // check this might be an authkey
     const authKey = new AuthKey({ ...props.nft.utxo, ownerWallet: user.wallet as Wallet })
     const lockedTokens = await authKey.authGuard.getLockedTokenIdentities()
+
     await delay(1000)
     ui.clearStatusMessage()
     if (lockedTokens) {
-      nftIsUsedAuthKey.value = { isAuthKey: true, lockedTokens }
+      nftIsAuthKey.value = { isAuthKey: true, lockedTokens, authKeyInstance: authKey }
     } else {
-      nftIsUsedAuthKey.value = { isAuthKey: true, lockedTokens: [] }
+      nftIsAuthKey.value = { isAuthKey: true, lockedTokens: [] }
     }
   }
 })

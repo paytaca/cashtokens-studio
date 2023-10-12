@@ -3,7 +3,8 @@ from patchwork.transfers import rsync
 from fabric import task
 
 hosts = [
-    'ubuntu@ec2-54-151-168-185.ap-southeast-1.compute.amazonaws.com'
+    # 'ubuntu@ec2-54-151-168-185.ap-southeast-1.compute.amazonaws.com', previous
+    'ubuntu@ec2-13-250-38-251.ap-southeast-1.compute.amazonaws.com'
 ]
 
 def attach_ssh_key(c):
