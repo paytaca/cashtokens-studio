@@ -4,7 +4,7 @@
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
           NFT Reserves
-          <q-badge color="blue-5" text-color="black" align="top" rounded>
+          <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
             {{ paginatedNftAuthchainIdentities?.count }}
           </q-badge>
         </h5>

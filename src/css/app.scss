@@ -1,42 +1,44 @@
 // app global css in SCSS form
 
-@font-face {
-  font-family: 'montserrat-regular';
-  src: url('/fonts/montserrat/Montserrat-Regular.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-regular';
+//   src: url('/fonts/montserrat/Montserrat-Regular.woff2');
+// }
 
-@font-face {
-  font-family: 'montserrat-italic';
-  src: url('/fonts/montserrat/Montserrat-Regular-Italic.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-italic';
+//   src: url('/fonts/montserrat/Montserrat-Regular-Italic.woff2');
+// }
 
-@font-face {
-  font-family: 'montserrat-thin';
-  src: url('/fonts/montserrat/Montserrat-Thin.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-thin';
+//   src: url('/fonts/montserrat/Montserrat-Thin.woff2');
+// }
 
-@font-face {
-  font-family: 'montserrat-thin-italic';
-  src: url('/fonts/montserrat/Montserrat-Thin-Italic.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-thin-italic';
+//   src: url('/fonts/montserrat/Montserrat-Thin-Italic.woff2');
+// }
 
-@font-face {
-  font-family: 'montserrat-bold';
-  src: url('/fonts/montserrat/Montserrat-Bold.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-bold';
+//   src: url('/fonts/montserrat/Montserrat-Bold.woff2');
+// }
 
-@font-face {
-  font-family: 'montserrat-bold-italic';
-  src: url('/fonts/montserrat/Montserrat-Bold-Italic.woff2');
-}
+// @font-face {
+//   font-family: 'montserrat-bold-italic';
+//   src: url('/fonts/montserrat/Montserrat-Bold-Italic.woff2');
+// }
 
-@font-face {
-  font-family: 'cutive-mono';
-  src: url('/fonts/montserrat/Cutive-Mono.woff2');
-}
+// @font-face {
+//   font-family: 'cutive-mono';
+//   src: url('/fonts/montserrat/Cutive-Mono.woff2');
+// }
 
 body {
-  font-family: 'montserrat-regular';
+  // font-family: 'montserrat-regular';
+  // font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
   font-size: .8em;
   /* For Firefox */
   /* Note: You may need to adjust this for older Firefox versions */
