@@ -23,7 +23,7 @@
           <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
             Capability <sup><code>{{ form.capability }}</code></sup>
             <q-option-group name="preferred_genre" v-model="form.capability" :options="[
-              // { value: 'minting', label: 'Minting' },
+              { value: 'minting', label: 'Minting' },
               { value: 'mutable', label: 'Mutable' },
               { value: 'none', label: 'None' }
             ]" color="primary" inline />
