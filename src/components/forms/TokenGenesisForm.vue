@@ -191,7 +191,7 @@
 <script setup lang="ts">
 import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
 import { useQuasar } from 'quasar'
-import { watch, onMounted, ref, computed, Ref } from 'vue'
+import { watch, onMounted, ref, computed, Ref, onUpdated } from 'vue'
 import { useUser } from 'src/stores/user'
 import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
@@ -358,7 +358,11 @@ watch(() => tType.value, (tokenType) => {
   if (tokenType === 'ft') {
     genesisToken.value.commitment = ''
   }
+  if (tokenType === 'nft' && !genesisToken.value.capability) {
+    genesisToken.value.capability = NFTCapability.minting
+  }
 })
+
 
 onMounted(() => {
   if (tType.value === 'nft') {
