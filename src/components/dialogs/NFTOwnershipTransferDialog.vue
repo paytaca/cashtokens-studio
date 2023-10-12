@@ -1,59 +1,68 @@
 <template>
-  <q-dialog v-close-popup @before-hide="() => { form.amount = ''; commitmentCopy = '' }" @before-show="beforeShow">
+  <q-dialog v-close-popup @before-hide="beforeHide" @before-show="beforeShow">
     <q-card class="q-px-sm q-py-lg full-width">
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
           Transfer {{ nftMetadata?.name || nft?.tokenCategory?.symbol }}
         </q-toolbar-title>
-        <TokenCategory v-if="nft.token?.tokenId" :token-id="nft.token.tokenId" />
+        <TokenCategory v-if="nft?.token?.tokenId" :token-id="nft.token.tokenId" />
       </q-toolbar>
+      <div v-if="nftIsUsedAuthKey?.isAuthKey" class="q-mx-md text-justify q-my-md">
+        <q-icon name="warning" color="warning" size="sm"></q-icon>
+        <span>
+          Warning! This NFT is an AuthGuard AuthKey (<q-icon name="key" color="warning"></q-icon>) for {{
+            nftIsUsedAuthKey.lockedTokens?.length || 0 }} locked token identity.
+          If you transfer this NFT you'll no longer be able to manage the token(s) locked by this AuthKey.
+        </span>
+      </div>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
-          <q-input :model-value="nft.token?.tokenId" label="Token ID/Category" filled dense disable stack-label></q-input>
-          <q-input :model-value="nft.token?.capability" label="Token Capability" filled dense disable
+          <q-input :model-value="nft?.token?.tokenId" label="Token ID/Category" filled dense disable
             stack-label></q-input>
-          <q-input :model-value="commitmentCopy" label="Token Commitment (read only)" filled dense stack-label
-            :disable="Boolean(nft.processing)">
+          <q-input :model-value="nft?.token?.capability" label="Token Capability" filled dense disable
+            stack-label></q-input>
+          <q-input v-if="props.nft?.token?.commitment"
+            :model-value="convertHexLEtoBigInt(props.nft?.token?.commitment).toString()" label="Token Commitment" filled
+            dense stack-label disable>
+            <template v-slot:prepend>
+              <q-btn icon-right="pin" size="sm" flat dense />
+            </template>
+          </q-input>
+          <q-input :model-value="commitmentCopy" label="Token Commitment (Raw hex value, actual value on-chain)" filled
+            dense stack-label disable>
             <template v-slot:prepend>
               <q-btn :label="commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
                 :icon-right="commitmentFormat === 'decimal' ? 'pin' : undefined" />
             </template>
-            <template v-slot:append>
-              <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
-                :class="$q.dark.isActive ? '' : 'text-black'"
-                :label="commitmentFormat === 'decimal' ? 'To Raw Hex' : 'To Number'" no-caps>
-                <q-tooltip>
-                  {{
-                    commitmentFormat === 'decimal' ? 'View raw hex value'
-                    : 'Click to convert value to a number'
-                  }}
-                </q-tooltip>
-              </q-btn>
-            </template>
           </q-input>
-          <q-input v-model="form.to" label="Recipient's Address*" filled dense :disable="Boolean(nft.processing)" />
+          <q-input v-model="form.to" label="Input Recipient's Token Address*" filled dense
+            :disable="Boolean(nft.processing)" />
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => transferNFT()" label="Transfer NFT" :busyLabel="nft.processing" color="primary"
-          :disable="!form.to" />
+          :disable="!form.to || Boolean(nft.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUpdated } from 'vue';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { CashToken } from 'src/app';
+import { AuthKey, CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
-import { shortenAddress, shortenTokenId } from 'src/app/utils';
+import { shortenAddress, shortenTokenId, shortenTx } from 'src/app/utils';
 import { NftType } from 'src/app/bcmr/bcmr-v2.schema';
 import { useUI } from 'src/stores/ui'
+import { UtxoI, Wallet, delay } from 'mainnet-js';
+import { userInfo } from 'os';
+import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
+import convertBigIntToHexLE from 'src/app/utils/convertBigIntToHexLE';
 const props = defineProps<{
   decimals?: string,
   nft: CashToken
@@ -65,7 +74,9 @@ const emit = defineEmits<{
 
 const $q = useQuasar()
 const ui = useUI()
+const user = useUser()
 const nftMetadata = ref<NftType>()
+const nftIsUsedAuthKey = ref<{ isAuthKey: boolean, lockedTokens?: UtxoI[] }>({ isAuthKey: false })
 const commitmentCopy = ref<string>()
 const commitmentFormat = ref<'decimal' | 'hex'>('hex')
 const form = ref<{ to: string, amount: string | number }>({
@@ -73,24 +84,12 @@ const form = ref<{ to: string, amount: string | number }>({
   amount: ''
 })
 
-const convertCommitment = () => {
-  if (commitmentCopy.value && commitmentFormat.value === 'decimal') {
-    commitmentCopy.value = BigInt(commitmentCopy.value).toString(16)
-    commitmentCopy.value = commitmentCopy.value.length < 2 ? commitmentCopy.value.padStart(2, '0') : commitmentCopy.value
-    commitmentFormat.value = 'hex'
-  } else if (commitmentCopy.value && commitmentFormat.value === 'hex') {
-    commitmentCopy.value = parseInt(commitmentCopy.value, 16).toString()
-    commitmentFormat.value = 'decimal'
-  }
-}
-
-
 const transferNFT = async () => {
   if (props.nft?.token?.tokenId) {
     try {
-      const tx = await props.nft.transferNFT({ newOwner: form.value.to })
+      const tx = await props.nft?.transferNFT({ newOwner: form.value.to })
       if (tx) {
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + tx })
+        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'CashToken.transferNFT',
@@ -99,7 +98,7 @@ const transferNFT = async () => {
         })
 
         ui.setStatusMessage({
-          statusMessage: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`,
+          statusMessage: `Transferred 1 ${props.nft?.tokenCategory?.symbol || shortenTokenId(props.nft?.token?.tokenId)} NFT with commitment = ${commitmentCopy.value || '<empty>'} to ${shortenAddress(form.value.to)}`,
           statusMessageType: 'success',
           statusMessageTxid: tx
         })
@@ -117,6 +116,15 @@ const transferNFT = async () => {
   }
 }
 
+const beforeHide = async () => {
+  // Reset dialog
+  form.value.amount = ''
+  commitmentCopy.value = ''
+  nftIsUsedAuthKey.value.isAuthKey = false
+  form.value.to = ''
+  // commitmentFormat.value = 'hex'
+}
+
 const beforeShow = async () => {
   form.value.amount = props.nft?.token?.amount ? String(props.nft.token!.amount) : 0
   commitmentCopy.value = props.nft?.token?.commitment
@@ -130,6 +138,25 @@ const beforeShow = async () => {
   }
 
 }
+
+onUpdated(async () => {
+  if (props.nft?.token?.commitment == '00') {
+    ui.setStatusMessage({
+      statusMessage: 'Checking if this NFT is an AuthKey. Plase wait...',
+      statusMessageSpinner: true
+    })
+    // check this might be an authkey
+    const authKey = new AuthKey({ ...props.nft.utxo, ownerWallet: user.wallet as Wallet })
+    const lockedTokens = await authKey.authGuard.getLockedTokenIdentities()
+    await delay(1000)
+    ui.clearStatusMessage()
+    if (lockedTokens) {
+      nftIsUsedAuthKey.value = { isAuthKey: true, lockedTokens }
+    } else {
+      nftIsUsedAuthKey.value = { isAuthKey: true, lockedTokens: [] }
+    }
+  }
+})
 
 
 </script>
