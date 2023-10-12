@@ -4,7 +4,6 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 row items-center">
-          <span class="q-mx-sm">Issue</span>
           <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
             authchainIdentity.tokenCategory.symbol : 'FT' }}</span>
           <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">

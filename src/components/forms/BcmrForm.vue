@@ -43,7 +43,7 @@
           @click="() => openBcmrPublisherDialog(AuthchainRegistryPublisherDialog.__name, bcmr?.authchainIdentity)" dense
           no-caps :icon="updatePublished ? 'done_all' : 'publish'" :disable="Boolean(bcmr?.processing)" flat>
           <template v-slot:default>
-            <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Update</span>
+            <span v-if="$q.screen.gt.xs" class="q-ml-xs">Publish Registry</span>
           </template>
         </q-btn>
       </div>
