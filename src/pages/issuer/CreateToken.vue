@@ -2,12 +2,13 @@
   <q-page class="q-pa-sm">
     <div class="row justify-center">
       <div class="col-xs-12 col-sm-10 col-lg-9">
-        <div class="row justify-center q-my-lg q-px-lg q-py-lg">
+        <div class="row justify-center q-my-lg">
           <template v-if="!genesisInputUtxo || !authKey">
-            <q-banner class="q-mt-lg q-pb-lg" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
-              <template v-slot:avatar>
-                <q-icon name="info" size="lg" />
-              </template>
+            <q-banner class="q-mt-lg q-px-lg q-py-xl text-justify" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'"
+              rounded>
+              <div class="row justify-center q-mb-md">
+                <q-icon name="info" size="lg" color="info" />
+              </div>
               <p>
                 Creating a new token requires a "genesis input". A valid genesis input is just a utxo that is the
                 first
