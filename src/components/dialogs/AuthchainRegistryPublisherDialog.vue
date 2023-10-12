@@ -89,7 +89,7 @@ const publish = async () => {
   } catch (error: any) {
     console.log(error)
     ui.setStatusMessage({
-      statusMessage: `Error! ${error.message}`,
+      statusMessage: error,
       statusMessageType: 'error',
     })
     $q.notify({ type: 'negative', message: error.message })

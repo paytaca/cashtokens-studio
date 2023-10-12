@@ -17,7 +17,7 @@
           <q-input :model-value="minter.token?.tokenId" label="Token ID/Category" filled dense disable>
           </q-input>
           <q-input :model-value="form.commitmentOfLastMint"
-            :label="nftCollectionType === 'SequentialNftCollection' ? 'Commitment of Last Mint (Sequence Number)' : 'Token Commitment'"
+            :label="nftCollectionType === 'SequentialNftCollection' ? 'Commitment of Last Mint (Last Sequence Number)' : 'Token Commitment'"
             filled dense disable>
           </q-input>
           <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
@@ -31,7 +31,8 @@
           <q-input v-if="form.capability !== 'minting'" v-model="form.commitment"
             :label="nftCollectionType === 'SequentialNftCollection' ? 'Token Commitment (Sequence Number)' : 'Token Commitment'"
             :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
-            :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" dense stack-label>
+            :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;" dense
+            stack-label>
             <template v-slot:prepend>
               <q-btn :label="form.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
                 :icon-right="form.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -177,7 +178,7 @@ const mintToken = async () => {
       }
     } catch (error: any) {
       ui.setStatusMessage({
-        statusMessage: `Error! ${error.message}`,
+        statusMessage: error,
         statusMessageType: 'error',
       })
       $q.notify({ type: 'negative', message: 'Error!' + error.message })

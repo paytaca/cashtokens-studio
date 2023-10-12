@@ -3,11 +3,11 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">AuthKeys</h5>
-        <q-expansion-item label="Description">
+        <q-expansion-item label="More Info">
           <p>
-            When you create a token (genesis) in CSStudio it's locked in a contract called an <q-btn
-              href="https://github.com/mr-zwets/AuthGuard" target="_blank" color="secondary" flat dense label="AuthGuard"
-              no-caps style="text-indent:0" />.
+            When you create a token (genesis) in CSStudio it's locked in a contract called an <a
+              href="https://github.com/mr-zwets/AuthGuard" target="_blank" flat dense no-caps style="text-indent:0"
+              class="text-secondary">AuthGuard</a>.
             An AuthKey (or Minting Baton) is an NFT that let's the holder manage the locked tokens.
             Holder of the AuthKey can manage the authchain, issue tokens from fungible reserves or mint new NFTs
             if the token created was a `minting` NFT.

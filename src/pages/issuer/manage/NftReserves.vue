@@ -8,10 +8,10 @@
             {{ paginatedNftAuthchainIdentities?.count }}
           </q-badge>
         </h5>
-        <q-expansion-item label="Description">
+        <q-expansion-item label="More Info">
           <p>
-            These are the NFT identities that are locked in the <q-btn href="https://github.com/mr-zwets/AuthGuard"
-              target="_blank" color="secondary" flat dense label="AuthGuard" no-caps style="text-indent:0" /> contract,
+            These are the NFT identities that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
+              target="_blank" flat dense no-caps style="text-indent:0" class="text-secondary">AuthGuard</a> contract,
             of which you own the AuthKey. Any NFT you create in CashTokens Studio will be listed here. If the NFT has
             minting capability, you can mint new NFTs of the same category here.
           </p>

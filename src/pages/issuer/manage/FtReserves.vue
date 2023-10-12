@@ -8,10 +8,11 @@
             {{ paginatedFtAuthchainIdentities?.count }}
           </q-badge>
         </h5>
-        <q-expansion-item label="Description">
+        <q-expansion-item label="More Info">
           <p>
-            These are the FT identities (utxos) that are locked in the <q-btn href="https://github.com/mr-zwets/AuthGuard"
-              target="_blank" color="secondary" flat dense label="AuthGuard" no-caps style="text-indent:0" /> contract,
+            These are the FT identities (utxos) that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
+              target="_blank" flat dense no-caps style="text-indent:0" class="text-secondary">AuthGuard</a>
+            contract,
             of which you own the AuthKey. Any FT you create in CashTokens Studio will be listed here. The amount held by
             each of the FT identity is considered as reserve supply. You can issue or release any amount from the reserve
             supply
@@ -47,7 +48,7 @@
                 <q-avatar v-if="identity.tokenUris?.icon">
                   <img :src="identity.tokenUris?.icon" alt="na">
                 </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-9" />
+                <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
                 <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
