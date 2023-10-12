@@ -15,18 +15,18 @@ export class MultiThreadedMinter {
   ownerWallet: Wallet
   private _contract: Contract
   private _processing?: string
-  constructor(parentMinter:UtxoI, mintPrice: number, nftCollectionSize: number, numberOfThreads: number, network: NetworkType, ownerWallet: Wallet ) {
-    this.parentMinter = parentMinter
-    this.mintPrice = mintPrice
-    this.ownerWallet = ownerWallet
-    this.numberOfThreads = numberOfThreads
-    this.network = network
-    this.nftCollectionSize = nftCollectionSize
+  constructor(opt:{parentMinter:UtxoI, mintPrice: number, nftCollectionSize: number, numberOfThreads: number, network: NetworkType, ownerWallet: Wallet}) {
+    this.parentMinter = opt.parentMinter
+    this.mintPrice = opt.mintPrice
+    this.ownerWallet = opt.ownerWallet
+    this.numberOfThreads = opt.numberOfThreads
+    this.network = opt.network
+    this.nftCollectionSize = opt.nftCollectionSize
     const pkh = this.ownerWallet.getPublicKeyHash(false)
     this._contract = new Contract(
       this.contractScript,
-      [BigInt(mintPrice), BigInt(numberOfThreads), pkh, nftCollectionSize - 1],
-      network
+      [BigInt(opt.mintPrice), BigInt(opt.numberOfThreads), pkh, opt.nftCollectionSize - 1],
+      opt.network
     )
   
   }
