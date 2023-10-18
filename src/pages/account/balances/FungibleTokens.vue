@@ -48,7 +48,11 @@
                 <td>
                   <TokenCategory :tokenId="b.tokenId" />
                 </td>
-                <td>{{ tokeshiToNumber(Number(b.balance), String(b.tokenCategory?.decimals || 0)) }}</td>
+                <td>
+                  <q-btn flat dense @click.stop="watchtower.subscribe(user.walletTokenAddress)">
+                    {{ tokeshiToNumber(Number(b.balance), String(b.tokenCategory?.decimals || 0)) }}
+                  </q-btn>
+                </td>
                 <!-- <td>{{ b.utxoCount }}</td> -->
                 <td>
                   <q-btn color="primary" dense no-caps @click="openDialog(FTBalanceTransferDialog.__name, b)">Send</q-btn>
