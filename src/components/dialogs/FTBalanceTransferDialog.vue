@@ -15,7 +15,7 @@
           <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance?.tokenCategory?.decimals" label="Decimals"
             filled dense disable></q-input>
           <q-input :model-value="currentBalanceWithDecimal"
-            :label="BigInt(amountToSendRaw) > 0 ? 'Remaining balance' : 'Current balance'" filled dense disable>
+            :label="Number(amountToSendRaw) > 0 ? 'Remaining balance' : 'Current balance'" filled dense disable>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
               <q-avatar>
                 <img :src="tokenBalance?.tokenUris?.icon" alt="">
@@ -35,7 +35,13 @@
               </q-avatar>
             </template>
           </q-input>
-          <div v-if="BigInt(amountToSendRaw) > 0" class="row justify-end text-italic">
+          <div v-if="!tokenBalance.tokenCategory?.decimals && form.amount.includes('.')" class="text-italic">
+            <q-icon name="warning" color="warning" size="xs" /> Token has 0 or no `decimals` metadata. Value after decimal
+            point
+            will be
+            ignored.
+          </div>
+          <div v-if="Number(amountToSendRaw) > 0" class="row justify-end text-italic">
             <span class="text-weight text-green-6 q-mr-xs">{{
               amountToSendRaw
             }}</span>
@@ -89,14 +95,15 @@ const currentBalanceWithDecimal = computed(() => {
   if (props.tokenBalance.tokenCategory?.decimals) {
     return Number(tokeshiToNumber(Number(props.tokenBalance.balance), props.tokenBalance.tokenCategory?.decimals?.toString())) - Number(form.value.amount)// !change to string if mainnetjs supports bigint
   }
-  return Number(props.tokenBalance.balance) - Number(form.value.amount)// !change to string if mainnetjs supports bigint
+  // ignore the decimal point of form.value.amount if no `decimals` metadata
+  return Number(props.tokenBalance.balance) - parseInt(form.value.amount || '0')// !change to string if mainnetjs supports bigint
 })
 const processingMessage = ref<ProcessingMessage>()
 const amountToSendRaw = computed(() => {
   if (props.tokenBalance.tokenCategory?.decimals) {
     return numberToTokeshi(Number(form.value.amount), props.tokenBalance.tokenCategory?.decimals?.toString())
   }
-  return form.value.amount
+  return parseInt(form.value.amount) // !!! Update once mainnetjs supports BigInt
 })
 const form = ref<{ to: string, amount: string }>({
   to: '',
