@@ -44,32 +44,31 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { NFTCapability, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { CashToken, ProcessingMessage } from 'src/app';
+import { CashToken } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
-import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
-import { NftCollectionType } from 'src/app/types';
-import { shortenAddress, shortenTokenId } from 'src/app/utils';
-import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
+import { shortenTokenId } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { MultiThreadedMinter } from 'src/app/mintingcontracts/MultiThreadedMinter';
-import { ProcessingMessageHandler } from 'src/app'
+import { CTSBackend } from 'src/app/CTSBackend';
 
 const props = defineProps<{
-  minter: CashToken, // this is actually the authchain
+  minter: CashToken, // A minting NFT on owner's token wallet address
 }>()
 
 const form = ref<{
   mintPrice: number | string,
+  mintDate: number | string,
   collectionSize: number | string,
-  threadCount: number
+  threadCount: number,
 }>({
   mintPrice: '',
+  mintDate: '',
   collectionSize: '',
   threadCount: 5
 })
@@ -83,6 +82,8 @@ const $q = useQuasar()
 const user = useUser()
 const ui = useUI()
 const multiThreadedMinter = ref<MultiThreadedMinter>()
+const ctsBackend = ref<CTSBackend>()
+
 const deployMintingContract = async () => {
   const mintPriceSat = Number(form.value.mintPrice) * 1e8
   multiThreadedMinter.value = new MultiThreadedMinter({
@@ -93,10 +94,28 @@ const deployMintingContract = async () => {
     network: user.wallet!.network,
     ownerWallet: user.wallet as Wallet
   })
-  window.m = multiThreadedMinter.value
+  // window.m = multiThreadedMinter.value
   try {
     const tx = await multiThreadedMinter.value.createThreads()
     if (tx) {
+
+      ctsBackend.value = new CTSBackend()
+      const pubRes = await ctsBackend.value.publishNFTProject({
+        tokenId: props.minter.token!.tokenId!,
+        mintingContractName: MultiThreadedMinter.name,
+        // convert bigint to string so it 
+        // can be added to a JSON payload
+        mintingContractParams: multiThreadedMinter.value.contractScriptParams.map((p: any) => typeof (p) === 'bigint' ? p.toString() : p),
+        mintingContractScript: multiThreadedMinter.value.contractScript,
+        mintingPrice: mintPriceSat,
+        mintingDate: new Date(form.value.mintDate).getTime(),
+        collectionSize: multiThreadedMinter.value.nftCollectionSize,
+        publisherAddress: user.wallet!.getTokenDepositAddress(),
+        publishedOn: new Date().getTime(),
+        network: user.wallet!.network
+      })
+      console.log(pubRes)
+
       $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
 
       $ebus?.emit('transaction', {
@@ -117,8 +136,10 @@ const deployMintingContract = async () => {
       statusMessage: error,
       statusMessageType: 'error'
     })
-    return $q.notify({ type: 'negative', message: error.message })
+    $q.notify({ type: 'negative', message: error.message })
   }
+
+
 
 }
 
