@@ -13,6 +13,10 @@ export class MultiThreadedMinter {
   numberOfThreads: number
   network: NetworkType
   ownerWallet: Wallet
+  /**
+   * Parameters passed to the contract script
+   */
+  contractScriptParams: any 
   private _contract: Contract
   private _processing?: string
   constructor(opt:{parentMinter:UtxoI, mintPrice: number, nftCollectionSize: number, numberOfThreads: number, network: NetworkType, ownerWallet: Wallet}) {
@@ -23,9 +27,10 @@ export class MultiThreadedMinter {
     this.network = opt.network
     this.nftCollectionSize = opt.nftCollectionSize
     const pkh = this.ownerWallet.getPublicKeyHash(false)
+    this.contractScriptParams = [BigInt(opt.mintPrice), BigInt(opt.numberOfThreads), pkh, opt.nftCollectionSize - 1]
     this._contract = new Contract(
       this.contractScript,
-      [BigInt(opt.mintPrice), BigInt(opt.numberOfThreads), pkh, opt.nftCollectionSize - 1],
+      this.contractScriptParams,
       opt.network
     )
   
@@ -99,7 +104,6 @@ export class MultiThreadedMinter {
     }
 
     this._processing = 'Awaiting signature'
-    console.log('ENCODED TRANSACTION', encodedTransaction)
     const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
     if (!signResult || !signResult.signedTransaction) {
       delete this._processing
