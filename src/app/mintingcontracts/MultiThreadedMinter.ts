@@ -3,7 +3,7 @@ import { Contract } from "@mainnet-cash/contract"
 import getWalletClass from 'src/app/utils/getWalletClass'
 import { DEFAULT_TOKEN_VALUE } from '../constants'
 import { bigIntToVmNumber, binToHex } from '@bitauth/libauth'
-import { requestPaytacaSignature, submitTransaction } from '../utils'
+import { calcMinerFee, requestPaytacaSignature, submitTransaction } from '../utils'
 
 export class MultiThreadedMinter {
   
@@ -39,6 +39,19 @@ export class MultiThreadedMinter {
     console.log('wip')
   }
 
+  get processing(): string|undefined {
+    return this._processing
+  }
+
+  get threadsCreationCost(): {minerFee: number, totalCost: number} {
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':2}, {P2SH:this.numberOfThreads, P2PKH: 1}) // out = contract address, change
+    const totalCost = minerFee + (DEFAULT_TOKEN_VALUE * this.numberOfThreads)
+    return {
+      minerFee,
+      totalCost
+    }
+  }
+
   /**
    * Creates minting UTXOs
    */
@@ -48,6 +61,11 @@ export class MultiThreadedMinter {
     }
     // check if the wallet owns a minting token for this category
     this._processing = 'Preparing threads'
+    
+    const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
+      return Boolean(!u.token) && u.satoshis > this.threadsCreationCost.totalCost
+    })[0]
+
     const requests = []
     for (let i = 0; i < this.numberOfThreads; i++) {
       requests.push(
@@ -68,8 +86,10 @@ export class MultiThreadedMinter {
         false,
         {
           tokenOperation: 'mint',
-          checkTokenQuantities: false,
-          buildUnsigned: true
+          checkTokenQuantities: true,
+          buildUnsigned: true,
+          utxoIds: [this.parentMinter, funderUtxo],
+          ensureUtxos: [this.parentMinter, funderUtxo]
         }
       )
       encodedTransaction = encoded?.encodedTransaction
@@ -79,6 +99,7 @@ export class MultiThreadedMinter {
     }
 
     this._processing = 'Awaiting signature'
+    console.log('ENCODED TRANSACTION', encodedTransaction)
     const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
     if (!signResult || !signResult.signedTransaction) {
       delete this._processing
