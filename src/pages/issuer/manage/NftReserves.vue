@@ -87,6 +87,10 @@
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Deploy a Minting Contract
                       </q-item>
+                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                        @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
+                        Load a Minting Contract
+                      </q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -120,7 +124,7 @@ import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
 import { CashToken } from 'src/app'
 import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
-import { EventBus, uid } from 'quasar';
+import { EventBus } from 'quasar';
 import { getWalletClass, shortenTokenId } from 'src/app/utils';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
 import { useUI } from 'src/stores/ui';
