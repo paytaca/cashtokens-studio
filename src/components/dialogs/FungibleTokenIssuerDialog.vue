@@ -43,23 +43,25 @@
                 BigInt(amountToSendRaw) }} (Raw FT Amount)</div>
             </template>
           </q-input>
-          <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense>
+          <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense
+            :disable="Boolean(authchainIdentity.processing)">
             <template v-slot:append>
               <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
                 @click="form.recipient = user.walletTokenAddress!" label="Self" dense />
             </template>
           </q-input>
-          <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal"
-            @update:model-value="() => amountToSendRaw = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))"
-            filled dense bottom-slots :rules="[(v) => Number(v) <= Number(currentFtReserves) || 'Amount exceeds supply']">
-            <template v-slot:hint>
+          <!-- @update:model-value="() => amountToSendRaw = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))" -->
+          <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal" filled dense
+            bottom-slots :rules="[(v) => Number(v) <= Number(currentFtReserves) || 'Amount exceeds supply']"
+            :disable="Boolean(authchainIdentity.processing)">
+            <!-- <template v-slot:hint>
               <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
-                class="row justify-end text-italic q-mb-sm">
+                class="row justify-end text-italic q-mb-sm" style="font-size: .8em;">
                 <q-icon name="warning" color="warning" /> Token has 0 or no decimal metadata. Value after decimal point
                 will be
                 ignored.
               </div>
-              <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
+              IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint
               <div v-if="Number(form.amount) <= Number(currentFtReserves)"
                 class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
                 <span>Token amount </span>
@@ -68,13 +70,28 @@
                 }}</span>
                 <span>(Raw FT Amount)</span>
               </div>
-            </template>
+            </template> -->
             <template v-if="authchainIdentity?.tokenUris?.icon" v-slot:prepend>
               <q-avatar>
                 <img :src="authchainIdentity.tokenUris.icon" alt="">
               </q-avatar>
             </template>
           </q-input>
+          <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
+            class="text-left text-italic q-mb-sm">
+            <q-icon name="warning" color="warning" /> Token has 0 or no `decimals` metadata. Value after decimal point
+            will be
+            ignored.
+          </div>
+          <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
+          <div v-if="Number(form.amount) <= Number(currentFtReserves)"
+            class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
+            <span>Token amount </span>
+            <span class="text-weight-bold text-green-6">{{
+              amountToSendRaw
+            }}</span>
+            <span>(Raw FT Amount)</span>
+          </div>
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end q-my-lg">
@@ -126,7 +143,7 @@ const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>(
 const currentFtReserves = computed(() => Number(props.authchainIdentity.token!.amount).toString())
 const currentFtReservesDecimal = computed(() => tokeshiToNumber(Number(currentFtReserves.value), props.authchainIdentity.tokenCategory?.decimals?.toString()))
 const newReserveSupplyDecimal = computed(() => {
-  let v = currentFtReservesDecimal.value - Number(form.value.amount)
+  let v = currentFtReservesDecimal.value - Number(form.value.amount || '0')
   if (!props.authchainIdentity.tokenCategory?.decimals) {
     v = Math.floor(v)
   }
@@ -140,7 +157,8 @@ const amountToSendRaw = computed(() => {
     console.log('d', props.authchainIdentity.tokenCategory?.decimals)
     return numberToTokeshi(Number(form.value.amount), props.authchainIdentity.tokenCategory?.decimals?.toString())
   }
-  return form.value.amount
+  // ignore value after decimal point, !!! handle BigInt in the future
+  return parseInt(form.value.amount || '0')
 })
 
 const releaseTokensFromReserveSupply = async () => {
