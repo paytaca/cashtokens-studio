@@ -36,7 +36,7 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="deployMintingContract" label="Deploy Contract" :busyLabel="minter.processing"
+        <BusyButton @click="deployMintingContract" label="Deploy Contract" :busyLabel="multiThreadedMinter?.processing"
           color="primary" />
       </q-card-actions>
     </q-card>
@@ -53,7 +53,7 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenAddress, shortenTokenId } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
@@ -84,9 +84,10 @@ const { $ebus } = useEventBus()
 const $q = useQuasar()
 const user = useUser()
 const ui = useUI()
-const deployMintingContract = () => {
+const multiThreadedMinter = ref<MultiThreadedMinter>()
+const deployMintingContract = async () => {
   const mintPriceSat = Number(form.value.mintPrice) * 1e8
-  const m = new MultiThreadedMinter({
+  multiThreadedMinter.value = new MultiThreadedMinter({
     parentMinter: props.minter.utxo,
     mintPrice: mintPriceSat,
     nftCollectionSize: Number(form.value.collectionSize),
@@ -94,8 +95,33 @@ const deployMintingContract = () => {
     network: user.wallet!.network,
     ownerWallet: user.wallet as Wallet
   })
-  window.m = m
-  console.log(m)
+  window.m = multiThreadedMinter.value
+  try {
+    const tx = await multiThreadedMinter.value.createThreads()
+    if (tx) {
+      $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'MultiThreadedMinter.createThreads',
+        timestamp: new Date().getTime(),
+        successMsg: `Created ${form.value.threadCount} NFTs (threads)`
+      })
+      ui.setStatusMessage({
+        statusMessage: `Created ${form.value.threadCount} NFTs (threads)`,
+        statusMessageType: 'success',
+        statusMessageTxid: tx
+      })
+
+    }
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
+    return $q.notify({ type: 'negative', message: error.message })
+  }
+
 }
 
 onMounted(() => {
