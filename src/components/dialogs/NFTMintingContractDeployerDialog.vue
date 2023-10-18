@@ -64,8 +64,6 @@ const props = defineProps<{
   minter: CashToken, // this is actually the authchain
 }>()
 
-const m = ref<ProcessingMessageHandler>(new ProcessingMessageHandler())
-
 const form = ref<{
   mintPrice: number | string,
   collectionSize: number | string,
