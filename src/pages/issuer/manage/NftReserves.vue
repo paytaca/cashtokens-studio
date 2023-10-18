@@ -83,10 +83,10 @@
                         @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
-                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Deploy a Minting Contract
-                      </q-item> -->
+                      </q-item>
                     </q-list>
                   </q-menu>
                 </q-btn>
@@ -178,17 +178,21 @@ const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) =>
   })
   await delay(1500)
   const utxos = await user.wallet!.getAddressUtxos()
-  const minter = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
-  if (!minter) {
+  const mintingNFT = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
+  if (!mintingNFT) {
     ui.setStatusMessage({
       statusMessage: `The contract requires you to have a minter for token ${shortenTokenId(identity.token!.tokenId)} ${identity.tokenCategory!.symbol ? `(${identity.tokenCategory!.symbol})` : ''} in your wallet which currently you don't have. Although you own the NFT reserve, it is not in your wallet it's in the AuthGuard contract. Don't worry you can create a minter from the Mint Child NFT menu.`,
       statusMessageType: 'error',
     })
     return
   }
-  const ct = new CashToken({ ...identity })
+  // encapsulating mintingNFT utxo as CashToken
+  const ct = new CashToken({ ...mintingNFT })
+  // borrowing the already present metadata from the authchain identity output
+
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
+  ct.ownerWallet = identity.ownerWallet
   ui.clearStatusMessage()
   openDialog(NFTMintingContractDeployerDialog.__name, ct)
 }
