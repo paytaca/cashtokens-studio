@@ -6,11 +6,17 @@ export type NFTProjectPublishingOptions = {
   mintingContractParams: any,
   mintingContractScript: string,
   mintingPrice: string|number,
+  mintingBannerMessage: string,
   mintingDate: any,
   collectionSize: number,
   publisherAddress: string,
   publishedOn?: string|number,
   network: Network
+}
+
+export type FetchPublishedNFTProjectsOptions = {
+  tokenId: string,
+  publisherAddress: string
 }
 
 export class CTSBackend {
@@ -26,6 +32,7 @@ export class CTSBackend {
    * Publishes a minting project to CashTokens Studio.
    */
   async publishNFTProject(opt: NFTProjectPublishingOptions): Promise<boolean> { 
+    this.processing = 'Publishing'
     try {
       if (!opt.publishedOn) {
         opt.publishedOn = new Date().getTime()
@@ -33,6 +40,7 @@ export class CTSBackend {
       console.log(opt)
       const r = await fetch(`${this.apiBaseUri}v1/nft-projects`, {
         method: 'POST',
+        headers: {'Content-Type': 'application/json'},
         body: JSON.stringify(opt)
       })
       console.log(r)
@@ -41,6 +49,20 @@ export class CTSBackend {
     } catch (error) {
       throw error 
     }
-    
+  }
+  /**
+   * Publishes a minting project to CashTokens Studio.
+   */
+  async fetchPublishedNFTProjects(opt?: FetchPublishedNFTProjectsOptions): Promise<any> { 
+    this.processing = 'Fetching data from server'
+    try {
+      const r = await fetch(`${this.apiBaseUri}v1/nft-projects`)
+      console.log(r)
+      return await r.json()
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
   }
 }
