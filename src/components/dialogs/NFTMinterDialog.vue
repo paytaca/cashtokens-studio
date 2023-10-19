@@ -198,7 +198,7 @@ const initCommitment = () => {
 
 const excludeFromSequentialNftCollectionHelp = () => {
   ui.setStatusMessage({
-    statusMessage: 'If checked, the commitment of the child NFT being minted won\'t be tracked by the minter. This means that the sequence number will NOT increase. Recommended values are already set by default, i.e. exclude child with `minting` and `mutable` capability, include child with `none` capability.',
+    statusMessage: 'If the box is checked, the commitment of the child NFT being minted won\'t be tracked by the minter. This means that the sequence number will NOT increase. Recommended values are already set by default, i.e. exclude child with `minting` and `mutable` capability, include child with `none` capability.',
     statusMessageType: 'info'
   })
 }
