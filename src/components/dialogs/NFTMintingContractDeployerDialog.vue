@@ -21,8 +21,8 @@
         </span>
       </div>
       <q-card-section class="q-gutter-sm">
-        <q-form class="q-gutter-sm">
-          <q-input v-model="form.mintPrice" label="Mint price" placeholder="How much it cost to mint your NFT?">
+        <q-form id="f-nmcdd" ref="mintFormRef" class="q-gutter-sm">
+          <q-input v-model="form.mintPrice" label="Mint price" placeholder="How much it cost to mint your NFT?" filled>
             <template v-slot:prepend>
               <q-avatar size="sm">
                 <q-img src="https://chipnet.imaginary.cash/img/logo/bch.svg"></q-img>
@@ -30,21 +30,33 @@
             </template>
           </q-input>
           <q-input v-model="form.collectionSize" label="Collection size"
-            placeholder="The total number of NFTs mintable in this collection"></q-input>
+            placeholder="The total number of NFTs mintable in this collection" filled></q-input>
+          <q-input ref="mintDateRef" v-model="form.mintDate" label="Go live on (Date)"
+            placeholder="The date when the mint goes live on CashTokens Studio" type="date" :rules="[mintDateRules]"
+            bottom-slots filled></q-input>
+          <q-input ref="mintTimeRef" v-if="form.mintDate && !mintDateRef.hasError" v-model="form.mintTime"
+            label="At (Time)" :rules="[mintTimeRules]" placeholder="The date when the mint goes live on CashTokens Studio"
+            type="time" filled></q-input>
+          <q-input ref="mintBannerMessageRef" v-if="form.mintDate && !mintDateRef.hasError"
+            v-model="form.mintBannerMessage" label="Banner Message (optional)"
+            :rules="[(v) => v.length <= 240 || '240 Characters Max']"
+            placeholder="An optional custom message that'll be displayed on your token's minting dialog." filled
+            bottom-slots>
+          </q-input>
           <!-- <q-input v-model="form.threadCount" label="Number of threads"
             placeholder="You don't have to change this value"></q-input> -->
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="deployMintingContract" label="Deploy Contract" :busyLabel="multiThreadedMinter?.processing"
-          color="primary" />
+          color="primary" :disable="disableContractDeployment || Boolean(ctsBackend?.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import { NFTCapability, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { CashToken } from 'src/app';
@@ -64,13 +76,34 @@ const props = defineProps<{
 const form = ref<{
   mintPrice: number | string,
   mintDate: number | string,
+  mintTime: number | string,
   collectionSize: number | string,
   threadCount: number,
+  mintBannerMessage: string
 }>({
   mintPrice: '',
   mintDate: '',
+  mintTime: '',
+  mintBannerMessage: '',
   collectionSize: '',
-  threadCount: 5
+  threadCount: 5,
+})
+
+const mintFormRef = ref()
+const mintDateRef = ref()
+const mintTimeRef = ref()
+const mintBannerMessageRef = ref()
+const disableContractDeployment = computed(() => {
+  return !form.value.mintDate ||
+    !form.value.mintTime ||
+    !form.value.mintPrice ||
+    !form.value.collectionSize ||
+    !form.value.threadCount ||
+    mintDateRef.value?.hasError ||
+    mintDateRef.value?.hasError ||
+    mintBannerMessageRef.value?.hasError ||
+    Boolean(multiThreadedMinter.value?.processing) ||
+    Boolean(ctsBackend.value?.processing)
 })
 
 const emit = defineEmits<{
@@ -84,8 +117,36 @@ const ui = useUI()
 const multiThreadedMinter = ref<MultiThreadedMinter>()
 const ctsBackend = ref<CTSBackend>()
 
+const getMintingDateTime = (mintTime: string) => {
+  const mintDateTime = new Date(form.value.mintDate)
+  const [hour, minutes] = mintTime.toString().split(':')
+  mintDateTime.setHours(Number(hour))
+  mintDateTime.setMinutes(Number(minutes))
+  return mintDateTime
+}
+
+const mintDateRules = (v: any) => {
+  const mintDate = new Date(v)
+  const m = mintDate.getMonth() + 1 // month is zero indexed
+  const d = mintDate.getDate()
+  const y = mintDate.getFullYear() * 100
+  const currentDate = new Date()
+  const cm = currentDate.getMonth() + 1
+  const cd = currentDate.getDate()
+  const cy = currentDate.getFullYear() * 100 // pad year
+  return m + d + y >= cm + cd + cy ? true : 'Value should be later than current date and time'
+}
+
+const mintTimeRules = (v: any) => {
+  const mintDateTime = getMintingDateTime(v)
+  if (mintDateTime > new Date()) {
+    return true
+  }
+  return 'Value should be later than current date and time'
+}
+
 const deployMintingContract = async () => {
-  const mintPriceSat = Number(form.value.mintPrice) * 1e8
+  const mintPriceSat = Math.floor(Number(form.value.mintPrice) * 1e8)
   multiThreadedMinter.value = new MultiThreadedMinter({
     parentMinter: props.minter.utxo,
     mintPrice: mintPriceSat,
@@ -108,7 +169,8 @@ const deployMintingContract = async () => {
         mintingContractParams: multiThreadedMinter.value.contractScriptParams.map((p: any) => typeof (p) === 'bigint' ? p.toString() : p),
         mintingContractScript: multiThreadedMinter.value.contractScript,
         mintingPrice: mintPriceSat,
-        mintingDate: new Date(form.value.mintDate).getTime(),
+        mintingDate: getMintingDateTime(form.value.mintTime.toString()),
+        mintingBannerMessage: form.value.mintBannerMessage,
         collectionSize: multiThreadedMinter.value.nftCollectionSize,
         publisherAddress: user.wallet!.getTokenDepositAddress(),
         publishedOn: new Date().getTime(),
@@ -138,10 +200,23 @@ const deployMintingContract = async () => {
     })
     $q.notify({ type: 'negative', message: error.message })
   }
-
-
-
 }
+
+const disableInputs = (disable: boolean) => {
+  if (disable) {
+    document.querySelectorAll('#f-nmcdd input').forEach((e: any) => e.disabled = true)
+  } else {
+    document.querySelectorAll('#f-nmcdd input').forEach((e: any) => e.disabled = '')
+  }
+}
+
+watch(() => multiThreadedMinter.value?.processing, (v) => {
+  disableInputs(Boolean(v))
+})
+
+watch(() => ctsBackend.value?.processing, (v) => {
+  disableInputs(Boolean(v))
+})
 
 onMounted(() => {
   ui.clearStatusMessage()
