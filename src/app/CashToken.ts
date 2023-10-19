@@ -373,7 +373,12 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   }
 
-  async mintChild(arg:{ capability: NFTCapability, commitment: string, commitmentFormat: 'decimal'|'hex', nftCollectionType?: NftCollectionType, recipient: string, }): Promise<string|undefined>{
+  /**
+   * @param {boolean} arg.excludeFromSequentialNftCollection - If true, the commitment of the SequentialNftCollection's minter won't change, the last sequence number is retained. 
+   *  This is so the issuer can create another minter, or mutable NFT of the same category with an option to not add it as part of the collection. If the value is undefined or false
+   *  the child NFT will be part of the collection and so the minter's commitment will increment.
+   */
+  async mintChild(arg:{ capability: NFTCapability, commitment: string, commitmentFormat: 'decimal'|'hex', nftCollectionType?: NftCollectionType, recipient: string, excludeFromSequentialNftCollection?: boolean}): Promise<string|undefined>{
     
     if (this.token?.capability !== NFTCapability.minting) {
       throw new Error('No capability to mint')
@@ -423,7 +428,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     // track the commitment of last minted child NFT
     // by storing the commitment in parent usually CashToken with minting capability
     // TODO: test using mutable token as parent
-    authchainIdentityOutput.token!.nft!.commitment = commitment 
+    if (arg.excludeFromSequentialNftCollection !== true) {
+      authchainIdentityOutput.token!.nft!.commitment = commitment 
+    }
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')(true)
