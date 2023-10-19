@@ -65,7 +65,7 @@ export class MultiThreadedMinter {
       throw new Error('Missing contract instance')
     }
     // check if the wallet owns a minting token for this category
-    this._processing = 'Preparing threads'
+    this._processing = 'Preparing minting threads'
     
     const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
       return Boolean(!u.token) && u.satoshis > this.threadsCreationCost.totalCost
@@ -109,7 +109,7 @@ export class MultiThreadedMinter {
       delete this._processing
       return
     }
-    this._processing = 'Creating Token'
+    this._processing = 'Creating minting threads'
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)
       return tx
