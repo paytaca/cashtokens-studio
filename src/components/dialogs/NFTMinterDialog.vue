@@ -28,6 +28,15 @@
               { value: 'none', label: 'None' }
             ]" color="primary" inline />
           </div>
+          <div class="text-right">
+            <q-checkbox v-model="form.excludeFromSequentialNftCollection"
+              label="Exclude from Sequential NFT Collection" />
+            <q-icon name="info" class="q-ml-sm" @click.stop="excludeFromSequentialNftCollectionHelp">
+              <q-tooltip>
+                If checked,the minter won't keep track on the commitment of this NFT. Click for more info.
+              </q-tooltip>
+            </q-icon>
+          </div>
           <q-input v-if="form.capability !== 'minting'" v-model="form.commitment"
             :label="nftCollectionType === 'SequentialNftCollection' ? 'Token Commitment (Sequence Number)' : 'Token Commitment'"
             :filled="true" :placeholder="tokenCommmitmentPlaceholderText"
@@ -104,8 +113,6 @@ const props = defineProps<{
   minter: CashToken,
 }>()
 
-
-
 const emit = defineEmits<{
   (e: 'nftMinted', val: { tokenId: string, recipient: string, capability: NFTCapability, commitment: string }): void
 }>()
@@ -121,12 +128,13 @@ const ui = useUI()
  */
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
 
-const form = ref<{ capability: NFTCapability, commitmentOfLastMint: string, commitment: string, recipient: string, commitmentFormat: 'decimal' | 'hex' }>({
+const form = ref<{ capability: NFTCapability, commitmentOfLastMint: string, commitment: string, recipient: string, commitmentFormat: 'decimal' | 'hex', excludeFromSequentialNftCollection: boolean }>({
   capability: NFTCapability.none,
   commitmentOfLastMint: '', // Commitment of last mint (stored as commitment of the minter)
   commitment: '',
   recipient: '',
-  commitmentFormat: 'decimal'
+  commitmentFormat: 'decimal',
+  excludeFromSequentialNftCollection: false
 })
 
 const tokenCommmitmentPlaceholderText = computed<string>(() => {
@@ -135,16 +143,6 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
   }
   return 'Enter commitment'
 })
-
-watch(() => form.value.commitment, (commitment) => {
-  if (!commitment) {
-    return form.value.commitmentFormat = 'decimal' // 
-  }
-  if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
-    form.value.commitmentFormat = 'hex'
-  }
-})
-
 
 const convertCommitment = () => {
   if (form.value.commitment && form.value.commitmentFormat === 'decimal') {
@@ -186,8 +184,7 @@ const mintToken = async () => {
   }
 }
 
-onMounted(() => {
-  console.log(props.minter)
+const initCommitment = () => {
   if (props.minter.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
     const commitmentOfLastMint = convertHexLEtoBigInt(props.minter.token.commitment)
     form.value.commitmentOfLastMint = commitmentOfLastMint.toString()
@@ -197,5 +194,42 @@ onMounted(() => {
     form.value.commitment = '1'
     form.value.commitmentFormat = 'decimal'
   }
+}
+
+const excludeFromSequentialNftCollectionHelp = () => {
+  ui.setStatusMessage({
+    statusMessage: 'If checked, the commitment of the child NFT being minted won\'t be tracked by the minter. This means that the sequence number will NOT increase. Recommended values are already set by default, i.e. exclude child with `minting` and `mutable` capability, include child with `none` capability.',
+    statusMessageType: 'info'
+  })
+}
+
+watch(() => form.value.commitment, (commitment) => {
+  if (!commitment) {
+    return form.value.commitmentFormat = 'decimal' // 
+  }
+  if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
+    form.value.commitmentFormat = 'hex'
+  }
+})
+
+watch(() => form.value.capability, (c) => {
+  if (c === NFTCapability.minting || c === NFTCapability.mutable) {
+    form.value.excludeFromSequentialNftCollection = true
+  } else {
+    form.value.excludeFromSequentialNftCollection = false
+  }
+
+})
+
+watch(() => form.value.excludeFromSequentialNftCollection, (exclude) => {
+  if (exclude) {
+    form.value.commitment = ''
+  } else {
+    initCommitment()
+  }
+})
+
+onMounted(() => {
+  initCommitment()
 })
 </script>
