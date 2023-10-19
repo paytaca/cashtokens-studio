@@ -143,7 +143,7 @@ module.exports = configure(function (ctx) {
         APP_ENV: process.env.APP_ENV,
         BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
         WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
-        CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api' : '',
+        CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : '',
         TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
         //TODO: only add this if context is isServer
         NFT_STORAGE_API_KEY: process.env.NFT_STORAGE_API_KEY
