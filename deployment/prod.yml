@@ -4,7 +4,7 @@ services:
     container_name: cts-prod
     build:
       context: /home/ubuntu/cashtokens-studio/prod
-      dockerfile: ./deployment/Dockerfile.staging
+      dockerfile: ./deployment/prod.Dockerfile
     ports:
       - "3000:3000"
 
