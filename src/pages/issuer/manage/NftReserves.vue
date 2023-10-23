@@ -63,9 +63,16 @@
                 <q-icon v-else name="token" size="xl" color="grey-9" />
               </td>
               <td>
-                <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
+                <!-- <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
                   identity.tokenCategory?.symbol }}</q-chip>
-                <span v-else>---</span>
+                <span v-else>---</span> -->
+                <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
+                <div v-else>
+                  <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
+                    {{ identity.tokenCategory?.symbol }}
+                  </q-chip>
+                  <span v-else>---</span>
+                </div>
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
