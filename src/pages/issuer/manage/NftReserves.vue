@@ -240,6 +240,7 @@ const refreshData = async () => {
     )
     user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
     initPagination()
+    populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
   }
 }
 
