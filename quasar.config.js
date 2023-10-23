@@ -24,8 +24,30 @@ if (process.env.NODE_ENV=='production') {
 
 
 module.exports = configure(function (ctx) {
-  console.log(process.env)
-  console.log('SERVER', ctx.isServer)
+  
+  console.log('Server IsServer', ctx.isServer)
+
+  const envs = {
+    APP_ENV: process.env.APP_ENV,
+    BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
+    WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
+    CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : '',
+    TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
+  }
+
+  if (ctx.isServer) {
+    envs.NFT_STORAGE_API_KEY_1 = process.env.NFT_STORAGE_API_KEY_1
+    envs.NFT_STORAGE_API_KEY_2 = process.env.NFT_STORAGE_API_KEY_2
+    envs.NFT_STORAGE_API_KEY_3 = process.env.NFT_STORAGE_API_KEY_3
+    envs.NFT_STORAGE_API_KEY_4 = process.env.NFT_STORAGE_API_KEY_4
+    envs.NFT_STORAGE_API_KEY_5 = process.env.NFT_STORAGE_API_KEY_5
+    envs.NFT_STORAGE_API_KEY_6 = process.env.NFT_STORAGE_API_KEY_6
+    envs.NFT_STORAGE_API_KEY_7 = process.env.NFT_STORAGE_API_KEY_7
+    envs.NFT_STORAGE_API_KEY_8 = process.env.NFT_STORAGE_API_KEY_8
+    envs.NFT_STORAGE_API_KEY_9 = process.env.NFT_STORAGE_API_KEY_9
+    envs.NFT_STORAGE_API_KEY_10 = process.env.NFT_STORAGE_API_KEY_10
+  }
+
   return {
     // https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
     supportTS: {
@@ -101,6 +123,7 @@ module.exports = configure(function (ctx) {
       // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
       // chainWebpack (/* chain */) {}
       chainWebpack (chain, {isClient, isServer}) {
+
         chain.target.browser = ['es2022']
         chain.target.node = 'node20'
         const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin')
@@ -138,16 +161,7 @@ module.exports = configure(function (ctx) {
         compress: false,
         mangle: false
       },
-
-      env: { // ui accessible envs
-        APP_ENV: process.env.APP_ENV,
-        BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
-        WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
-        CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : '',
-        TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
-        //TODO: only add this if context is isServer
-        NFT_STORAGE_API_KEY: process.env.NFT_STORAGE_API_KEY
-      },
+      env: envs
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-devServer
