@@ -8,51 +8,52 @@ import fs from 'fs'
 import crypto from 'crypto'
 const multer = require('multer')
 const throttle = require('express-throttle-bandwidth')
-const client = new NFTStorage({ token: process.env.NFT_STORAGE_API_KEY || '' })
 
+let nftStorageApiKeys = [
+  process.env.NFT_STORAGE_API_KEY_1,
+  process.env.NFT_STORAGE_API_KEY_2,
+  process.env.NFT_STORAGE_API_KEY_3,
+  process.env.NFT_STORAGE_API_KEY_4,
+  process.env.NFT_STORAGE_API_KEY_5,
+  process.env.NFT_STORAGE_API_KEY_6,
+  process.env.NFT_STORAGE_API_KEY_7,
+  process.env.NFT_STORAGE_API_KEY_8,
+  process.env.NFT_STORAGE_API_KEY_9,
+  process.env.NFT_STORAGE_API_KEY_10,
+]
+
+nftStorageApiKeys = nftStorageApiKeys.filter(k=>Boolean(k))
+
+const nftStorageClients:NFTStorage[] = []
+
+nftStorageApiKeys.forEach((apiKey)=>{
+  nftStorageClients.push(new NFTStorage({ token: apiKey || ''}))
+})
+
+const nftStorageClient = () => {
+  return nftStorageClients[Math.floor(Math.random() * nftStorageClients.length)] 
+}
+
+const nftStorageApiKey = () => {
+  return nftStorageApiKeys[Math.floor(Math.random() * nftStorageApiKeys.length)] 
+}
 
 
 //Setting storage engine
 
 const storage = multer.diskStorage({dest: 'uploads/'});
 const upload = multer(storage)
-// const tokenRouter = express.Router()
-
-// tokenRouter.post('icon/upload', async (req:any, res:any) => {
-//   console.log(req.file)
-//   console.log('query', req.query)
-
-//   const imageBlob = new Blob([req.file.buffer], { type: 'image/png' });
-
-//   const metadata = await client.store({
-//     name: 'CTStudio',
-//     description: 'Test',
-//     image: imageBlob
-//   })
-
-//   console.log(metadata.url)
-//   res.status(200).send({
-//     message: `Hi! req.method: ${req.method}, req.url: ${req.url}`,
-//     metadata: 'test'
-//   });
-// })
 
 export default ssrMiddleware(async ({ app, resolve }) => {
-
-  // app.use('/api', (req, res,next) => {
-  //   console.log('Hit on api')
-  //   next()
-  // })
 
   app.use(throttle(1024 * 128))
 
   app.get('/api/testx11', async (req:any, res:any) => {
-    console.log('NFT_STORAGE_API_KEY', process.env.NFT_STORAGE_API_KEY)
-    res.send({test: 'test api', NFT_STORAGE_API_KEY: process.env.NFT_STORAGE_API_KEY})
+    res.send({'test': 'test'})
   })
 
   app.post('/api/tokens/icon/upload', upload.single('icon'), async (req:any, res:any) => {
-    const metadata = await client.store({
+    const metadata = await nftStorageClient().store({
       name: 'CTStudio',
       description: 'Test',
       image: new File(
@@ -76,7 +77,6 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       
     } catch (error) {
       console.log(error)
-      console.log('NFT STORAGE API KEY', process.env.NFT_STORAGE_API_KEY)
       res.status(400).send(error)
     }
     
@@ -88,13 +88,13 @@ export default ssrMiddleware(async ({ app, resolve }) => {
   app.post('/api/tokens/registry/storage', bodyParser.json(), async (req:any, res:any) => {
 
     const headers = {
-      'Authorization': `Bearer ${process.env.NFT_STORAGE_API_KEY}`,
+      'Authorization': `Bearer ${nftStorageApiKey()}`,
       'Content-Type': 'application/json'
     };
 
     // Convert JSON object to JSON string
     const jsonString = JSON.stringify(req.body);
-    console.log(jsonString)
+    
     // Create a Blob from the JSON string
     const blob = new Blob([jsonString], { type: 'application/json' });
 
@@ -104,7 +104,6 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     try {
       const resp:any = await fetch('https://api.nft.storage/upload', {method: 'POST', headers, body: file})
       const json = await resp.json()
-      console.log('CID', json)
       if (json.ok) {
         const hash = crypto.createHash('sha256')
         res.status(200).send({
@@ -133,10 +132,8 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       })
     }
 
-
-
     const headers = {
-      'Authorization': `Bearer ${process.env.NFT_STORAGE_API_KEY}`,
+      'Authorization': `Bearer ${nftStorageApiKey()}`,
       'Content-Type': 'application/json'
     };
 
@@ -145,14 +142,12 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       `${req.query.tokenId}.json`,
       { type: 'application/json' }
     )
-    console.log('sent', req.file.buffer.toString('utf-8'))
     const hash = crypto.createHash('sha256')
     const contentHash = hash.update(req.file.buffer.toString('utf-8')).digest('hex')
 
     try {
       const resp:any = await fetch('https://api.nft.storage/upload', {method: 'POST', headers, body: registryJsonFile})
       const json = await resp.json()
-      console.log('CID', json)
       if (json.ok) {
         res.status(200).send({
           artifact: {
