@@ -120,12 +120,12 @@
               <th>Commitment</th>
               <th>Name</th>
               <th>Description</th>
-              <th>Uris</th>
-              <th>Extensions</th>
+              <!-- <th>Uris</th>
+              <th>Extensions</th> -->
             </thead>
             <tbody>
               <tr v-for="nft, i in nftPage" :key="Object.keys(nft)[0] + i">
-                <td>{{ i + 1 }}</td>
+                <td>{{ i + 1 + (nftsPagination.maxRowsPerPage * (nftsPagination.currentPage - 1)) }}</td>
                 <td>
                   <q-avatar v-if="parsedNft(nft)?.nft?.uris?.icon">
                     <img :src="parsedNft(nft)?.nft?.uris?.icon" alt="">
@@ -135,7 +135,7 @@
                 <td>{{ parsedNft(nft)?.commitment }}</td>
                 <td>{{ parsedNft(nft)?.nft?.name }}</td>
                 <td style="max-width:10em;text-wrap: wrap;">{{ parsedNft(nft)?.nft?.description }}</td>
-                <td style="max-width:10em;text-wrap: wrap;">
+                <!-- <td style="max-width:10em;text-wrap: wrap;">
                   <q-btn icon="handyman" disable>
                     Uris
                     <q-tooltip>Feature under construction</q-tooltip>
@@ -146,7 +146,7 @@
                     Extensions
                     <q-tooltip>Feature under construction</q-tooltip>
                   </q-btn>
-                </td>
+                </td> -->
               </tr>
             </tbody>
           </q-markup-table>
