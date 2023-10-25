@@ -1,6 +1,10 @@
 import { defineStore } from 'pinia'
 import { AuthchainIdentity, CashToken } from 'src/app';
 
+type TokenIdCache = {
+  [tokenId:string]: string|number|undefined
+}
+
 type UIState = {
   statusMessage: string,
   statusMessageType: 'info'|'error'|'success'|'warning'|'',
@@ -16,8 +20,14 @@ type UIState = {
   /**
    * The token that will loaded in Token Page
    */
-  tokenInView?: CashToken | AuthchainIdentity
+  tokenInView?: CashToken | AuthchainIdentity,
+  tokenBasicMetadataCache: {tokenId: string, symbol: string, decimals: number|undefined, icon: string|undefined}[],
+  tokenIconCache: TokenIdCache,
+  tokenSymbolCache: TokenIdCache,
+  tokenDecimalsCache: TokenIdCache
 }
+
+
 
 export const useUI = defineStore('ui', {
   state: (): UIState => ({
@@ -29,7 +39,11 @@ export const useUI = defineStore('ui', {
     statusMessageSubjectTokenCategory: '',
     statusMessageSentFTAmount: '',
     statusMessageSubjectTokenSymbol: '',
-    statusMessageRecipient: ''
+    statusMessageRecipient: '',
+    tokenBasicMetadataCache: [],
+    tokenIconCache: {},
+    tokenSymbolCache: {},
+    tokenDecimalsCache: {}
   }),
   actions: {
     clearStatusMessage() {
