@@ -45,22 +45,21 @@
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
-                <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="identity.tokenUris?.icon" alt="na">
+                <q-avatar v-if="ui.tokenIconCache[identity.token!.tokenId]">
+                  <img :src="String(ui.tokenIconCache[identity.token!.tokenId])" alt="na">
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
-                <!-- <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
-                  identity.tokenCategory?.symbol }}</q-chip>
-                <span v-else>---</span> -->
-                <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
-                <div v-else>
-                  <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
-                    {{ identity.tokenCategory?.symbol }}
+                <q-spinner
+                  v-if="identity.processing === 'Checking token registry' && !ui.tokenSymbolCache[identity.token!.tokenId]"></q-spinner>
+                <span v-else>
+                  <q-chip v-if="ui.tokenSymbolCache[identity.token!.tokenId]" color="primary" class="q-p-sm" square
+                    outline>
+                    {{ ui.tokenSymbolCache[identity.token!.tokenId] }}
                   </q-chip>
                   <span v-else>---</span>
-                </div>
+                </span>
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
@@ -108,9 +107,11 @@ import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
 import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
+import { useUI } from 'src/stores/ui';
 
 
 const user = useUser()
+const ui = useUI()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const paginatedFtAuthchainIdentities = ref<PaginatedData>({
   count: 0,
@@ -163,6 +164,11 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
     await a.resolveTokenCategory()
     await a.resolveTokenUris()
+    if (a.tokenCategory) {
+      ui.tokenSymbolCache[a.token!.tokenId] = a.tokenCategory.symbol
+      ui.tokenDecimalsCache[a.token!.tokenId] = a.tokenCategory.decimals
+      ui.tokenIconCache[a.token!.tokenId] = a.tokenUris?.icon
+    }
   })
 }
 
