@@ -1,73 +1,67 @@
-import { defineStore } from 'pinia';
-import { UIMessage } from 'src/types';
-import { Registry as BcmrRegistry } from 'src/interfaces/bcmr-v2.schema'
+import { defineStore } from 'pinia'
+import { AuthchainIdentity, CashToken } from 'src/app';
 
 type UIState = {
-  paytacaInstalled: boolean,
-  isBusy: boolean,
-  message: UIMessage,
-  messages: UIMessage[],
-  loadedRegistry?: BcmrRegistry
-  loadedRegistryUpdated?: boolean,
-  pageLoader: {show? :boolean, label?: string},
-  innerLoader: {show? :boolean, label?: string}
-
+  statusMessage: string,
+  statusMessageType: 'info'|'error'|'success'|'warning'|'',
+  statusMessageSpinner: boolean,
+  // Just so we can properly position this in the MessageDialog
+  statusMessageTxid: string,
+  statusMessageContext: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft', 
+  statusMessageSubjectTokenCategory: string,
+  statusMessageSubjectTokenSymbol: string,
+  statusMessageSentFTAmount: string,
+  statusMessageRecipient: string,
+  transactionLogs?: any[],
+  /**
+   * The token that will loaded in Token Page
+   */
+  tokenInView?: CashToken | AuthchainIdentity
 }
 
-export const useUIStore = defineStore('ui', {
-  state: ():UIState => ({
-    paytacaInstalled: false,
-    isBusy: false,
-    message: {} as UIMessage,
-    messages: [] as UIMessage[],
-    pageLoader: {show: false},
-    innerLoader: {show: false},
+export const useUI = defineStore('ui', {
+  state: (): UIState => ({
+    statusMessage: '',
+    statusMessageType:'',
+    statusMessageTxid: '',
+    statusMessageSpinner: false ,
+    statusMessageContext: '',
+    statusMessageSubjectTokenCategory: '',
+    statusMessageSentFTAmount: '',
+    statusMessageSubjectTokenSymbol: '',
+    statusMessageRecipient: ''
   }),
-  getters: {
-    // doubleCount: (state) => state.counter * 2,
-  },
   actions: {
-    busy(msg: UIMessage){
-      this.isBusy = true
-      this.message.text = msg.text
-      this.message.type = msg.type
-      // this.messages.push(msg)
+    clearStatusMessage() {
+      this.statusMessage = ''
+      this.statusMessageType = ''
+      this.statusMessageSpinner = false
+      this.statusMessageContext = '',
+      this.statusMessageSubjectTokenCategory = '',
+      this.statusMessageSentFTAmount = '',
+      this.statusMessageSubjectTokenSymbol = '',
+      this.statusMessageRecipient = ''
     },
-    idle(){
-      this.isBusy = false
-      this.message.text = ''
-      this.message.type = ''
-    },
-    clearMessage(){
-      this.message.text = ''
-      this.message.type = ''
-      delete this.message.timeout
-    },
-    setMessage(msg: UIMessage) {
-      console.log('MESSAGE', msg)
-      this.message = msg
-    },
-    addLoaderMessage(msg: UIMessage) {
-      this.messages.push({...msg, withLoader: true})
-    },
-    addMessage(msg: UIMessage) {
-      this.messages.push(msg)
-    },
-    showPageLoader(label: string) {
-      this.pageLoader.show = true
-      this.pageLoader.label = label
-    },
-    hidePageLoader() {
-      this.pageLoader.show = false
-      delete this.pageLoader.label
-    },
-    showInnerLoader(label: string) {
-      this.innerLoader.show = true
-      this.innerLoader.label = label
-    },
-    hideInnerLoader() {
-      this.innerLoader.show = false
-      delete this.innerLoader.label
+    setStatusMessage(m: {
+        statusMessage:string, 
+        statusMessageType?: 'info'|'error'|'success'|'warning', 
+        statusMessageSpinner?:boolean, 
+        statusMessageTxid?:string,
+        statusMessageContext?: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft', 
+        statusMessageSubjectTokenCategory?: string,
+        statusMessageSubjectTokenSymbol?: string,
+        statusMessageSentFTAmount?: string,
+        statusMessageRecipient?: string,
+    }) {
+      this.statusMessage = m.statusMessage
+      this.statusMessageType = m.statusMessageType || ''
+      this.statusMessageTxid = m.statusMessageTxid || ''
+      this.statusMessageSpinner = m.statusMessageSpinner || false
+      this.statusMessageContext = m.statusMessageContext || ''
+      this.statusMessageSubjectTokenCategory = m.statusMessageSubjectTokenCategory || ''
+      this.statusMessageSubjectTokenSymbol= m.statusMessageSubjectTokenSymbol || ''
+      this.statusMessageSentFTAmount = m.statusMessageSentFTAmount || ''
+      this.statusMessageRecipient = m.statusMessageRecipient || ''
     }
-  },
+  }
 });

@@ -1,25 +1,13 @@
-FROM node:18-alpine
-
-RUN mkdir -p /usr/cashtoken-studio
-WORKDIR /usr/cashtoken-studio
+FROM nikolaik/python-nodejs:python3.11-nodejs18
+RUN apt-get update
+#For libpq
+RUN apt-get install postgresql -y
+WORKDIR /cashtoken-studio
 COPY . .
-
 RUN yarn --ignore-engines
-
-RUN rm -rf node_modules/@mainnet-cash/contract/node_modules/cashscript
-RUN rm -rf node_modules/@mainnet-cash/contract/node_modules/@cashscript/utils
-# RUN npx nuxi clean
-# RUN yarn postinstall
-
-RUN yarn run build
-
-ENV NUXT_HOST=0.0.0.0
-ENV NUXT_PORT=9000
-
-EXPOSE 9000 
-
-ENV NODE_OPTIONS="--experimental-specifier-resolution=node index"
-
-RUN cd dist/ssr
-
-ENTRYPOINT ["yarn", "start"]
+RUN yarn add source-map && yarn global add pm2
+ENV NODE_ENV=development
+RUN yarn run build -m ssr
+RUN cd dist/ssr && yarn --ignore-engines
+WORKDIR /cashtoken-studio/dist/ssr
+CMD ["pm2-runtime", "index.js", "-i", "max"]

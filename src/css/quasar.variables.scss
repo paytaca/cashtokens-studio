@@ -40,16 +40,22 @@
 
 // src/css/quasar.variables.sass
 
-$primary   : #1976d2;
-$secondary : #26A69A;
+// $primary   : #1976d2;
+$primary   : #26A69A;
+$secondary : #318eeb;
 $accent    : #9C27B0;
 
 $dark      : #1d1d1d;
 $dark-page : #121212;
 
-$positive  : #21BA45;
-$negative  : #C10015;
+// $positive  : #21BA45;
+// $negative  : #C10015;
+$positive  : #26A69A;
+$negative  : #da5c6a;
 $info      : #31CCEC;
 $warning   : #F2C037;
+$disabled  : #c4baba;
+$zinc      : #343131;
+$input-disabled: #43333314;
 
 $default-font: 'montserrat-regular';

@@ -1,121 +1,162 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:expanded="expanded" v-model:selected="selected"
-      default-expand-all />
+      default-expand-all ref="qtree" />
   </div>
 </template>
 
 <script setup lang="ts">
 
-import { useRouter } from 'vue-router'
-import { ref, computed, watch } from 'vue'
-import useStore from 'src/composables/useStore'
+import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, watch, onMounted } from 'vue'
+import { useUser } from 'src/stores/user'
+import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
+const qtree = ref()
+const route = useRoute()
 const router = useRouter()
-const { user } = useStore()
-const lastSelectedBeforeUnselect = ref<string | null>(null)
+const user = useUser()
 const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
+const hrefs = {
+  createAuthKey: '/issuer/tokens/create/authkey',
+  // createFT: '/issuer/tokens/create/ft',
+  // createNFT: '/issuer/tokens/create/nft',
+  manageFTReserves: '/issuer/manage/ft-reserves',
+  manageNFTReserves: '/issuer/manage/nft-reserves',
+  manageAuthchains: '/issuer/manage/authchains',
+  manageAuthKeys: '/issuer/manage/authkeys',
+  accountFungibles: '/account/balance/fungibletokens',
+  accountCollectibles: '/account/balance/collectibles',
+  recentTransactions: '/account/recent-transactions',
+  createNewToken: '/issuer/tokens/create',
+}
 
 const menu = computed<any[]>(() => {
   return [
     {
-      label: 'Issuer',
-      href: '#Issuer',
-      icon: 'domain_add',
-      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      label: 'Create New Token',
+      href: hrefs.createNewToken,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Create New AuthKey',
+      href: hrefs.createAuthKey,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Manage',
+      href: '#Manage',
+      icon: 'token',
+      disabled: Boolean(user.walletAddress) === false,
       children: [
         {
-          label: 'Create Fungible Token',
-          href: '/token/create/fungible',
-          icon: 'add',
-        },
-        {
-          label: 'Create NFT',
-          href: '/token/create/nonfungible',
-          icon: 'add',
-        },
-        {
-          label: 'Create FNFT hybrid',
-          href: '/token/create/hybrid',
-          icon: 'add',
-        },
-        {
-          label: 'Manage Tokens',
-          href: '#',
+          label: 'FT Reserves',
+          href: hrefs.manageFTReserves,
           icon: 'token',
-          children: [
-            {
-              label: 'Authchain Identities',
-              href: '/token/identities',
-              icon: 'token',
-            },
-            {
-              label: 'Fungible Reserves',
-              href: '/token/fungibles',
-              icon: 'token',
-            }
-          ]
+        },
+        {
+          label: 'NFT Reserves',
+          href: hrefs.manageNFTReserves,
+          icon: 'token',
+        },
+        {
+          label: 'Token Categories',
+          href: hrefs.manageAuthchains,
+          icon: 'token',
+        },
+        {
+          label: 'AuthKeys',
+          href: hrefs.manageAuthKeys,
+          icon: 'token',
         }
+
       ]
     },
     {
-      label: 'Wallet Balance',
-      href: '#Balance',
+      label: 'Wallet',
+      href: '#Wallet',
       icon: 'account_balance_wallet',
-      disabled: Boolean(user.connectedPaytacaAddress) === false,
+      disabled: Boolean(user.walletAddress) === false,
       children: [
         {
-          label: 'Fungibles (FTs) ' + `${user.fts?.length || 0}`,
-          href: '/balances/fungibles',
-          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
+          label: shortenAddress(user.wallet?.getDepositAddress()),
+          icon: 'account_balance_wallet',
+          href: '#Cashaddr',
+          children: [
+            {
+              href: '#',
+              label: user.walletBchBalance,
+              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
+            }
+          ]
+        },
+
+        {
+          label: shortenAddress(user.wallet?.getTokenDepositAddress()),
+          href: '#Tokenaddr',
+          icon: 'token',
+          children: [
+            {
+              label: 'Fungibles (FTs)',
+              href: hrefs.accountFungibles,
+              icon: 'token'
+            },
+            {
+              label: 'Collectibles (NFTs)',
+              href: hrefs.accountCollectibles,
+              icon: 'token'
+            },
+          ]
         },
         {
-          label: 'Collectibles (NFTs)',
-          icon: 'token'
-        },
-        {
-          label: 'Hybrids (FNFTs)',
-          href: '/balances/nonfungibles',
-          avatar: 'https://cdn-icons-png.flaticon.com/128/5171/5171287.png',
-        },
-        {
-          label: user.connectedPaytacaWalletBchBalance ? Number(user.connectedPaytacaWalletBchBalance) / 1e8 : '',
-          avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
-        },
+          label: 'Recent Transactions',
+          href: hrefs.recentTransactions,
+          icon: 'receipt',
+        }
       ]
     }
   ]
 })
 
-watch(selected, (currentlySelected, previouslySelected) => {
-  /**
-   * Toggle Expand / Collapse of menu with children on select
-   */
-  if (currentlySelected !== null) {
-    lastSelectedBeforeUnselect.value = currentlySelected
+watch(() => selected.value, (currentlySelected, previouslySelected) => {
+  const previouslySelectedIndex = expanded.value?.findIndex((exp) => exp === previouslySelected)
+  const currentlySelectedIndex = expanded.value?.findIndex((exp) => exp === currentlySelected)
+  if (!currentlySelected && previouslySelected?.startsWith('#') && previouslySelectedIndex !== -1) {
+    // toggling, collapse menu
+    expanded.value.splice(previouslySelectedIndex, 1)
+  } else if (currentlySelected && currentlySelected.startsWith('#') && currentlySelectedIndex === -1) {
+    expanded.value.push(currentlySelected)
+  } else if (currentlySelected && currentlySelectedIndex !== -1) {
+    expanded.value.splice(currentlySelectedIndex, 1)
+  } else if (!currentlySelected && previouslySelected?.startsWith('#') && previouslySelectedIndex === -1) {
+    // toggling, expand previously selected
+    expanded.value.push(previouslySelected)
   }
-
   if (currentlySelected && !currentlySelected.startsWith('#')) {
-    router.push(currentlySelected)
-    return
-  }
-
-  if (currentlySelected === null) {
-    if (previouslySelected === lastSelectedBeforeUnselect.value) {
-      let menuIndex = expanded.value.findIndex((e: string) => e == lastSelectedBeforeUnselect.value)
-      expanded.value.splice(menuIndex, 1)
-    }
-  } else {
-    let indexOfCurrentlySelected = expanded.value.findIndex((e: any) => e == currentlySelected)
-    if (indexOfCurrentlySelected === -1) {
-      expanded.value.push(currentlySelected)
-    } else {
-      expanded.value.splice(indexOfCurrentlySelected, 1)
-    }
+    router.replace(currentlySelected)
   }
 })
 
+watch(() => route.path, (currentPath) => {
+  if (!Object.values(hrefs).includes(currentPath)) {
+    selected.value = null
+  }
+})
+
+onMounted(async () => {
+  qtree.value.expandAll()
+})
 
 </script>
+
+<style lang="scss">
+/* q-tree__node-header relative-position row no-wrap items-center q-tree__node--link q-hoverable q-focusable q-tree__node--selected {} */
+.q-tree__node--selected {
+  color: rgb(254, 254, 254);
+  background: linear-gradient(90deg, rgba(4, 30, 90, 0.9779411764705882) 0%, rgba(7, 41, 102, 1) 42%, rgba(9, 56, 121, 1) 77%, rgba(1, 114, 205, 1) 100%);
+}
+</style>

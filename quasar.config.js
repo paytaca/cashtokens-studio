@@ -6,48 +6,70 @@
  */
 
 // Configuration for your app
-// https://v2.quasar.dev/quasar-cli-vite/quasar-config-js
+// https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js
 
-const { NodeGlobalsPolyfillPlugin } = require('@esbuild-plugins/node-globals-polyfill')
+
+/* eslint-disable @typescript-eslint/no-var-requires */
+
+
 const { configure } = require('quasar/wrappers');
-const path = require('path');
-const EMPTY_PATH = require.resolve(
-  'rollup-plugin-node-polyfills/polyfills/empty.js',
-)
 
-if (process.env.NODE_ENV==='development' || process.env.NODE_ENV==='development-build') {
-  require('dotenv').config({path: '.env.dev'})
+if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-build') {
+  require('dotenv').config({path: './.env.dev'})
 }
 
-if (process.env.NODE_ENV==='production') {
-  require('dotenv').config({path: '.env.prod'})
+if (process.env.NODE_ENV=='production') {
+  require('dotenv').config({path: './.env.prod'})
 }
 
-module.exports = configure(function (/* ctx */) {
+
+module.exports = configure(function (ctx) {
+  
+  console.log('Server IsServer', ctx.isServer)
+
+  const envs = {
+    APP_ENV: process.env.APP_ENV,
+    BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
+    WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
+    CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : '',
+    TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
+  }
+
+  if (ctx.isServer) {
+    envs.NFT_STORAGE_API_KEY_1 = process.env.NFT_STORAGE_API_KEY_1
+    envs.NFT_STORAGE_API_KEY_2 = process.env.NFT_STORAGE_API_KEY_2
+    envs.NFT_STORAGE_API_KEY_3 = process.env.NFT_STORAGE_API_KEY_3
+    envs.NFT_STORAGE_API_KEY_4 = process.env.NFT_STORAGE_API_KEY_4
+    envs.NFT_STORAGE_API_KEY_5 = process.env.NFT_STORAGE_API_KEY_5
+    envs.NFT_STORAGE_API_KEY_6 = process.env.NFT_STORAGE_API_KEY_6
+    envs.NFT_STORAGE_API_KEY_7 = process.env.NFT_STORAGE_API_KEY_7
+    envs.NFT_STORAGE_API_KEY_8 = process.env.NFT_STORAGE_API_KEY_8
+    envs.NFT_STORAGE_API_KEY_9 = process.env.NFT_STORAGE_API_KEY_9
+    envs.NFT_STORAGE_API_KEY_10 = process.env.NFT_STORAGE_API_KEY_10
+  }
+
   return {
-    eslint: {
-      // fix: true,
-      // include: [],
-      // exclude: [],
-      // rawOptions: {},
-      warnings: true,
-      errors: true
+    // https://v2.quasar.dev/quasar-cli-webpack/supporting-ts
+    supportTS: {
+      tsCheckerConfig: {
+        eslint: {
+          enabled: true,
+          files: './src/**/*.{ts,tsx,js,jsx,vue}',
+        },
+      }
     },
 
-    // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
+    // https://v2.quasar.dev/quasar-cli-webpack/prefetch-feature
     // preFetch: true,
 
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
-    // https://v2.quasar.dev/quasar-cli-vite/boot-files
+    // https://v2.quasar.dev/quasar-cli-webpack/boot-files
     boot: [
-      'i18n',
-      'axios',
-      'buffer',
-      'constants'
+      'eventbus.ts'
     ],
 
-    // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#css
+    // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-css
     css: [
       'app.scss'
     ],
@@ -66,110 +88,93 @@ module.exports = configure(function (/* ctx */) {
       'material-icons', // optional, you are not bound to it
     ],
 
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#build
+    // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-build
     build: {
-      target: {
-        // browser: [ 'es2019', 'edge88', 'firefox78', 'chrome87', 'safari13.1' ],
-        browser: [ 'esnext' ],
-        node: 'node16'
-      },
-      // extendWebpack (cfg, { isServer, isClient }) {
-      //   cfg.resolve.alias = {
-      //     ...cfg.resolve.alias, // This adds the existing alias
-
-      //     // Add your own alias like this
-      //     res: path.resolve(__dirname, './src/res'),
-      //     utils: path.resolve(__dirname, './src/utils')
-      //   }
-      // },
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
-      // vueRouterBase,
-      // vueDevtools,
-      // vueOptionsAPI: false,
+      transpile: true,
 
-      // rebuildCache: true, // rebuilds Vite/linter/etc cache on startup
-
+      // transpile: false,
       // publicPath: '/',
+
+      // Add dependencies for transpiling with Babel (Array of string/regex)
+      // (from node_modules, which are by default not transpiled).
+      // Applies only if "transpile" is set to true.
+      transpileDependencies: [
+        '@bitauth/libauth',
+        '@mainnet-cash/contract',
+        'mainnet-js',
+        'cashscript',
+        '@cashscript/utils',
+        'cashc',
+        '@quasar/ssr-helpers'
+      ],
+
+      // rtl: true, // https://quasar.dev/options/rtl-support
+      // preloadChunks: true,
+      // showProgress: false,
+      // gzip: true,
       // analyze: true,
-      env: {
-        APP_ENV: process.env.APP_ENV
-      },
-      // rawDefine: {}
-      // ignorePublicFolder: true,
-      // minify: false,
-      // polyfillModulePreload: true,
-      // distDir
 
-      extendViteConf (viteConf) {
-        const inject = require('@rollup/plugin-inject')
-        viteConf.build = {
-          ...viteConf.build,
-          target: 'esnext',
-          rollupOptions: {
-            ...viteConf.build.rollupOptions,
-            plugins: [inject({ Buffer: ['buffer', 'Buffer'] })]
-          }
+      // Options below are automatically set depending on the env, set them if you want to override
+      // extractCSS: false,
+
+      // https://v2.quasar.dev/quasar-cli-webpack/handling-webpack
+      // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
+      // chainWebpack (/* chain */) {}
+      chainWebpack (chain, {isClient, isServer}) {
+
+        chain.target.browser = ['es2022']
+        chain.target.node = 'node20'
+        const nodePolyfillWebpackPlugin = require('node-polyfill-webpack-plugin')
+        chain.plugin('node-polyfill').use(nodePolyfillWebpackPlugin)
+        chain.resolve.alias.set('fs', require.resolve('browserfs'))
+        if (isClient) {
+          chain.externals = ['dns','dgram']
         }
-        // viteConf.resolve.alias = stdLibBrowser
-        // viteConf.optimizeDeps = {
-        //   // ...viteConf.optimizeDeps,
-        //   esbuildOptions: {
-        //     define: {global: 'globalThis'},
-        //     target: 'esnext',
-        //     plugins: [
-        //       NodeGlobalsPolyfillPlugin({
-        //           process: true,
-        //           buffer: true,
-        //       }),
-        //     ]
-        //   },
-        //   include: ['buffer', 'process']
+        // mainnet-js
+        chain.resolve.alias.set('stream', require.resolve('stream-browserify')) // bip39
+        chain.resolve.alias.set('crypto', require.resolve('crypto-browserify')) // bip39
+        chain.resolve.alias.set('net', false) // electrum-cash tcp connections
+        chain.resolve.alias.set('tls', false) // electrum-cash tcp connections
+        chain.resolve.alias.set('fs', false)  // qrcode-svg.save
 
-        // }
+        // @mainnet-cash/contract
+        chain.resolve.alias.set('url', false)   // cashscript/bitcoind-rpc
+        chain.resolve.alias.set('https', false) // cashscript/bitcoind-rpc
+        chain.resolve.alias.set('http', false)  // cashscript/bitcoind-rpc
+        chain.resolve.alias.set('dns', false)  // cashscript/bitcoind-rpc
 
-        // // viteConf.resolve.alias.crypto = require.resolve('crypto-browserify')
-        viteConf.resolve.alias = {
-          ...viteConf.resolve.alias,
-          pg: EMPTY_PATH,
-          'pg-format': EMPTY_PATH,
-          'pg-native': EMPTY_PATH,
-          stream: require.resolve('stream-browserify'),
-          bufferutil: EMPTY_PATH,
-          child_process: EMPTY_PATH,
-          utils: path.resolve('./src/utils'),
-          interfaces: path.resolve('./src/interfaces'),
-          composables: path.resolve('./src/composables')
-        }
+        // @mainnet-cash/smartbch
+        chain.resolve.alias.set('require-from-string', false)
+        chain.resolve.alias.set('module', false)
+        chain.resolve.alias.set('path', false)
+        chain.resolve.alias.set('child_process', false)
+
+        // Added for Quasar v1 to v2 migration
+        // chain
+        //   .plugin('eslint-webpack-plugin')
+        //   .use(ESLintPlugin, [{ extensions: ['js', 'vue'] }])
       },
-      // viteVuePluginOptions: {},
 
-      vitePlugins: [
-        ['@intlify/vite-plugin-vue-i18n', {
-          // if you want to use Vue I18n Legacy API, you need to set `compositionOnly: false`
-          // compositionOnly: false,
-
-          // if you want to use named tokens in your Vue I18n messages, such as 'Hello {name}',
-          // you need to set `runtimeOnly: false`
-          // runtimeOnly: false,
-
-          // you need to set i18n resource including paths !
-          include: path.resolve(__dirname, './src/i18n/**')
-        }]
-      ]
+      uglifyOptions: {
+        compress: false,
+        mangle: false
+      },
+      env: envs
     },
 
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#devServer
+    // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-devServer
     devServer: {
-      // https: true
+      server: {
+        type: 'http'
+      },
+      port: 8080,
       open: true // opens browser window automatically
     },
 
-    // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#framework
+    // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-framework
     framework: {
-      plugins: [
-        'Notify'
-      ],
       config: {
         dark: 'auto',
         notify: {}
@@ -186,101 +191,96 @@ module.exports = configure(function (/* ctx */) {
       // directives: [],
 
       // Quasar plugins
+      plugins: [
+        'Notify'
+      ],
     },
 
     // animations: 'all', // --- includes all animations
-    // https://v2.quasar.dev/options/animations
+    // https://quasar.dev/options/animations
     animations: [],
 
-    // https://v2.quasar.dev/quasar-cli-vite/quasar-config-js#sourcefiles
-    // sourceFiles: {
-    //   rootComponent: 'src/App.vue',
-    //   router: 'src/router/index',
-    //   store: 'src/store/index',
-    //   registerServiceWorker: 'src-pwa/register-service-worker',
-    //   serviceWorker: 'src-pwa/custom-service-worker',
-    //   pwaManifestFile: 'src-pwa/manifest.json',
-    //   electronMain: 'src-electron/electron-main',
-    //   electronPreload: 'src-electron/electron-preload'
-    // },
-
-    // https://v2.quasar.dev/quasar-cli-vite/developing-ssr/configuring-ssr
+    // https://v2.quasar.dev/quasar-cli-webpack/developing-ssr/configuring-ssr
     ssr: {
-      ssrPwaHtmlFilename: 'offline.html', // do NOT use index.html as name!
-                                          // will mess up SSR
-
-      extendSSRWebserverConf (esbuildConf) {},
-      extendPackageJson (json) {},
-
       pwa: false,
-      /**
-       * Manually serialize the store state and provide it yourself
-       * as window.__INITIAL_STATE__ to the client-side (through a <script> tag)
-       * (Requires @quasar/app-vite v1.0.0-beta.14+)
-       */
-      manualStoreSerialization: false,
-
-      /**
-       * Manually inject the store state into ssrContext.state
-       * (Requires @quasar/app-vite v1.0.0-beta.14+)
-       */
-      manualStoreSsrContextInjection: false,
-
-      /**
-       * Manually handle the store hydration instead of letting Quasar CLI do it.
-       * For Pinia: store.state.value = window.__INITIAL_STATE__
-       * For Vuex: store.replaceState(window.__INITIAL_STATE__)
-       */
-      manualStoreHydration: false,
-
-      /**
-       * Manually call $q.onSSRHydrated() instead of letting Quasar CLI do it.
-       * This announces that client-side code should takeover.
-       */
-      manualPostHydrationTrigger: false,
 
       // manualStoreHydration: true,
       // manualPostHydrationTrigger: true,
 
-      prodPort: 3000, // The default port that the production server should use
+      prodPort: process.env.PORT, // The default port that the production server should use
                       // (gets superseded if process.env.PORT is specified at runtime)
 
+      maxAge: 1000 * 60 * 60 * 24 * 30,
+        // Tell browser when a file from the server should expire from cache (in ms)
+
+      // chainWebpackWebserver (/* chain */) {},
+
       middlewares: [
+        ctx.prod ? 'compression' : '',
+        'api',
         'render' // keep this as last one
       ]
     },
 
-    // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
+    // https://v2.quasar.dev/quasar-cli-webpack/developing-pwa/configuring-pwa
     pwa: {
-      workboxMode: 'generateSW', // or 'injectManifest'
-      injectPwaMetaTags: true,
-      swFilename: 'sw.js',
-      manifestFilename: 'manifest.json',
-      useCredentialsForManifestTag: false,
-      // useFilenameHashes: true,
-      // extendGenerateSWOptions (cfg) {}
-      // extendInjectManifestOptions (cfg) {},
-      // extendManifestJson (json) {}
-      // extendPWACustomSWConf (esbuildConf) {}
+      workboxPluginMode: 'GenerateSW', // 'GenerateSW' or 'InjectManifest'
+      workboxOptions: {}, // only for GenerateSW
+
+      // for the custom service worker ONLY (/src-pwa/custom-service-worker.[js|ts])
+      // if using workbox in InjectManifest mode
+      // chainWebpackCustomSW (/* chain */) {},
+
+      manifest: {
+        name: 'Cashtoken Studio',
+        short_name: 'Cashtoken Studio',
+        description: '',
+        display: 'standalone',
+        orientation: 'portrait',
+        background_color: '#ffffff',
+        theme_color: '#027be3',
+        icons: [
+          {
+            src: 'icons/icon-128x128.png',
+            sizes: '128x128',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-256x256.png',
+            sizes: '256x256',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-384x384.png',
+            sizes: '384x384',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          }
+        ]
+      }
     },
 
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-cordova-apps/configuring-cordova
+    // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/developing-cordova-apps/configuring-cordova
     cordova: {
       // noIosLegacyBuildFlag: true, // uncomment only if you know what you are doing
     },
 
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-capacitor-apps/configuring-capacitor
+    // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/developing-capacitor-apps/configuring-capacitor
     capacitor: {
       hideSplashscreen: true
     },
 
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-electron-apps/configuring-electron
+    // Full list of options: https://v2.quasar.dev/quasar-cli-webpack/developing-electron-apps/configuring-electron
     electron: {
-      // extendElectronMainConf (esbuildConf)
-      // extendElectronPreloadConf (esbuildConf)
-
-      inspectPort: 5858,
-
       bundler: 'packager', // 'packager' or 'builder'
 
       packager: {
@@ -299,18 +299,20 @@ module.exports = configure(function (/* ctx */) {
       builder: {
         // https://www.electron.build/configuration/configuration
 
-        appId: 'cashtokens-studio'
+        appId: 'cashtokenstudio'
+      },
+
+      // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
+      chainWebpackMain (/* chain */) {
+        // do something with the Electron main process Webpack cfg
+        // extendWebpackMain also available besides this chainWebpackMain
+      },
+
+      // "chain" is a webpack-chain object https://github.com/neutrinojs/webpack-chain
+      chainWebpackPreload (/* chain */) {
+        // do something with the Electron main process Webpack cfg
+        // extendWebpackPreload also available besides this chainWebpackPreload
       }
-    },
-
-    // Full list of options: https://v2.quasar.dev/quasar-cli-vite/developing-browser-extensions/configuring-bex
-    bex: {
-      contentScripts: [
-        'my-content-script'
-      ],
-
-      // extendBexScriptsConf (esbuildConf) {}
-      // extendBexManifestJson (json) {}
     }
   }
 });

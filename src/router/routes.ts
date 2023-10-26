@@ -1,4 +1,3 @@
-import { defineAsyncComponent } from 'vue';
 import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
@@ -8,29 +7,37 @@ const routes: RouteRecordRaw[] = [
     children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
   },
   {
-    path: '/token',
+    path: '/issuer',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'token-browse', path: 'browse/:tokenType?', component: defineAsyncComponent(() => import('pages/token/Browse.vue')) },
-      { name: 'token-view', path: 'view', component: () => import('pages/token/View.vue') },
-      { name: 'token-create', path: 'create/:tokenType?', component: () => import('pages/token/Create.vue') },
-      { name: 'token-identities', path: 'identities/:tokenType?', component: () => import('pages/token/Identities.vue') },
-      { name: 'token-fungibles', path: 'fungibles', component: () => import('pages/token/Fungibles.vue') }
-
+      { name: 'create-authkey', path: 'tokens/create/authkey', component: () => import('pages/issuer/CreateAuthKey.vue') },
+      { name: 'create-token', path: 'tokens/create', component: () => import('pages/issuer/CreateToken.vue') },
     ],
   },
   {
-    path: '/registry',
+    path: '/issuer/manage',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { name: 'registry-edit', path: 'edit', component: () => import('pages/registry/Edit.vue') }
+      { name: 'authchains', path: 'authchains', component: () => import('pages/issuer/manage/AuthChains.vue') },
+      { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
+      { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
+      { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
+      { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
     ],
   },
   {
-    path: '/balances',
+    path: '/account/balance',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'fungibles', component: () => import('pages/balances/Fungibles.vue') }
+      { path: 'fungibletokens', component: () => import('pages/account/balances/FungibleTokens.vue') },
+      { path: 'collectibles', component: () => import('pages/account/balances/NonFungibleTokens.vue')},
+    ],
+  },
+  {
+    path: '/account',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      { path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
     ],
   },
   // Always leave this as last one,
@@ -38,8 +45,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/:catchAll(.*)*',
     component: () => import('pages/ErrorNotFound.vue'),
-  }
-
+  },
 ];
 
 export default routes;
