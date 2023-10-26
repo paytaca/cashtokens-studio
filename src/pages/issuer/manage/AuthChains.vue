@@ -65,18 +65,19 @@
                 <td class="cursor-pointer">{{ i + pagination.offset + 1 }}</td>
                 <td class="cursor-pointer">
                   <q-avatar v-if="identity.tokenUris?.icon">
-                    <img :src="identity.tokenUris?.icon" alt="na">
+                    <img :src="String(identity.tokenUris.icon)" alt="na">
                   </q-avatar>
-                  <q-icon v-else name="token" size="xl" color="disabled" />
+                  <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
                 </td>
                 <td class="cursor-pointer">
-                  <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
-                  <div v-else>
+                  <q-spinner
+                    v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
+                  <span v-else>
                     <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
-                      {{ identity.tokenCategory?.symbol }}
+                      {{ identity.tokenCategory.symbol }}
                     </q-chip>
                     <span v-else>---</span>
-                  </div>
+                  </span>
                 </td>
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
@@ -146,7 +147,7 @@ import { onMounted, ref, watch, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -157,6 +158,7 @@ import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/Aut
 import { PaginatedData } from 'src/app/types';
 import { useRouter } from 'vue-router';
 import { getWalletClass } from 'src/app/utils';
+import { hash256 } from '@cashscript/utils';
 
 
 const user = useUser()
@@ -203,8 +205,23 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    await a.resolveTokenCategory()
-    await a.resolveTokenUris()
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
+    }
+
+    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+      await a.resolveTokenUris()
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+      }
+    } else {
+      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
   })
 }
 
@@ -213,15 +230,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     if (paginatedAuthchainIdentities.value) {
       authchainIdentities.value = []
     }
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
@@ -247,6 +256,7 @@ const refreshData = async () => {
     )
     user.paginatedAuthchainIdentities = paginatedAuthchainIdentities.value
     initPagination()
+    populateAuthchainIdentities(paginatedAuthchainIdentities.value)
   }
 }
 
@@ -307,7 +317,6 @@ const onBurn = () => {
 const viewToken = (token: AuthchainIdentity, b: any) => {
   if ((b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) && !b.target.className?.includes('col-authkey')) {
     ui.tokenInView = token
-    // router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
     router.push(`/issuer/manage/token/${token.token?.tokenId}`)
   }
 }

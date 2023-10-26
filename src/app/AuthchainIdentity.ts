@@ -703,12 +703,15 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
   }
 
-  async resolveTokenCategory(){
+  async resolveTokenCategory(quite?: boolean){
     if (!this.token?.tokenId) return
     try {
-      this._processing = 'Checking token registry'
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
       const rj = await r.json()
+      delete rj.nfts // exclude nfts, because it's uncapped
       this.tokenCategory = rj
       delete this._processing
     } catch (error) {
@@ -718,10 +721,12 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
   }
 
-  async resolveTokenUris(){
+  async resolveTokenUris(quite?:boolean){
     if (!this.token?.tokenId) return
     try {
-      this._processing = 'Checking token registry'
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
       this.tokenUris = await r.json()
     } catch (error:any) {
