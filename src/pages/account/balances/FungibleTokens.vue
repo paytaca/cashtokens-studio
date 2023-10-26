@@ -151,16 +151,7 @@ const populateFtBalances = (paginated: PaginatedData) => {
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
-
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )

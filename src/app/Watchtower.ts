@@ -124,7 +124,6 @@ export class Watchtower {
         }
         const r = await fetch(url)
         result = await r.json()
-        console.log('result', result)
         return result
       } catch (error) {
         this.error = error
