@@ -117,8 +117,10 @@ import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTrans
 import { Wallet } from 'mainnet-js';
 import { getWalletClass } from 'src/app/utils';
 import { EventBus } from 'quasar';
+import { useUI } from 'src/stores/ui';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
+const ui = useUI()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const nftCollections = ref<CashToken[]>([])
@@ -174,8 +176,25 @@ const populateNftCollections = (paginated: PaginatedData) => {
     }
 
     nftCollections.value.forEach(async (a) => {
-        await a.resolveTokenCategory()
-        await a.resolveTokenUris()
+        // await a.resolveTokenCategory()
+        // await a.resolveTokenUris()
+        if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+            await a.resolveTokenCategory()
+            if (a.tokenCategory) {
+                ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+            }
+        } else {
+            a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
+        }
+
+        if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+            await a.resolveTokenUris()
+            if (a.tokenUris) {
+                ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+            }
+        } else {
+            a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+        }
     })
 }
 
