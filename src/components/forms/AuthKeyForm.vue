@@ -7,7 +7,7 @@
       <q-spinner-grid></q-spinner-grid>
       {{ authKey.processing }}
     </template> -->
-    <q-input v-if="genesisInput" :model-value="genesisInput.txid" :filled="true" disable dense square
+    <q-input v-if="genesisInput" :model-value="genesisInput.txid" :filled="true" disable square
       label="AuthKey ID (vout-0 utxo txid)" />
     <p v-else>No utxo suitable as auth Key in your address. Please send BCH to your address.</p>
     <div class="row justify-end q-my-lg">
@@ -68,6 +68,7 @@ const createAuthKeyGenesis = async () => {
       emit('authKeyCreated')
     }
   } catch (error: any) {
+    console.log(error)
     $q.notify({ type: 'negative', message: 'Txn Failed!' + error.message })
   }
 }

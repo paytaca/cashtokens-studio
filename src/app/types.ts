@@ -88,5 +88,13 @@ export declare interface CashTokenTransaction {
 
 export type HexString = string & { __hexStringBrand: never };
 
-
-
+export type NftProjectDrop = {
+  tokenId: string
+  collectionSize: number,
+  mintingBannerMessage: string,
+  mintingContractName: string,
+  mintingDate: string,
+  mintingPrice: number,
+  publishedOn: number,
+  publisherAddress: string,
+}
