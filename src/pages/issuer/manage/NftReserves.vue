@@ -118,22 +118,24 @@
 </template>
 <script setup lang="ts">
 import { NFTCapability, Wallet, delay } from 'mainnet-js';
-import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
-import { useUser } from 'src/stores/user';
-import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app';
-import TokenCategory from 'src/components/TokenCategory.vue'
-import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-
-import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
-import { CashToken } from 'src/app'
-import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { EventBus } from 'quasar';
-import { getWalletClass, shortenTokenId } from 'src/app/utils';
-import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
+import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
-
+import { useDialogs } from 'src/composables'
+import {
+  CashToken,
+  Watchtower,
+  AuthKey, AuthchainIdentity,
+  TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, ADDRESS_WATCHER_TRIGGERED
+} from 'src/app';
+import { PaginatedData } from 'src/app/types';
+import { getWalletClass, shortenTokenId } from 'src/app/utils';
+import TokenCategory from 'src/components/TokenCategory.vue'
+import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
+import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
+import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
 
 const user = useUser()
 const ui = useUI()
@@ -235,7 +237,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
 
     if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
       await a.resolveTokenUris()
-      if (a.tokenUris && Object.keys(ui.tokenCategoryCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
         ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
       }
     } else {
@@ -319,11 +321,6 @@ onBeforeUnmount(() => {
 })
 
 const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
-  // refreshData().then(() => {
-  //   if (paginatedNftAuthchainIdentities.value) {
-  //     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-  //   }
-  // })
   hideDialog()
 }
 
