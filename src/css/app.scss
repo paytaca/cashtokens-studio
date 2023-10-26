@@ -1,43 +1,52 @@
 // app global css in SCSS form
 
-@font-face {
-  font-family: montserrat-regular;
-  src: url(../public/fonts/montserrat/Montserrat-Regular.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-regular';
+//   src: url('/fonts/montserrat/Montserrat-Regular.woff2');
+// }
 
-@font-face {
-  font-family: montserrat-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Regular-Italic.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-italic';
+//   src: url('/fonts/montserrat/Montserrat-Regular-Italic.woff2');
+// }
 
-@font-face {
-  font-family: montserrat-thin;
-  src: url(../public/fonts/montserrat/Montserrat-Thin.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-thin';
+//   src: url('/fonts/montserrat/Montserrat-Thin.woff2');
+// }
 
-@font-face {
-  font-family: montserrat-thin-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Thin-Italic.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-thin-italic';
+//   src: url('/fonts/montserrat/Montserrat-Thin-Italic.woff2');
+// }
 
-@font-face {
-  font-family: montserrat-bold;
-  src: url(../public/fonts/montserrat/Montserrat-Bold.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-bold';
+//   src: url('/fonts/montserrat/Montserrat-Bold.woff2');
+// }
 
-@font-face {
-  font-family: montserrat-bold-italic;
-  src: url(../public/fonts/montserrat/Montserrat-Bold-Italic.woff2);
-}
+// @font-face {
+//   font-family: 'montserrat-bold-italic';
+//   src: url('/fonts/montserrat/Montserrat-Bold-Italic.woff2');
+// }
 
-@font-face {
-  font-family: cutive-mono;
-  src: url(../public/fonts/montserrat/Cutive-Mono.woff2);
-}
+// @font-face {
+//   font-family: 'cutive-mono';
+//   src: url('/fonts/montserrat/Cutive-Mono.woff2');
+// }
 
 body {
-  font-family: 'montserrat-regular';
+  // font-family: 'montserrat-regular';
+  // font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family:'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
   font-size: .8em;
+  /* For Firefox */
+  /* Note: You may need to adjust this for older Firefox versions */
+  scrollbar-width: none;
+
+  /* For Edge and other non-WebKit browsers */
+  /* Note: You may need to adjust this for older Edge versions */
+  -ms-overflow-style: none;
 }
 
 form {
@@ -52,11 +61,18 @@ p {
 
 code {
   font-family: Monaco, monospace;
-  background-color: $grey-9;
+  // background-color: $grey-9;
   color: $orange-10;
   padding: 0.2em;
   word-break: normal;
   border-radius: 5px;
+  font-size: 1.2em;
+}
+
+
+th {
+  font-size: 1.1em !important;
+  font-weight: bold;
 }
 
 .token-symbol {
@@ -89,4 +105,51 @@ code {
     min-width: 13em;
     min-height: 13em;
   }
+}
+
+// .q-dialog__inner > div {
+//   overflow: unset;
+// }
+
+/* For WebKit browsers (Chrome, Safari) */
+::-webkit-scrollbar {
+  width: 0; /* Adjust as needed */
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: transparent; /* Hide the thumb */
+}
+
+.disabled {
+  color: #686666;
+}
+
+.q-field--disabled {
+  border: 2px dotted rgb(211, 176, 176);
+  // background-color: white !important;
+}
+.q-field--dark.q-field--disabled {
+  // background-color: black !important;
+  border: 2px dotted #3b3636;
+}
+
+.q-field--disabled .q-field__label {
+  color: rgb(55, 46, 46) !important;
+}
+.q-field--dark.q-field--disabled .q-field__label {
+  color: rgb(228, 201, 201) !important;
+}
+
+.q-field__label {
+  color: black;
+}
+
+i.q-icon.notranslate.material-icons {
+  // color: #15416d;
+}
+.token-default-avatar {
+  color: #26a69a2e;
+}
+.body--dark, .token-default-avatar {
+  color: #3b3636; 
 }

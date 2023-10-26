@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  web:
+    container_name: cts-prod
+    build:
+      context: /home/ubuntu/cashtokens-studio/prod
+      dockerfile: ./deployment/prod.Dockerfile
+    ports:
+      - "3000:3000"
+

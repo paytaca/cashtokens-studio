@@ -1,0 +1,10 @@
+**/node_modules
+*.log
+.git
+.vscode
+# .eslintignore
+# .eslintrc.cjs
+.prettierrc
+.editorconfig
+README.md
+

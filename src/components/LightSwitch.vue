@@ -1,6 +1,8 @@
 <template>
   <div>
-    <q-btn size="md" flat @click="toggle" :icon="$q.dark.isActive ? 'light_mode' : 'dark_mode'"></q-btn>
+    <q-btn size="lg" flat @click="toggle" :icon="$q.dark.isActive ? 'dark_mode' : 'light_mode'"
+      :color="$q.dark.isActive ? 'grey-7' : 'yellow'">
+    </q-btn>
   </div>
 </template>
 <script lang="ts">
