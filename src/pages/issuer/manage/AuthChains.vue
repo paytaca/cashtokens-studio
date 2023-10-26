@@ -64,8 +64,8 @@
                 @click="(b: any) => viewToken(identity, b)">
                 <td class="cursor-pointer">{{ i + pagination.offset + 1 }}</td>
                 <td class="cursor-pointer">
-                  <q-avatar v-if="ui.tokenUrisCache[identity.token!.tokenId]?.icon">
-                    <img :src="String(ui.tokenUrisCache[identity.token!.tokenId].icon)" alt="na">
+                  <q-avatar v-if="identity.tokenUris?.icon">
+                    <img :src="String(identity.tokenUris.icon)" alt="na">
                   </q-avatar>
                   <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
                 </td>
@@ -73,9 +73,8 @@
                   <q-spinner
                     v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
                   <span v-else>
-                    <q-chip v-if="ui.tokenCategoryCache[identity.token!.tokenId]?.symbol" color="primary" class="q-p-sm"
-                      square outline>
-                      {{ ui.tokenCategoryCache[identity.token!.tokenId].symbol }}
+                    <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
+                      {{ identity.tokenCategory.symbol }}
                     </q-chip>
                     <span v-else>---</span>
                   </span>
