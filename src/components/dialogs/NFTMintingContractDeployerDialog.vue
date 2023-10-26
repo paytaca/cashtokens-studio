@@ -126,15 +126,11 @@ const getMintingDateTime = (mintTime: string) => {
 }
 
 const mintDateRules = (v: any) => {
-  const mintDate = new Date(v)
-  const m = mintDate.getMonth() + 1 // month is zero indexed
-  const d = mintDate.getDate()
-  const y = mintDate.getFullYear() * 100
   const currentDate = new Date()
   const cm = currentDate.getMonth() + 1
   const cd = currentDate.getDate()
-  const cy = currentDate.getFullYear() * 100 // pad year
-  return m + d + y >= cm + cd + cy ? true : 'Value should be later than current date and time'
+  const cy = currentDate.getFullYear()
+  return new Date(v) >= new Date(`${cy}-${cm}-${cd}`)
 }
 
 const mintTimeRules = (v: any) => {

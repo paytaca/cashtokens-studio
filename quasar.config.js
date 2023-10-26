@@ -16,12 +16,12 @@ const { configure } = require('quasar/wrappers');
 
 if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-build') {
   require('dotenv').config({path: './.env.dev'})
-}
-
+} 
 if (process.env.NODE_ENV=='production') {
-  require('dotenv').config({path: './.env.prod'})
+  require('dotenv').config({path: '/cashtoken-studio/.env.prod'})
 }
 
+console.log('PROCESS ENV', process.env)
 
 module.exports = configure(function (ctx) {
   
@@ -31,7 +31,7 @@ module.exports = configure(function (ctx) {
     APP_ENV: process.env.APP_ENV,
     BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
     WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
-    CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : '',
+    CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : 'https://',
     TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
   }
 

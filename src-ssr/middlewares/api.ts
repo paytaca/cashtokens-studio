@@ -19,8 +19,9 @@ let nftStorageApiKeys = [
   process.env.NFT_STORAGE_API_KEY_7,
   process.env.NFT_STORAGE_API_KEY_8,
   process.env.NFT_STORAGE_API_KEY_9,
-  process.env.NFT_STORAGE_API_KEY_10,
+  process.env.NFT_STORAGE_API_KEY_10
 ]
+
 
 nftStorageApiKeys = nftStorageApiKeys.filter(k=>Boolean(k))
 
@@ -30,6 +31,8 @@ nftStorageApiKeys.forEach((apiKey)=>{
   nftStorageClients.push(new NFTStorage({ token: apiKey || ''}))
 })
 
+console.log('NFT STORAGE KEYS', nftStorageApiKeys)
+console.log('NFT STORAGE clients', nftStorageClients)
 const nftStorageClient = () => {
   return nftStorageClients[Math.floor(Math.random() * nftStorageClients.length)] 
 }

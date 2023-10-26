@@ -91,8 +91,8 @@
                       <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Deploy a Minting Contract
-                      </q-item>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                      </q-item> -->
+                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Load a Minting Contract
                       </q-item> -->
