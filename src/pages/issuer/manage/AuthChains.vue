@@ -230,15 +230,7 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     if (paginatedAuthchainIdentities.value) {
       authchainIdentities.value = []
     }
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )

@@ -282,15 +282,7 @@ watch(() => user.walletAddress, async (v) => {
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }

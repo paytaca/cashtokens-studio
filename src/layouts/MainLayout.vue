@@ -79,13 +79,6 @@ watch(() => ui.statusMessage, (value) => {
   }
 })
 
-watch(() => Object.keys(ui.tokenCategoryCache).length, (value) => {
-  if (value > 10) {
-    console.log(Object.keys(ui.tokenCategoryCache))
-    console.log('LENGTH CHANGE', value)
-  }
-
-})
 // onMounted(() => {
 //   window.onbeforeunload = () => {
 //     router.push('/')
