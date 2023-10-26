@@ -7,5 +7,5 @@ export const CTS_MINTING_TOKEN_DEFAULT_COMMITMENT = 'feed' // actual default com
 export const CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT = 'ctsfeed782974771942$%&*@(&#(@&' // default commitment value in forms, because the user might actually need to use `feed`
 // EVENT BUS EVENTS
 export const ADDRESS_WATCHER_TRIGGERED = 1
-export const TOKEN_CATEGORY_CACHE_MAX_KEYS = 400
-export const TOKEN_URIS_CACHE_MAX_KEYS = 400
+export const TOKEN_CATEGORY_CACHE_MAX_KEYS = 1000
+export const TOKEN_URIS_CACHE_MAX_KEYS = 1000
