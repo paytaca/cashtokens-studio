@@ -46,39 +46,27 @@
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="identity.tokenUris?.icon" alt="na">
+                  <img :src="String(identity.tokenUris.icon)" alt="na">
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
-                <!-- <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
-                  identity.tokenCategory?.symbol }}</q-chip>
-                <span v-else>---</span> -->
-                <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
-                <div v-else>
+                <q-spinner
+                  v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
+                <span v-else>
                   <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
-                    {{ identity.tokenCategory?.symbol }}
+                    {{ identity.tokenCategory.symbol }}
                   </q-chip>
                   <span v-else>---</span>
-                </div>
+                </span>
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
-
-              <!-- <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td> -->
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
                   @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
-                  <!-- <q-menu>
-                    <q-list>
-                      <q-item clickable v-close-popup
-                        @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
-                        Issue Tokens
-                      </q-item>
-                    </q-list>
-                  </q-menu> -->
                 </q-btn>
               </td>
             </tr>
@@ -102,15 +90,17 @@ import { EventBus } from 'quasar';
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
 import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
+import { useUI } from 'src/stores/ui';
 
 
 const user = useUser()
+const ui = useUI()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const paginatedFtAuthchainIdentities = ref<PaginatedData>({
   count: 0,
@@ -161,23 +151,30 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    await a.resolveTokenCategory()
-    await a.resolveTokenUris()
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
+    }
+
+    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+      await a.resolveTokenUris()
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+      }
+    } else {
+      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
   })
 }
 
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedFtAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
@@ -246,11 +243,6 @@ onBeforeUnmount(() => {
 
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
   hideDialog()
-  // refreshData().then(() => {
-  //   if (paginatedFtAuthchainIdentities.value) {
-  //     populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-  //   }
-  // })
 }
 
 </script>

@@ -58,21 +58,19 @@
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="identity.tokenUris?.icon" alt="na">
+                  <img :src="String(identity.tokenUris.icon)" alt="na">
                 </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-9" />
+                <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
-                <!-- <q-chip v-if="identity.tokenCategory?.symbol" color="primary" square outline>{{
-                  identity.tokenCategory?.symbol }}</q-chip>
-                <span v-else>---</span> -->
-                <q-spinner v-if="identity.processing === 'Checking token registry'"></q-spinner>
-                <div v-else>
+                <q-spinner
+                  v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
+                <span v-else>
                   <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
-                    {{ identity.tokenCategory?.symbol }}
+                    {{ identity.tokenCategory.symbol }}
                   </q-chip>
                   <span v-else>---</span>
-                </div>
+                </span>
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
@@ -120,22 +118,24 @@
 </template>
 <script setup lang="ts">
 import { NFTCapability, Wallet, delay } from 'mainnet-js';
-import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
-import { useUser } from 'src/stores/user';
-import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app';
-import TokenCategory from 'src/components/TokenCategory.vue'
-import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-
-import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
-import { CashToken } from 'src/app'
-import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { EventBus } from 'quasar';
-import { getWalletClass, shortenTokenId } from 'src/app/utils';
-import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
+import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
-
+import { useDialogs } from 'src/composables'
+import {
+  CashToken,
+  Watchtower,
+  AuthKey, AuthchainIdentity,
+  TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, ADDRESS_WATCHER_TRIGGERED
+} from 'src/app';
+import { PaginatedData } from 'src/app/types';
+import { getWalletClass, shortenTokenId } from 'src/app/utils';
+import TokenCategory from 'src/components/TokenCategory.vue'
+import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
+import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
+import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
 
 const user = useUser()
 const ui = useUI()
@@ -226,8 +226,23 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    await a.resolveTokenCategory()
-    await a.resolveTokenUris()
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
+    }
+
+    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+      await a.resolveTokenUris()
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+      }
+    } else {
+      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
   })
 }
 const initPagination = () => {
@@ -267,15 +282,7 @@ watch(() => user.walletAddress, async (v) => {
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-    }
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
@@ -306,11 +313,6 @@ onBeforeUnmount(() => {
 })
 
 const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
-  // refreshData().then(() => {
-  //   if (paginatedNftAuthchainIdentities.value) {
-  //     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-  //   }
-  // })
   hideDialog()
 }
 

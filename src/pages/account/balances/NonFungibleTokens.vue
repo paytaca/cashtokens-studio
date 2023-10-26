@@ -117,8 +117,10 @@ import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTrans
 import { Wallet } from 'mainnet-js';
 import { getWalletClass } from 'src/app/utils';
 import { EventBus } from 'quasar';
+import { useUI } from 'src/stores/ui';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
+const ui = useUI()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const nftCollections = ref<CashToken[]>([])
@@ -174,8 +176,25 @@ const populateNftCollections = (paginated: PaginatedData) => {
     }
 
     nftCollections.value.forEach(async (a) => {
-        await a.resolveTokenCategory()
-        await a.resolveTokenUris()
+        // await a.resolveTokenCategory()
+        // await a.resolveTokenUris()
+        if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+            await a.resolveTokenCategory()
+            if (a.tokenCategory) {
+                ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+            }
+        } else {
+            a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
+        }
+
+        if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+            await a.resolveTokenUris()
+            if (a.tokenUris) {
+                ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+            }
+        } else {
+            a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+        }
     })
 }
 
@@ -216,11 +235,6 @@ const openNFTTransferDialog = (nft: CashToken) => {
 
 const onNftTransfer = () => {
     hideDialog()
-    // refreshData().then(() => {
-    //     if (paginatedNftCollections.value) {
-    //         populateNftCollections(paginatedNftCollections.value)
-    //     }
-    // })
 }
 
 watch(() => user.walletAddress, async (v) => {
@@ -239,16 +253,7 @@ watch(() => user.walletAddress, async (v) => {
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
     if (user.wallet) {
-        if (pageNumber === 1) {
-            pagination.value.offset = 0
-        } else {
-            if (oldPageNumber > pageNumber) {
-                pagination.value.offset -= pagination.value.maxRowsPerPage
-            } else {
-                pagination.value.offset += pagination.value.maxRowsPerPage
-            }
-
-        }
+        pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
         let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
         if (excludePossibleAuthKeys.value) {
             query.commitment_ne = '00'

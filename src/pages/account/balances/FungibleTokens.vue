@@ -37,7 +37,7 @@
                   <q-icon v-else name="token" size="xl" color="disabled" />
                 </td>
                 <td>
-                  <q-spinner v-if="bcmrIndexer.processing"></q-spinner>
+                  <q-spinner v-if="bcmrIndexer.processing && !b.tokenCategory?.symbol"></q-spinner>
                   <div v-else>
                     <q-chip v-if="b.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
                       {{ b.tokenCategory?.symbol }}
@@ -76,7 +76,7 @@
 import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
@@ -84,11 +84,13 @@ import { BcmrIndexer } from 'src/app/bcmr/BcmrIndexer';
 import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
 import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
 import { EventBus } from 'quasar';
+import { useUI } from 'src/stores/ui';
 
 
 defineOptions({ name: 'FungibleTokens' })
 
 const user = useUser()
+const ui = useUI()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const ftBalances = ref<FungibleTokenBalance[]>([])
@@ -117,31 +119,42 @@ const populateFtBalances = (paginated: PaginatedData) => {
   const results = paginated.results
   for (let i = 0; i < results.length; i++) {
     const ftBalance: FungibleTokenBalance = results[i]
+    if (ui.tokenCategoryCache[ftBalance.tokenId]) {
+      ftBalance.tokenCategory = ui.tokenCategoryCache[ftBalance.tokenId]
+    }
+    if (ui.tokenUrisCache[ftBalance.tokenId]) {
+      ftBalance.tokenUris = ui.tokenUrisCache[ftBalance.tokenId]
+    }
     ftBalances.value.push(ftBalance)
   }
   ftBalances.value.forEach(async (a) => {
-    a.tokenCategory = await bcmrIndexer.value.fetchToken(a.tokenId)
-    a.tokenUris = await bcmrIndexer.value.fetchTokenUris(a.tokenId)
+    if (!ui.tokenCategoryCache[a.tokenId]) {
+      a.tokenCategory = await bcmrIndexer.value.fetchToken(a.tokenId)
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.tokenId]
+    }
+    if (!ui.tokenUrisCache[a.tokenId]) {
+      a.tokenUris = await bcmrIndexer.value.fetchTokenUris(a.tokenId)
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenUris = ui.tokenUrisCache[a.tokenId]
+    }
+    // a.tokenCategory = await bcmrIndexer.value.fetchToken(a.tokenId)
+    // a.tokenUris = await bcmrIndexer.value.fetchTokenUris(a.tokenId)
   })
 }
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   if (user.wallet) {
-    if (pageNumber === 1) {
-      pagination.value.offset = 0
-    } else {
-      if (oldPageNumber > pageNumber) {
-        pagination.value.offset -= pagination.value.maxRowsPerPage
-      } else {
-        pagination.value.offset += pagination.value.maxRowsPerPage
-      }
-
-    }
-
+    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
     paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
-
     // populate 
     populateFtBalances(paginatedFtBalances.value)
     user.paginatedFtBalances = paginatedFtBalances.value
