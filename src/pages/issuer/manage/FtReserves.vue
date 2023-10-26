@@ -63,20 +63,10 @@
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
               </td>
-
-              <!-- <td>{{ BigInt(identity.token!.amount! as number) || 'n/a' }}</td> -->
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
                   @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
-                  <!-- <q-menu>
-                    <q-list>
-                      <q-item clickable v-close-popup
-                        @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
-                        Issue Tokens
-                      </q-item>
-                    </q-list>
-                  </q-menu> -->
                 </q-btn>
               </td>
             </tr>
@@ -161,9 +151,6 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-
-    // await a.resolveTokenCategory(quite)
-    // await a.resolveTokenUris(quite)
     if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
       await a.resolveTokenCategory()
       if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
@@ -175,7 +162,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
 
     if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
       await a.resolveTokenUris()
-      if (a.tokenUris && Object.keys(ui.tokenCategoryCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
         ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
       }
     } else {
@@ -264,11 +251,6 @@ onBeforeUnmount(() => {
 
 const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
   hideDialog()
-  // refreshData().then(() => {
-  //   if (paginatedFtAuthchainIdentities.value) {
-  //     populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-  //   }
-  // })
 }
 
 </script>

@@ -216,16 +216,13 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
 
     if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
       await a.resolveTokenUris()
-      if (a.tokenUris && Object.keys(ui.tokenCategoryCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
+      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
         ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
       }
     } else {
       a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
     }
   })
-
-
-  // ui.tokenSymbolsCache = authchainIdentities.value.map(a=>({token}))
 }
 
 watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
@@ -328,7 +325,6 @@ const onBurn = () => {
 const viewToken = (token: AuthchainIdentity, b: any) => {
   if ((b.target.innerHTML !== 'more_vert' && !b.target.className?.includes('col-action')) && !b.target.className?.includes('col-authkey')) {
     ui.tokenInView = token
-    // router.push(`/issuer/manage/token/${token.tokenCategory?.symbol || token.tokenCategory?.category}`)
     router.push(`/issuer/manage/token/${token.token?.tokenId}`)
   }
 }
