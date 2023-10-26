@@ -4,11 +4,11 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 row items-center">
-          <span class="q-mx-sm">Mint</span>
-          <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT' }}</span>
           <q-avatar class="q-mx-sm" v-if="minter.tokenUris?.icon">
             <img :src="minter.tokenUris?.icon" alt="">
           </q-avatar>
+          <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT' }}</span>
+
         </q-toolbar-title>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
       </q-toolbar>

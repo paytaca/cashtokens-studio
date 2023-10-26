@@ -45,18 +45,18 @@
             <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
-                <q-avatar v-if="ui.tokenIconCache[identity.token!.tokenId]">
-                  <img :src="String(ui.tokenIconCache[identity.token!.tokenId])" alt="na">
+                <q-avatar v-if="ui.tokenUrisCache[identity.token!.tokenId]?.icon">
+                  <img :src="String(ui.tokenUrisCache[identity.token!.tokenId].icon)" alt="na">
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
                 <q-spinner
-                  v-if="identity.processing === 'Checking token registry' && !ui.tokenSymbolCache[identity.token!.tokenId]"></q-spinner>
+                  v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
                 <span v-else>
-                  <q-chip v-if="ui.tokenSymbolCache[identity.token!.tokenId]" color="primary" class="q-p-sm" square
-                    outline>
-                    {{ ui.tokenSymbolCache[identity.token!.tokenId] }}
+                  <q-chip v-if="ui.tokenCategoryCache[identity.token!.tokenId]?.symbol" color="primary" class="q-p-sm"
+                    square outline>
+                    {{ ui.tokenCategoryCache[identity.token!.tokenId].symbol }}
                   </q-chip>
                   <span v-else>---</span>
                 </span>
@@ -162,13 +162,44 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    await a.resolveTokenCategory()
-    await a.resolveTokenUris()
-    if (a.tokenCategory) {
-      ui.tokenSymbolCache[a.token!.tokenId] = a.tokenCategory.symbol
-      ui.tokenDecimalsCache[a.token!.tokenId] = a.tokenCategory.decimals
-      ui.tokenIconCache[a.token!.tokenId] = a.tokenUris?.icon
+
+    // const quite = Boolean(ui.tokenCategoryCache[a.token!.tokenId])
+    // await a.resolveTokenCategory(quite)
+    // await a.resolveTokenUris(quite)
+
+    // if (a.tokenCategory) {
+    //   ui.tokenCategoryCache[a.token!.tokenId] = a.tokenCategory
+    // }
+    // if (a.tokenUris) {
+    //   ui.tokenUrisCache[a.token!.tokenId] = a.tokenUris
+    // }
+
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
     }
+
+    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
+      await a.resolveTokenUris()
+      if (a.tokenUris) {
+        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
+      }
+    } else {
+      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
+
+
+    // if (a.token && ui.tokenCategoryCache[a.token.tokenId]) {
+    //   ui.tokenSymbolCache[a.token!.tokenId] = ui.tokenCategoryCache[a.token.tokenId].symbol
+    //   ui.tokenDecimalsCache[a.token!.tokenId] = ui.tokenCategoryCache[a.token.tokenId].decimals
+    // }
+    // if (a.token && ui.tokenUrisCache[a.token.tokenId]) {
+    //   ui.tokenIconCache[a.token!.tokenId] = ui.tokenUrisCache[a.token.tokenId].icon
+    // }
   })
 }
 
