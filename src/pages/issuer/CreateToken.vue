@@ -83,7 +83,11 @@ const generateGenesisInputs = async () => {
         successMsg: 'Generated genesis input(v-out 0 utxo)'
       })
     }
-  } catch (error) {
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
     console.log(error)
     $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
   }

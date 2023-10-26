@@ -64,9 +64,11 @@ import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { AuthKey, GenesisInput } from 'src/app'
 import AuthKeyForm from 'src/components/forms/AuthKeyForm.vue'
+import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
 const user = useUser()
+const ui = useUI()
 const genesisInput = ref<UtxoI>()
 const genesisInputInstance = ref<GenesisInput>()
 
@@ -94,14 +96,16 @@ const generateGenesisInputs = async () => {
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
     }
-  } catch (error) {
-    console.log(error)
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
     $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
   }
 }
 
 const onCreateAuthKey = () => {
-  console.log('AuthKeyCreated')
   genesisInput.value = undefined
 }
 </script>
