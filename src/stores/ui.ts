@@ -1,9 +1,19 @@
 import { defineStore } from 'pinia'
 import { AuthchainIdentity, CashToken } from 'src/app';
+import { TokenCategory, URIs } from 'src/app/bcmr/bcmr-v2.schema';
 
 type TokenIdCache = {
   [tokenId:string]: string|number|undefined
 }
+
+type TokenCategoryCache = {
+  [tokenId:string]: TokenCategory
+}
+
+type TokenUrisCache = {
+  [tokenId:string]: URIs
+}
+
 
 type UIState = {
   statusMessage: string,
@@ -24,7 +34,9 @@ type UIState = {
   tokenBasicMetadataCache: {tokenId: string, symbol: string, decimals: number|undefined, icon: string|undefined}[],
   tokenIconCache: TokenIdCache,
   tokenSymbolCache: TokenIdCache,
-  tokenDecimalsCache: TokenIdCache
+  tokenDecimalsCache: TokenIdCache,
+  tokenCategoryCache: TokenCategoryCache,
+  tokenUrisCache: TokenUrisCache
 }
 
 
@@ -43,7 +55,9 @@ export const useUI = defineStore('ui', {
     tokenBasicMetadataCache: [],
     tokenIconCache: {},
     tokenSymbolCache: {},
-    tokenDecimalsCache: {}
+    tokenDecimalsCache: {},
+    tokenCategoryCache: {},
+    tokenUrisCache: {}
   }),
   actions: {
     clearStatusMessage() {

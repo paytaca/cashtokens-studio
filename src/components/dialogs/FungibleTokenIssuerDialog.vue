@@ -4,11 +4,21 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 row items-center">
-          <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
-            authchainIdentity.tokenCategory.symbol : 'FT' }}</span>
           <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
             <img :src="authchainIdentity.tokenUris?.icon" alt="">
           </q-avatar>
+          <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
+            authchainIdentity.tokenCategory.symbol : 'FT' }}</span>
+          <span v-if="authchainIdentity.tokenCategory?.decimals === undefined">
+            <q-icon name="warning" color="warning" size="sm" flat dense>
+              <q-tooltip>
+                Registry not found. Unable to determine symbol and decimals value. If you already uploaded the registry,
+                the indexer might
+                just not have picked it
+                up yet, you may try to refresh the page
+              </q-tooltip>
+            </q-icon>
+          </span>
         </q-toolbar-title>
         <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
       </q-toolbar>

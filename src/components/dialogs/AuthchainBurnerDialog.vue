@@ -2,6 +2,11 @@
   <q-dialog ref="authchainBurnerDialogRef" v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
+      <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
+        <img :src="authchainIdentity.tokenUris?.icon" alt="">
+      </q-avatar>
+      <span v-if="authchainIdentity.tokenCategory?.symbol" class="q-mx-sm text-bold">{{
+        authchainIdentity.tokenCategory?.symbol }} </span>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">Burn Token Identity</q-toolbar-title>
       </q-toolbar>
