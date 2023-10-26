@@ -82,7 +82,8 @@ export class GenesisInput implements UtxoI {
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
     const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
     if (!funder) {
-      throw new Error('Insufficient balance, please try to consolidate your utxos')
+      delete this._processing
+      throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
     }
     // build tx
     this._processing = 'Processing'
@@ -117,9 +118,10 @@ export class GenesisInput implements UtxoI {
           broadcast: false,
           userPrompt: 'Generate genesis inputs'
       })
-    } catch (error) {
+    } catch (error:any) {
       console.log(error)
       delete this._processing
+      throw error
     } finally {
       delete this._processing
     }
@@ -130,10 +132,16 @@ export class GenesisInput implements UtxoI {
     }
     delete this._processing
     this._processing = 'Submitting Transaction'
-    const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)
-    // delete GenesisInput.processing
-    delete this._processing
-    return tx
+    try {
+      const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)  
+      return tx
+    } catch (error) {
+      throw error
+    } finally {
+      // delete GenesisInput.processing
+      delete this._processing
+    }
+    
   }
 
 
