@@ -158,12 +158,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
       if (typeof decoded === 'string') {
-        console.log('decoded:', decoded)
         delete this._processing
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw error
     }
@@ -224,13 +222,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       });
 
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
 
     if (!signingResult) {
-      console.log('signed', signingResult)
       delete this._processing
       return
     }
@@ -241,7 +237,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
     } catch (error:any) {
-      console.log('Error:AuthchainIdentity@', error)
       throw error
     } finally {
       delete this._processing
@@ -302,12 +297,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
       if (typeof decoded === 'string') {
-        console.log('decoded:', decoded)
         delete this._processing
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw error
     }
@@ -367,13 +360,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       });
 
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
 
     if (!signingResult) {
-      console.log('signed', signingResult)
       delete this._processing
       return
     }
@@ -388,7 +379,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       }
       return tx
     } catch (error) {
-      console.log('Error:AuthChainGuard@publish', error)
       throw error
     } finally {
       delete this._processing
@@ -423,7 +413,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     const tokenOwner = this.ownerWallet!.getDepositAddress()
     let transaction
     let decoded
-    console.log('AMOUNT TO SEND', arg.amount)
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')(true)
@@ -467,12 +456,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
       if (typeof decoded === 'string') {
-        console.log('decoded:', decoded)
         delete this._processing
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw error
     }
@@ -532,13 +519,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       });
 
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
 
     if (!signingResult) {
-      console.log('signed', signingResult)
       delete this._processing
       return
     }
@@ -548,8 +533,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
     } catch (error:any) {
-      
-      console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
       throw new Error(error.message)
     } finally {
       delete this._processing
@@ -615,12 +598,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
       if (typeof decoded === 'string') {
-        console.log('decoded:', decoded)
         delete this._processing
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw new Error('Error building transaction')
     }
@@ -680,13 +661,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       });
 
     } catch (error) {
-      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
 
     if (!signingResult) {
-      console.log('signed', signingResult)
       delete this._processing
       return
     }
@@ -696,7 +675,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       return tx
     } catch (error:any) {
-      console.log('Error:AuthchainIdentity@releaseTokensFromReserveSupply', error)
       throw new Error(error.message)
     } finally {
       delete this._processing
@@ -717,7 +695,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete rj.nfts // exclude nfts, because it's uncapped
       delete this._processing
     } catch (error) {
-      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
       delete this._processing
     }
@@ -735,7 +712,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this.tokenUris = rj
       }
     } catch (error:any) {
-      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
       delete this._processing
     }
