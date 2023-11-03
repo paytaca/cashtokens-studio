@@ -85,6 +85,9 @@ const props = defineProps<{ authchainIdentity: AuthchainIdentity }>()
 const uploaded = ref<boolean>(false)
 const uploadArtifact = ref<BcmrStorageArtifact>()
 const uploading = ref<boolean>(false)
+const emit = defineEmits<{
+  (e: 'registryPublished', val: { tokenId: string }): void
+}>()
 const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean }>({
   url: '',
   contentHash: ''
@@ -122,6 +125,7 @@ const publish = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
       })
+      emit('registryPublished', { tokenId: props.authchainIdentity!.token!.tokenId })
       ui.setStatusMessage({
         statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
         statusMessageType: 'success',
