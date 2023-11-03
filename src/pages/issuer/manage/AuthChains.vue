@@ -71,7 +71,7 @@
                 </td>
                 <td class="cursor-pointer">
                   <q-spinner
-                    v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
+                    v-if="(identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol) || (updatingTokenCache && updatingTokenCache[identity.token!.tokenId])"></q-spinner>
                   <span v-else>
                     <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
                       {{ identity.tokenCategory.symbol }}
@@ -113,6 +113,7 @@
                         <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, identity)">
                           Burn Token
                         </q-item>
+                        <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item>
                       </q-list>
                     </q-menu>
                   </q-btn>
@@ -127,10 +128,12 @@
           </q-markup-table>
         </q-scroll-area>
         <AuthchainRegistryPublisherDialog v-if="dialog" :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+          @registry-published="() => onRegistryPublished(dialogData)" />
         <AuthchainRegistryFromFilePublisherDialog v-if="dialog"
           :model-value="dialog === AuthchainRegistryFromFilePublisherDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+          @registry-published="() => onRegistryPublished(dialogData)" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
@@ -141,13 +144,19 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { Wallet } from 'mainnet-js';
+import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
 import { onMounted, ref, watch, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app';
+import {
+  AuthKey, AuthchainIdentity, Watchtower,
+  TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, ADDRESS_WATCHER_TRIGGERED
+} from 'src/app';
+import { PaginatedData } from 'src/app/types';
+import { useRouter } from 'vue-router';
+import { getWalletClass } from 'src/app/utils';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
@@ -155,10 +164,6 @@ import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialo
 import CashAddress from 'src/components/CashAddress.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
-import { PaginatedData } from 'src/app/types';
-import { useRouter } from 'vue-router';
-import { getWalletClass } from 'src/app/utils';
-import { hash256 } from '@cashscript/utils';
 
 
 const user = useUser()
@@ -181,9 +186,10 @@ const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerP
   rowCount: 0,
   offset: 0,
 })
-
+// const updatingTokenCache = ref<boolean>(false)
+const updatingTokenCache = ref<{ [tokenId: string]: boolean } | null>()
 const eventBus = inject<EventBus>('eventBus')
-const { dialog, dialogData, openDialog, onHide } = useDialogs()
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const watchtower = ref<Watchtower>(new Watchtower())
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
@@ -258,6 +264,31 @@ const refreshData = async () => {
     initPagination()
     populateAuthchainIdentities(paginatedAuthchainIdentities.value)
   }
+}
+
+const refreshTokenBasicMeta = async (token: AuthchainIdentity) => {
+  try {
+    updatingTokenCache.value = { [token.token!.tokenId]: true }
+    await token.resolveTokenCategory()
+    await token.resolveTokenUris()
+    if (token.tokenCategory) {
+      ui.tokenCategoryCache[token.token!.tokenId] = token.tokenCategory
+    }
+    if (token.tokenUris) {
+      ui.tokenUrisCache[token.token!.tokenId] = token.tokenUris
+    }
+  } catch (error) {
+    updatingTokenCache.value = null
+  } finally {
+    updatingTokenCache.value = null
+  }
+
+}
+
+const onRegistryPublished = async (tokenIdentity: AuthchainIdentity) => {
+  hideDialog()
+  await delay(3000)
+  await refreshTokenBasicMeta(tokenIdentity)
 }
 
 watch(() => user.walletAddress, async (v) => {
