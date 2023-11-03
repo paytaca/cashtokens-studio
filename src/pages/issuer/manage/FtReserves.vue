@@ -54,8 +54,9 @@
                 <q-spinner
                   v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
                 <span v-else>
-                  <q-chip v-if="identity.tokenCategory?.symbol" color="primary" class="q-p-sm" square outline>
-                    {{ identity.tokenCategory.symbol }}
+                  <q-chip v-if="ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol"
+                    color="primary" class="q-p-sm" square outline>
+                    {{ ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol }}
                   </q-chip>
                   <span v-else>---</span>
                 </span>
