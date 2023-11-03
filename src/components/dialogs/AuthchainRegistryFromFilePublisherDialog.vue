@@ -59,7 +59,7 @@
           <i class="q-mr-xs">Storing file in IPFS. This may take a while, please wait</i><q-spinner-dots></q-spinner-dots>
         </div>
         <BusyButton v-if="uploaded" :busy-label="authchainIdentity?.processing" label="Publish" color="primary"
-          @click="publish" :disable="!uploaded" />
+          @click="publish" :disable="!uploaded || Boolean(authchainIdentity?.processing)" />
       </q-card-actions>
 
     </q-card>
