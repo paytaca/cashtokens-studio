@@ -567,12 +567,19 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   }
 
-  async resolveTokenCategory(){
+  async resolveTokenCategory(quite?:boolean){
     if (!this.token?.tokenId) return
     try {
-      this._processing = 'Checking token registry'
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
-      this.tokenCategory = await r.json()
+      const rj = await r.json()
+      if (!rj.error) {
+        this.tokenCategory = rj
+      }
+      delete rj.nfts // exclude nfts, because it's uncapped
+      delete this._processing
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
@@ -580,12 +587,18 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
   }
   
-  async resolveTokenUris(){
+  async resolveTokenUris(quite?:boolean){
     if (!this.token?.tokenId) return
     try {
-      this._processing = 'Checking token registry'
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
+      
       const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
-      this.tokenUris = await r.json()
+      const rj = await r.json()
+      if (!rj.error) {
+        this.tokenUris = rj
+      }
     } catch (error) {
       console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
