@@ -16,9 +16,10 @@
           <q-form class="q-gutter-sm">
             <q-input :filled="true" :model-value="authchainIdentity?.token?.tokenId" type="url" label="Token ID" dense
               square standout disable></q-input>
-            <q-input :filled="true" v-model="form.url" type="url" label="Registry URL *" dense square standout></q-input>
+            <q-input :filled="true" v-model="form.url" type="url" label="Registry URL *" dense square standout
+              :disable="Boolean(authchainIdentity?.processing)" clearable></q-input>
             <q-input :filled="true" v-model="form.contentHash" :loading="form.isLoadingRegistry" type="url"
-              label="Content hash *" dense square>
+              label="Content hash *" dense square :disable="Boolean(authchainIdentity?.processing)">
               <template v-slot:loading>
                 <q-spinner-facebook color="primary" />
               </template>
@@ -34,7 +35,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton :busy-label="authchainIdentity?.processing" label="Publish" color="primary" @click="publish"
-          :disable="!form.contentHash" />
+          :disable="Boolean(authchainIdentity?.processing) || !form.contentHash" />
       </q-card-actions>
     </q-card>
   </q-dialog>
