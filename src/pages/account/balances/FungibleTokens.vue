@@ -172,7 +172,10 @@ const initPagination = () => {
   }
 }
 
-const refreshData = async () => {
+const refreshData = async (immediate?: boolean) => {
+  if (!immediate) {
+    await delay(2500)
+  }
   if (user.wallet) {
     paginatedFtBalances.value = await watchtower.value.fetchFtBalance(
       user.wallet.getTokenDepositAddress(),
@@ -185,9 +188,8 @@ const refreshData = async () => {
   }
 }
 
-const onFTTransferred = async () => {
+const onFTTransferred = () => {
   hideDialog()
-  await delay(2500)
   refreshData()
 }
 

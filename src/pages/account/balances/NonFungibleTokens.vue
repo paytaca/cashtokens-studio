@@ -208,7 +208,10 @@ const initPagination = () => {
     }
 }
 
-const refreshData = async () => {
+const refreshData = async (immediate?: boolean) => {
+    if (!immediate) {
+        await delay(2500)
+    }
     if (user.wallet) {
         let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
         if (excludePossibleAuthKeys.value) {
@@ -233,9 +236,8 @@ const openNFTTransferDialog = (nft: CashToken) => {
     openDialog(NFTOwnershipTransferDialog.__name, nft)
 }
 
-const onNftTransfer = async () => {
+const onNftTransfer = () => {
     hideDialog()
-    await delay(2500)
     refreshData()
 }
 
