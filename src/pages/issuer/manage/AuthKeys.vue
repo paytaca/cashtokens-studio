@@ -22,7 +22,7 @@
           <thead>
             <tr v-if="watchtower.processing && authKeys">
               <th colspan="5">
-                <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+                <q-spinner-grid size="xs"></q-spinner-grid> Loading
               </th>
             </tr>
             <tr>
@@ -99,7 +99,7 @@
 </template>
 <script setup lang="ts">
 
-import { Wallet } from 'mainnet-js';
+import { Wallet, delay } from 'mainnet-js';
 import { useUser } from 'src/stores/user';
 import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useDialogs } from 'src/composables'
@@ -216,7 +216,8 @@ watch(() => user.walletAddress, async (v) => {
     // keep so page survives reload
     user.wallet = await getWalletClass().watchOnly(v)
     refreshData()
-    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
+      await delay(2000)
       refreshData()
     })
   } else {

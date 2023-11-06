@@ -11,7 +11,7 @@
 import { EventBus, useQuasar } from 'quasar'
 import { ref, onMounted, watch, inject } from 'vue';
 import { useRouter } from 'vue-router';
-import { UtxoI, Wallet } from 'mainnet-js';
+import { UtxoI, Wallet, delay } from 'mainnet-js';
 import formatAddress from 'src/app/utils/formatAddress';
 import getWalletClass from 'src/app/utils/getWalletClass';
 import { useUser } from 'src/stores/user';
@@ -30,6 +30,7 @@ const connected = ref<boolean>(false)
 
 const loadWalletBchBalance = async (address: string) => {
   if (address) {
+    await delay(3000)
     try {
       const balance = await watchtower.value.fetchBchBalance(address)
       user.walletBchBalance = balance?.balance
@@ -58,9 +59,9 @@ const connect = async () => {
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
     // user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
-    await loadWalletBchBalance(user.walletAddress)
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
+    await loadWalletBchBalance(user.walletAddress)
   }
 }
 
@@ -77,18 +78,20 @@ const filterAndStoreGenesisInputs = (userUtxos: UtxoI[]) => {
 const watchAddress = async (address: string) => {
   user.wallet = await getWalletClass().watchOnly(address)
   watching.value = user.wallet.watchAddress(async () => {
-    eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
     user.updatingBalances = true
     // user.walletBchBalance = await user.wallet?.getBalance('bch') as string
     // const balance = await watchtower.value.fetchBchBalance(address)
     // user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
-    await loadWalletBchBalance(address)
+
     const userUtxos = await user.wallet?.getAddressUtxos()
     if (userUtxos) {
       filterAndStoreGenesisInputs(userUtxos)
     }
+    eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
+    await loadWalletBchBalance(address)
     user.updatingBalances = false
+
   })
 }
 
@@ -112,13 +115,13 @@ watch(() => connected.value, async (c) => {
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('bch'))
     // user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
-    await loadWalletBchBalance(user.walletAddress)
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
     watchAddress(user.walletAddress)
     if (!watching.value && user.walletAddress) {
       watchAddress(user.walletAddress)
     }
+    await loadWalletBchBalance(user.walletAddress)
   } else {
     user.walletAddress = ''
     if (watching.value) {

@@ -25,7 +25,7 @@
                         <thead>
                             <tr v-if="watchtower.processing">
                                 <th colspan="7">
-                                    <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
+                                    <q-spinner-grid size="xs"></q-spinner-grid> Loading
                                 </th>
                             </tr>
                             <tr>
@@ -97,7 +97,7 @@
                         </tbody>
                     </q-markup-table>
                     <NFTOwnershipTransferDialog :model-value="dialog === NFTOwnershipTransferDialog.__name"
-                        :nft="dialogData" @hide="onHide" @nft-transferred="onNftTransfer" />
+                        :nft="dialogData" @hide="onHide" @nft-transferred="() => onNftTransfer()" />
                 </q-scroll-area>
             </div>
         </div>
@@ -114,7 +114,7 @@ import { PaginatedData } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
-import { Wallet } from 'mainnet-js';
+import { Wallet, delay } from 'mainnet-js';
 import { getWalletClass } from 'src/app/utils';
 import { EventBus } from 'quasar';
 import { useUI } from 'src/stores/ui';
@@ -233,8 +233,10 @@ const openNFTTransferDialog = (nft: CashToken) => {
     openDialog(NFTOwnershipTransferDialog.__name, nft)
 }
 
-const onNftTransfer = () => {
+const onNftTransfer = async () => {
     hideDialog()
+    await delay(2500)
+    refreshData()
 }
 
 watch(() => user.walletAddress, async (v) => {

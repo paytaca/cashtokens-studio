@@ -12,7 +12,7 @@
             <thead>
               <tr v-if="watchtower.processing">
                 <th colspan="6">
-                  <q-spinner-grid size="xs"></q-spinner-grid> Refreshing list
+                  <q-spinner-grid size="xs"></q-spinner-grid> Loading
                 </th>
               </tr>
               <tr>
@@ -66,7 +66,7 @@
             </tbody>
           </q-markup-table>
           <FTBalanceTransferDialog :model-value="dialog === FTBalanceTransferDialog.__name" :token-balance="dialogData"
-            @hide="onHide" @ft-transferred="onFTTransferred" />
+            @hide="onHide" @ft-transferred="() => onFTTransferred()" />
         </q-scroll-area>
       </div>
     </div>
@@ -85,6 +85,7 @@ import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
 import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
 import { EventBus } from 'quasar';
 import { useUI } from 'src/stores/ui';
+import { delay } from 'mainnet-js';
 
 
 defineOptions({ name: 'FungibleTokens' })
@@ -184,9 +185,10 @@ const refreshData = async () => {
   }
 }
 
-const onFTTransferred = () => {
+const onFTTransferred = async () => {
   hideDialog()
-  // refreshData()
+  await delay(2500)
+  refreshData()
 }
 
 watch(() => user.walletAddress, async (v) => {

@@ -27,7 +27,7 @@
           <thead>
             <tr v-if="watchtower.processing && authchainIdentities">
               <th colspan="6">
-                <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+                <q-spinner-grid size="xs"></q-spinner-grid> Loading
               </th>
             </tr>
             <tr>
@@ -86,7 +86,7 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { Wallet } from 'mainnet-js';
+import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
 import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
@@ -213,7 +213,8 @@ watch(() => user.walletAddress, async (v) => {
     // keep so page survives reload
     user.wallet = await getWalletClass().watchOnly(v)
     refreshData()
-    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
+      await delay(2000)
       refreshData()
     })
   } else {
