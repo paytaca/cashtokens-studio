@@ -28,6 +28,18 @@ const eventBus = inject<EventBus>('eventBus')
 const watchtower = ref<Watchtower>(new Watchtower())
 const connected = ref<boolean>(false)
 
+const loadWalletBchBalance = async (address: string) => {
+  if (address) {
+    try {
+      const balance = await watchtower.value.fetchBchBalance(address)
+      user.walletBchBalance = balance?.balance
+    } catch (error) {
+      user.walletBchBalance = await user.wallet?.getBalance('bch') as string
+    }
+  }
+
+}
+
 const connect = async () => {
   const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -45,8 +57,8 @@ const connect = async () => {
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
     // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
-
+    // user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
+    await loadWalletBchBalance(user.walletAddress)
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
   }
@@ -60,14 +72,18 @@ const filterAndStoreGenesisInputs = (userUtxos: UtxoI[]) => {
   }).slice(0, 5)
 }
 
+
+
 const watchAddress = async (address: string) => {
   user.wallet = await getWalletClass().watchOnly(address)
   watching.value = user.wallet.watchAddress(async () => {
     eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
     user.updatingBalances = true
-    // user.walletBchBalance = await user.wallet?.getBalance('sat') as string
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
+    // user.walletBchBalance = await user.wallet?.getBalance('bch') as string
+    // const balance = await watchtower.value.fetchBchBalance(address)
+    // user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
     // user.authchainIdentities = await AuthchainIdentity.scanWalletForAuthchainIdentities(user.wallet as Wallet)
+    await loadWalletBchBalance(address)
     const userUtxos = await user.wallet?.getAddressUtxos()
     if (userUtxos) {
       filterAndStoreGenesisInputs(userUtxos)
@@ -94,8 +110,9 @@ watch(() => connected.value, async (c) => {
     user.walletAddress = formatAddress(await window.paytaca.address('bch'))
     user.wallet = await getWalletClass().watchOnly(user.walletAddress)
     user.walletTokenAddress = user.wallet.getTokenDepositAddress()
-    // user.walletBchBalance = String(await user.wallet.getBalance('sat'))
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
+    // user.walletBchBalance = String(await user.wallet.getBalance('bch'))
+    // user.walletBchBalance = (await watchtower.value.fetchBchBalance(user.walletAddress))?.spendable
+    await loadWalletBchBalance(user.walletAddress)
     const userUtxos = await user.wallet.getAddressUtxos()
     filterAndStoreGenesisInputs(userUtxos)
     watchAddress(user.walletAddress)
@@ -116,8 +133,10 @@ watch(() => user.walletAddress, async (address) => {
     if (!watching.value) {
       watchAddress(address)
     }
-    user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
+    // user.walletBchBalance = (await watchtower.value.fetchBchBalance(address))?.spendable
     user.wallet = await getWalletClass().watchOnly(address)
+    user.walletBchBalance = String(await user.wallet.getBalance('bch'))
+
   } else {
     router.push('/')
   }
