@@ -140,9 +140,9 @@
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
           @registry-published="() => onRegistryPublished(dialogData)" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="() => onUnguard()" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="() => onBurn()" />
 
       </div>
     </div>
