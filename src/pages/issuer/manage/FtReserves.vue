@@ -80,7 +80,8 @@
           </tbody>
         </q-markup-table>
         <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @tokens-issued="onTokensIssuance" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+          @tokens-issued="(data) => onTokensIssuance(data)" />
       </div>
     </div>
   </q-page>
@@ -196,7 +197,10 @@ const initPagination = () => {
   }
 }
 
-const refreshData = async () => {
+const refreshData = async (immediate?: boolean) => {
+  if (!immediate) {
+    await delay(2500)
+  }
   if (user.wallet) {
     paginatedFtAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
@@ -214,7 +218,6 @@ watch(() => user.walletAddress, async (v) => {
     user.wallet = await getWalletClass().watchOnly(v)
     refreshData()
     eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-      await delay(2000)
       refreshData()
     })
   } else {
@@ -243,8 +246,9 @@ onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
 
-const onTokensIssuance = (issued: { tokenId: string, to: string, amount: string }) => {
+const onTokensIssuance = async (issued: { tokenId: string, to: string, amount: string }) => {
   hideDialog()
+  refreshData()
 }
 
 </script>

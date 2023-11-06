@@ -255,7 +255,10 @@ const initPagination = () => {
     pagination.value.offset = paginatedNftAuthchainIdentities.value.offset
   }
 }
-const refreshData = async () => {
+const refreshData = async (immediate?: boolean) => {
+  if (!immediate) {
+    await delay(2500)
+  }
   if (user.wallet) {
     paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
@@ -273,7 +276,6 @@ watch(() => user.walletAddress, async (v) => {
     user.wallet = await getWalletClass().watchOnly(v)
     refreshData()
     eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-      await delay(2000)
       refreshData()
     })
   } else {

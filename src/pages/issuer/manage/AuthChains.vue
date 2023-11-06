@@ -261,7 +261,10 @@ const initPagination = () => {
   }
 }
 
-const refreshData = async () => {
+const refreshData = async (immediate?: boolean) => {
+  if (!immediate) {
+    await delay(2500)
+  }
   if (user.wallet) {
     paginatedAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
@@ -324,8 +327,7 @@ onMounted(async () => {
     refreshData()
   }
 
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-    await delay(2000)
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
   })
 
@@ -337,7 +339,6 @@ onBeforeUnmount(() => {
 
 
 const onUnguard = async () => {
-  await delay(2000)
   refreshData().then(() => {
     if (paginatedAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
@@ -346,7 +347,6 @@ const onUnguard = async () => {
 }
 
 const onBurn = async () => {
-  await delay(2000)
   refreshData().then(() => {
     if (paginatedAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
