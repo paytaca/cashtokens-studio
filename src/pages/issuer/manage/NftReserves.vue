@@ -24,7 +24,7 @@
           <thead>
             <tr v-if="watchtower.processing && authchainIdentities">
               <th colspan="7">
-                <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+                <q-spinner-grid size="xs"></q-spinner-grid> Loading
               </th>
             </tr>
             <tr>
@@ -272,7 +272,8 @@ watch(() => user.walletAddress, async (v) => {
     // keep so page survives reload
     user.wallet = await getWalletClass().watchOnly(v)
     refreshData()
-    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
+      await delay(2000)
       refreshData()
     })
   } else {

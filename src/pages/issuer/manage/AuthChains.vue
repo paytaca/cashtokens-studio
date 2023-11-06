@@ -36,7 +36,7 @@
             <thead>
               <tr v-if="authchainIdentities && watchtower.processing">
                 <th :colspan="viewType === 'simple' ? 7 : 8">
-                  <q-spinner-grid size="xs"></q-spinner-grid> Loading list
+                  <q-spinner-grid size="xs"></q-spinner-grid> Loading
                 </th>
               </tr>
               <tr>
@@ -140,7 +140,8 @@
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
           @registry-published="() => onRegistryPublished(dialogData)" />
         <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="() => onUnguard()" />
+          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+          @identity-unguarded="() => onUnguard()" />
         <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
           :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="() => onBurn()" />
 
@@ -323,7 +324,8 @@ onMounted(async () => {
     refreshData()
   }
 
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
+  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
+    await delay(2000)
     refreshData()
   })
 
@@ -334,7 +336,8 @@ onBeforeUnmount(() => {
 })
 
 
-const onUnguard = () => {
+const onUnguard = async () => {
+  await delay(2000)
   refreshData().then(() => {
     if (paginatedAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
@@ -342,7 +345,8 @@ const onUnguard = () => {
   })
 }
 
-const onBurn = () => {
+const onBurn = async () => {
+  await delay(2000)
   refreshData().then(() => {
     if (paginatedAuthchainIdentities.value) {
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
