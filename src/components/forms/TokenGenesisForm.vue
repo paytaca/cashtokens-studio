@@ -238,7 +238,7 @@ const iconUploader = ref()
 const { $ebus } = useEventBus()
 const { setStatusProvider } = useStatusBar()
 const tokenNameRef = ref<Ref | undefined | null>(null)
-const tType = ref<'ft' | 'nft' | 'fnft'>('ft')
+const tType = ref<'ft' | 'nft' | 'fnft'>(props.tokenType || 'ft')
 const genesisToken = ref<{
   tokenId: string,
   amount: string | number,   // actual  amount that will be sent 
@@ -360,6 +360,7 @@ watch(() => tType.value, (tokenType) => {
   }
   if (tokenType === 'nft' && !genesisToken.value.capability) {
     genesisToken.value.capability = NFTCapability.minting
+    genesisToken.value.amount = ''
   }
 })
 
@@ -367,6 +368,7 @@ watch(() => tType.value, (tokenType) => {
 onMounted(() => {
   if (tType.value === 'nft') {
     genesisToken.value.capability = NFTCapability.minting
+    genesisToken.value.amount = ''
   }
   if (tType.value === 'ft') {
     genesisToken.value.amount = MAX_FUNGIBLE_AMOUNT
