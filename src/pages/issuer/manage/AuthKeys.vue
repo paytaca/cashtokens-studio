@@ -72,7 +72,10 @@
                         AuthKey</q-item>
                       <q-item clickable v-close-popup
                         @click="wOpenAuthGuardTokenListDialog(AuthGuardTokenListDialog.__name, { authKey: authKey, authGuard: authKey.authGuard })">
-                        View Locked tokens
+                        View locked tokens
+                      </q-item>
+                      <q-item clickable v-close-popup @click="() => refreshLockedTokens(authKey)">
+                        Refresh locked tokens
                       </q-item>
                     </q-list>
                   </q-menu>
@@ -113,9 +116,10 @@ import { PaginatedData } from 'src/app/types';
 import { getWalletClass } from 'src/app/utils';
 import { EventBus } from 'quasar';
 import AuthGuardTokenListDialog from 'src/components/dialogs/AuthGuardTokenListDialog.vue';
+import { useUI } from 'src/stores/ui';
 
 const user = useUser()
-
+const ui = useUI()
 const authKeys = ref<AuthKey[] | undefined>()
 const paginatedAuthKeys = ref<PaginatedData>({
   count: 0,
@@ -209,6 +213,23 @@ const onAuthKeyTransfer = () => {
   //   }
   // })
   hideDialog()
+}
+
+const refreshLockedTokens = async (authKey: AuthKey) => {
+  authKey.processing = 'Checking for locked tokens'
+  try {
+    await delay(1500)
+    const r = await new Watchtower().subscribe(authKey.authGuard.contract!.getTokenDepositAddress())
+    const rj = await r.json()
+    console.log(rj)
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error'
+    })
+  } finally {
+    authKey.processing = undefined
+  }
 }
 
 watch(() => user.walletAddress, async (v) => {
