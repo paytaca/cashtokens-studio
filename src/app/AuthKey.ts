@@ -83,6 +83,10 @@ export class AuthKey implements UtxoI {
     return this._processing
   }
 
+  set processing(m: string|undefined) {
+    this._processing = m
+  }
+
   static get processing():string|undefined {
     return AuthKey._processing
   }
