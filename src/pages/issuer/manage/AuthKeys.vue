@@ -219,9 +219,7 @@ const refreshLockedTokens = async (authKey: AuthKey) => {
   authKey.processing = 'Checking for locked tokens'
   try {
     await delay(1500)
-    const r = await new Watchtower().subscribe(authKey.authGuard.contract!.getTokenDepositAddress())
-    const rj = await r.json()
-    console.log(rj)
+    await new Watchtower().subscribe(authKey.authGuard.contract!.getTokenDepositAddress())
   } catch (error: any) {
     ui.setStatusMessage({
       statusMessage: error,
