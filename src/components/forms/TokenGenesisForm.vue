@@ -470,8 +470,10 @@ const createToken = async () => {
       contentHash: bcmrStorageArtifact.value!.contentHash
     }
 
-    await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
-
+    // We're initializing authKey's ownerWallet here 
+    // because it's being used to initialize the AuthGuard contract
+    cashToken.value.authKey!.ownerWallet = props.ownerWallet
+    new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
     const tx = await cashToken.value.createGenesis({
       amount: Number(tokenAmountWithDecimal.value.replace('.', '')),
       capability: genesisToken.value.capability,
@@ -479,10 +481,7 @@ const createToken = async () => {
       commitmentFormat: genesisToken.value.commitmentFormat,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true
     })
-
-    await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
-
-
+    new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + shortenTx(tx) })
       if (!user.tokens) {
