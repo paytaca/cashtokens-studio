@@ -189,7 +189,7 @@
   </q-form>
 </template>
 <script setup lang="ts">
-import { NFTCapability, UtxoI, Wallet } from 'mainnet-js'
+import { NFTCapability, UtxoI, Wallet, delay } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed, Ref, onUpdated } from 'vue'
 import { useUser } from 'src/stores/user'
@@ -470,6 +470,8 @@ const createToken = async () => {
       contentHash: bcmrStorageArtifact.value!.contentHash
     }
 
+    await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
+
     const tx = await cashToken.value.createGenesis({
       amount: Number(tokenAmountWithDecimal.value.replace('.', '')),
       capability: genesisToken.value.capability,
@@ -479,6 +481,7 @@ const createToken = async () => {
     })
 
     await new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
+
 
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Token created.Tx=' + shortenTx(tx) })
@@ -493,12 +496,12 @@ const createToken = async () => {
         timestamp: new Date().getTime(),
         successMsg: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token (genesis)`
       })
-      emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
       ui.setStatusMessage({
         statusMessage: `Created ${bcmr.value?.getToken()?.symbol || props.genesisInput.txid} token`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
+      emit('genesisResult', { txid: tx, tokenSymbol: cashToken.value.tokenCategory?.symbol || '' })
       buildAuthchain(cashToken.value)
     }
     // setStatusProvider(null)
