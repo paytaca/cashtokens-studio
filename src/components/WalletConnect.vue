@@ -43,7 +43,7 @@ onMounted(async () => {
     metadata: {
       name: 'Cash-Tokens-Studio',
       description: 'Cash Tokens Studio',
-      url: 'https://cashtokens.studio',
+      url: 'http://localhost:8000',
       icons: ['https://cashtokens.studio/images/cts_icon.png']
     }
   })
@@ -59,7 +59,8 @@ onMounted(async () => {
     explorerExcludedWalletIds: 'ALL',
   })
 
-  const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+  // const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+  const connectedChain = "bch:bitcoincash"
   requiredNamespaces.value = {
     bch: {
       chains: [connectedChain],
