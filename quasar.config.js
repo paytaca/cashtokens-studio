@@ -33,6 +33,7 @@ module.exports = configure(function (ctx) {
     WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
     CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : 'https://',
     TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
+    WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID
   }
 
   if (ctx.isServer) {

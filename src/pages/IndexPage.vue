@@ -6,17 +6,19 @@
       </div>
       <div class="row items-center justify-evenly">
         <paytaca-connect size="3em" />
+        <wallet-connect size="3em" />
       </div>
     </div>
   </q-page>
 </template>
 
-<script lang="ts">
+<script setup lang="ts">
 import PaytacaConnect from 'components/PaytacaConnect.vue';
+import WalletConnect from 'components/WalletConnect.vue';
 import { defineComponent } from 'vue';
 
-export default defineComponent({
-  name: "IndexPage",
-  components: { PaytacaConnect }
-});
+// export default defineComponent({
+//   name: "IndexPage",
+//   components: { PaytacaConnect }
+// });
 </script>
