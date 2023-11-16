@@ -1,5 +1,5 @@
 <template>
-  <q-btn icon="img:images/paytaca-128x128.png" class="q-px-md" align="center" @click.stop="connect" stack dense>
+  <q-btn icon="img:images/walletconnect.png" class="q-px-md" align="center" @click.stop="connect" stack dense>
     <q-icon v-if="user.walletAddress" name="link" color="positive" size="xs" class="q-py-sm"
       style="width:.15em;height:.10em"></q-icon>
     <q-icon v-else name="link_off" color="negative" size="xs" class="q-py-sm" style="width:.15em;height:.10em"></q-icon>
@@ -9,7 +9,7 @@
 <script setup lang="ts">
 
 import SignClient from '@walletconnect/sign-client';
-import { WalletConnectModal } from '@walletconnect/modal';
+
 
 import { EventBus, useQuasar } from 'quasar'
 import { ref, onMounted, watch, inject } from 'vue';
@@ -43,11 +43,12 @@ onMounted(async () => {
     metadata: {
       name: 'Cash-Tokens-Studio',
       description: 'Cash Tokens Studio',
-      url: 'http://localhost:8000',
+      url: 'https://cashtokens.studio',
       icons: ['https://cashtokens.studio/images/cts_icon.png']
     }
   })
 
+  const { WalletConnectModal } = await import('@walletconnect/modal')
   walletConnectModal.value = new WalletConnectModal({
     projectId: projectId,
     themeMode: 'dark',

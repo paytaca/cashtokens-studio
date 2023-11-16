@@ -108,7 +108,9 @@ module.exports = configure(function (ctx) {
         'cashscript',
         '@cashscript/utils',
         'cashc',
-        '@quasar/ssr-helpers'
+        '@quasar/ssr-helpers',
+        '@walletconnect/modal',
+        '@walletconnect/sign-client'
       ],
 
       // rtl: true, // https://quasar.dev/options/rtl-support
