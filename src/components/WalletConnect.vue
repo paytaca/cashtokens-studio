@@ -59,8 +59,7 @@ onMounted(async () => {
     explorerExcludedWalletIds: 'ALL',
   })
 
-  // const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
-  const connectedChain = "bch:bitcoincash"
+  const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
   requiredNamespaces.value = {
     bch: {
       chains: [connectedChain],
@@ -68,13 +67,17 @@ onMounted(async () => {
       events: ['addressesChanged'],
     },
   }
+
+  console.log('SIGN CLIENT ON LOAD', signClient.value)
+  console.log(signClient.value.session.getAll())
 })
 
 const connect = async () => {
   try {
 
     const { uri, approval } = await signClient.value.connect({ requiredNamespaces: requiredNamespaces.value });
-    console.log(uri);
+    console.log('URI', uri);
+    console.log('APPROVAL', approval);
     if (session.value) return;
     await walletConnectModal.value.openModal({ uri });
     // Await session approval from the wallet.
@@ -83,14 +86,23 @@ const connect = async () => {
     // document.getElementById('my-button').style.display = "none";
     // document.getElementById('connectInfo').style.display = "none";
     // document.getElementById('mintSection').style.display = "block";
-    console.log(session.value);
+    console.log('SESSION', session.value);
     //onSessionConnect(session)
     // Close the QRCode modal in case it was open.
     walletConnectModal.value.closeModal();
+    user.walletType = 'walletconnect'
+    user.walletConnectSigner = signClient.value
+    user.walletConnectSession = session.value
+    if (session.value) {
+      user.walletAddress = formatAddress(session.value.namespaces?.bch?.accounts[0])
+    }
 
   } catch (error) { console.log(error); }
 }
 
-const disconnect = async () => { console.log('Disconnecting') }
+const disconnect = async () => {
+  signClient.value.disconnect()
+}
+
 
 </script>

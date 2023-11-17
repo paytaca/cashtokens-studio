@@ -30,7 +30,10 @@ type UserState = {
   paginatedNftAuthchainIdentities: PaginatedData,
   paginatedAuthKeys: PaginatedData,
   paginatedFtBalances: PaginatedData,
-  paginatedNftCollections: PaginatedData
+  paginatedNftCollections: PaginatedData,
+  walletConnectSigner: any,
+  walletConnectSession:any,
+  walletType: 'paytaca' | 'walletconnect'
 }
 
 export const useUser = defineStore('user', {
@@ -48,7 +51,10 @@ export const useUser = defineStore('user', {
     walletBchBalance: '',
     walletAddress: '',
     walletTokenAddress: '',
-    wallet: undefined
+    wallet: undefined,
+    walletConnectSigner: undefined,
+    walletConnectSession: undefined,
+    walletType: 'paytaca'
   }),
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){
