@@ -10,7 +10,10 @@
           <code v-if="getAppEnv() !== 'production'" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         <light-switch />
-        <paytaca-connect />
+        <span v-if="user.walletAddress">
+          <paytaca-connect v-if="user.walletType == 'paytaca'" variant="icon" />
+          <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="icon" />
+        </span>
       </q-toolbar>
     </q-header>
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
@@ -49,6 +52,7 @@ import { onMounted, ref, watch } from 'vue';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import LightSwitch from 'components/LightSwitch.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
+import WalletConnect from 'components/WalletConnect.vue';
 import { useUser } from 'src/stores/user'
 import { useUI } from 'src/stores/ui';
 import CashAddress from 'src/components/CashAddress.vue'
