@@ -1,6 +1,6 @@
 <template>
   <span
-    @click.stop="user.walletAddress && user.walletType === 'paytaca' ? userWallet.paytaca.paytacaDisconnect() : userWallet.paytaca.paytacaConnect()"
+    @click.stop="user.walletAddress && user.walletType === 'paytaca' ? paytacaWallet.paytacaDisconnect() : paytacaWallet.paytacaConnect()"
     stack dense>
     <q-btn v-if="variant === 'icon'">
       <div class="row justify-center text-center q-py-xs">
@@ -30,7 +30,8 @@ import getWalletClass from 'src/app/utils/getWalletClass';
 import { useUser } from 'src/stores/user';
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE } from 'src/app/constants'
 import { Watchtower } from 'src/app/Watchtower';
-import { useUserWallet } from 'src/composables/useUserWallet';
+// import { useUserWallet } from 'src/composables/useUserWallet';
+import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
 
 defineOptions({ name: 'PaytacaConnect' })
 
@@ -41,7 +42,8 @@ const watching = ref()
 const eventBus = inject<EventBus>('eventBus')
 const watchtower = ref<Watchtower>(new Watchtower())
 const connected = ref<boolean>(false)
-const userWallet = useUserWallet()
+// const userWallet = useUserWallet()
+const paytacaWallet = usePaytacaConnect()
 
 defineProps<{ variant?: 'icon' | 'icon-text' }>()
 

@@ -8,6 +8,7 @@ import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
+import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
@@ -32,6 +33,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   private _processing?: string
   private static _processing?: string
+  walletType: 'paytaca'|'walletconnect'|undefined
 
   constructor(
     u?: {
@@ -43,7 +45,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       token?: TokenI | undefined;
       authKey: AuthKey
       ownerWallet?: Wallet
-    }
+    },
+    walletType?: 'paytaca'|'walletconnect'|undefined
   ){
     if (u) {
       this.vout = u.vout
@@ -59,6 +62,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       this.txid = ''
       this.satoshis = 0
     }
+
+    this.walletType = walletType
   }
 
   get utxo():UtxoI {
@@ -474,9 +479,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+      const sourceOutputs = [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -513,10 +516,24 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Issue/Release Tokens'
-      });
+      ]
+
+      if (this.walletType === 'walletconnect') {
+        signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs')
+      } else {
+        signingResult = await window.paytaca.signTransaction({
+            transaction: decoded,
+            sourceOutputs: [...sourceOutputs],
+            broadcast: false,
+            userPrompt: 'Issue/Release Tokens'
+        })
+      }
+      // signingResult = await window.paytaca!.signTransaction({
+      //   transaction: decoded,
+      //   sourceOutputs: sourceOutputs,
+      //   broadcast: false,
+      //   userPrompt: 'Issue/Release Tokens'
+      // });
 
     } catch (error) {
       delete this._processing

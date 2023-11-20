@@ -12,6 +12,7 @@ import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 import { ProcessingMessage } from "."
+import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
@@ -289,11 +290,19 @@ export class CashToken implements UtxoI, PartialBcmr {
     requests.push(...this.prepareGenesisRegistryPublicationReq())
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests, opt.includeAuthKeyGenesis)
     this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    if (!signResult || !signResult.signedTransaction) {
-      delete this._processing
-      return
+    let signResult: any
+    if (opt?.walletType === 'walletconnect') {
+      signResult = await requestWalletConnectSignature(encodedTransaction, sourceOutputs,'Create Token')
+      console.log('signResult', signResult)
+    } else {
+      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
+      if (!signResult || !signResult.signedTransaction) {
+        delete this._processing
+        return
+      }
     }
+    console.log('wallet', this.ownerWallet)
+    
     this._processing = 'Creating Token'
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)

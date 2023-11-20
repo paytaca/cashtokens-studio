@@ -33,7 +33,7 @@ type UserState = {
   paginatedNftCollections: PaginatedData,
   walletConnectSigner: any,
   walletConnectSession:any,
-  walletType: 'paytaca' | 'walletconnect'
+  walletType: 'paytaca' | 'walletconnect' | undefined
 }
 
 export const useUser = defineStore('user', {
