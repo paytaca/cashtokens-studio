@@ -51,6 +51,8 @@ export class CashToken implements UtxoI, PartialBcmr {
   defaultNftCollectionType: NftCollectionType
   private _processing?: string
   private static _processing?: string
+  walletType?: 'paytaca'|'walletconnect'
+  walletConnectSession?: any
   constructor(
     u?: {
       txid: string;
@@ -62,7 +64,9 @@ export class CashToken implements UtxoI, PartialBcmr {
       ownerWallet?: Wallet
       authKey?: AuthKey,
       registry?: { uri: string, contentHash: string }
-    }
+    },
+    walletType?: 'paytaca'|'walletconnect'|undefined,
+    walletConnectSession?: any
   ){
     this.defaultNftCollectionType = 'SequentialNftCollection'
     if (u) {
@@ -82,6 +86,8 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
     this.includeAuthKeyGenesis = true
     this.useAuthGuard = true
+    this.walletType = walletType
+    this.walletConnectSession = walletConnectSession
     delete this._processing
   }
 
@@ -292,7 +298,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     this._processing = 'Waiting for signature'
     let signResult: any
     if (opt?.walletType === 'walletconnect') {
-      signResult = await requestWalletConnectSignature(encodedTransaction, sourceOutputs,'Create Token')
+      signResult = await requestWalletConnectSignature(decodeTransaction(encodedTransaction), sourceOutputs,'Create Token', this.walletConnectSession)
       console.log('signResult', signResult)
     } else {
       signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)

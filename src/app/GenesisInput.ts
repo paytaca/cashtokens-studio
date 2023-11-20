@@ -21,7 +21,8 @@ export class GenesisInput implements UtxoI {
   private static _processing?:string;
   private _processing?:string;
   walletType?: 'paytaca'|'walletconnect'
-  constructor(instance:UtxoI, walletType?:'paytaca'|'walletconnect') {
+  walletConnectSession?: any
+  constructor(instance:UtxoI, walletType?:'paytaca'|'walletconnect', walletConnectSession?: any) {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
     }
@@ -32,6 +33,7 @@ export class GenesisInput implements UtxoI {
     this.coinbase = instance.coinbase
     this.token = instance.token
     this.walletType = walletType
+    this.walletConnectSession = walletConnectSession
   }
 
 
@@ -116,7 +118,10 @@ export class GenesisInput implements UtxoI {
     let signResult: {signedTransaction:any} | undefined
     try {
       if (this.walletType === 'walletconnect') {
-        signResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs')
+        if (!this.walletConnectSession) {
+          throw new Error('No WalletConnect active session')
+        }
+        signResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
       } else {
         signResult = await window.paytaca.signTransaction({
             transaction: decoded,

@@ -12,7 +12,8 @@ export type GenesisOptions = {
   commitment?: string,                                    // could be a number text e.g. '10' or hex '0a' Big Endian
   commitmentFormat?: 'decimal'|'hex'                      // what's the format of the commitment's value
   nftCollectionType?: NftCollectionType,
-  walletType?: 'paytaca' | 'walletconnect'
+  walletType?: 'paytaca' | 'walletconnect',
+  walletConnectSession?: any
 }
 
 export type TokenBalance = {

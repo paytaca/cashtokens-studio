@@ -41,13 +41,14 @@ const connectDisconnect = async () => {
     user.walletType = undefined
     user.walletAddress = ''
     user.wallet = undefined
+    user.walletConnectSession = undefined
   } else {
     console.log('CONNECTING')
     await walletConnect.walletConnectConnect()
     user.walletType = 'walletconnect'
     user.walletAddress = walletConnect.walletConnectWalletAddress.value
     user.wallet = walletConnect.walletConnectWallet.value
-
+    user.walletConnectSession = walletConnect.walletConnectSessions.value[0]
   }
 
 }

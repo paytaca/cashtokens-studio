@@ -34,6 +34,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   private _processing?: string
   private static _processing?: string
   walletType: 'paytaca'|'walletconnect'|undefined
+  walletConnectSession: any
 
   constructor(
     u?: {
@@ -46,7 +47,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       authKey: AuthKey
       ownerWallet?: Wallet
     },
-    walletType?: 'paytaca'|'walletconnect'|undefined
+    walletType?: 'paytaca'|'walletconnect'|undefined,
+    walletConnectSession?: any
   ){
     if (u) {
       this.vout = u.vout
@@ -64,6 +66,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
 
     this.walletType = walletType
+    this.walletConnectSession = walletConnectSession
   }
 
   get utxo():UtxoI {
@@ -519,7 +522,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       ]
 
       if (this.walletType === 'walletconnect') {
-        signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs')
+        signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
       } else {
         signingResult = await window.paytaca.signTransaction({
             transaction: decoded,

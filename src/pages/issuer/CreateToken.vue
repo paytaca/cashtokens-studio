@@ -72,7 +72,7 @@ const generateGenesisInputs = async () => {
     return
   }
   try {
-    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, user.walletType) // 
+    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, user.walletType, user.walletConnectSession) // 
     const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 2)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
