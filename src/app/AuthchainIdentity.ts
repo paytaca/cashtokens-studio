@@ -477,7 +477,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
       const bytecode = (transaction as any).redeemScript;
       const artifact = {...contract.artifact} as Partial<Artifact>;
-      delete artifact.source;
+    delete artifact.source;
       delete artifact.bytecode;
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
@@ -546,6 +546,12 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     if (!signingResult) {
       delete this._processing
       return
+    }
+
+    if (this.walletType === 'walletconnect') {
+
+      delete this._processing
+      return 
     }
 
     this._processing = 'Submitting Transaction'
