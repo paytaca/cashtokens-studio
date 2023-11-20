@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue"
 import { formatAddress, getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { Watchtower } from 'src/app';
+import { delay } from 'mainnet-js';
 
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()
@@ -39,6 +40,7 @@ export const useWalletConnect = () => {
       explorerExcludedWalletIds: 'ALL',
     })
     const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+    console.log('CONNECTED CHAIN', connectedChain)
     walletConnectRequiredNamespaces.value = {
       bch: {
         chains: [connectedChain],
