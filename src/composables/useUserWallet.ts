@@ -64,6 +64,10 @@ export const useUserWallet = () => {
     const sessions = walletConnectSignerClient.value.session.getAll()
     if (sessions.length > 0) {
       walletConnectWalletAddress.value = sessions[0].namespaces?.bch?.accounts[0]
+      // user.walletAddress = formatAddress(walletConnectSession.value.namespaces?.bch?.accounts[0])
+      // console.log('MOUNT', user.walletAddress)
+      // user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+      // user.walletType = 'walletconnect'
     }
   })
   
@@ -79,34 +83,49 @@ export const useUserWallet = () => {
           return
         }
         
-        paytacaWalletAddress.value = formatAddress(paytacaConnection.address)
-        paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
-        paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
-        console.log('paytaca connection', paytacaWalletAddress.value)
+        // paytacaWalletAddress.value = formatAddress(paytacaConnection.address)
+        // paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
+        // paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
+        // console.log('paytaca connection', paytacaWalletAddress.value)
+        user.walletAddress = formatAddress(paytacaConnection.address)
+        user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+        user.walletTokenAddress = paytacaWallet.value.getTokenDepositAddress()
+        user.walletType = 'paytaca'
       }
     }
     
   }
 
   const paytacaDisconnect = async() => {
+    user.walletAddress = ''
+    user.wallet = undefined
+    user.walletTokenAddress = ''
     await window.paytaca?.disconnect()
   }
 
   const walletConnectConnect = async () => {
+    console.log('CONNECTING TO WALLET CONNECT')
     try {
-
       const { uri, approval } = await walletConnectSignerClient?.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
-      if (walletConnectSession.value) {
+      if (Boolean(walletConnectSession.value.getAll().length > 0)) {
         console.log('SESSION', walletConnectSession.value.getAll())
-        return
-      };
-      await walletConnectModal.value.openModal({ uri });
-      // Await session approval from the wallet.
-      walletConnectSession.value = await approval();
-      walletConnectModal.value.closeModal();
-      user.walletType = 'walletconnect'
+      } else {
+        console.log()
+        await walletConnectModal.value.openModal({ uri });
+        // Await session approval from the wallet.
+        await approval();
+        walletConnectModal.value.closeModal();  
+      }
       if (walletConnectSession.value) {
-        user.walletAddress = formatAddress(walletConnectSession.value.namespaces?.bch?.accounts[0])
+        const sessions = walletConnectSession.value.getAll()
+        console.log(sessions)
+        if (sessions[0]?.namespaces?.bch?.accounts) {
+          const address = sessions[0]?.namespaces?.bch?.accounts[0].replace('bch:','')
+          user.walletAddress = formatAddress(address)
+          user.wallet = await getWalletClass().watchOnly(user.walletAddress)
+          user.walletType = 'walletconnect'
+        }
+        
       }
   
     } catch (error) { console.log(error); }
@@ -114,7 +133,22 @@ export const useUserWallet = () => {
 
   const walletConnectDisconnect = async () => {
     console.log('Disconnecting wallet connect')
-    walletConnectSignerClient.value?.disconnect()
+    console.log('WALLET', walletConnectSession.value)
+    const s = walletConnectSession.value
+    console.log('S', s)
+    if (walletConnectSession.value.getAll()[0]?.topic) {
+      try {
+        await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value?.getAll()[0]?.topic, reason: 'Disconnecting'})
+        if (user.walletType === 'walletconnect') {
+          user.wallet = undefined
+          user.walletAddress = ''
+          user.walletConnectSession = undefined
+        }
+      } catch (error) {
+        console.log(error)
+      }
+    }
+    
   }
 
   return {

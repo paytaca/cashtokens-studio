@@ -88,4 +88,9 @@ watch(() => ui.statusMessage, (value) => {
 //     router.push('/')
 //   }
 // })
+onMounted(() => {
+  if (!user.walletAddress) {
+    router.push('/')
+  }
+})
 </script>
