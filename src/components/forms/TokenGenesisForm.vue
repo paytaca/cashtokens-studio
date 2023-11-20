@@ -479,7 +479,8 @@ const createToken = async () => {
       capability: genesisToken.value.capability,
       commitment: genesisToken.value.commitment,
       commitmentFormat: genesisToken.value.commitmentFormat,
-      includeAuthKeyGenesis: props.createAuthKey === false ? false : true
+      includeAuthKeyGenesis: props.createAuthKey === false ? false : true,
+      walletType: user.walletType
     })
     new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
     if (tx) {

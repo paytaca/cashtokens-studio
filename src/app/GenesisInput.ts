@@ -8,6 +8,7 @@ import {
 
 import calcMinerFee from './utils/calcMinerFee';
 import { DEFAULT_TOKEN_VALUE } from './constants';
+import requestWalletConnectSignature from './utils/requestWalletConnectSignature';
 
 export class GenesisInput implements UtxoI {
 
@@ -19,7 +20,8 @@ export class GenesisInput implements UtxoI {
   token?: TokenI | undefined;
   private static _processing?:string;
   private _processing?:string;
-  constructor(instance:UtxoI) {
+  walletType?: 'paytaca'|'walletconnect'
+  constructor(instance:UtxoI, walletType?:'paytaca'|'walletconnect') {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
     }
@@ -29,6 +31,7 @@ export class GenesisInput implements UtxoI {
     this.height = instance.height
     this.coinbase = instance.coinbase
     this.token = instance.token
+    this.walletType = walletType
   }
 
 
@@ -112,12 +115,17 @@ export class GenesisInput implements UtxoI {
     this._processing = 'Waiting for signature'
     let signResult: {signedTransaction:any} | undefined
     try {
-      signResult = await window.paytaca.signTransaction({
-          transaction: decoded,
-          sourceOutputs: [...sourceOutputs],
-          broadcast: false,
-          userPrompt: 'Generate genesis inputs'
-      })
+      if (this.walletType === 'walletconnect') {
+        signResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs')
+      } else {
+        signResult = await window.paytaca.signTransaction({
+            transaction: decoded,
+            sourceOutputs: [...sourceOutputs],
+            broadcast: false,
+            userPrompt: 'Generate genesis inputs'
+        })
+      }
+      
     } catch (error:any) {
       console.log(error)
       delete this._processing

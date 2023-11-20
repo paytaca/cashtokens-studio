@@ -1,11 +1,5 @@
 <template>
   <span @click.stop="connectDisconnect" stack dense>
-    <!-- <q-avatar v-if="variant === 'icon'" rounded size="lg">
-      <q-img src="images/walletconnect_icon.png"></q-img>
-    </q-avatar>
-    <q-avatar v-else rounded style="width: 300px; height: 100px">
-      <q-img src="images/walletconnect.png"></q-img>
-    </q-avatar> -->
     <q-btn v-if="variant === 'icon'">
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
@@ -27,23 +21,33 @@
 <script setup lang="ts">
 
 import { onMounted } from 'vue';
-import { useUserWallet } from 'src/composables/useUserWallet';
+// import { useUserWallet } from 'src/composables/useUserWallet';
 import { useUser } from 'src/stores/user';
+import { useWalletConnect } from 'src/composables/useWalletConnect';
 
 defineProps<{ variant?: 'icon' | 'icon-text' }>()
 
-const { walletConnect } = useUserWallet()
+// const { walletConnect } = useUserWallet()
 const user = useUser()
+const walletConnect = useWalletConnect()
 
 onMounted(() => {
   console.log('WalletConnect', walletConnect)
 })
 
-const connectDisconnect = () => {
+const connectDisconnect = async () => {
   if (user.walletAddress && user.walletType === 'walletconnect') {
-    walletConnect.walletConnectDisconnect()
+    await walletConnect.walletConnectDisconnect()
+    user.walletType = undefined
+    user.walletAddress = ''
+    user.wallet = undefined
   } else {
-    walletConnect.walletConnectConnect()
+    console.log('CONNECTING')
+    await walletConnect.walletConnectConnect()
+    user.walletType = 'walletconnect'
+    user.walletAddress = walletConnect.walletConnectWalletAddress.value
+    user.wallet = walletConnect.walletConnectWallet.value
+
   }
 
 }

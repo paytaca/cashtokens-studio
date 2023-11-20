@@ -61,6 +61,7 @@ import getAppEnv from 'src/app/utils/getAppEnv'
 import { useRoute, useRouter } from 'vue-router'
 import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useDialogs } from 'src/composables';
+import { useInit } from 'src/composables/useInit';
 
 const leftDrawerOpen = ref(false)
 const user = useUser()
@@ -72,6 +73,8 @@ const messageDialog = ref<boolean>(false)
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
+
+useInit()
 
 watch(() => route.path, () => {
   ui.clearStatusMessage()
