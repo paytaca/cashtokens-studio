@@ -13,6 +13,7 @@ export const useWalletConnect = () => {
   const walletConnectModal = ref()
   const walletConnectRequiredNamespaces = ref()
   const walletConnectSession = ref()
+  const walletConnectSessions = ref()
   const user = useUser()
 
   onMounted(async () => {
@@ -40,7 +41,7 @@ export const useWalletConnect = () => {
       explorerExcludedWalletIds: 'ALL',
     })
     const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
-    console.log('CONNECTED CHAIN', connectedChain)
+    
     walletConnectRequiredNamespaces.value = {
       bch: {
         chains: [connectedChain],
@@ -49,39 +50,50 @@ export const useWalletConnect = () => {
       },
     }
 
-    walletConnectSession.value = walletConnectSignerClient.value.session
-    const sessions = walletConnectSignerClient.value.session.getAll()
-    if (sessions.length > 0) {
-      walletConnectWalletAddress.value = sessions[0].namespaces?.bch?.accounts[0]
-      if (sessions[0]?.namespaces?.bch?.accounts) {
-        const address = sessions[0]?.namespaces?.bch?.accounts[0].replace('bch:','')
+    console.log('WALLET CONNECT SIGNER', walletConnectSignerClient.value)
+    // walletConnectSession.value = walletConnectSignerClient.value.session
+    // const sessions = walletConnectSignerClient.value.session?.getAll()
+    // console.log('SESSIONS', sessions)
+    walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
+    console.log('SESSIONS', walletConnectSessions.value)
+    if (walletConnectSessions.value.length > 0) {
+      console.log('length . 0', )
+      walletConnectWalletAddress.value = walletConnectSessions.value[0].namespaces?.bch?.accounts[0]
+      console.log('walletConnectSessions.value', walletConnectWalletAddress.value)
+      if (walletConnectWalletAddress.value) {
+        const address = walletConnectWalletAddress.value.replace('bch:','')
         walletConnectWalletAddress.value = formatAddress(address)
         walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
+        console.log('ADDRESS', walletConnectWalletAddress.value)
       }
     }
-    console.log('SESSION', walletConnectSession.value)
   })
   
 
   const walletConnectConnect = async () => {
-    console.log('CONNECTING TO WALLET CONNECT')
     try {
-      const { uri, approval } = await walletConnectSignerClient?.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
-      if (!Boolean(walletConnectSession.value.getAll().length > 0)) {
+      const { uri, approval } = await walletConnectSignerClient.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
+      if (!Boolean(walletConnectSessions.value?.length > 0)) {
         
         await walletConnectModal.value.openModal({ uri });
         // Await session approval from the wallet.
-        await approval();
+        const approvalRes = await approval();
+        console.log('APPROVAL RES', approvalRes)
+
+        walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
         walletConnectModal.value.closeModal();  
-      }
+      } 
       let address
-      if (walletConnectSession.value) {
-        const sessions = walletConnectSession.value.getAll()
+      if (walletConnectSessions.value) {
+        const sessions = walletConnectSessions.value
+        console.log('AHAHA', sessions)
         if (sessions[0]?.namespaces?.bch?.accounts) {
-           address = sessions[0]?.namespaces?.bch?.accounts[0].replace('bch:','')
+          
+          address = sessions[0]?.namespaces?.bch?.accounts[0].replace('bch:','')
           walletConnectWalletAddress.value = formatAddress(address)
           walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
         }
+        
         
       }
 
@@ -89,7 +101,6 @@ export const useWalletConnect = () => {
         const watchtower = new Watchtower()
         let counter = 0
         while (counter < 3){
-          console.log('SUBSCRIBING')
           watchtower.subscribe(address)  
           counter++
         }
@@ -99,11 +110,12 @@ export const useWalletConnect = () => {
   }
 
   const walletConnectDisconnect = async () => {
-    const s = walletConnectSession.value
-    console.log('SESSION', s)
-    if (walletConnectSession.value.getAll()[0]?.topic) {
+    console.log(walletConnectSessions.value)
+    if (walletConnectSessions.value[0].topic) {
+      console.log('Disconnecting')
+      
       try {
-        await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value?.getAll()[0]?.topic, reason: 'Disconnecting'})
+        await walletConnectSignerClient.value?.disconnect({topic: walletConnectSessions.value[0].topic, reason: 'Disconnecting'})
         if (user.walletType === 'walletconnect') {
           user.wallet = undefined
           user.walletAddress = ''
@@ -124,6 +136,7 @@ export const useWalletConnect = () => {
     walletConnectModal,
     walletConnectRequiredNamespaces,
     walletConnectSession,
+    walletConnectSessions,
     walletConnectConnect,
     walletConnectDisconnect
     

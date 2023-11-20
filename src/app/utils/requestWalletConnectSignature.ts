@@ -1,11 +1,9 @@
 import { decodeTransaction } from '@bitauth/libauth'
 import  { stringify } from '@bitauth/libauth'
 import { SignClient } from '@walletconnect/sign-client'
-import { useUserWallet } from 'src/composables/useUserWallet'
-import { useWalletConnect } from 'src/composables/useWalletConnect'
 
 
-export  default async (decodedTransaction:any, sourceOutputs:any, prompt:string):Promise<any> =>  {
+export  default   async (decodedTransaction:any, sourceOutputs:any, prompt:string, walletConnectSession:any):Promise<any> =>  {
   // options
   // {
   //   transaction: decodedTransaction,
@@ -18,6 +16,7 @@ export  default async (decodedTransaction:any, sourceOutputs:any, prompt:string)
   // if (typeof decoded === 'string') {
   //   throw new Error('Error decoding transaction')
   // }
+
   
   const options = {
     transaction: decodedTransaction,
@@ -26,6 +25,7 @@ export  default async (decodedTransaction:any, sourceOutputs:any, prompt:string)
     userPrompt: prompt
   }
 
+  console.log('SIGN OPTIONS', options)
   const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
   const signerClient = await SignClient.init({
       projectId,
@@ -38,23 +38,32 @@ export  default async (decodedTransaction:any, sourceOutputs:any, prompt:string)
         icons: ['https://cashtokens.studio/images/cts_icon.png']
       }
     })
+
+    const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
+  
+
   
   console.log(signerClient)
   if (signerClient.session.getAll().length <= 0) {
     return console.log('No Session')
   }
+  
+  console.log('SESSION', signerClient.session)
+  let result
   try {
-    const result = await signerClient.request({
-      chainId: 'bch:bchtest',
-      topic: signerClient.session.getAll()[0]?.topic,
+    result = await signerClient.request({
+      chainId: chainId,
+      topic: walletConnectSession.topic,
       request: {
         method: "bch_signTransaction",
         params: JSON.parse(stringify(options)),
       },
     });
-    console.log('signerClient result ', result)
+    console.log('SIGN RESULT ', result)
     return result;
   } catch (error) {
+    console.log('SIGN ERROR', error)
+    console.log('ERROR SIGN RESULT', result)
     return undefined;
   }
 }

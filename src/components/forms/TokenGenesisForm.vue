@@ -453,7 +453,7 @@ const createToken = async () => {
     genesisToken.value.commitment = ''
     genesisToken.value.commitmentFormat = 'hex'
   }
-  cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet })
+  cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet }, user.walletType, user.walletConnectSession)
   try {
     cashToken.value.processing = 'Creating registry'
     bcmrStorageArtifact.value = await constructAndStoreBcmr()
@@ -480,7 +480,8 @@ const createToken = async () => {
       commitment: genesisToken.value.commitment,
       commitmentFormat: genesisToken.value.commitmentFormat,
       includeAuthKeyGenesis: props.createAuthKey === false ? false : true,
-      walletType: user.walletType
+      walletType: user.walletType,
+      walletConnectSession: user.walletConnectSession
     })
     new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
     if (tx) {
