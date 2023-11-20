@@ -1,8 +1,8 @@
 <template>
-  <span @click.stop="user.walletAddress ? userWallet.paytaca.paytacaDisconnect() : userWallet.paytaca.paytacaConnect()"
+  <span
+    @click.stop="user.walletAddress && user.walletType === 'paytaca' ? userWallet.paytaca.paytacaDisconnect() : userWallet.paytaca.paytacaConnect()"
     stack dense>
     <q-btn v-if="variant === 'icon'">
-      <div>{{ userWallet.paytaca }}</div>
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
           <q-avatar rounded size="md">
