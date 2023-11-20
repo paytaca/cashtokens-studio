@@ -18,7 +18,7 @@ if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-bu
   require('dotenv').config({path: './.env.dev'})
 } 
 if (process.env.NODE_ENV=='production') {
-  require('dotenv').config({path: '/cashtoken-studio/.env.prod'})
+  require('dotenv').config({path: './.env.prod'})
 }
 
 console.log('PROCESS ENV', process.env)

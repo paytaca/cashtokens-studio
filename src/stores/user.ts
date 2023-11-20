@@ -58,7 +58,7 @@ export const useUser = defineStore('user', {
   }),
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){
-      if (process.env.APP_ENV === 'development' || process.env.APP_ENV === 'production') {
+      if (process.env.APP_ENV === 'development' || process.env.APP_ENV === 'development-build') {
         return 'chipnet'
       }
       return 'mainnet'
