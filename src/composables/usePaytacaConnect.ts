@@ -25,25 +25,39 @@ export const usePaytacaConnect = () => {
     // const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     if (window.paytaca) {
-      const paytacaConnection = await window.paytaca!.connect()
-      if (paytacaConnection.connected) {
-        if (!paytacaConnection.address.startsWith('bitcoincash')) {
-          // $q.notify({ message: 'Please select a bitcoin cash address', color: 'negative', timeout: 1500 })
-          // dismiss()
-          return
+      const connected = await window.paytaca.connected()
+      let address 
+      if (!connected) {
+        const paytacaConnection = await window.paytaca!.connect()
+        if (paytacaConnection.connected) {
+          if (!paytacaConnection.address.startsWith('bitcoincash')) {
+            // $q.notify({ message: 'Please select a bitcoin cash address', color: 'negative', timeout: 1500 })
+            // dismiss()
+            return
+          }else {
+            address = paytacaConnection.address
+          }
         }
-        paytacaWalletAddress.value = formatAddress(paytacaConnection.address)
-        paytacaWallet.value = await getWalletClass().watchOnly(user.walletAddress)
+      } else {
+        address = await window.paytaca.address('bch')
+      }
+      if (address) {
+        paytacaWalletAddress.value = formatAddress(address)
+        paytacaWallet.value = await getWalletClass().watchOnly(address)
         paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
       }
+      
     }
     
   }
 
   const paytacaDisconnect = async() => {
-    user.walletAddress = ''
-    user.wallet = undefined
-    user.walletTokenAddress = ''
+    paytacaWalletAddress.value = ''
+    paytacaWallet.value = undefined
+    paytacaWalletTokenAddress.value = ''
+    // user.walletAddress = ''
+    // user.wallet = undefined
+    // user.walletTokenAddress = ''
     await window.paytaca?.disconnect()
   }
 

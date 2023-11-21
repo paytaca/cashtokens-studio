@@ -1,7 +1,5 @@
 <template>
-  <span
-    @click.stop="user.walletAddress && user.walletType === 'paytaca' ? paytacaWallet.paytacaDisconnect() : paytacaWallet.paytacaConnect()"
-    stack dense>
+  <span @click.stop="paytacaConnectDisconnect" stack dense>
     <q-btn v-if="variant === 'icon'">
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
@@ -43,9 +41,28 @@ const eventBus = inject<EventBus>('eventBus')
 const watchtower = ref<Watchtower>(new Watchtower())
 const connected = ref<boolean>(false)
 // const userWallet = useUserWallet()
-const paytacaWallet = usePaytacaConnect()
+const paytacaConnect = usePaytacaConnect()
 
 defineProps<{ variant?: 'icon' | 'icon-text' }>()
+
+const paytacaConnectDisconnect = async () => {
+  if (user.walletAddress && user.walletType === 'paytaca') {
+    await paytacaConnect.paytacaDisconnect()
+    user.walletType = undefined
+    user.walletAddress = ''
+    user.walletTokenAddress = ''
+    user.wallet = undefined
+    user.transactionSigner = undefined
+  } else {
+    await paytacaConnect.paytacaConnect()
+
+    user.walletType = 'paytaca'
+    user.walletTokenAddress = paytacaConnect.paytacaWalletTokenAddress.value
+    user.walletAddress = paytacaConnect.paytacaWalletAddress.value
+    user.wallet = paytacaConnect.paytacaWallet.value
+    user.transactionSigner = paytacaConnect.paytacaTransactionSigner
+  }
+}
 
 // const loadWalletBchBalance = async (address: string) => {
 //   if (address) {
