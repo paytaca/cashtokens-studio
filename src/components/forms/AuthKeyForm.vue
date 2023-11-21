@@ -45,7 +45,7 @@ const user = useUser()
 
 onMounted(() => {
   if (props.genesisInput && props.ownerWallet) {
-    authKey.value = new AuthKey({ ...props.genesisInput, ownerWallet: props.ownerWallet })
+    authKey.value = new AuthKey({ ...props.genesisInput, ownerWallet: props.ownerWallet }, user.transactionSigner)
   }
 })
 
