@@ -8,9 +8,7 @@ import {
 
 import calcMinerFee from './utils/calcMinerFee';
 import { DEFAULT_TOKEN_VALUE } from './constants';
-import requestWalletConnectSignature from './utils/requestWalletConnectSignature';
 import { TransactionSigner } from './types';
-
 
 export class GenesisInput implements UtxoI {
 
@@ -86,12 +84,17 @@ export class GenesisInput implements UtxoI {
   async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
     this._processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
-    const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
+    let funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
     if (!funder) {
-      delete this._processing
-      throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      if (this.satoshis <= (DEFAULT_TOKEN_VALUE + fee)) {
+        delete this._processing
+        throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      } else {
+        funder = this.utxo
+      }
+      // use this input to fund the transaction 
+      //if it we can't find a different funder utxo and if it has enough satoshis
     }
-    // build tx
     this._processing = 'Processing'
     const { encodedTransaction, sourceOutputs } = await ownerWallet!.encodeTransaction(
       [new SendRequest({
@@ -142,9 +145,7 @@ export class GenesisInput implements UtxoI {
       // delete GenesisInput.processing
       delete this._processing
     }
-    
   }
-
 
   /**
    * Generate genesis inputs from wallet's utxos

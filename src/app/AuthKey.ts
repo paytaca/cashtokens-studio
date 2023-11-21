@@ -144,23 +144,22 @@ export class AuthKey implements UtxoI {
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
     const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
       return Boolean(!u.token) &&
-        (u.txid !== this.txid || u.vout !== this.vout) && // Exclude the utxo that we're using as genesis inputs
+        (u.txid !== this.txid || u.vout !== this.vout) && 
           u.satoshis > this.genesisCost
     })[0]
-    console.log('FUNDER', (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> !u.token))
-    console.log('COST', this.genesisCost)
-    console.log('THIS TXID', this.txid)
     if (!funderUtxo) {
-      throw new Error('Insufficient balance to fund the transaction')
+      if (this.satoshis <= this.genesisCost) {
+        delete this._processing
+        throw new Error('Insufficient balance to fund the transaction. Please try to consolidate your utxos.')
+      } 
+      // use this input to fund the transaction 
+      //if it we can't find a different funder utxo and if it has enough satoshis
     }
-
-    console.log('SELECTED FUNDER', funderUtxo)
-
     // const useThisUtxos = this.authKey? [this.utxo, this.authKey!.utxo!, funderUtxo]: [this.utxo, funderUtxo]
     const utxoExpenses = [this.utxo]
-    
-    utxoExpenses.push(funderUtxo)
-
+    if (funderUtxo) {
+      utxoExpenses.push(funderUtxo)
+    }
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
       false,
