@@ -1,6 +1,6 @@
 import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE } from '.'
-import { GenesisOptions, NftCollectionType } from "./types";
+import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
@@ -49,10 +49,10 @@ export class CashToken implements UtxoI, PartialBcmr {
    */
   includeAuthKeyGenesis: boolean
   defaultNftCollectionType: NftCollectionType
+  transactionSigner?: TransactionSigner
   private _processing?: string
   private static _processing?: string
-  walletType?: 'paytaca'|'walletconnect'
-  walletConnectSession?: any
+  
   constructor(
     u?: {
       txid: string;
@@ -65,8 +65,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       authKey?: AuthKey,
       registry?: { uri: string, contentHash: string }
     },
-    walletType?: 'paytaca'|'walletconnect'|undefined,
-    walletConnectSession?: any
+    transactionSigner?: TransactionSigner
   ){
     this.defaultNftCollectionType = 'SequentialNftCollection'
     if (u) {
@@ -86,8 +85,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
     this.includeAuthKeyGenesis = true
     this.useAuthGuard = true
-    this.walletType = walletType
-    this.walletConnectSession = walletConnectSession
+    this.transactionSigner = transactionSigner
     delete this._processing
   }
 
@@ -297,18 +295,32 @@ export class CashToken implements UtxoI, PartialBcmr {
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests, opt.includeAuthKeyGenesis)
     this._processing = 'Waiting for signature'
     let signResult: any
-    if (opt?.walletType === 'walletconnect') {
-      signResult = await requestWalletConnectSignature(decodeTransaction(encodedTransaction), sourceOutputs,'Create Token', this.walletConnectSession)
-      console.log('signResult', signResult)
-    } else {
-      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
-      if (!signResult || !signResult.signedTransaction) {
-        delete this._processing
-        return
-      }
+    // if (opt?.walletType === 'walletconnect') {
+    //   signResult = await requestWalletConnectSignature(decodeTransaction(encodedTransaction), sourceOutputs,'Create Token', this.walletConnectSession)
+    //   console.log('signResult', signResult)
+    // } else {
+    //   signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
+    //   if (!signResult || !signResult.signedTransaction) {
+    //     delete this._processing
+    //     return
+    //   }
+    // }
+    // console.log('wallet', this.ownerWallet)
+    const decoded = decodeTransaction(encodedTransaction)
+    if (typeof decoded === 'string') {
+      throw new Error('Error decoding transaction')
     }
-    console.log('wallet', this.ownerWallet)
     
+    try {
+      signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Create Token')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+
     this._processing = 'Creating Token'
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)

@@ -205,6 +205,7 @@ import { buildAuthchain } from 'src/app/globalfunctions'
 import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
 import { numberToTokeshi, shortenTx } from 'src/app/utils'
 import { useUI } from 'src/stores/ui'
+
 const props = defineProps<{
   tokenType: 'ft' | 'nft' | 'fnft', // deprecated
   genesisInput: UtxoI,
@@ -453,7 +454,7 @@ const createToken = async () => {
     genesisToken.value.commitment = ''
     genesisToken.value.commitmentFormat = 'hex'
   }
-  cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet }, user.walletType, user.walletConnectSession)
+  cashToken.value = new CashToken({ ...props.genesisInput, authKey: props.authKey, ownerWallet: props.ownerWallet }, user.transactionSigner)
   try {
     cashToken.value.processing = 'Creating registry'
     bcmrStorageArtifact.value = await constructAndStoreBcmr()

@@ -4,6 +4,8 @@ import { formatAddress, getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { Watchtower } from 'src/app';
 import { delay } from 'mainnet-js';
+import  { stringify } from '@bitauth/libauth'
+import { TransactionSigner } from 'src/app/types';
 
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()
@@ -58,12 +60,14 @@ export const useWalletConnect = () => {
     console.log('SESSIONS', walletConnectSessions.value)
     if (walletConnectSessions.value.length > 0) {
       console.log('length . 0', )
+      walletConnectSession.value = walletConnectSessions.value[0]
       walletConnectWalletAddress.value = walletConnectSessions.value[0].namespaces?.bch?.accounts[0]
       console.log('walletConnectSessions.value', walletConnectWalletAddress.value)
       if (walletConnectWalletAddress.value) {
         const address = walletConnectWalletAddress.value.replace('bch:','')
         walletConnectWalletAddress.value = formatAddress(address)
         walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
+        walletConnectWalletTokenAddress.value = walletConnectWallet.value.getTokenDepositAddress()
         console.log('ADDRESS', walletConnectWalletAddress.value)
       }
     }
@@ -74,29 +78,20 @@ export const useWalletConnect = () => {
     try {
       const { uri, approval } = await walletConnectSignerClient.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
       if (!Boolean(walletConnectSessions.value?.length > 0)) {
-        
         await walletConnectModal.value.openModal({ uri });
         // Await session approval from the wallet.
-        const approvalRes = await approval();
-        console.log('APPROVAL RES', approvalRes)
-
+        walletConnectSession.value = await approval();
         walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
         walletConnectModal.value.closeModal();  
       } 
       let address
-      if (walletConnectSessions.value) {
-        const sessions = walletConnectSessions.value
-        console.log('AHAHA', sessions)
-        if (sessions[0]?.namespaces?.bch?.accounts) {
-          
-          address = sessions[0]?.namespaces?.bch?.accounts[0].replace('bch:','')
+      if (walletConnectSession.value) {
+        if (walletConnectSession.value?.namespaces?.bch?.accounts) {
+          address = walletConnectSession.value.namespaces.bch.accounts[0].replace('bch:','')
           walletConnectWalletAddress.value = formatAddress(address)
           walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
         }
-        
-        
       }
-
       if (address) {
         const watchtower = new Watchtower()
         let counter = 0
@@ -111,21 +106,53 @@ export const useWalletConnect = () => {
 
   const walletConnectDisconnect = async () => {
     console.log(walletConnectSessions.value)
-    if (walletConnectSessions.value[0].topic) {
+    if (walletConnectSession.value?.topic) {
       console.log('Disconnecting')
-      
       try {
-        await walletConnectSignerClient.value?.disconnect({topic: walletConnectSessions.value[0].topic, reason: 'Disconnecting'})
+        await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value.topic, reason: 'Disconnecting'})
         if (user.walletType === 'walletconnect') {
           user.wallet = undefined
           user.walletAddress = ''
+          user.walletTokenAddress = ''
           user.walletConnectSession = undefined
         }
       } catch (error) {
         console.log(error)
       }
     }
-    
+  }
+
+  const walletConnectSignTransaction =  async (decodedTransaction:any, sourceOutputs:any, broadcast?: boolean, prompt?:string):Promise<any> =>  {
+    const options = {
+      transaction: decodedTransaction,
+      sourceOutputs: sourceOutputs,
+      broadcast: Boolean(broadcast),
+      userPrompt: prompt || 'CTS Requests your signature'
+    }
+  
+    const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
+
+    let result
+    try {
+      result = await walletConnectSignerClient.value.request({
+        chainId: chainId,
+        topic: walletConnectSession.value.topic,
+        request: {
+          method: "bch_signTransaction",
+          params: JSON.parse(stringify(options)),
+        },
+      });
+      console.log('SIGN RESULT ', result)
+      return result;
+    } catch (error) {
+      console.log('SIGN ERROR', error)
+      console.log('ERROR SIGN RESULT', result)
+    }
+  }
+  
+  const walletConnectTransactionSigner:TransactionSigner = {
+    type: 'walletconnect',
+    signTransaction: walletConnectSignTransaction
   }
 
   return {
@@ -138,8 +165,9 @@ export const useWalletConnect = () => {
     walletConnectSession,
     walletConnectSessions,
     walletConnectConnect,
-    walletConnectDisconnect
-    
+    walletConnectDisconnect,
+    walletConnectSignTransaction,
+    walletConnectTransactionSigner
   }
 }
 

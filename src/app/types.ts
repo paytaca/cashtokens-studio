@@ -100,3 +100,10 @@ export type NftProjectDrop = {
   publishedOn: number,
   publisherAddress: string,
 }
+
+export type SignTransaction = (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?: string) => Promise<any>
+
+export interface TransactionSigner {
+  type: 'paytaca' | 'walletconnect',
+  signTransaction: SignTransaction
+}

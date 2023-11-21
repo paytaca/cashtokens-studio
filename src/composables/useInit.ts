@@ -54,8 +54,8 @@ export const useInit = () => {
     if(value) {  
       const userWallet =  await getWalletClass().watchOnly(user.walletAddress)
       const userUtxos = await userWallet.getAddressUtxos()
+      console.log('UTXOS', userUtxos)
       loadWalletBchBalance(user.walletAddress)
-
       filterAndStoreGenesisInputs(userUtxos)
       
     } else {

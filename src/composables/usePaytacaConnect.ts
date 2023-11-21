@@ -2,6 +2,7 @@ import SignClient from '@walletconnect/sign-client';
 import { onMounted, ref } from "vue"
 import { formatAddress, getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
+import { TransactionSigner } from 'src/app/types';
 
 export const usePaytacaConnect = () => {
   const paytacaWalletAddress = ref('')
@@ -46,13 +47,32 @@ export const usePaytacaConnect = () => {
     await window.paytaca?.disconnect()
   }
 
+  const paytacaSignTransaction = async (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?:string): Promise<any> => {
+    try {
+      const signResult = await window.paytaca.signTransaction({
+          transaction: decodedTransaction,
+          sourceOutputs: [...sourceOutputs],
+          broadcast: Boolean(broadcast),
+          userPrompt: prompt || 'Signature Requested'
+      })
+      return signResult
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const paytacaTransactionSigner:TransactionSigner = {
+    type: 'paytaca',
+    signTransaction: paytacaSignTransaction
+  }
 
   return {
     paytacaWalletAddress,
     paytacaWalletTokenAddress,
     paytacaWallet,
     paytacaConnect,
-    paytacaDisconnect
+    paytacaDisconnect,
+    paytacaTransactionSigner
     
   }
 }
