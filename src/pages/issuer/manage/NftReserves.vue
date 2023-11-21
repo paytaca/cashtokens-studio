@@ -222,7 +222,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 
@@ -260,10 +260,12 @@ const refreshData = async (immediate?: boolean) => {
     await delay(2500)
   }
   if (user.wallet) {
+
     paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
     )
+    console.log(user.paginatedAuthchainIdentities)
     user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
     initPagination()
     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)

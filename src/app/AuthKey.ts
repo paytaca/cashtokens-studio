@@ -307,9 +307,18 @@ export class AuthKey implements UtxoI {
         // ensureUtxos: [this.utxo, funderUtxo]
       }
     )
-    this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer AuthKey')
-
+    let signResult
+    try {
+      this._processing = `Waiting for ${this.transactionSigner?.type} signature`
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Transfer AuthKey')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+    
     this._processing = 'Transferring,please wait'
     const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
     delete this._processing

@@ -2,7 +2,6 @@
   <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
-      Token{{ user.walletTokenAddress }}
       <q-toolbar>
         <q-toolbar-title class="text-h5 row items-center">
           <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
