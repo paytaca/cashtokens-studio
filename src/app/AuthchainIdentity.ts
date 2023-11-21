@@ -608,9 +608,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+
+      const sourceOutputs = [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -647,10 +646,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(depositAddress) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Unguard Token: ' + shortenTokenId(this.token!.tokenId)
-      });
+      ]
+
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Unguard Token: ' + shortenTokenId(this.token!.tokenId))
 
     } catch (error) {
       delete this._processing

@@ -9,8 +9,8 @@
                     </q-badge>
                 </h5>
                 <div class="q-pa-lg flex flex-center">
-                    <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
-                        :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
+                    <q-pagination v-if="paginatedNftCollections?.count > 0" v-model="pagination.currentPage"
+                        :max="pagination.numberOfPages" :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
                 </div>
                 <div class="text-right q-my-sm">
                     <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys" class="text-grey-6"
@@ -172,7 +172,9 @@ const populateNftCollections = (paginated: PaginatedData) => {
             height,
             coinbase,
             token
-        }))
+        },
+            user.transactionSigner
+        ))
     }
 
     nftCollections.value.forEach(async (a) => {
