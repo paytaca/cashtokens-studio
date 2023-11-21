@@ -5,6 +5,7 @@ import calcMinerFee from "./utils/calcMinerFee";
 import { decodeTransaction } from "@bitauth/libauth";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
+import { TransactionSigner } from "./types";
 
 export class AuthKey implements UtxoI {
   txid: string;
@@ -14,6 +15,7 @@ export class AuthKey implements UtxoI {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   ownerWallet?: Wallet
+  transactionSigner?: TransactionSigner
   private _processing?: string
   private static _processing?: string
   unlockableTokens?: UtxoI[]
@@ -28,7 +30,8 @@ export class AuthKey implements UtxoI {
       coinbase?: boolean | undefined;
       token?: TokenI | undefined;
       ownerWallet?: Wallet
-    }
+    },
+    transactionSigner?: TransactionSigner
   ){
     if (u) {
       this.vout = u.vout
@@ -43,6 +46,7 @@ export class AuthKey implements UtxoI {
       this.txid = ''
       this.satoshis = 0
     }
+    this.transactionSigner = transactionSigner
   }
 
   get utxo():UtxoI {
@@ -140,13 +144,17 @@ export class AuthKey implements UtxoI {
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
     const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
       return Boolean(!u.token) &&
-        (u.txid !== this.txid) && // Exclude the utxo that we're using as genesis inputs
+        (u.txid !== this.txid || u.vout !== this.vout) && // Exclude the utxo that we're using as genesis inputs
           u.satoshis > this.genesisCost
     })[0]
-
+    console.log('FUNDER', (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> !u.token))
+    console.log('COST', this.genesisCost)
+    console.log('THIS TXID', this.txid)
     if (!funderUtxo) {
       throw new Error('Insufficient balance to fund the transaction')
     }
+
+    console.log('SELECTED FUNDER', funderUtxo)
 
     // const useThisUtxos = this.authKey? [this.utxo, this.authKey!.utxo!, funderUtxo]: [this.utxo, funderUtxo]
     const utxoExpenses = [this.utxo]
@@ -190,10 +198,39 @@ export class AuthKey implements UtxoI {
     ]
     // requests.push(...this.prepareChangeReq(this.utxo))
     
+    // try {
+    //   const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
+    //   this._processing = 'Waiting for signature'
+    //   const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
+    //   this._processing = 'Creating AuthKey'
+    //   const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
+    //   return tx
+    // } catch (error) {
+
+    //   throw error
+    // } finally {
+    //   delete this._processing
+    // }
+    console.log('transaction signer', this.transactionSigner)
+    let signResult
     try {
       const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
       this._processing = 'Waiting for signature'
-      const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Generate genesis inputs')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+    
+    if (!signResult) {
+      delete this._processing
+      return
+    }
+
+    try {
       this._processing = 'Creating AuthKey'
       const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
       return tx
@@ -203,8 +240,7 @@ export class AuthKey implements UtxoI {
     } finally {
       delete this._processing
     }
-    
-    
+
   }
 
   /**
@@ -248,7 +284,7 @@ export class AuthKey implements UtxoI {
       return Boolean(!u.token) &&
           u.satoshis > this.transferCost
     })[0]
-
+    
     if (!funderUtxo) {
       throw new Error('Insufficient balance to fund the transaction')
     }

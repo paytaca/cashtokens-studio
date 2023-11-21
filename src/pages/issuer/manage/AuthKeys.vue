@@ -158,7 +158,7 @@ const populateAuthKeys = (paginated: PaginatedData) => {
       unlockableTokensCount
     } = results[i]
 
-    const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
+    const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authKey.unlockableTokens = unlockableTokens
     authKey.unlockableTokensCount = unlockableTokensCount
     authKeys.value.push(authKey)
