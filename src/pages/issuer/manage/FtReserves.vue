@@ -135,6 +135,7 @@ const formatReservedSupply = computed(() => {
 })
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
+  console.log('IDENTITIES', user.walletConnectSession)
   authchainIdentities.value = []
   const results = paginated.results
   for (let i = 0; i < results.length; i++) {

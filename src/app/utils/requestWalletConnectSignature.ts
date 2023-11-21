@@ -3,7 +3,7 @@ import  { stringify } from '@bitauth/libauth'
 import { SignClient } from '@walletconnect/sign-client'
 
 
-export  default   async (decodedTransaction:any, sourceOutputs:any, prompt:string, walletConnectSession:any):Promise<any> =>  {
+export default async (decodedTransaction:any, sourceOutputs:any, prompt:string, walletConnectSession:any, walletConnectSignerClient?:any):Promise<any> =>  {
   // options
   // {
   //   transaction: decodedTransaction,
@@ -43,15 +43,15 @@ export  default   async (decodedTransaction:any, sourceOutputs:any, prompt:strin
   
 
   
-  console.log(signerClient)
-  if (signerClient.session.getAll().length <= 0) {
-    return console.log('No Session')
-  }
+  // console.log(signerClient)
+  // if (walletConnectSignerClient.session.getAll().length <= 0) {
+  //   return console.log('No Session')
+  // }
   
-  console.log('SESSION', signerClient.session)
+  // console.log('SESSION', signerClient.session)
   let result
   try {
-    result = await signerClient.request({
+    result = await walletConnectSignerClient.request({
       chainId: chainId,
       topic: walletConnectSession.topic,
       request: {

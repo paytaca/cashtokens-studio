@@ -21,13 +21,11 @@
 <script setup lang="ts">
 
 import { onMounted } from 'vue';
-// import { useUserWallet } from 'src/composables/useUserWallet';
 import { useUser } from 'src/stores/user';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
 
 defineProps<{ variant?: 'icon' | 'icon-text' }>()
 
-// const { walletConnect } = useUserWallet()
 const user = useUser()
 const walletConnect = useWalletConnect()
 
@@ -40,15 +38,19 @@ const connectDisconnect = async () => {
     await walletConnect.walletConnectDisconnect()
     user.walletType = undefined
     user.walletAddress = ''
+    user.walletTokenAddress = ''
     user.wallet = undefined
     user.walletConnectSession = undefined
+    user.transactionSigner = undefined
   } else {
     console.log('CONNECTING')
     await walletConnect.walletConnectConnect()
     user.walletType = 'walletconnect'
+    user.walletTokenAddress = walletConnect.walletConnectWalletTokenAddress.value
     user.walletAddress = walletConnect.walletConnectWalletAddress.value
     user.wallet = walletConnect.walletConnectWallet.value
-    user.walletConnectSession = walletConnect.walletConnectSessions.value[0]
+    user.walletConnectSession = walletConnect.walletConnectSession.value
+    user.transactionSigner = walletConnect.walletConnectTransactionSigner
   }
 
 }

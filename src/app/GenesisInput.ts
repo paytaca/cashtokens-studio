@@ -9,6 +9,8 @@ import {
 import calcMinerFee from './utils/calcMinerFee';
 import { DEFAULT_TOKEN_VALUE } from './constants';
 import requestWalletConnectSignature from './utils/requestWalletConnectSignature';
+import { TransactionSigner } from './types';
+
 
 export class GenesisInput implements UtxoI {
 
@@ -18,11 +20,11 @@ export class GenesisInput implements UtxoI {
   height?: number | undefined;
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
+  transactionSigner?: TransactionSigner
   private static _processing?:string;
   private _processing?:string;
-  walletType?: 'paytaca'|'walletconnect'
-  walletConnectSession?: any
-  constructor(instance:UtxoI, walletType?:'paytaca'|'walletconnect', walletConnectSession?: any) {
+
+  constructor(instance:UtxoI, transactionSigner?: TransactionSigner) {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
     }
@@ -32,8 +34,7 @@ export class GenesisInput implements UtxoI {
     this.height = instance.height
     this.coinbase = instance.coinbase
     this.token = instance.token
-    this.walletType = walletType
-    this.walletConnectSession = walletConnectSession
+    this.transactionSigner = transactionSigner
   }
 
 
@@ -115,22 +116,9 @@ export class GenesisInput implements UtxoI {
     // request signature
     delete this._processing
     this._processing = 'Waiting for signature'
-    let signResult: {signedTransaction:any} | undefined
+    let signResult: {signedTransaction:any, signedTransactionHash?:any} | undefined
     try {
-      if (this.walletType === 'walletconnect') {
-        if (!this.walletConnectSession) {
-          throw new Error('No WalletConnect active session')
-        }
-        signResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
-      } else {
-        signResult = await window.paytaca.signTransaction({
-            transaction: decoded,
-            sourceOutputs: [...sourceOutputs],
-            broadcast: false,
-            userPrompt: 'Generate genesis inputs'
-        })
-      }
-      
+      signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Generate genesis inputs')
     } catch (error:any) {
       console.log(error)
       delete this._processing

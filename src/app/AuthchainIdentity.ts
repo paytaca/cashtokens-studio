@@ -9,6 +9,7 @@ import shortenTokenId from "./utils/shortenTokenId";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
+import { TransactionSigner } from "./types";
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
@@ -33,8 +34,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   private _processing?: string
   private static _processing?: string
-  walletType: 'paytaca'|'walletconnect'|undefined
-  walletConnectSession: any
+  transactionSigner?: TransactionSigner
 
   constructor(
     u?: {
@@ -47,8 +47,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       authKey: AuthKey
       ownerWallet?: Wallet
     },
-    walletType?: 'paytaca'|'walletconnect'|undefined,
-    walletConnectSession?: any
+    transactionSigner?: TransactionSigner
   ){
     if (u) {
       this.vout = u.vout
@@ -65,8 +64,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       this.satoshis = 0
     }
 
-    this.walletType = walletType
-    this.walletConnectSession = walletConnectSession
+    this.transactionSigner = transactionSigner
   }
 
   get utxo():UtxoI {
@@ -521,23 +519,23 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         }
       ]
 
-      if (this.walletType === 'walletconnect') {
-        signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
-      } else {
-        signingResult = await window.paytaca.signTransaction({
-            transaction: decoded,
-            sourceOutputs: [...sourceOutputs],
-            broadcast: false,
-            userPrompt: 'Issue/Release Tokens'
-        })
-      }
+      // if (this.walletType === 'walletconnect') {
+      //   signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
+      // } else {
+      //   signingResult = await window.paytaca.signTransaction({
+      //       transaction: decoded,
+      //       sourceOutputs: [...sourceOutputs],
+      //       broadcast: false,
+      //       userPrompt: 'Issue/Release Tokens'
+      //   })
+      // }
       // signingResult = await window.paytaca!.signTransaction({
       //   transaction: decoded,
       //   sourceOutputs: sourceOutputs,
       //   broadcast: false,
       //   userPrompt: 'Issue/Release Tokens'
       // });
-
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Issue/Release Tokens')
     } catch (error) {
       delete this._processing
       throw new Error('Error signing transaction')
@@ -546,12 +544,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     if (!signingResult) {
       delete this._processing
       return
-    }
-
-    if (this.walletType === 'walletconnect') {
-
-      delete this._processing
-      return 
     }
 
     this._processing = 'Submitting Transaction'
