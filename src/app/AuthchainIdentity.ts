@@ -117,8 +117,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
    * Burn the authchain identity output
    */
   async burn(): Promise<string | undefined> {
-    
-    
     this.ensureOwnerWallet()
     this._processing = 'Processing'
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > this.burningCost).map(toCashScript)[0]
@@ -171,7 +169,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete this._processing
       throw error
     }
-    this._processing = 'Waiting for signature'
+    this._processing = `Waiting for signature`
     
     let signingResult
     try {
@@ -183,9 +181,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+
+      const sourceOutputs =  [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -222,11 +219,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(depositAddress) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Burn authchain of token: ' + shortenTokenId(this.token!.tokenId)
-      });
-
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Burn authchain of token: ' + shortenTokenId(this.token!.tokenId))
     } catch (error) {
       delete this._processing
       throw new Error('Error signing transaction')
@@ -321,9 +315,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+
+      const sourceOutputs = [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -360,11 +353,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Publish registry update'
-      });
+      ]
 
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Publish registry update')
     } catch (error) {
       delete this._processing
       throw new Error('Error signing transaction')
@@ -518,23 +509,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           valueSatoshis: BigInt(funderInput.satoshis)
         }
       ]
-
-      // if (this.walletType === 'walletconnect') {
-      //   signingResult = await requestWalletConnectSignature(decoded, sourceOutputs,'Generate genesis inputs', this.walletConnectSession)
-      // } else {
-      //   signingResult = await window.paytaca.signTransaction({
-      //       transaction: decoded,
-      //       sourceOutputs: [...sourceOutputs],
-      //       broadcast: false,
-      //       userPrompt: 'Issue/Release Tokens'
-      //   })
-      // }
-      // signingResult = await window.paytaca!.signTransaction({
-      //   transaction: decoded,
-      //   sourceOutputs: sourceOutputs,
-      //   broadcast: false,
-      //   userPrompt: 'Issue/Release Tokens'
-      // });
       signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Issue/Release Tokens')
     } catch (error) {
       delete this._processing

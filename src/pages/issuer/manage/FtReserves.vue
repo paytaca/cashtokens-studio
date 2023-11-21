@@ -135,7 +135,6 @@ const formatReservedSupply = computed(() => {
 })
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
-  console.log('IDENTITIES', user.walletConnectSession)
   authchainIdentities.value = []
   const results = paginated.results
   for (let i = 0; i < results.length; i++) {
@@ -149,7 +148,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.walletType, user.walletConnectSession)
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 

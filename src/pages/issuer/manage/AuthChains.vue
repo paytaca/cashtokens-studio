@@ -203,7 +203,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   const results = paginated.results
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet }, user.transactionSigner)
     const {
       txid,
       vout,
@@ -212,7 +212,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.walletType, user.walletConnectSession)
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 
