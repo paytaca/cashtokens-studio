@@ -349,7 +349,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     
   } 
 
-  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage}):Promise<string|undefined> {
+  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage, transactionSigner?: TransactionSigner}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
     arg?.processingMessage?.setProcessing('Processing')
     
@@ -379,12 +379,18 @@ export class CashToken implements UtxoI, PartialBcmr {
     CashToken._processing = 'Waiting for signature'
     arg?.processingMessage?.setProcessing('Waiting for signature')  
     let signResult
+
     try {
-      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
+      
+      this._processing = 'Waiting for signature'
+      signResult = await arg.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Send Tokens')
     } catch (error) {
       console.log(error)
       throw error
+    } finally {
+      delete this._processing
     }
+
     CashToken._processing = `Sending tokens`
     arg?.processingMessage?.setProcessing(`Sending tokens`)  
     try {
@@ -519,9 +525,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+      const sourceOutputs = [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -558,11 +562,8 @@ export class CashToken implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Mint NFT'
-      });
-
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
     } catch (error) {
       console.log(error)
       delete this._processing
@@ -675,7 +676,8 @@ export class CashToken implements UtxoI, PartialBcmr {
         }
       )
       this._processing = 'Waiting for signature'
-      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+      // signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Transfer NFT')
     } catch (error) {
       console.log(error)
       throw error

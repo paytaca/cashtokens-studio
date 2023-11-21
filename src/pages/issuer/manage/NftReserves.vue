@@ -169,7 +169,7 @@ const formatCommitment = computed(() => {
   }
 })
 const openMintChildDialog = (identity: AuthchainIdentity) => {
-  const ct = new CashToken({ ...identity })
+  const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
   openDialog(NFTMinterDialog.__name, ct)
