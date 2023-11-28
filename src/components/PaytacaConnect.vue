@@ -20,27 +20,16 @@
 
 <script setup lang="ts">
 import { EventBus, useQuasar } from 'quasar'
-import { ref, onMounted, watch, inject } from 'vue';
+import { ref, inject } from 'vue';
 import { useRouter } from 'vue-router';
-import { UtxoI, Wallet, delay } from 'mainnet-js';
-import formatAddress from 'src/app/utils/formatAddress';
-import getWalletClass from 'src/app/utils/getWalletClass';
 import { useUser } from 'src/stores/user';
-import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE } from 'src/app/constants'
 import { Watchtower } from 'src/app/Watchtower';
-// import { useUserWallet } from 'src/composables/useUserWallet';
 import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
 
 defineOptions({ name: 'PaytacaConnect' })
 
 const $q = useQuasar()
-const router = useRouter()
 const user = useUser()
-const watching = ref()
-const eventBus = inject<EventBus>('eventBus')
-const watchtower = ref<Watchtower>(new Watchtower())
-const connected = ref<boolean>(false)
-// const userWallet = useUserWallet()
 const paytacaConnect = usePaytacaConnect()
 
 defineProps<{ variant?: 'icon' | 'icon-text' }>()

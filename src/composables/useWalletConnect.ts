@@ -52,25 +52,45 @@ export const useWalletConnect = () => {
       },
     }
 
-    console.log('WALLET CONNECT SIGNER', walletConnectSignerClient.value)
-    // walletConnectSession.value = walletConnectSignerClient.value.session
-    // const sessions = walletConnectSignerClient.value.session?.getAll()
-    // console.log('SESSIONS', sessions)
     walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
-    console.log('SESSIONS', walletConnectSessions.value)
     if (walletConnectSessions.value.length > 0) {
-      console.log('length . 0', )
       walletConnectSession.value = walletConnectSessions.value[0]
       walletConnectWalletAddress.value = walletConnectSessions.value[0].namespaces?.bch?.accounts[0]
-      console.log('walletConnectSessions.value', walletConnectWalletAddress.value)
       if (walletConnectWalletAddress.value) {
         const address = walletConnectWalletAddress.value.replace('bch:','')
         walletConnectWalletAddress.value = formatAddress(address)
         walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
         walletConnectWalletTokenAddress.value = walletConnectWallet.value.getTokenDepositAddress()
-        console.log('ADDRESS', walletConnectWalletAddress.value)
+        if (localStorage.getItem('user.walletType') === 'walletconnect') {
+          user.walletType = 'walletconnect'
+          user.walletTokenAddress = walletConnectWalletTokenAddress.value
+          user.walletAddress = walletConnectWalletAddress.value
+          user.wallet = walletConnectWallet.value
+          user.walletConnectSession = walletConnectSession.value
+          user.transactionSigner = walletConnectTransactionSigner
+        }
       }
     }
+
+    walletConnectSignerClient.value.on('session-update', (s:any)=>{
+      console.log('SESSION UPDATED', s)
+    })
+
+    walletConnectSignerClient.value.on('session-proposal', (s:any)=>{
+      console.log('SESSION PROPOSAL', s)
+    })
+    walletConnectSignerClient.value.on('session-delete', (s:any)=>{
+      console.log('SESSION DELETE', s)
+    })
+
+    walletConnectSignerClient.value.on('session-event', (s:any)=>{
+      console.log('SESSION EVENT', s)
+    })
+
+    walletConnectSignerClient.value.on('proposal-expire', (s:any)=>{
+      console.log('PROPOSAL EXPIRE', s)
+    })
+
   })
   
 
@@ -115,9 +135,16 @@ export const useWalletConnect = () => {
           user.walletAddress = ''
           user.walletTokenAddress = ''
           user.walletConnectSession = undefined
+          if (localStorage.getItem('user.walletType') === 'walletconnect') {
+            localStorage.removeItem('user.walletType')
+          }
         }
       } catch (error) {
         console.log(error)
+      } finally {
+        if (localStorage.getItem('user.walletType') === 'walletconnect') {
+          localStorage.removeItem('user.walletType')
+        }
       }
     }
   }
@@ -142,11 +169,9 @@ export const useWalletConnect = () => {
           params: JSON.parse(stringify(options)),
         },
       });
-      console.log('SIGN RESULT ', result)
       return result;
     } catch (error) {
-      console.log('SIGN ERROR', error)
-      console.log('ERROR SIGN RESULT', result)
+      console.log('')
     }
   }
   
