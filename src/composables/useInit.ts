@@ -1,5 +1,5 @@
 import SignClient from '@walletconnect/sign-client';
-import { inject, onMounted, ref, watch } from "vue"
+import { inject, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { formatAddress, getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE, Watchtower } from 'src/app';
@@ -16,6 +16,9 @@ export const useInit = () => {
   
   onMounted(()=>{
     watchtower.value = new Watchtower()
+    window.onbeforeunload = () => {
+      localStorage.setItem('user.walletType', user.walletType || '')
+    }
   })
 
   const loadWalletBchBalance = async (address: string) => {
@@ -60,6 +63,7 @@ export const useInit = () => {
       router.replace('/')
     }
   })
+  
   
 }
 

@@ -17,8 +17,16 @@ export const usePaytacaConnect = () => {
         paytacaWalletAddress.value = formatAddress(await window.paytaca.address('bch'))
         paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
         paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
+        if (localStorage.getItem('user.walletType') === 'paytaca') {
+          user.walletType = 'paytaca'
+          user.walletTokenAddress = paytacaWalletTokenAddress.value
+          user.walletAddress = paytacaWalletAddress.value
+          user.wallet = paytacaWallet.value
+          user.transactionSigner = paytacaTransactionSigner
+        }
       }
     }
+    
   })
   
   const paytacaConnect = async() => {
@@ -55,10 +63,14 @@ export const usePaytacaConnect = () => {
     paytacaWalletAddress.value = ''
     paytacaWallet.value = undefined
     paytacaWalletTokenAddress.value = ''
-    // user.walletAddress = ''
-    // user.wallet = undefined
-    // user.walletTokenAddress = ''
-    await window.paytaca?.disconnect()
+    try {
+      await window.paytaca?.disconnect()  
+    } catch {
+    } finally {
+      if (localStorage.getItem('user.walletType') === 'paytaca') {
+        localStorage.removeItem('user.walletType')
+      }
+    }
   }
 
   const paytacaSignTransaction = async (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?:string): Promise<any> => {
