@@ -1,6 +1,5 @@
-import SignClient from '@walletconnect/sign-client';
-import { inject, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { formatAddress, getWalletClass } from "src/app/utils"
+import { inject, onMounted, ref, watch } from "vue"
+import { getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE, Watchtower } from 'src/app';
 import { UtxoI, delay } from 'mainnet-js';
