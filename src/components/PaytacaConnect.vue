@@ -22,11 +22,9 @@
 </template>
 
 <script setup lang="ts">
-import { EventBus, useQuasar } from 'quasar'
-import { ref, computed, onMounted, watch, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar'
+import { ref, onMounted } from 'vue';
 import { useUser } from 'src/stores/user';
-import { Watchtower } from 'src/app/Watchtower';
 import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
 import { delay } from 'mainnet-js';
 
