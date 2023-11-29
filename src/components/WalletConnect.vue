@@ -29,10 +29,6 @@ defineProps<{ variant?: 'icon' | 'icon-text' }>()
 const user = useUser()
 const walletConnect = useWalletConnect()
 
-onMounted(() => {
-  console.log('WalletConnect', walletConnect)
-})
-
 const connectDisconnect = async () => {
   if (user.walletAddress && user.walletType === 'walletconnect') {
     await walletConnect.walletConnectDisconnect()
@@ -43,7 +39,6 @@ const connectDisconnect = async () => {
     user.walletConnectSession = undefined
     user.transactionSigner = undefined
   } else {
-    console.log('CONNECTING')
     await walletConnect.walletConnectConnect()
     user.walletType = 'walletconnect'
     user.walletTokenAddress = walletConnect.walletConnectWalletTokenAddress.value

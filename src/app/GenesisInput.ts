@@ -123,7 +123,6 @@ export class GenesisInput implements UtxoI {
     try {
       signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Generate genesis inputs')
     } catch (error:any) {
-      console.log(error)
       delete this._processing
       throw error
     } finally {

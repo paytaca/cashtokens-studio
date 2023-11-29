@@ -628,7 +628,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         this.tokenUris = rj
       }
     } catch (error) {
-      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+      // console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
       delete this._processing
     }
