@@ -6,12 +6,12 @@
       </div>
       <div v-if="!user.walletAddress" class="row justify-center items-center q-px-lg q-pt-lg">
         <q-list bordered separator>
-          <q-item class="col-xs-12 text-center" clickable v-ripple>
+          <q-item v-if="!isMobileBrowser" class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
               <paytaca-connect size="3em" />
             </q-item-section>
           </q-item>
-          <q-item class="col-xs-12 text-center" clickable v-ripple>
+          <q-item v-if="user.walletNetworkType === 'mainnet'" class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
               <wallet-connect size="3em" />
             </q-item-section>
@@ -25,11 +25,13 @@
 <script setup lang="ts">
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import WalletConnect from 'components/WalletConnect.vue';
+import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
-import { computed } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 const $q = useQuasar()
 const user = useUser()
+const isMobileBrowser = ref<boolean>(false)
 
 const bannerSize = computed(() => {
   const size = { width: '400px' }
@@ -44,5 +46,10 @@ const bannerSize = computed(() => {
   }
 
   return size
+})
+
+onMounted(async () => {
+  await delay(100)
+  isMobileBrowser.value = /Mobi/.test(navigator?.userAgent)
 })
 </script>
