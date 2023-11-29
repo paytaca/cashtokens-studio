@@ -1,6 +1,6 @@
 <template>
   <span @click.stop="paytacaConnectDisconnect" stack dense>
-    <q-btn v-if="variant === 'icon'" :disable="!paytacaIsInstalled">
+    <q-btn v-if="variant === 'icon'">
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
           <q-avatar rounded size="md">
@@ -39,6 +39,7 @@ const paytacaIsInstalled = ref<boolean>(true)
 defineProps<{ variant?: 'icon' | 'icon-text' }>()
 
 const paytacaConnectDisconnect = async () => {
+  if (!window.paytaca) return
   if (user.walletAddress && user.walletType === 'paytaca') {
     await paytacaConnect.paytacaDisconnect()
     user.walletType = undefined
@@ -46,9 +47,10 @@ const paytacaConnectDisconnect = async () => {
     user.walletTokenAddress = ''
     user.wallet = undefined
     user.transactionSigner = undefined
-  } else {
+    return
+  }
+  if (!user.walletAddress) {
     await paytacaConnect.paytacaConnect()
-
     user.walletType = 'paytaca'
     user.walletTokenAddress = paytacaConnect.paytacaWalletTokenAddress.value
     user.walletAddress = paytacaConnect.paytacaWalletAddress.value

@@ -14,15 +14,18 @@ export const usePaytacaConnect = () => {
     if (window.paytaca) {
       const connected = await window.paytaca.connected()
       if (connected) {
-        paytacaWalletAddress.value = formatAddress(await window.paytaca.address('bch'))
-        paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
-        paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
-        if (localStorage.getItem('user.walletType') === 'paytaca') {
-          user.walletType = 'paytaca'
-          user.walletTokenAddress = paytacaWalletTokenAddress.value
-          user.walletAddress = paytacaWalletAddress.value
-          user.wallet = paytacaWallet.value
-          user.transactionSigner = paytacaTransactionSigner
+        const address = await window.paytaca.address('bch')
+        if (address) {
+          paytacaWalletAddress.value = formatAddress(address)
+          paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
+          paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
+          if (localStorage.getItem('user.walletType') === 'paytaca') {
+            user.walletType = 'paytaca'
+            user.walletTokenAddress = paytacaWalletTokenAddress.value
+            user.walletAddress = paytacaWalletAddress.value
+            user.wallet = paytacaWallet.value
+            user.transactionSigner = paytacaTransactionSigner
+          }
         }
       }
     }
@@ -35,6 +38,7 @@ export const usePaytacaConnect = () => {
     if (window.paytaca) {
       const connected = await window.paytaca.connected()
       let address 
+      
       if (!connected) {
         const paytacaConnection = await window.paytaca!.connect()
         if (paytacaConnection.connected) {
@@ -49,6 +53,7 @@ export const usePaytacaConnect = () => {
       } else {
         address = await window.paytaca.address('bch')
       }
+      console.log('ADDRESS', address)
       if (address) {
         paytacaWalletAddress.value = formatAddress(address)
         paytacaWallet.value = await getWalletClass().watchOnly(address)
