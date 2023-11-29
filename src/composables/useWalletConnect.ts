@@ -54,7 +54,8 @@ export const useWalletConnect = () => {
 
     walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
     if (walletConnectSessions.value.length > 0) {
-      walletConnectSession.value = walletConnectSessions.value[0]
+      const lastSession = walletConnectSessions.value.length - 1
+      walletConnectSession.value = walletConnectSessions.value[lastSession]
       walletConnectWalletAddress.value = walletConnectSessions.value[0].namespaces?.bch?.accounts[0]
       if (walletConnectWalletAddress.value) {
         const address = walletConnectWalletAddress.value.replace('bch:','')
@@ -72,22 +73,22 @@ export const useWalletConnect = () => {
       }
     }
 
-    walletConnectSignerClient.value.on('session-update', (s:any)=>{
+    walletConnectSignerClient.value.on('session_update', (s:any)=>{
       console.log('SESSION UPDATED', s)
     })
 
-    walletConnectSignerClient.value.on('session-proposal', (s:any)=>{
+    walletConnectSignerClient.value.on('session_proposal', (s:any)=>{
       console.log('SESSION PROPOSAL', s)
     })
-    walletConnectSignerClient.value.on('session-delete', (s:any)=>{
+    walletConnectSignerClient.value.on('session_delete', (s:any)=>{
       console.log('SESSION DELETE', s)
     })
 
-    walletConnectSignerClient.value.on('session-event', (s:any)=>{
+    walletConnectSignerClient.value.on('session_event', (s:any)=>{
       console.log('SESSION EVENT', s)
     })
 
-    walletConnectSignerClient.value.on('proposal-expire', (s:any)=>{
+    walletConnectSignerClient.value.on('proposal_expire', (s:any)=>{
       console.log('PROPOSAL EXPIRE', s)
     })
 
@@ -171,8 +172,8 @@ export const useWalletConnect = () => {
       });
       return result;
     } catch (error) {
-      console.log('')
-    }
+      throw error
+    } 
   }
   
   const walletConnectTransactionSigner:TransactionSigner = {
