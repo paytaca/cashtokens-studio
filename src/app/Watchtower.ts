@@ -63,6 +63,9 @@ export class Watchtower {
   async fetchAuthchainIdentities(address: string, q?:FetchAuthchainIdentitiesQueryParams): Promise<PaginatedData> {
     this.processing = 'Fetching authchain identities'
     let result: any
+    if (q && !q?.limit) {
+      q = {...q, limit:10}
+    }
     try {
       let url = `${this.apiBaseUri}cts/authchain-identities/${address}`
       if (q) {

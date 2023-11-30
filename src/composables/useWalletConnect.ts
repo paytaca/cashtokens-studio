@@ -111,6 +111,7 @@ export const useWalletConnect = () => {
           address = walletConnectSession.value.namespaces.bch.accounts[0].replace('bch:','')
           walletConnectWalletAddress.value = formatAddress(address)
           walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
+          walletConnectWalletTokenAddress.value = walletConnectWallet.value.getTokenDepositAddress()
         }
       }
       if (address) {
