@@ -35,24 +35,22 @@ export const usePaytacaConnect = () => {
   const paytacaConnect = async() => {
     // const dismiss = $q.notify({ spinner: true, message: 'Connecting Paytaca® wallet', color: 'info', timeout: 0 })
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    let address 
     if (window.paytaca) {
       const connected = await window.paytaca.connected()
-      let address 
-      
-      if (!connected) {
+      if (connected) {
+        address = await window.paytaca.address('bch')
+      }
+      if (!address) {
         const paytacaConnection = await window.paytaca!.connect()
         if (paytacaConnection.connected) {
           if (!paytacaConnection.address.startsWith('bitcoincash')) {
-            // $q.notify({ message: 'Please select a bitcoin cash address', color: 'negative', timeout: 1500 })
-            // dismiss()
             return
           }else {
             address = paytacaConnection.address
           }
         }
-      } else {
-        address = await window.paytaca.address('bch')
-      }
+      } 
       console.log('ADDRESS', address)
       if (address) {
         paytacaWalletAddress.value = formatAddress(address)
@@ -65,11 +63,16 @@ export const usePaytacaConnect = () => {
   }
 
   const paytacaDisconnect = async() => {
+    
     paytacaWalletAddress.value = ''
     paytacaWallet.value = undefined
     paytacaWalletTokenAddress.value = ''
     try {
       await window.paytaca?.disconnect()  
+      if (localStorage.getItem('user.walletType') === 'paytaca') {
+        localStorage.removeItem('user.walletType')
+      }
+      console.log('Disconnecting Paytaca...')
     } catch {
     } finally {
       if (localStorage.getItem('user.walletType') === 'paytaca') {

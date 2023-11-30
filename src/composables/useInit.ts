@@ -58,7 +58,7 @@ export const useInit = () => {
         eventBus?.emit(ADDRESS_WATCHER_TRIGGERED)
       })
     } else {
-      unwatchAddress.value()
+      unwatchAddress?.value()
       router.replace('/')
     }
   })
