@@ -165,7 +165,6 @@ const tokenAmountInputRef = ref<QInput | null>(null)
 
 const amountToSendRaw = computed(() => {
   if (props.authchainIdentity.tokenCategory?.decimals) {
-    console.log('d', props.authchainIdentity.tokenCategory?.decimals)
     return numberToTokeshi(Number(form.value.amount), props.authchainIdentity.tokenCategory?.decimals?.toString())
   }
   // ignore value after decimal point, !!! handle BigInt in the future

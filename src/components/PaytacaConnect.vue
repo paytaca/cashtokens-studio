@@ -40,7 +40,7 @@ defineProps<{ variant?: 'icon' | 'icon-text' }>()
 
 const paytacaConnectDisconnect = async () => {
   if (!window.paytaca) return
-  if (user.walletAddress && user.walletType === 'paytaca') {
+  if (user.walletAddress) {
     await paytacaConnect.paytacaDisconnect()
     user.walletType = undefined
     user.walletAddress = ''

@@ -679,7 +679,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       // signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
       signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Transfer NFT')
     } catch (error) {
-      console.log(error)
       throw error
     } finally {
       delete this._processing
@@ -690,7 +689,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       return await submitTransaction(signResult, this.ownerWallet as Wallet)
     } catch (error) {
       this._processing = ''
-      console.log(error)
       throw error
     } finally {
       delete this._processing

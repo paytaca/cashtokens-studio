@@ -73,7 +73,6 @@ export default class ClientDB {
             cursor.continue();
           } else {
             // The cursor has reached the end of the object store.
-            console.log('Retrieved objects:', txns);
             res(txns)
           }
   
