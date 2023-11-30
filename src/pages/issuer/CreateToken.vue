@@ -95,7 +95,6 @@ const generateGenesisInputs = async () => {
       statusMessage: error,
       statusMessageType: 'error'
     })
-    console.log(error)
     $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
   }
 
