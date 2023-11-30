@@ -135,7 +135,7 @@ const paginatedNftCollections = ref<PaginatedData>({
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
     numberOfPages: 0,
     currentPage: 0,
-    maxRowsPerPage: 0,
+    maxRowsPerPage: 10,
     rowCount: 0,
     offset: 0,
 })
