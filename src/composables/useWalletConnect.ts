@@ -61,8 +61,6 @@ export const useWalletConnect = () => {
     })
 
     await walletConnectSignerClient.value.initialize()
-    console.log('S', walletConnectSignerClient.value)
-    console.log('PE', await walletConnectSignerClient.value.proposal?.getAll())
     walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
     if (walletConnectSessions.value.length > 0) {
       const lastSession = walletConnectSessions.value.length - 1
