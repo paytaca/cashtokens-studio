@@ -5,7 +5,7 @@
         <h5 class="text-center">
           Token Categories
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedAuthchainIdentities?.count }}
+            {{ paginatedAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
         <p class="text-center">
@@ -200,7 +200,7 @@ const watchtower = ref<Watchtower>(new Watchtower())
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
     const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet }, user.transactionSigner)

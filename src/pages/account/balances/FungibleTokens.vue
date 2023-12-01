@@ -117,7 +117,7 @@ const bcmrIndexer = ref<BcmrIndexer>(new BcmrIndexer())
 const populateFtBalances = (paginated: PaginatedData) => {
   // populate 
   ftBalances.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const ftBalance: FungibleTokenBalance = results[i]
     if (ui.tokenCategoryCache[ftBalance.tokenId]) {

@@ -5,7 +5,7 @@
                 <h5 class="text-center">
                     My Collectibles(NFTs)
                     <q-badge color="blue-5" text-color="black" align="top" rounded>
-                        {{ paginatedNftCollections?.count }}
+                        {{ paginatedNftCollections?.count || 0 }}
                     </q-badge>
                 </h5>
                 <div class="q-pa-lg flex flex-center">
@@ -154,7 +154,7 @@ const commitmentDisplay = computed(() => {
 const populateNftCollections = (paginated: PaginatedData) => {
     // populate 
     nftCollections.value = []
-    const results = paginated.results
+    const results = paginated?.results || []
     for (let i = 0; i < results.length; i++) {
         const {
             txid,
