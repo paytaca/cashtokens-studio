@@ -7,6 +7,8 @@ import { delay } from 'mainnet-js';
 import  { stringify } from '@bitauth/libauth'
 import { TransactionSigner } from 'src/app/types';
 
+let w:any
+
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()
   const walletConnectWalletTokenAddress = ref()
@@ -20,7 +22,8 @@ export const useWalletConnect = () => {
 
   onMounted(async () => {
     const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
-    walletConnectSignerClient.value = await SignClient.init({
+    if (w !== undefined) return
+    walletConnectSignerClient.value = new SignClient({
       projectId,
       // optional parameters
       relayUrl: 'wss://relay.walletconnect.com',
@@ -31,6 +34,20 @@ export const useWalletConnect = () => {
         icons: ['https://cashtokens.studio/images/cts_icon.png']
       }
     })
+    
+
+    await walletConnectSignerClient.value.initialize()
+    
+    w = walletConnectSignerClient.value
+    
+    // localStorage.setItem('wc@2:core:0.3//keychain', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//keychain')))
+    // localStorage.setItem('wc@2:core:0.3//history', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//history')))
+    // localStorage.setItem('wc@2:client:0.3//session', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:client:0.3//session') || []) )
+    // localStorage.setItem('wc@2:client:0.3//proposal', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:client:0.3//proposal') || []))
+    // localStorage.setItem('wc@2:core:0.3//pairing', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//pairing') || []))
+    // localStorage.setItem('wc@2:core:0.3//subscription', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//subscription')))
+    // localStorage.setItem('wc@2:core:0.3//messages', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//messages')))
+    // localStorage.setItem('wc@2:core:0.3//expirer', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//expirer')))
 
     const { WalletConnectModal } = await import('@walletconnect/modal')
     walletConnectModal.value = new WalletConnectModal({
