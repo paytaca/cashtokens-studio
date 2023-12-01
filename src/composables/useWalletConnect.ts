@@ -7,8 +7,6 @@ import { delay } from 'mainnet-js';
 import  { stringify } from '@bitauth/libauth'
 import { TransactionSigner } from 'src/app/types';
 
-let w:any
-
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()
   const walletConnectWalletTokenAddress = ref()
@@ -20,9 +18,36 @@ export const useWalletConnect = () => {
   const walletConnectSessions = ref()
   const user = useUser()
 
+  
   onMounted(async () => {
+
     const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
-    if (w !== undefined) return
+
+    const { WalletConnectModal } = await import('@walletconnect/modal')
+      walletConnectModal.value = new WalletConnectModal({
+        projectId: projectId,
+        themeMode: 'dark',
+        themeVariables: {
+          '--wcm-background-color': '#20c997',
+          '--wcm-accent-color': '#20c997',
+        },
+        explorerExcludedWalletIds: 'ALL',
+      })
+      const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+      
+      walletConnectRequiredNamespaces.value = {
+        bch: {
+          chains: [connectedChain],
+          methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
+          events: ['addressesChanged'],
+        },
+      }
+
+    if (user.walletConnectSession) {
+      walletConnectSession.value = user.walletConnectSession
+      walletConnectSignerClient.value = user.walletConnectSigner
+      return
+    }
     walletConnectSignerClient.value = new SignClient({
       projectId,
       // optional parameters
@@ -34,41 +59,10 @@ export const useWalletConnect = () => {
         icons: ['https://cashtokens.studio/images/cts_icon.png']
       }
     })
-    
 
     await walletConnectSignerClient.value.initialize()
-    
-    w = walletConnectSignerClient.value
-    
-    // localStorage.setItem('wc@2:core:0.3//keychain', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//keychain')))
-    // localStorage.setItem('wc@2:core:0.3//history', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//history')))
-    // localStorage.setItem('wc@2:client:0.3//session', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:client:0.3//session') || []) )
-    // localStorage.setItem('wc@2:client:0.3//proposal', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:client:0.3//proposal') || []))
-    // localStorage.setItem('wc@2:core:0.3//pairing', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//pairing') || []))
-    // localStorage.setItem('wc@2:core:0.3//subscription', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//subscription')))
-    // localStorage.setItem('wc@2:core:0.3//messages', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//messages')))
-    // localStorage.setItem('wc@2:core:0.3//expirer', JSON.stringify(await walletConnectSignerClient.value?.session?.core?.storage?.storage?.indexedDb.getItem('wc@2:core:0.3//expirer')))
-
-    const { WalletConnectModal } = await import('@walletconnect/modal')
-    walletConnectModal.value = new WalletConnectModal({
-      projectId: projectId,
-      themeMode: 'dark',
-      themeVariables: {
-        '--wcm-background-color': '#20c997',
-        '--wcm-accent-color': '#20c997',
-      },
-      explorerExcludedWalletIds: 'ALL',
-    })
-    const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
-    
-    walletConnectRequiredNamespaces.value = {
-      bch: {
-        chains: [connectedChain],
-        methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
-        events: ['addressesChanged'],
-      },
-    }
-
+    console.log('S', walletConnectSignerClient.value)
+    console.log('PE', await walletConnectSignerClient.value.proposal?.getAll())
     walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
     if (walletConnectSessions.value.length > 0) {
       const lastSession = walletConnectSessions.value.length - 1
@@ -109,19 +103,23 @@ export const useWalletConnect = () => {
       console.log('PROPOSAL EXPIRE', s)
     })
 
+    user.walletConnectSession = walletConnectSession.value
+    user.walletConnectSigner = walletConnectSignerClient.value  
+
   })
   
 
   const walletConnectConnect = async () => {
     try {
       const { uri, approval } = await walletConnectSignerClient.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
-      if (!Boolean(walletConnectSessions.value?.length > 0)) {
-        await walletConnectModal.value.openModal({ uri });
-        // Await session approval from the wallet.
-        walletConnectSession.value = await approval();
-        walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
-        walletConnectModal.value.closeModal();  
-      } 
+      const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
+      
+      await walletConnectModal.value.openModal({ uri });
+      // Await session approval from the wallet.
+      walletConnectSession.value = await approval();
+      walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
+      walletConnectModal.value.closeModal();
+      
       let address
       if (walletConnectSession.value) {
         if (walletConnectSession.value?.namespaces?.bch?.accounts) {
@@ -144,16 +142,23 @@ export const useWalletConnect = () => {
   }
 
   const walletConnectDisconnect = async () => {
-    console.log(walletConnectSessions.value)
     if (walletConnectSession.value?.topic) {
       console.log('Disconnecting')
       try {
         await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value.topic, reason: 'Disconnecting'})
         if (user.walletType === 'walletconnect') {
+          walletConnectWalletTokenAddress.value = ''
+          walletConnectWallet.value = undefined
+          walletConnectSignerClient.value = undefined
+          walletConnectModal.value = undefined
+          walletConnectRequiredNamespaces.value = undefined 
+          walletConnectSession.value = undefined
+          walletConnectSessions.value = undefined
           user.wallet = undefined
           user.walletAddress = ''
           user.walletTokenAddress = ''
           user.walletConnectSession = undefined
+          user.walletConnectSigner = undefined
           if (localStorage.getItem('user.walletType') === 'walletconnect') {
             localStorage.removeItem('user.walletType')
           }
