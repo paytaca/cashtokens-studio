@@ -144,7 +144,7 @@ const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
 const populateAuthKeys = (paginated: PaginatedData) => {
   authKeys.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
 
   for (let i = 0; i < results.length; i++) {
     const {

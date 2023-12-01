@@ -5,7 +5,7 @@
         <h5 class="text-center">
           NFT Reserves
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedNftAuthchainIdentities?.count }}
+            {{ paginatedNftAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
         <q-expansion-item label="More Info">
@@ -210,7 +210,7 @@ const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) =>
 }
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
     const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
