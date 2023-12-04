@@ -11,7 +11,7 @@
               <paytaca-connect size="3em" />
             </q-item-section>
           </q-item>
-          <q-item v-if="user.walletNetworkType === 'mainnet'" class="col-xs-12 text-center" clickable v-ripple>
+          <q-item class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
               <wallet-connect size="3em" />
             </q-item-section>
