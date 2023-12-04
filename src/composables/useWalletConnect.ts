@@ -90,7 +90,14 @@ export const useWalletConnect = () => {
       console.log('SESSION PROPOSAL', s)
     })
     walletConnectSignerClient.value.on('session_delete', (s:any)=>{
-      console.log('SESSION DELETE', s)
+      if (walletConnectSession.value?.topic == s.topic) {
+        walletConnectSession.value = undefined
+        walletConnectWalletAddress.value = ''
+        if (user.walletType == 'walletconnect') {
+          user.walletConnectSession.value = undefined
+          user.walletAddress = ''
+        }
+      }
     })
 
     walletConnectSignerClient.value.on('session_event', (s:any)=>{
@@ -180,7 +187,7 @@ export const useWalletConnect = () => {
     }
   
     const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
-
+    console.log(chainId)
     let result
     try {
       result = await walletConnectSignerClient.value.request({
