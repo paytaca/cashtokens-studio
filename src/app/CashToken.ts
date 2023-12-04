@@ -4,7 +4,7 @@ import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
+import { binToHex, binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
@@ -187,9 +187,9 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
 
       if (typeof(this.registry?.uri) === 'string') {
-        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
+        return [OpReturnData.fromArray(['BCMR', hexToBin(this.registry.contentHash), this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
       } else if (this.registry?.uri instanceof Array){
-        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, ...this.registry.uri.map((u) => u.replace(/https:\/\/|ipfs:\/\//, ''))])]
+        return [OpReturnData.fromArray(['BCMR', hexToBin(this.registry.contentHash), ...this.registry.uri.map((u) => u.replace(/https:\/\/|ipfs:\/\//, ''))])]
       }
 
     }
