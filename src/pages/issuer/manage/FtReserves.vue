@@ -8,6 +8,15 @@
             {{ paginatedFtAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
+        <div>
+          <q-icon name="warning" color="warning" size="sm" flat dense>
+          </q-icon>
+          <span>The maximum fungible amount that can be handled by CashTokens Studio is
+            9007199254740991(MAX_SAFE_INTEGER). If you've
+            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
+            result in inaccurate calculation when you try to issue/transfer some tokens.
+          </span>
+        </div>
         <q-expansion-item label="More Info">
           <p>
             These are the FT identities (utxos) that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
@@ -67,9 +76,11 @@
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })"
+                  :disable="BigInt((identity?.token?.amount || 0)) > Number.MAX_SAFE_INTEGER">
                 </q-btn>
               </td>
+
             </tr>
 
             <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">

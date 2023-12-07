@@ -3,6 +3,12 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">Fungible Token Balances</h5>
+        <span>
+          <q-icon name="warning" color="warning" size="sm" flat dense> </q-icon>The maximum fungible amount that can be
+          handled by CashTokens Studio is
+          9007199254740991(MAX_SAFE_INTEGER). If your token balance exceeds this amount this may result in inaccurate
+          calculation when sending. We are currently in the process of upgrading the system to support big integers.
+        </span>
         <div class="q-pa-lg flex flex-center">
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
             :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
@@ -55,7 +61,8 @@
                 </td>
                 <!-- <td>{{ b.utxoCount }}</td> -->
                 <td>
-                  <q-btn color="primary" dense no-caps @click="openDialog(FTBalanceTransferDialog.__name, b)">Send</q-btn>
+                  <q-btn color="primary" dense no-caps @click="openDialog(FTBalanceTransferDialog.__name, b)"
+                    :disable="b.balance > Number.MAX_SAFE_INTEGER">Send</q-btn>
                 </td>
               </tr>
               <tr v-if="ftBalances?.length === 0 && !watchtower.processing">
