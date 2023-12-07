@@ -4,10 +4,24 @@
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
           Token Categories
+
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
             {{ paginatedAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
+        <div>
+          <q-icon name="warning" color="warning" size="sm" flat dense>
+          </q-icon>
+          <span>
+            The maximum fungible amount that can be handled by CashTokens Studio is
+            9007199254740991(MAX_SAFE_INTEGER). If you've
+            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
+            result in inaccurate calculation when you try to issue/transfer some tokens. Please don't transfer the
+            fungible token Auth utxo to CashTokens Studio if the amount exceeds 9007199254740991. We are currently in
+            the
+            process of upgrading the system to support big integers.
+          </span>
+        </div>
         <p class="text-center">
           These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
           listed here. Click an item on this list to view the token details.
