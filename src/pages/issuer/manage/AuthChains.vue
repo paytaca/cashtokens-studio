@@ -22,10 +22,10 @@
             process of upgrading the system to support big integers.
           </span>
         </div>
-        <p class="text-center">
+        <!-- <p class="text-center">
           These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
           listed here. Click an item on this list to view the token details.
-        </p>
+        </p> -->
         <q-expansion-item label="More Info">
           <p>
             The token categories here are utxos that are authheads of these token categories' authchain. So, we can use
