@@ -264,6 +264,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     const tokenOwner = this.ownerWallet!.getDepositAddress()
     let transaction
     let decoded
+    let contentHash = opt?.contentHash
+    if (contentHash && !contentHash.startsWith('0x')) {
+      contentHash = `0x${contentHash}`
+    }
     try {
       transaction =
         contract.getContractFunction('unlockWithNft')(true)
