@@ -288,7 +288,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
           }])
           .withOpReturn([
             'BCMR',
-            opt.contentHash, // sha256 of the contents from the uri below
+            contentHash, // sha256 of the contents from the uri below
             opt.url.replace('https://', '')
           ])
           .to(funderInput.satoshis - BigInt(issuanceCost) > 546 ?[{
