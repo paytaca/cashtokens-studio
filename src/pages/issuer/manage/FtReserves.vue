@@ -14,7 +14,9 @@
           <span>The maximum fungible amount that can be handled by CashTokens Studio is
             9007199254740991(MAX_SAFE_INTEGER). If you've
             created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
-            result in inaccurate calculation when you try to issue/transfer some tokens.
+            result in inaccurate calculation when you try to issue/transfer some tokens. We are currently in
+            the
+            process of upgrading the system to support big integers.
           </span>
         </div>
         <q-expansion-item label="More Info">
