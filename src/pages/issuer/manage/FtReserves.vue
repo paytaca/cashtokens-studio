@@ -5,9 +5,20 @@
         <h5 class="text-center">
           Fungible Token Reserves
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedFtAuthchainIdentities?.count }}
+            {{ paginatedFtAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
+        <div>
+          <q-icon name="warning" color="warning" size="sm" flat dense>
+          </q-icon>
+          <span>The maximum fungible amount that can be handled by CashTokens Studio is
+            9007199254740991(MAX_SAFE_INTEGER). If you've
+            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
+            result in inaccurate calculation when you try to issue/transfer some tokens. We are currently in
+            the
+            process of upgrading the system to support big integers.
+          </span>
+        </div>
         <q-expansion-item label="More Info">
           <p>
             These are the FT identities (utxos) that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
@@ -67,9 +78,11 @@
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })"
+                  :disable="BigInt((identity?.token?.amount || 0)) > Number.MAX_SAFE_INTEGER">
                 </q-btn>
               </td>
+
             </tr>
 
             <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
@@ -116,7 +129,7 @@ const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
-  maxRowsPerPage: 0,
+  maxRowsPerPage: 10,
   rowCount: 0,
   offset: 0,
 })
@@ -136,7 +149,7 @@ const formatReservedSupply = computed(() => {
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
     const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -148,7 +161,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 

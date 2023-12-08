@@ -4,14 +4,28 @@
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
           Token Categories
+
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedAuthchainIdentities?.count }}
+            {{ paginatedAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
-        <p class="text-center">
+        <div>
+          <q-icon name="warning" color="warning" size="sm" flat dense>
+          </q-icon>
+          <span>
+            The maximum fungible amount that can be handled by CashTokens Studio is
+            9007199254740991(MAX_SAFE_INTEGER). If you've
+            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
+            result in inaccurate calculation when you try to issue/transfer some tokens. Please don't transfer the
+            fungible token Auth utxo to CashTokens Studio if the amount exceeds 9007199254740991. We are currently in
+            the
+            process of upgrading the system to support big integers.
+          </span>
+        </div>
+        <!-- <p class="text-center">
           These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
           listed here. Click an item on this list to view the token details.
-        </p>
+        </p> -->
         <q-expansion-item label="More Info">
           <p>
             The token categories here are utxos that are authheads of these token categories' authchain. So, we can use
@@ -188,7 +202,7 @@ const paginatedAuthchainIdentities = ref<PaginatedData>({
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
-  maxRowsPerPage: 0,
+  maxRowsPerPage: 10,
   rowCount: 0,
   offset: 0,
 })
@@ -200,10 +214,10 @@ const watchtower = ref<Watchtower>(new Watchtower())
 
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet }, user.transactionSigner)
     const {
       txid,
       vout,
@@ -212,7 +226,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 

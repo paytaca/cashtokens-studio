@@ -5,7 +5,7 @@
         <h5 class="text-center">
           NFT Reserves
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedNftAuthchainIdentities?.count }}
+            {{ paginatedNftAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
         <q-expansion-item label="More Info">
@@ -154,7 +154,7 @@ const paginatedNftAuthchainIdentities = ref<PaginatedData>({
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
-  maxRowsPerPage: 0,
+  maxRowsPerPage: 10,
   rowCount: 0,
   offset: 0,
 })
@@ -169,7 +169,7 @@ const formatCommitment = computed(() => {
   }
 })
 const openMintChildDialog = (identity: AuthchainIdentity) => {
-  const ct = new CashToken({ ...identity })
+  const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
   openDialog(NFTMinterDialog.__name, ct)
@@ -210,7 +210,7 @@ const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) =>
 }
 const populateAuthchainIdentities = (paginated: PaginatedData) => {
   authchainIdentities.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
   for (let i = 0; i < results.length; i++) {
     const authKeyUtxoClone = Object.assign({}, results[i].authKey)
     const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -222,7 +222,7 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       coinbase,
       token
     } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet })
+    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authchainIdentities.value.push(authchainIdentity)
   }
 
@@ -260,10 +260,12 @@ const refreshData = async (immediate?: boolean) => {
     await delay(2500)
   }
   if (user.wallet) {
+
     paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
     )
+    console.log(user.paginatedAuthchainIdentities)
     user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
     initPagination()
     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)

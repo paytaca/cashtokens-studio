@@ -5,6 +5,7 @@ import calcMinerFee from "./utils/calcMinerFee";
 import { decodeTransaction } from "@bitauth/libauth";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
+import { TransactionSigner } from "./types";
 
 export class AuthKey implements UtxoI {
   txid: string;
@@ -14,6 +15,7 @@ export class AuthKey implements UtxoI {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   ownerWallet?: Wallet
+  transactionSigner?: TransactionSigner
   private _processing?: string
   private static _processing?: string
   unlockableTokens?: UtxoI[]
@@ -28,7 +30,8 @@ export class AuthKey implements UtxoI {
       coinbase?: boolean | undefined;
       token?: TokenI | undefined;
       ownerWallet?: Wallet
-    }
+    },
+    transactionSigner?: TransactionSigner
   ){
     if (u) {
       this.vout = u.vout
@@ -43,6 +46,7 @@ export class AuthKey implements UtxoI {
       this.txid = ''
       this.satoshis = 0
     }
+    this.transactionSigner = transactionSigner
   }
 
   get utxo():UtxoI {
@@ -140,19 +144,22 @@ export class AuthKey implements UtxoI {
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
     const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
       return Boolean(!u.token) &&
-        (u.txid !== this.txid) && // Exclude the utxo that we're using as genesis inputs
+        (u.txid !== this.txid || u.vout !== this.vout) && 
           u.satoshis > this.genesisCost
     })[0]
-
     if (!funderUtxo) {
-      throw new Error('Insufficient balance to fund the transaction')
+      if (this.satoshis <= this.genesisCost) {
+        delete this._processing
+        throw new Error('Insufficient balance to fund the transaction. Please try to consolidate your utxos.')
+      } 
+      // use this input to fund the transaction 
+      //if it we can't find a different funder utxo and if it has enough satoshis
     }
-
     // const useThisUtxos = this.authKey? [this.utxo, this.authKey!.utxo!, funderUtxo]: [this.utxo, funderUtxo]
     const utxoExpenses = [this.utxo]
-    
-    utxoExpenses.push(funderUtxo)
-
+    if (funderUtxo) {
+      utxoExpenses.push(funderUtxo)
+    }
     const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
       genesisRequests,
       false,
@@ -190,10 +197,39 @@ export class AuthKey implements UtxoI {
     ]
     // requests.push(...this.prepareChangeReq(this.utxo))
     
+    // try {
+    //   const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
+    //   this._processing = 'Waiting for signature'
+    //   const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
+    //   this._processing = 'Creating AuthKey'
+    //   const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
+    //   return tx
+    // } catch (error) {
+
+    //   throw error
+    // } finally {
+    //   delete this._processing
+    // }
+    console.log('transaction signer', this.transactionSigner)
+    let signResult
     try {
       const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests)
       this._processing = 'Waiting for signature'
-      const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Create AuthKey')
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Generate genesis inputs')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+    
+    if (!signResult) {
+      delete this._processing
+      return
+    }
+
+    try {
       this._processing = 'Creating AuthKey'
       const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
       return tx
@@ -203,8 +239,7 @@ export class AuthKey implements UtxoI {
     } finally {
       delete this._processing
     }
-    
-    
+
   }
 
   /**
@@ -248,7 +283,7 @@ export class AuthKey implements UtxoI {
       return Boolean(!u.token) &&
           u.satoshis > this.transferCost
     })[0]
-
+    
     if (!funderUtxo) {
       throw new Error('Insufficient balance to fund the transaction')
     }
@@ -272,9 +307,18 @@ export class AuthKey implements UtxoI {
         // ensureUtxos: [this.utxo, funderUtxo]
       }
     )
-    this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer AuthKey')
-
+    let signResult
+    try {
+      this._processing = `Waiting for ${this.transactionSigner?.type} signature`
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Transfer AuthKey')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+    
     this._processing = 'Transferring,please wait'
     const tx = await submitTransaction(signResult, this.ownerWallet as Wallet)
     delete this._processing

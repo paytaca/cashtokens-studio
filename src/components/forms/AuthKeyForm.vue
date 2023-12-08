@@ -45,13 +45,13 @@ const user = useUser()
 
 onMounted(() => {
   if (props.genesisInput && props.ownerWallet) {
-    authKey.value = new AuthKey({ ...props.genesisInput, ownerWallet: props.ownerWallet })
+    authKey.value = new AuthKey({ ...props.genesisInput, ownerWallet: props.ownerWallet }, user.transactionSigner)
   }
 })
 
 const createAuthKeyGenesis = async () => {
   try {
-    authKey.value = new AuthKey({ ...props.genesisInput!, ownerWallet: props.ownerWallet })
+    authKey.value = new AuthKey({ ...props.genesisInput!, ownerWallet: props.ownerWallet }, user.transactionSigner)
     const tx = await authKey?.value.createGenesis({ commitment: '00', capability: 'none' })
     if (tx) {
       $q.notify({ type: 'positive', message: 'Success!Auth NFT created.Tx=' + shortenTx(tx) })

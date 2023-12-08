@@ -60,7 +60,7 @@ const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
 const genesisInput = ref<UtxoI>()
-const genesisInputInstance = ref<GenesisInput>(new GenesisInput({ vout: 0, satoshis: 0, txid: '' }))
+const genesisInputInstance = ref<GenesisInput>(new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, user.transactionSigner))
 
 watch(() => user.genesisInputs, (value) => {
   if (value && value.length >= 1) {
@@ -69,6 +69,7 @@ watch(() => user.genesisInputs, (value) => {
 })
 
 onMounted(async () => {
+  genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, user.transactionSigner)
   if (user.genesisInputs && user.genesisInputs?.length >= 1) {
     genesisInput.value = user.genesisInputs[0]
   }

@@ -5,12 +5,12 @@
                 <h5 class="text-center">
                     My Collectibles(NFTs)
                     <q-badge color="blue-5" text-color="black" align="top" rounded>
-                        {{ paginatedNftCollections?.count }}
+                        {{ paginatedNftCollections?.count || 0 }}
                     </q-badge>
                 </h5>
                 <div class="q-pa-lg flex flex-center">
-                    <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
-                        :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
+                    <q-pagination v-if="paginatedNftCollections?.count > 0" v-model="pagination.currentPage"
+                        :max="pagination.numberOfPages" :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
                 </div>
                 <div class="text-right q-my-sm">
                     <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys" class="text-grey-6"
@@ -135,7 +135,7 @@ const paginatedNftCollections = ref<PaginatedData>({
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
     numberOfPages: 0,
     currentPage: 0,
-    maxRowsPerPage: 0,
+    maxRowsPerPage: 10,
     rowCount: 0,
     offset: 0,
 })
@@ -154,7 +154,7 @@ const commitmentDisplay = computed(() => {
 const populateNftCollections = (paginated: PaginatedData) => {
     // populate 
     nftCollections.value = []
-    const results = paginated.results
+    const results = paginated?.results || []
     for (let i = 0; i < results.length; i++) {
         const {
             txid,
@@ -172,7 +172,9 @@ const populateNftCollections = (paginated: PaginatedData) => {
             height,
             coinbase,
             token
-        }))
+        },
+            user.transactionSigner
+        ))
     }
 
     nftCollections.value.forEach(async (a) => {
