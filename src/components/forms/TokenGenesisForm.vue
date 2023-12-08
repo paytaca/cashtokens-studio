@@ -242,12 +242,12 @@ const tokenNameRef = ref<Ref | undefined | null>(null)
 const tType = ref<'ft' | 'nft' | 'fnft'>(props.tokenType || 'ft')
 const genesisToken = ref<{
   tokenId: string,
-  amount: string | number,   // actual  amount that will be sent 
+  amount: string,   // actual  amount that will be sent 
   capability: NFTCapability | undefined
   commitment: string | undefined,
   commitmentFormat: 'decimal' | 'hex'
 }>({
-  amount: tType.value === 'ft' ? 1 : 0,
+  amount: tType.value === 'ft' ? '1' : '0',
   tokenId: props.genesisInput.txid,
   capability: undefined,
   commitment: '',
@@ -476,7 +476,7 @@ const createToken = async () => {
     cashToken.value.authKey!.ownerWallet = props.ownerWallet
     new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
     const tx = await cashToken.value.createGenesis({
-      amount: Number(tokenAmountWithDecimal.value.replace('.', '')),
+      amount: BigInt(tokenAmountWithDecimal.value.replace('.', '')),
       capability: genesisToken.value.capability,
       commitment: genesisToken.value.commitment,
       commitmentFormat: genesisToken.value.commitmentFormat,
