@@ -47,11 +47,11 @@ export class BcmrIndexer {
    */
   async fetchBcmrContents(tokenId:string): Promise<Registry|undefined|{error: string}> {
     try {
-      this.processing = 'Downloading token registry'
+      this.processing = 'Fetching token registry'
       const r = await fetch(`${process.env.BCMR_API}bcmr/${tokenId}`)  
       return await r.json()
     } catch (error) {
-      console.log(`Error downloading registry of ${tokenId} from indexer`, error)
+      console.log(`Error fetching registry of ${tokenId} from indexer`, error)
     } finally {
       delete this.processing
     }

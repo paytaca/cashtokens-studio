@@ -18,7 +18,7 @@ if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-bu
   require('dotenv').config({path: './.env.dev'})
 } 
 if (process.env.NODE_ENV=='production') {
-  require('dotenv').config({path: '/cashtoken-studio/.env.prod'})
+  require('dotenv').config({path: './.env.prod'})
 }
 
 console.log('PROCESS ENV', process.env)
@@ -33,6 +33,8 @@ module.exports = configure(function (ctx) {
     WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
     CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : 'https://',
     TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
+    WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
+    WALLET_CONNECT_VERIFIED_URL: process.env.URL || 'http://localhost:8000'
   }
 
   if (ctx.isServer) {
@@ -107,7 +109,9 @@ module.exports = configure(function (ctx) {
         'cashscript',
         '@cashscript/utils',
         'cashc',
-        '@quasar/ssr-helpers'
+        '@quasar/ssr-helpers',
+        '@walletconnect/modal',
+        '@walletconnect/sign-client'
       ],
 
       // rtl: true, // https://quasar.dev/options/rtl-support

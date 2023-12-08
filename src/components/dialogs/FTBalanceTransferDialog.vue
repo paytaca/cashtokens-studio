@@ -118,7 +118,8 @@ const send = async () => {
       to: form.value.to,
       amount: BigInt(amountToSendRaw.value),
       ownerWallet: user.wallet as Wallet,
-      processingMessage: processingMessage.value
+      processingMessage: processingMessage.value,
+      transactionSigner: user.transactionSigner
     })
     if (tx) {
       $q.notify({

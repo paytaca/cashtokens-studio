@@ -3,6 +3,17 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">AuthKeys</h5>
+        <div>
+          <q-icon name="warning" color="warning" size="sm" flat dense>
+          </q-icon>
+          <span>The maximum fungible amount that can be handled by CashTokens Studio is
+            9007199254740991(MAX_SAFE_INTEGER). If you've
+            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
+            result in inaccurate calculation when you try to issue/transfer some tokens. Please don't transfer the
+            fungible token Auth utxo to CashTokens Studio if the amount exceeds 9007199254740991. We are currently in the
+            process of upgrading the system to support big integers.
+          </span>
+        </div>
         <q-expansion-item label="More Info">
           <p>
             When you create a token (genesis) in CSStudio it's locked in a contract called an <a
@@ -133,7 +144,7 @@ const eventBus = inject<EventBus>('eventBus')
 const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
   numberOfPages: 0,
   currentPage: 0,
-  maxRowsPerPage: 0,
+  maxRowsPerPage: 10,
   rowCount: 0,
   offset: 0,
 })
@@ -144,7 +155,7 @@ const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
 const populateAuthKeys = (paginated: PaginatedData) => {
   authKeys.value = []
-  const results = paginated.results
+  const results = paginated?.results || []
 
   for (let i = 0; i < results.length; i++) {
     const {
@@ -158,7 +169,7 @@ const populateAuthKeys = (paginated: PaginatedData) => {
       unlockableTokensCount
     } = results[i]
 
-    const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet })
+    const authKey = new AuthKey({ txid, vout, satoshis, height, coinbase, token, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
     authKey.unlockableTokens = unlockableTokens
     authKey.unlockableTokensCount = unlockableTokensCount
     authKeys.value.push(authKey)

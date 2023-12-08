@@ -54,6 +54,9 @@ import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
+import { useWalletConnect } from 'src/composables/useWalletConnect';
+import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
+import { TransactionSigner } from 'src/app/types';
 
 const $q = useQuasar()
 const user = useUser()
@@ -64,15 +67,19 @@ const authKey = ref<AuthKey | null>()
 const genesisInputUtxo = ref<UtxoI | null>()
 const genesisInputInstance = ref<GenesisInput>()
 const genesisInputScanDone = ref<boolean>(false)
-
+const walletConnect = useWalletConnect()
+const paytacaConnect = usePaytacaConnect()
 
 const generateGenesisInputs = async () => {
-  if (!user.wallet) {
+  if (!user.wallet || !user.walletType) {
     $q.notify({ type: 'negative', message: 'Wallet not connected' })
     return
   }
+
+  const transactionSigner: TransactionSigner = user.walletType === 'paytaca' ? paytacaConnect.paytacaTransactionSigner : walletConnect.walletConnectTransactionSigner
+
   try {
-    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }) // 
+    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, transactionSigner) // 
     const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 2)
     if (tx) {
       $q.notify({ type: 'positive', message: 'Genesis inputs created' })
@@ -88,7 +95,6 @@ const generateGenesisInputs = async () => {
       statusMessage: error,
       statusMessageType: 'error'
     })
-    console.log(error)
     $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
   }
 

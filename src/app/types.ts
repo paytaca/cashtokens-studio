@@ -11,7 +11,9 @@ export type GenesisOptions = {
   capability?: NFTCapability,
   commitment?: string,                                    // could be a number text e.g. '10' or hex '0a' Big Endian
   commitmentFormat?: 'decimal'|'hex'                      // what's the format of the commitment's value
-  nftCollectionType?: NftCollectionType
+  nftCollectionType?: NftCollectionType,
+  walletType?: 'paytaca' | 'walletconnect',
+  walletConnectSession?: any
 }
 
 export type TokenBalance = {
@@ -97,4 +99,11 @@ export type NftProjectDrop = {
   mintingPrice: number,
   publishedOn: number,
   publisherAddress: string,
+}
+
+export type SignTransaction = (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?: string) => Promise<any>
+
+export interface TransactionSigner {
+  type: 'paytaca' | 'walletconnect',
+  signTransaction: SignTransaction
 }

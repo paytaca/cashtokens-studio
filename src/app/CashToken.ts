@@ -1,10 +1,10 @@
 import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE } from '.'
-import { GenesisOptions, NftCollectionType } from "./types";
+import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
+import { binToHex, binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
@@ -12,6 +12,7 @@ import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 import { ProcessingMessage } from "."
+import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput, 
@@ -48,8 +49,10 @@ export class CashToken implements UtxoI, PartialBcmr {
    */
   includeAuthKeyGenesis: boolean
   defaultNftCollectionType: NftCollectionType
+  transactionSigner?: TransactionSigner
   private _processing?: string
   private static _processing?: string
+  
   constructor(
     u?: {
       txid: string;
@@ -61,7 +64,8 @@ export class CashToken implements UtxoI, PartialBcmr {
       ownerWallet?: Wallet
       authKey?: AuthKey,
       registry?: { uri: string, contentHash: string }
-    }
+    },
+    transactionSigner?: TransactionSigner
   ){
     this.defaultNftCollectionType = 'SequentialNftCollection'
     if (u) {
@@ -81,6 +85,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
     this.includeAuthKeyGenesis = true
     this.useAuthGuard = true
+    this.transactionSigner = transactionSigner
     delete this._processing
   }
 
@@ -182,9 +187,9 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
 
       if (typeof(this.registry?.uri) === 'string') {
-        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
+        return [OpReturnData.fromArray(['BCMR', hexToBin(this.registry.contentHash), this.registry.uri.replace(/https:\/\/|ipfs:\/\//, '')])]
       } else if (this.registry?.uri instanceof Array){
-        return [OpReturnData.fromArray(['BCMR', this.registry.contentHash, ...this.registry.uri.map((u) => u.replace(/https:\/\/|ipfs:\/\//, ''))])]
+        return [OpReturnData.fromArray(['BCMR', hexToBin(this.registry.contentHash), ...this.registry.uri.map((u) => u.replace(/https:\/\/|ipfs:\/\//, ''))])]
       }
 
     }
@@ -289,11 +294,33 @@ export class CashToken implements UtxoI, PartialBcmr {
     requests.push(...this.prepareGenesisRegistryPublicationReq())
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests, opt.includeAuthKeyGenesis)
     this._processing = 'Waiting for signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    if (!signResult || !signResult.signedTransaction) {
-      delete this._processing
-      return
+    let signResult: any
+    // if (opt?.walletType === 'walletconnect') {
+    //   signResult = await requestWalletConnectSignature(decodeTransaction(encodedTransaction), sourceOutputs,'Create Token', this.walletConnectSession)
+    //   console.log('signResult', signResult)
+    // } else {
+    //   signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
+    //   if (!signResult || !signResult.signedTransaction) {
+    //     delete this._processing
+    //     return
+    //   }
+    // }
+    // console.log('wallet', this.ownerWallet)
+    const decoded = decodeTransaction(encodedTransaction)
+    if (typeof decoded === 'string') {
+      throw new Error('Error decoding transaction')
     }
+    
+    try {
+      signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Create Token')
+    } catch (error:any) {
+      console.log(error)
+      delete this._processing
+      throw error
+    } finally {
+      delete this._processing
+    }
+
     this._processing = 'Creating Token'
     try {
       const tx = await submitTransaction(signResult, this.ownerWallet!)
@@ -322,7 +349,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     
   } 
 
-  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage}):Promise<string|undefined> {
+  static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage, transactionSigner?: TransactionSigner}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
     arg?.processingMessage?.setProcessing('Processing')
     
@@ -352,12 +379,18 @@ export class CashToken implements UtxoI, PartialBcmr {
     CashToken._processing = 'Waiting for signature'
     arg?.processingMessage?.setProcessing('Waiting for signature')  
     let signResult
+
     try {
-      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Send Tokens')
+      
+      this._processing = 'Waiting for signature'
+      signResult = await arg.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Send Tokens')
     } catch (error) {
       console.log(error)
       throw error
+    } finally {
+      delete this._processing
     }
+
     CashToken._processing = `Sending tokens`
     arg?.processingMessage?.setProcessing(`Sending tokens`)  
     try {
@@ -492,9 +525,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
       decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
       decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
-      signingResult = await window.paytaca!.signTransaction({
-        transaction: decoded,
-        sourceOutputs: [
+      const sourceOutputs = [
         {
           ...decoded.inputs[0],
           lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
@@ -531,11 +562,8 @@ export class CashToken implements UtxoI, PartialBcmr {
           lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
           valueSatoshis: BigInt(funderInput.satoshis)
         }
-      ],
-        broadcast: false,
-        userPrompt: 'Mint NFT'
-      });
-
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
     } catch (error) {
       console.log(error)
       delete this._processing
@@ -600,7 +628,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         this.tokenUris = rj
       }
     } catch (error) {
-      console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
+      // console.log(`Error fetching ${this.token!.tokenId} from indexer`, error)
     } finally {
       delete this._processing
     }
@@ -648,9 +676,9 @@ export class CashToken implements UtxoI, PartialBcmr {
         }
       )
       this._processing = 'Waiting for signature'
-      signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+      // signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs, 'Transfer NFT')
+      signResult = await this.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Transfer NFT')
     } catch (error) {
-      console.log(error)
       throw error
     } finally {
       delete this._processing
@@ -661,7 +689,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       return await submitTransaction(signResult, this.ownerWallet as Wallet)
     } catch (error) {
       this._processing = ''
-      console.log(error)
       throw error
     } finally {
       delete this._processing

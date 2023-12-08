@@ -8,6 +8,7 @@ import {
 
 import calcMinerFee from './utils/calcMinerFee';
 import { DEFAULT_TOKEN_VALUE } from './constants';
+import { TransactionSigner } from './types';
 
 export class GenesisInput implements UtxoI {
 
@@ -17,9 +18,11 @@ export class GenesisInput implements UtxoI {
   height?: number | undefined;
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
+  transactionSigner?: TransactionSigner
   private static _processing?:string;
   private _processing?:string;
-  constructor(instance:UtxoI) {
+
+  constructor(instance:UtxoI, transactionSigner?: TransactionSigner) {
     if(instance.vout !== 0) {
       throw new Error('Genesis input must be a zeroeth decendant output')
     }
@@ -29,6 +32,7 @@ export class GenesisInput implements UtxoI {
     this.height = instance.height
     this.coinbase = instance.coinbase
     this.token = instance.token
+    this.transactionSigner = transactionSigner
   }
 
 
@@ -80,12 +84,17 @@ export class GenesisInput implements UtxoI {
   async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
     this._processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
-    const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
+    let funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
     if (!funder) {
-      delete this._processing
-      throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      if (this.satoshis <= (DEFAULT_TOKEN_VALUE + fee)) {
+        delete this._processing
+        throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      } else {
+        funder = this.utxo
+      }
+      // use this input to fund the transaction 
+      //if it we can't find a different funder utxo and if it has enough satoshis
     }
-    // build tx
     this._processing = 'Processing'
     const { encodedTransaction, sourceOutputs } = await ownerWallet!.encodeTransaction(
       [new SendRequest({
@@ -110,16 +119,10 @@ export class GenesisInput implements UtxoI {
     // request signature
     delete this._processing
     this._processing = 'Waiting for signature'
-    let signResult: {signedTransaction:any} | undefined
+    let signResult: {signedTransaction:any, signedTransactionHash?:any} | undefined
     try {
-      signResult = await window.paytaca.signTransaction({
-          transaction: decoded,
-          sourceOutputs: [...sourceOutputs],
-          broadcast: false,
-          userPrompt: 'Generate genesis inputs'
-      })
+      signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Generate genesis inputs')
     } catch (error:any) {
-      console.log(error)
       delete this._processing
       throw error
     } finally {
@@ -141,9 +144,7 @@ export class GenesisInput implements UtxoI {
       // delete GenesisInput.processing
       delete this._processing
     }
-    
   }
-
 
   /**
    * Generate genesis inputs from wallet's utxos
