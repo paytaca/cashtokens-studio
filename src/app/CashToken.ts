@@ -273,12 +273,12 @@ export class CashToken implements UtxoI, PartialBcmr {
         commitment = convertBigIntToHexLE(BigInt(commitment))
       } 
     } /*else commitment is raw hex provided by user*/
-
+    console.log('AMOUNT', opt.amount)
     requests.push(this.prepareGenesisAuthchainIdentityReq({
       recipient: tokenRecipient,
       token: {
         tokenId: this.txid,
-        amount: Number(opt.amount || 0),
+        amount: opt.amount || BigInt(0),
         // Following BCMR standard, FT reserved supply handling suggestion
         // i.e. For fungible tokens continued issuance, store the reserve supply/genesis supply
         // ...  in the identity output and set capability to 'mutable'
@@ -295,17 +295,6 @@ export class CashToken implements UtxoI, PartialBcmr {
     const {encodedTransaction, sourceOutputs} = await this.buildTokenGenesisTransaction(requests, opt.includeAuthKeyGenesis)
     this._processing = 'Waiting for signature'
     let signResult: any
-    // if (opt?.walletType === 'walletconnect') {
-    //   signResult = await requestWalletConnectSignature(decodeTransaction(encodedTransaction), sourceOutputs,'Create Token', this.walletConnectSession)
-    //   console.log('signResult', signResult)
-    // } else {
-    //   signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
-    //   if (!signResult || !signResult.signedTransaction) {
-    //     delete this._processing
-    //     return
-    //   }
-    // }
-    // console.log('wallet', this.ownerWallet)
     const decoded = decodeTransaction(encodedTransaction)
     if (typeof decoded === 'string') {
       throw new Error('Error decoding transaction')
@@ -327,6 +316,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       return tx
     } catch (error:any) {
       console.log(error)
+      delete this._processing
       throw new Error(error.message)
     } finally {
       delete this._processing
