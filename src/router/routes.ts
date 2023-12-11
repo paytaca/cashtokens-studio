@@ -12,6 +12,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { name: 'create-authkey', path: 'tokens/create/authkey', component: () => import('pages/issuer/CreateAuthKey.vue') },
       { name: 'create-token', path: 'tokens/create', component: () => import('pages/issuer/CreateToken.vue') },
+      { name: 'import-auth-utxo', path: 'tokens/import-auth-utxo', component: () => import('pages/issuer/ImportAuthUtxo.vue') },
     ],
   },
   {
