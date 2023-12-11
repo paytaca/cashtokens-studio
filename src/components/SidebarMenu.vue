@@ -31,6 +31,7 @@ const hrefs = {
   accountCollectibles: '/account/balance/collectibles',
   recentTransactions: '/account/recent-transactions',
   createNewToken: '/issuer/tokens/create',
+  importAuthUtxo: '/issuer/tokens/import-auth-utxo',
 }
 
 const menu = computed<any[]>(() => {
@@ -44,6 +45,12 @@ const menu = computed<any[]>(() => {
     {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Import Auth Utxo',
+      href: hrefs.importAuthUtxo,
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },
