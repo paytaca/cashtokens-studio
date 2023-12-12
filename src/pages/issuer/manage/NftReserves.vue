@@ -265,7 +265,6 @@ const refreshData = async (immediate?: boolean) => {
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
     )
-    console.log(user.paginatedAuthchainIdentities)
     user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
     initPagination()
     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
