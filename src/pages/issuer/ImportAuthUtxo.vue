@@ -17,16 +17,6 @@
         </p>
         <p class="text-justify">
         </p>
-
-        <q-icon name="warning" color="warning" size="sm" flat dense>
-        </q-icon>
-        <span class="text-justify">The maximum fungible amount that can be handled by CashTokens Studio is
-          9007199254740991(MAX_SAFE_INTEGER). If you've
-          created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
-          result in inaccurate calculation when you try to issue/transfer some tokens. Please don't transfer the
-          fungible token Auth utxo to CashTokens Studio if the amount exceeds 9007199254740991. We are currently in the
-          process of upgrading the system to support big integers.
-        </span>
         <div class="q-pa-lg flex flex-center">
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
             :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
