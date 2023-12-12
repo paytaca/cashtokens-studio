@@ -78,13 +78,10 @@
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })"
-                  :disable="BigInt((identity?.token?.amount || 0)) > Number.MAX_SAFE_INTEGER">
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
                 </q-btn>
               </td>
-
             </tr>
-
             <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
               <td colspan="6">
                 No data
@@ -110,8 +107,9 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
-import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
+import { getWalletClass } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
+import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
 
 
 const user = useUser()
@@ -139,8 +137,8 @@ const formatReservedSupply = computed(() => {
   return (authchainIdentity: AuthchainIdentity) => {
 
     if (authchainIdentity.token!.amount && authchainIdentity.tokenCategory?.decimals) {
-      return tokeshiToNumber(
-        Number(authchainIdentity.token!.amount), authchainIdentity.tokenCategory?.decimals.toString()
+      return ftAmtFormatter.toDecimal(
+        authchainIdentity.token!.amount.toString(), authchainIdentity.tokenCategory?.decimals
       )
     }
     return authchainIdentity.token?.amount
