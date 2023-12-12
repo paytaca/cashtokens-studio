@@ -6,7 +6,6 @@
  */
 export const toDecimal = (rawFt: string, decimal?:number):string => {
     try {
-        // Convert the input string to a BigInt
         if (decimal === undefined || decimal == 0) {
             return rawFt    
         }
@@ -15,16 +14,17 @@ export const toDecimal = (rawFt: string, decimal?:number):string => {
         }
         const bigIntInput = BigInt(rawFt);
 
-        // Divide the BigInt to get the integer and remainder parts
         const integerPart = (bigIntInput / BigInt(10 ** decimal)).toString();
         const remainderPart = (bigIntInput % BigInt(10 ** decimal)).toString();
 
         // Pad the remainder part with zeros if needed
         const paddedRemainder = remainderPart.padStart(decimal, '0');
-
-        // Concatenate the integer and padded remainder parts
-        const formattedDecimal = `${integerPart}.${paddedRemainder}`;
-
+        let formattedDecimal = `${integerPart}.${paddedRemainder}`;
+        console.log('F', formattedDecimal)
+        if (formattedDecimal.includes('-')) {
+            formattedDecimal = formattedDecimal.replace(/-/g,'')
+            formattedDecimal = `-${formattedDecimal}`
+        }
         return formattedDecimal;
     } catch (error) {
         throw new Error('Invalid input: not a valid number')
@@ -40,14 +40,16 @@ export const toDecimal = (rawFt: string, decimal?:number):string => {
 export const toRaw = (decimalFt:string, decimal?:number):string => {
     try {
 
-        if (decimal === undefined || decimal == 0) {
-            return decimalFt    
+        // if (decimal === undefined || decimal == 0) {
+        //     return decimalFt    
+        // }
+
+        if (!decimal) {
+            decimal = 0
         }
 
-        // Split the formatted decimal into integer and decimal parts
         const [integerPart, decimalPart] = decimalFt.split('.');
         
-        // Parse the integer and decimal parts to BigInt
         const integerBigInt = BigInt(integerPart);
         let decimalBigInt 
         if (!decimalPart) {
@@ -59,14 +61,10 @@ export const toRaw = (decimalFt:string, decimal?:number):string => {
         if (decimalPart && decimalPart.length > decimal) {
             decimalBigInt = BigInt(decimalPart.slice(0, decimal))
         }
-        // Combine the integer and decimal parts to get the original BigInt value
         const originalBigInt = integerBigInt * BigInt(10 ** decimal) + decimalBigInt;
 
         return originalBigInt.toString();
     } catch (error) {
-        console.log('DECIMAL FT', decimalFt)
-        console.log(error)
-        // return "Invalid input: not a valid formatted decimal";
         return '0'
     }
 
