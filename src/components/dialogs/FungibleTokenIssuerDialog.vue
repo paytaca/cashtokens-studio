@@ -161,6 +161,9 @@ const amountToSendRaw = computed(() => {
 // Token Amount Rules
 const tokenAmountHonorsDecimalPlaces = (v: string) => {
   if (v.indexOf('.') !== -1) {
+    if (!props.authchainIdentity.tokenCategory?.decimals) {
+      return 'Invalid decimal value'
+    }
     // be sure that the input has 2 decimal places only
     return v.split('.')[1].length <= Number(props.authchainIdentity.tokenCategory?.decimals || 0) || 'Invalid decimal value'
   }
@@ -168,19 +171,11 @@ const tokenAmountHonorsDecimalPlaces = (v: string) => {
 }
 
 const tokenAmountIsLessThanSupply = (v: string) => {
-  console.log('current reserve', currentFtReserves.value)
-  console.log('new reserve', newReserveSupplyDecimal.value)
-  console.log('ENTERED V', v)
-  console.log('Entered Decimal', ftAmtFormatter.toRaw(v, props.authchainIdentity.tokenCategory?.decimals))
-
-  if (v.indexOf('.') !== -1) {
-    console.log('RAW V', BigInt(ftAmtFormatter.toRaw(v, props.authchainIdentity.tokenCategory?.decimals)))
-  } else {
-
-  }
-  // newReserveSupplyDecimal.value > 0
-  // return BigInt(ftAmtFormatter.toRaw(v, props.authchainIdentity.tokenCategory?.decimals)) <= BigInt(ftAmtFormatter.toRaw(currentFtReserves.value, props.authchainIdentity.tokenCategory?.decimals))
-  return BigInt(ftAmtFormatter.toRaw(newReserveSupplyDecimal.value, props.authchainIdentity.tokenCategory?.decimals)) > BigInt('0') || 'Amount exceeds available supply'
+  return (
+    Number(newReserveSupplyDecimal.value) >= 0 &&
+    BigInt(ftAmtFormatter.toRaw(newReserveSupplyDecimal.value, props.authchainIdentity.tokenCategory?.decimals)) >= BigInt('0')
+  ) ||
+    'Amount exceeds available supply'
 }
 
 

@@ -14,7 +14,7 @@
             disable></q-input>
           <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance?.tokenCategory?.decimals" label="Decimals"
             filled dense disable></q-input>
-          <q-input :model-value="currentBalanceWithDecimal"
+          <q-input :model-value="newBalanceWithDecimal"
             :label="Number(amountToSendRaw) > 0 ? 'Remaining balance' : 'Current balance'" filled dense disable>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
               <q-avatar>
@@ -23,10 +23,12 @@
             </template>
           </q-input>
           <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense
-            :disable="Boolean(processingMessage?.processing)">
+            :disable="Boolean(processingMessage?.processing)"
+            :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]">
             <template v-slot:append>
               <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
-                dense @click="form.amount = String(tokenBalance.balance)">Send
+                dense
+                @click="form.amount = ftAmtFormatter.toDecimal(tokenBalance.balance.toString(), props.tokenBalance.tokenCategory?.decimals)">Send
                 all</q-btn>
             </template>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
@@ -61,14 +63,14 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="processingMessage?.processing" color="primary"
-          :disable="currentBalanceWithDecimal < 0 || Boolean(processingMessage?.processing)" />
+          :disable="Number(newBalanceWithDecimal) < 0 || Boolean(processingMessage?.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { FungibleTokenBalance } from 'src/app/types';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
@@ -76,10 +78,11 @@ import { CashToken } from 'src/app';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { numberToTokeshi, shortenAddress, shortenTokenId, shortenTx, tokeshiToNumber } from 'src/app/utils';
+import { shortenAddress, shortenTx } from 'src/app/utils';
 import { ProcessingMessage } from 'src/app'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui'
+import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
 const props = defineProps<{
   tokenBalance: FungibleTokenBalance
 }>()
@@ -91,25 +94,51 @@ const $q = useQuasar()
 const user = useUser()
 const ui = useUI()
 const { $ebus } = useEventBus()
-const currentBalanceWithDecimal = computed(() => {
-  if (props.tokenBalance.tokenCategory?.decimals) {
-    return Number(tokeshiToNumber(Number(props.tokenBalance.balance), props.tokenBalance.tokenCategory?.decimals?.toString())) - Number(form.value.amount)// !change to string if mainnetjs supports bigint
-  }
-  // ignore the decimal point of form.value.amount if no `decimals` metadata
-  return Number(props.tokenBalance.balance) - parseInt(form.value.amount || '0')// !change to string if mainnetjs supports bigint
-})
 const processingMessage = ref<ProcessingMessage>()
-const amountToSendRaw = computed(() => {
-  if (props.tokenBalance.tokenCategory?.decimals) {
-    return numberToTokeshi(Number(form.value.amount), props.tokenBalance.tokenCategory?.decimals?.toString())
-  }
-  return parseInt(form.value.amount) // !!! Update once mainnetjs supports BigInt
+
+const currentBalanceWithDecimal = computed(() => {
+  return ftAmtFormatter.toDecimal(props.tokenBalance.balance.toString(), props.tokenBalance.tokenCategory?.decimals)
 })
+
+const newBalanceWithDecimal = computed(() => {
+  if (!form.value.amount) return currentBalanceWithDecimal.value
+  const currentReserves = ftAmtFormatter.toRaw(currentBalanceWithDecimal.value, props.tokenBalance.tokenCategory?.decimals)
+  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.tokenBalance.tokenCategory?.decimals)
+  const newReserves = BigInt(currentReserves) - BigInt(issuedAmount)
+  return ftAmtFormatter.toDecimal(newReserves.toString(), props.tokenBalance.tokenCategory?.decimals)
+})
+
+const amountToSendRaw = computed(() => {
+  if (!form.value.amount) return '0'
+  if (props.tokenBalance.tokenCategory?.decimals) {
+    return ftAmtFormatter.toRaw(form.value.amount, props.tokenBalance.tokenCategory?.decimals)
+  }
+  return form.value.amount
+})
+
 const form = ref<{ to: string, amount: string }>({
   to: '',
   amount: ''
 })
 
+// Token Amount Rules
+const tokenAmountHonorsDecimalPlaces = (v: string) => {
+  if (v.indexOf('.') !== -1) {
+    // be sure that the input has n decimal places only
+    return v.split('.')[1].length <= Number(props.tokenBalance.tokenCategory?.decimals || 0) || 'Invalid decimal value'
+  }
+  return true
+}
+
+const tokenAmountIsLessThanSupply = (v: string) => {
+  return (
+    (
+      Number(newBalanceWithDecimal.value) >= 0 &&
+      BigInt(ftAmtFormatter.toRaw(newBalanceWithDecimal.value, props.tokenBalance.tokenCategory?.decimals)) >= BigInt('0')
+    ) ||
+    'Amount exceeds available supply'
+  )
+}
 const send = async () => {
   try {
     processingMessage.value = new ProcessingMessage()
