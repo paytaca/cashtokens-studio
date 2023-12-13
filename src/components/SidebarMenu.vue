@@ -48,12 +48,12 @@ const menu = computed<any[]>(() => {
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },
-    {
-      label: 'Import Auth Utxo',
-      href: hrefs.importAuthUtxo,
-      icon: 'add',
-      disabled: Boolean(user.walletAddress) === false,
-    },
+    // {
+    //   label: 'Import Auth Utxo',
+    //   href: hrefs.importAuthUtxo,
+    //   icon: 'add',
+    //   disabled: Boolean(user.walletAddress) === false,
+    // },
     {
       label: 'Manage',
       href: '#Manage',
