@@ -152,7 +152,7 @@
 <script setup lang="ts">
 import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
-import { onMounted, ref, watch, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, watch, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
@@ -315,6 +315,10 @@ watch(() => user.walletAddress, async (v) => {
   }
 })
 
+onBeforeMount(() => {
+  refreshData(true)
+})
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -324,7 +328,7 @@ onMounted(async () => {
       paginatedAuthchainIdentities.value = user.paginatedAuthchainIdentities
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
 
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {

@@ -121,7 +121,7 @@
 import { NFTCapability, Wallet, delay } from 'mainnet-js';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { EventBus } from 'quasar';
-import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, computed, watch, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
@@ -297,6 +297,10 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   }
 })
 
+onBeforeMount(() => {
+  refreshData(true)
+})
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -306,7 +310,7 @@ onMounted(async () => {
       paginatedNftAuthchainIdentities.value = user.paginatedNftAuthchainIdentities
       populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()

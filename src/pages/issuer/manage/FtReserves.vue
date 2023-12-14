@@ -46,7 +46,7 @@
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="String(identity.tokenUris.icon)" alt="na">
+                  <q-img :src="String(identity.tokenUris.icon)" alt="na" loading="lazy" spinner-size="xs" />
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
@@ -88,7 +88,7 @@
 <script setup lang="ts">
 import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app'
@@ -153,15 +153,6 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
-      await a.resolveTokenCategory()
-      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
-        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
-      }
-    } else {
-      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
-    }
-
     if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
       await a.resolveTokenUris()
       if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
@@ -169,6 +160,15 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       }
     } else {
       a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
+
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
     }
   })
 }
@@ -226,6 +226,7 @@ watch(() => user.walletAddress, async (v) => {
 
 })
 
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -235,11 +236,15 @@ onMounted(async () => {
       paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
       populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
   })
+})
+
+onBeforeMount(() => {
+  refreshData(true)
 })
 
 onBeforeUnmount(() => {
