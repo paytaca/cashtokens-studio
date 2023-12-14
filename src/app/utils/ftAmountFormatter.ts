@@ -20,7 +20,6 @@ export const toDecimal = (rawFt: string, decimal?:number):string => {
         // Pad the remainder part with zeros if needed
         const paddedRemainder = remainderPart.padStart(decimal, '0');
         let formattedDecimal = `${integerPart}.${paddedRemainder}`;
-        console.log('F', formattedDecimal)
         if (formattedDecimal.includes('-')) {
             formattedDecimal = formattedDecimal.replace(/-/g,'')
             formattedDecimal = `-${formattedDecimal}`
