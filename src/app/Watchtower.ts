@@ -145,6 +145,7 @@ export class Watchtower {
           url += '?' + querify(q)
         }
         const r = await fetch(url)
+        
         result = await r.json()
         return result
       } catch (error) {

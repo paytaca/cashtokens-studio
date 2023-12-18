@@ -8,17 +8,6 @@
             {{ paginatedFtAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
-        <div>
-          <q-icon name="warning" color="warning" size="sm" flat dense>
-          </q-icon>
-          <span>The maximum fungible amount that can be handled by CashTokens Studio is
-            9007199254740991(MAX_SAFE_INTEGER). If you've
-            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
-            result in inaccurate calculation when you try to issue/transfer some tokens. We are currently in
-            the
-            process of upgrading the system to support big integers.
-          </span>
-        </div>
         <q-expansion-item label="More Info">
           <p>
             These are the FT identities (utxos) that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
@@ -57,7 +46,7 @@
               <td>{{ i + pagination.offset + 1 }}</td>
               <td>
                 <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="String(identity.tokenUris.icon)" alt="na">
+                  <q-img :src="String(identity.tokenUris.icon)" alt="na" loading="lazy" spinner-size="xs" />
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
@@ -78,13 +67,10 @@
               <td>{{ formatReservedSupply(identity) }}</td>
               <td>
                 <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })"
-                  :disable="BigInt((identity?.token?.amount || 0)) > Number.MAX_SAFE_INTEGER">
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
                 </q-btn>
               </td>
-
             </tr>
-
             <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
               <td colspan="6">
                 No data
@@ -102,7 +88,7 @@
 <script setup lang="ts">
 import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
-import { computed, inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useDialogs } from 'src/composables'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app'
@@ -110,8 +96,9 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { PaginatedData } from 'src/app/types';
-import { getWalletClass, tokeshiToNumber } from 'src/app/utils';
+import { getWalletClass } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
+import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
 
 
 const user = useUser()
@@ -139,8 +126,8 @@ const formatReservedSupply = computed(() => {
   return (authchainIdentity: AuthchainIdentity) => {
 
     if (authchainIdentity.token!.amount && authchainIdentity.tokenCategory?.decimals) {
-      return tokeshiToNumber(
-        Number(authchainIdentity.token!.amount), authchainIdentity.tokenCategory?.decimals.toString()
+      return ftAmtFormatter.toDecimal(
+        authchainIdentity.token!.amount.toString(), authchainIdentity.tokenCategory?.decimals
       )
     }
     return authchainIdentity.token?.amount
@@ -166,15 +153,6 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
   }
 
   authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
-      await a.resolveTokenCategory()
-      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
-        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
-      }
-    } else {
-      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
-    }
-
     if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
       await a.resolveTokenUris()
       if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
@@ -182,6 +160,15 @@ const populateAuthchainIdentities = (paginated: PaginatedData) => {
       }
     } else {
       a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+    }
+
+    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
+      await a.resolveTokenCategory()
+      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
+        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
+      }
+    } else {
+      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
     }
   })
 }
@@ -239,6 +226,7 @@ watch(() => user.walletAddress, async (v) => {
 
 })
 
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -248,11 +236,15 @@ onMounted(async () => {
       paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
       populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
   })
+})
+
+onBeforeMount(() => {
+  refreshData(true)
 })
 
 onBeforeUnmount(() => {
