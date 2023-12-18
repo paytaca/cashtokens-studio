@@ -38,9 +38,8 @@
             </template>
           </q-input>
           <q-input :model-value="currentFtReservesDecimal" label="Current reserve supply (decimal)" filled borderless
-            dense disable bottom-slots>
+            dense disable bottom-slots type="text">
             <template v-slot:hint>
-              <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
               <div class="row justify-end text-italic">{{ currentFtReserves }} (Raw FT Amount)</div>
             </template>
           </q-input>
@@ -48,9 +47,10 @@
           <q-input v-if="form.amount && Number(form.amount) > 0" :model-value="newReserveSupplyDecimal"
             label="New reserve supply (decimal)" filled dense disable bottom-slots>
             <template v-slot:hint>
-              <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-              <div class="row justify-end text-italic">{{ BigInt(currentFtReserves) -
-                BigInt(amountToSendRaw) }} (Raw FT Amount)</div>
+              <div class="row justify-end text-italic">
+                {{ Number(newReserveSupplyDecimal) > 0 ? ftAmtFormatter.toRaw(newReserveSupplyDecimal,
+                  props.authchainIdentity.tokenCategory?.decimals) : 0 }} (Raw
+                FT Amount)</div>
             </template>
           </q-input>
 
@@ -61,27 +61,9 @@
                 @click="form.recipient = user.walletTokenAddress!" label="Self" dense />
             </template>
           </q-input>
-          <!-- @update:model-value="() => amountToSendRaw = numberToTokeshi(Number(form.amount), String(authchainIdentity.tokenCategory?.decimals))" -->
           <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal" filled dense
-            bottom-slots :rules="[(v) => Number(v) <= Number(currentFtReserves) || 'Amount exceeds supply']"
+            bottom-slots :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]"
             :disable="Boolean(authchainIdentity.processing)">
-            <!-- <template v-slot:hint>
-              <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
-                class="row justify-end text-italic q-mb-sm" style="font-size: .8em;">
-                <q-icon name="warning" color="warning" /> Token has 0 or no decimal metadata. Value after decimal point
-                will be
-                ignored.
-              </div>
-              IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint
-              <div v-if="Number(form.amount) <= Number(currentFtReserves)"
-                class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
-                <span>Token amount </span>
-                <span class="text-weight-bold text-green-6">{{
-                  amountToSendRaw
-                }}</span>
-                <span>(Raw FT Amount)</span>
-              </div>
-            </template> -->
             <template v-if="authchainIdentity?.tokenUris?.icon" v-slot:prepend>
               <q-avatar>
                 <img :src="authchainIdentity.tokenUris.icon" alt="">
@@ -94,8 +76,8 @@
             will be
             ignored.
           </div>
-          <!-- IMPORTANT TODO: change formAmount to BigInt once mainnet-js supports bigint -->
-          <div v-if="Number(form.amount) <= Number(currentFtReserves)"
+          <div
+            v-if="BigInt(ftAmtFormatter.toRaw(form.amount, props.authchainIdentity.tokenCategory?.decimals)) <= BigInt(ftAmtFormatter.toRaw(currentFtReserves, props.authchainIdentity.tokenCategory?.decimals))"
             class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
             <span>Token amount </span>
             <span class="text-weight-bold text-green-6">{{
@@ -117,14 +99,15 @@
 
 import { QInput, useQuasar } from 'quasar';
 import { AuthchainIdentity } from 'src/app'
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useUser } from 'src/stores/user'
-import { numberToTokeshi, shortenAddress, tokeshiToNumber } from 'src/app/utils'
+import { shortenAddress } from 'src/app/utils'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import shortenTokenId from 'src/app/utils/shortenTokenId';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui'
+import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
 
 const emit = defineEmits<{
   (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
@@ -151,25 +134,51 @@ const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>(
 })
 
 
-const currentFtReserves = computed(() => Number(props.authchainIdentity.token!.amount).toString())
-const currentFtReservesDecimal = computed(() => tokeshiToNumber(Number(currentFtReserves.value), props.authchainIdentity.tokenCategory?.decimals?.toString()))
+
+const currentFtReserves = computed(() => BigInt(props.authchainIdentity.token!.amount).toString())
+const currentFtReservesDecimal = computed(() => ftAmtFormatter.toDecimal(currentFtReserves.value, props.authchainIdentity.tokenCategory?.decimals))
 const newReserveSupplyDecimal = computed(() => {
-  let v = currentFtReservesDecimal.value - Number(form.value.amount || '0')
-  if (!props.authchainIdentity.tokenCategory?.decimals) {
-    v = Math.floor(v)
-  }
-  return v
+  if (!form.value.amount) return currentFtReservesDecimal.value
+  const currentReserves = ftAmtFormatter.toRaw(currentFtReservesDecimal.value, props.authchainIdentity.tokenCategory?.decimals)
+  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.authchainIdentity.tokenCategory?.decimals)
+  const newReserves = BigInt(currentReserves) - BigInt(issuedAmount)
+
+  return ftAmtFormatter.toDecimal(newReserves.toString(), props.authchainIdentity.tokenCategory?.decimals)
 })
 
 const tokenAmountInputRef = ref<QInput | null>(null)
 
 const amountToSendRaw = computed(() => {
+  if (!form.value.amount) return '0'
   if (props.authchainIdentity.tokenCategory?.decimals) {
-    return numberToTokeshi(Number(form.value.amount), props.authchainIdentity.tokenCategory?.decimals?.toString())
+    return ftAmtFormatter.toRaw(form.value.amount, props.authchainIdentity.tokenCategory?.decimals)
   }
   // ignore value after decimal point, !!! handle BigInt in the future
-  return parseInt(form.value.amount || '0')
+  // return parseInt(form.value.amount || '0')
+  return form.value.amount
 })
+
+// Token Amount Rules
+const tokenAmountHonorsDecimalPlaces = (v: string) => {
+  if (v.indexOf('.') !== -1) {
+    if (!props.authchainIdentity.tokenCategory?.decimals) {
+      return 'Invalid decimal value'
+    }
+    // be sure that the input has 2 decimal places only
+    return v.split('.')[1].length <= Number(props.authchainIdentity.tokenCategory?.decimals || 0) || 'Invalid decimal value'
+  }
+  return true
+}
+
+const tokenAmountIsLessThanSupply = (v: string) => {
+  return (
+    Number(newReserveSupplyDecimal.value) >= 0 &&
+    BigInt(ftAmtFormatter.toRaw(newReserveSupplyDecimal.value, props.authchainIdentity.tokenCategory?.decimals)) >= BigInt('0')
+  ) ||
+    'Amount exceeds available supply'
+}
+
+
 
 const releaseTokensFromReserveSupply = async () => {
   if (!form.value || !form.value.recipient || Number(form.value.amount) <= 0) {
@@ -206,4 +215,8 @@ const releaseTokensFromReserveSupply = async () => {
   }
 
 }
+
+onMounted(() => {
+  console.log('RESULT', props.authchainIdentity.token?.amount)
+})
 </script>

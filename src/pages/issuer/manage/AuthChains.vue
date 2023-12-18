@@ -4,28 +4,14 @@
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
           Token Categories
-
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
             {{ paginatedAuthchainIdentities?.count || 0 }}
           </q-badge>
         </h5>
-        <div>
-          <q-icon name="warning" color="warning" size="sm" flat dense>
-          </q-icon>
-          <span>
-            The maximum fungible amount that can be handled by CashTokens Studio is
-            9007199254740991(MAX_SAFE_INTEGER). If you've
-            created your fungible token somewhere else e.g. Cashonize, the max supply may exceed this value and will
-            result in inaccurate calculation when you try to issue/transfer some tokens. Please don't transfer the
-            fungible token Auth utxo to CashTokens Studio if the amount exceeds 9007199254740991. We are currently in
-            the
-            process of upgrading the system to support big integers.
-          </span>
-        </div>
-        <!-- <p class="text-center">
+        <p class="text-center">
           These are the token categories that you control. All the tokens that you created in CashTokens Studio will be
           listed here. Click an item on this list to view the token details.
-        </p> -->
+        </p>
         <q-expansion-item label="More Info">
           <p>
             The token categories here are utxos that are authheads of these token categories' authchain. So, we can use
@@ -166,7 +152,7 @@
 <script setup lang="ts">
 import { Wallet, delay } from 'mainnet-js';
 import { EventBus } from 'quasar';
-import { onMounted, ref, watch, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, watch, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
@@ -329,6 +315,10 @@ watch(() => user.walletAddress, async (v) => {
   }
 })
 
+onBeforeMount(() => {
+  refreshData(true)
+})
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -338,7 +328,7 @@ onMounted(async () => {
       paginatedAuthchainIdentities.value = user.paginatedAuthchainIdentities
       populateAuthchainIdentities(paginatedAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
 
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {

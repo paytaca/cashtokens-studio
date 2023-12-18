@@ -121,7 +121,7 @@
 import { NFTCapability, Wallet, delay } from 'mainnet-js';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { EventBus } from 'quasar';
-import { onMounted, ref, computed, watch, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, computed, watch, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import { useDialogs } from 'src/composables'
@@ -265,7 +265,6 @@ const refreshData = async (immediate?: boolean) => {
       user.wallet.getTokenDepositAddress(),
       { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
     )
-    console.log(user.paginatedAuthchainIdentities)
     user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
     initPagination()
     populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
@@ -298,6 +297,10 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
   }
 })
 
+onBeforeMount(() => {
+  refreshData(true)
+})
+
 onMounted(async () => {
   if (user.wallet) {
     /**
@@ -307,7 +310,7 @@ onMounted(async () => {
       paginatedNftAuthchainIdentities.value = user.paginatedNftAuthchainIdentities
       populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
     }
-    refreshData()
+    // refreshData()
   }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
