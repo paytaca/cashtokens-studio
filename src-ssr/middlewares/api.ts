@@ -88,6 +88,36 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     
   })
 
+  app.post('/api/tokens/nft/asset-upload', upload.single('icon'), async (req:any, res:any) => {
+    const metadata = await nftStorageClient().store({
+      name: 'CTStudio',
+      description: 'NFT asset',
+      image: new File(
+        [req.file.buffer],
+        `${req.query.tokenId}-${req.query.commitment}.png`,
+        { type: 'image/png' }
+      )
+    })
+    const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
+    try {
+      const metadataContents = await fetch(`https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`)
+      const {/*name, description,*/image } = await metadataContents.json()
+      const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
+      res.status(200).send({
+        nftStorageMetadata: metadata,
+        iconUris: {
+          ipfs: image,
+          https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
+        }
+      });
+      
+    } catch (error) {
+      console.log(error)
+      res.status(400).send(error)
+    }
+    
+  })
+
   /**
    * Stores the Registry(BCMR) json payload in nft.storage
    */
