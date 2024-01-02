@@ -85,10 +85,25 @@
                 :class="$q.dark.isActive ? '' : 'text-black'" @click="form.recipient = user.walletTokenAddress!" />
             </template>
           </q-input>
+          <div class="text-right">
+            <q-checkbox v-model="form.uploadNftAsset" label="Upload NFT asset" />
+            <q-icon name="info" class="q-ml-sm">
+              <q-tooltip>
+                Upload real world asset that this NFT represent. E.g. a digital artwork.
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <div class="row justify-center">
+            <q-uploader v-if="form.uploadNftAsset" ref="nftAssetUploader" @uploaded="onNftAssetUploaded" field-name="icon"
+              :label="nftAssetUploader?.uploadProgressLabel === '100.00%' ? 'Icon Uploaded' : 'Upload Token Icon'" flat
+              :url="`api/tokens/nft/asset-upload?tokenId=${minter.token!.tokenId}&commitment=${nftCommitment}`" dense
+              size="sm" style="width:100%;max-width: 100%;" />
+          </div>
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => mintToken()" label="Mint NFT" :busyLabel="minter.processing" color="primary" />
+        <BusyButton @click="() => mintToken()" label="Mint NFT" :busyLabel="minter.processing" color="primary"
+          :disable="disableMint" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -121,6 +136,7 @@ const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
+const nftAssetUploader = ref()
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParseableNftCollection will be handled
@@ -128,13 +144,23 @@ const ui = useUI()
  */
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
 
-const form = ref<{ capability: NFTCapability, commitmentOfLastMint: string, commitment: string, recipient: string, commitmentFormat: 'decimal' | 'hex', excludeFromSequentialNftCollection: boolean }>({
+const form = ref<{
+  capability: NFTCapability,
+  commitmentOfLastMint: string,
+  commitment: string,
+  recipient: string,
+  commitmentFormat: 'decimal' | 'hex',
+  excludeFromSequentialNftCollection: boolean,
+  uploadNftAsset: boolean, NftAssetUploadUris: any
+}>({
   capability: NFTCapability.none,
   commitmentOfLastMint: '', // Commitment of last mint (stored as commitment of the minter)
   commitment: '',
   recipient: '',
   commitmentFormat: 'decimal',
-  excludeFromSequentialNftCollection: false
+  excludeFromSequentialNftCollection: false,
+  uploadNftAsset: false,
+  NftAssetUploadUris: null
 })
 
 const tokenCommmitmentPlaceholderText = computed<string>(() => {
@@ -143,6 +169,49 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
   }
   return 'Enter commitment'
 })
+
+/**
+ * Actual commitment on chain
+ */
+const nftCommitment = computed<string>(() => {
+  let commitment = form.value.commitment
+  if (commitment && form.value.commitmentFormat === 'decimal') {
+    commitment = convertBigIntToHexLE(BigInt(commitment))
+  }
+
+  if (commitment && form.value.commitmentFormat === 'hex') {
+    if (nftCollectionType.value === 'SequentialNftCollection') {
+      commitment = parseInt(commitment, 16).toString()
+      commitment = convertBigIntToHexLE(BigInt(commitment))
+    }
+  } /*else commitment is raw hex provided by user*/
+  return commitment
+})
+
+const disableMint = computed(() => {
+  if (!form.value.recipient) {
+    return true
+  }
+  console.log(nftAssetUploader.value)
+  if (form.value.uploadNftAsset && nftAssetUploader.value.queuedFiles?.length <= 0) {
+    return true
+  }
+  return false
+})
+
+
+
+const onNftAssetUploaded = (info: any) => {
+  try {
+    const serverResponse = JSON.parse(info.xhr.responseText)
+    console.log(serverResponse.iconUris)
+
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+
 
 const convertCommitment = () => {
   if (form.value.commitment && form.value.commitmentFormat === 'decimal') {
