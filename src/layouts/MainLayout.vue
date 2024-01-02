@@ -16,7 +16,8 @@
         </span>
       </q-toolbar>
     </q-header>
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay>
+      <q-btn flat dense round icon="close" aria-label="Menu" @click="toggleLeftDrawer" />
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
