@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { BCMR, hexToBin } from 'mainnet-js'
+import { BCMR, NetworkType, hexToBin } from 'mainnet-js'
 /**
  *
  * Fetch the authchain information from a trusted external indexer
@@ -15,13 +15,18 @@ import { BCMR, hexToBin } from 'mainnet-js'
  *
  * @returns {AuthChain} returns the resolved authchain
  */
-export default async (options:{chaingraphUrl:string, transactionHash:string, network: string}) => {
+export default async (options:{chaingraphUrl:string, transactionHash:string, network: NetworkType}) => {
 
   if (!options.chaingraphUrl) {
       throw new Error('Provide `chaingraphUrl` param.');
   }
   if (options.network === undefined) {
-      options.network = 'mainnet';
+      options.network = NetworkType.Mainnet;
+  }
+
+  let n:any = options.network
+  if (options.network === NetworkType.Testnet) {
+    n = 'chipnet'
   }
 
   let response:any = await fetch(options.chaingraphUrl, {
@@ -35,7 +40,7 @@ export default async (options:{chaingraphUrl:string, transactionHash:string, net
       // eslint-disable-next-line quotes
       /* chaingraph authhead query*/
       // eslint-disable-next-line quotes
-      query: `{transaction(where:{hash:{_eq:\"\\\\x${options.transactionHash}\"},node_validation_timeline:{node:{name:{_ilike:\"%${options.network}%\"}}}}){hash authchains{authchain_length migrations(where:{transaction:{outputs:{locking_bytecode_pattern:{_like:\"6a04%\"}}}},order_by:{migration_index:desc}limit:1){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{locking_bytecode_pattern:{_like:\"6a04%\"}}){output_index locking_bytecode}}}}}}`
+      query: `{transaction(where:{hash:{_eq:\"\\\\x${options.transactionHash}\"},node_validation_timeline:{node:{name:{_ilike:\"%${n}%\"}}}}){hash authchains{authchain_length migrations(where:{transaction:{outputs:{locking_bytecode_pattern:{_like:\"6a04%\"}}}},order_by:{migration_index:desc}limit:1){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{locking_bytecode_pattern:{_like:\"6a04%\"}}){output_index locking_bytecode}}}}}}`
     })
   });
   response = await response.json()
