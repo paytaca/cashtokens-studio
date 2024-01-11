@@ -95,7 +95,7 @@
           </div>
           <div class="row justify-center">
             <q-uploader v-if="form.uploadNftAsset" ref="nftAssetUploader" @uploaded="onNftAssetUploaded" field-name="icon"
-              :label="nftAssetUploader?.uploadProgressLabel === '100.00%' ? 'Image Uploaded' : 'Upload NFT Image'" flat
+              :label="nftAssetUploader?.uploadProgressLabel === '100.00%' ? 'Asset Uploaded' : 'Upload NFT Asset'" flat
               :url="`api/tokens/nft/asset-upload?tokenId=${minter.token!.tokenId}&commitment=${nftCommitment}`" dense
               size="sm" style="width:100%;max-width: 100%;" />
           </div>
