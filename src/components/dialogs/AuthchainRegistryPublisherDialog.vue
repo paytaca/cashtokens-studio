@@ -49,8 +49,9 @@ import shortenTx from 'src/app/utils/shortenTx';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
-import { shortenTokenId } from 'src/app/utils';
+import { fetchAuthChainAuthheadFromChainGraph, fetchAuthhead, shortenTokenId } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
+import { BCMR, Network } from 'mainnet-js';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -64,14 +65,22 @@ const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean
   contentHash: ''
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (props.url) {
     form.value.url = props.url
   }
   if (props.contentHash) {
     form.value.contentHash = props.contentHash
   }
+
+  const authhead = await fetchAuthChainAuthheadFromChainGraph({
+    chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql',
+    transactionHash: props.authchainIdentity.token?.tokenId || props.authchainIdentity.txid,
+    network: props.authchainIdentity.ownerWallet!.network
+  })
+  // TODO: authenticate authchainIdentity check if it's the authhead, show Authentication Failure dialog if not.
 })
+
 const publish = async () => {
   try {
     const tx = await props.authchainIdentity.publish({ url: form.value.url, contentHash: form.value.contentHash })
