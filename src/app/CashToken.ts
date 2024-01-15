@@ -568,10 +568,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     let tx 
     try {
       // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      const broadcastResp = await (new Watchtower()).broadcastTx(signingResult.signedTransaction)
-      if (broadcastResp.success) {
+      tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
+      if (tx) {
         this._processing = 'Minted'
-        tx = broadcastResp.txid
         setTimeout(()=> {
           delete this._processing
         }, 2000)
