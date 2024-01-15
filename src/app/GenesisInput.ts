@@ -9,6 +9,7 @@ import {
 import calcMinerFee from './utils/calcMinerFee';
 import { DEFAULT_TOKEN_VALUE } from './constants';
 import { TransactionSigner } from './types';
+import submitTransaction from './utils/submitTransaction';
 
 export class GenesisInput implements UtxoI {
 
@@ -136,8 +137,9 @@ export class GenesisInput implements UtxoI {
     delete this._processing
     this._processing = 'Submitting Transaction'
     try {
-      const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)  
-      return tx
+      // const tx = await ownerWallet!.submitTransaction(hexToBin(signResult!.signedTransaction), true)  
+      // return tx
+      return await submitTransaction(signResult, ownerWallet as Wallet)
     } catch (error) {
       throw error
     } finally {

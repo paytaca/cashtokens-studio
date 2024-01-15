@@ -10,6 +10,7 @@ import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 import { TransactionSigner } from "./types";
+import { submitTransaction } from "./utils";
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
@@ -234,8 +235,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this._processing = 'Burning'
     
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      return tx
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      // return tx await submitTransaction(signingResult, )
+      return await submitTransaction(signingResult, this.ownerWallet as Wallet)
     } catch (error:any) {
       throw error
     } finally {
@@ -371,7 +373,8 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
 
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      const tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
       if (tx) {
         this._processing = 'Published'
         setTimeout(()=> {
@@ -526,8 +529,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
     this._processing = 'Submitting Transaction'
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      return tx
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      // return tx
+      return await submitTransaction(signingResult, this.ownerWallet as Wallet)
     } catch (error:any) {
       throw new Error(error.message)
     } finally {
@@ -666,8 +670,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
     this._processing = 'Submitting Transaction'
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      return tx
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      // return tx
+      return await submitTransaction(signingResult, this.ownerWallet as Wallet)
     } catch (error:any) {
       throw new Error(error.message)
     } finally {

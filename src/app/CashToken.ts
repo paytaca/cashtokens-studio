@@ -312,8 +312,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
     this._processing = 'Creating Token'
     try {
-      const tx = await submitTransaction(signResult, this.ownerWallet!)
-      return tx
+      return await submitTransaction(signResult, this.ownerWallet!)
     } catch (error:any) {
       console.log(error)
       delete this._processing
@@ -333,7 +332,6 @@ export class CashToken implements UtxoI, PartialBcmr {
     //       this.token?.tokenId option made available so that authchain can still
     //       be built after genesis
     const authChain = await BCMR.buildAuthChain({ transactionHash: this.token?.tokenId || this.utxo.txid, network: this.ownerWallet!.network })
-    console.log('AUTHCHAIN', authChain)
     delete this._processing 
     return authChain
     
@@ -561,12 +559,10 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
 
     if (!signingResult) {
-      console.log('signed', signingResult)
       delete this._processing
       return
     }
 
-    console.log(signingResult)
     signingResult.signedTransaction
     this._processing = 'Minting'
     let tx 
