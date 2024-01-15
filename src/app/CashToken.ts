@@ -1,5 +1,5 @@
 import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE } from '.'
+import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE, Watchtower } from '.'
 import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
@@ -566,23 +566,28 @@ export class CashToken implements UtxoI, PartialBcmr {
       return
     }
 
+    console.log(signingResult)
+    signingResult.signedTransaction
     this._processing = 'Minting'
+    let tx 
     try {
-      const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
-      if (tx) {
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      const broadcastResp = await (new Watchtower()).broadcastTx(signingResult.signedTransaction)
+      if (broadcastResp.success) {
         this._processing = 'Minted'
+        tx = broadcastResp.txid
         setTimeout(()=> {
           delete this._processing
         }, 2000)
       }
       return tx
     } catch (error: any) {
-      console.log('Error:CashToken@mintChild', error)
       throw new Error(error.message)
     } finally {
       delete this._processing
     }
 
+    
   }
 
   async resolveTokenCategory(quite?:boolean){

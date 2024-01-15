@@ -172,6 +172,31 @@ export class Watchtower {
       return b
     } 
 
+
+    /**
+     * Get the address' BCH balance from watchtower
+     * @param {string} tx Raw transaction hash
+     */
+    async broadcastTx(tx: string): Promise<any> {
+      let b
+      try {
+        const r = await fetch(`${this.apiBaseUri}broadcast/`, {
+          method: 'POST', 
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            transaction: tx
+          })
+        })
+        b = await r.json()
+      } catch (error) {
+        this.error = error
+      } finally {
+        delete this.processing
+      }
+      return b
+    } 
   
     
 }
