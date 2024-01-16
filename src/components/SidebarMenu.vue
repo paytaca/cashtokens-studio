@@ -31,6 +31,7 @@ const hrefs = {
   accountCollectibles: '/account/balance/collectibles',
   recentTransactions: '/account/recent-transactions',
   createNewToken: '/issuer/tokens/create',
+  createNftCollection: '/issuer/tokens/create/nft-collection',
   importAuthUtxo: '/issuer/tokens/import-auth-utxo',
 }
 
@@ -39,6 +40,12 @@ const menu = computed<any[]>(() => {
     {
       label: 'Create New Token',
       href: hrefs.createNewToken,
+      icon: 'add',
+      disabled: Boolean(user.walletAddress) === false,
+    },
+    {
+      label: 'Create NFT Collection',
+      href: hrefs.createNftCollection,
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },

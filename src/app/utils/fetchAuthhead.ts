@@ -1,4 +1,7 @@
 export default async (tokenId: string, network: 'chipnet'|'mainnet'|'testnet' = 'mainnet'): Promise<Response> => {
+  if (network === 'testnet') {
+    network = 'chipnet'
+  }
   return await fetch(
   'https://gql.chaingraph.pat.mn/v1/graphql',
   {

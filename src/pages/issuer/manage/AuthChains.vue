@@ -44,6 +44,7 @@
                 <th>Brand</th>
                 <th>Symbol</th>
                 <th>Token Id</th>
+                <th>Tx Id</th>
                 <template v-if="viewType == 'detailed'">
                   <th>Fungible Reserves</th>
                   <th>NFT Capability</th>
@@ -86,6 +87,9 @@
                 </td>
                 <td>
                   <TokenCategory :tokenId="identity.token?.tokenId" />
+                </td>
+                <td>
+                  <TokenCategory :tokenId="identity.txid" />
                 </td>
                 <template v-if="viewType == 'detailed'">
                   <td>{{ identity.token?.amount || 'n/a' }}</td>
