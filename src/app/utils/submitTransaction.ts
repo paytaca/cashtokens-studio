@@ -8,7 +8,7 @@ export default async (signingResult:any, ownerWallet: Wallet): Promise<string|un
   if (signingResult?.signedTransaction) {
     // return ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
     const broadcastResp = await (new Watchtower()).broadcastTx(signingResult.signedTransaction)
-      if (broadcastResp.success) {
+      if (broadcastResp && broadcastResp.success) {
         return broadcastResp.txid
       }
   }
