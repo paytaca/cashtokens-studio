@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-close-popup>
+  <q-dialog>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">Add Links</q-toolbar-title>

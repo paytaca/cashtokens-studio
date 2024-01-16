@@ -118,7 +118,7 @@
           </i>
         </div>
       </template>
-      <q-input v-model="genesisTokenMetadata.website" label="Website" filled placeholder="https://"
+      <q-input v-model="genesisTokenMetadata.links!.web" label="web" filled placeholder="https://"
         :disable="Boolean(cashToken?.processing)" dense>
         <template v-slot:prepend>
           <q-icon name="web" flat></q-icon>
@@ -185,7 +185,7 @@
       @close="hideBcmrLinkAdderDialog" @confirm="(links) => {
         genesisTokenMetadata.links = links;
         hideBcmrLinkAdderDialog()
-      }" persistent />
+      }" :links="genesisTokenMetadata.links" persistent />
   </q-form>
 </template>
 <script setup lang="ts">
@@ -242,7 +242,7 @@ const tokenNameRef = ref<Ref | undefined | null>(null)
 const tType = ref<'ft' | 'nft' | 'fnft'>(props.tokenType || 'ft')
 const genesisToken = ref<{
   tokenId: string,
-  amount: string,   // actual  amount that will be sent 
+  amount: string,   // actual  amount that will be sent
   capability: NFTCapability | undefined
   commitment: string | undefined,
   commitmentFormat: 'decimal' | 'hex'
@@ -262,7 +262,7 @@ const genesisTokenMetadata = ref<{
   symbol: string,
   decimals: number,
   iconUris: { https: string, ipfs: string },
-  website: string,
+  web: string,
   links?: URIs
 }>({
   name: '',
@@ -274,7 +274,10 @@ const genesisTokenMetadata = ref<{
     https: '',
     ipfs: ''
   },
-  website: ''
+  web: '',
+  links: {
+    web: ''
+  }
 })
 
 const validationErrors = ref<{ name: string, symbol: string }>({
@@ -306,7 +309,7 @@ const tokenAmountWithDecimal = computed<string>(() => {
       genesisToken.value.amount >= MAX_FUNGIBLE_AMOUNT ||
       Number(`${genesisToken.value.amount.toString()}`.padEnd(genesisToken.value.amount.toString().length + Number(genesisTokenMetadata.value.decimals), '0')) >= Number(MAX_FUNGIBLE_AMOUNT)
     ) {
-      // don't pad, accomodate 
+      // don't pad, accomodate
       const decimal_place = genesisToken.value.amount.toString().length - Number(genesisTokenMetadata.value.decimals)
       const whole = genesisToken.value.amount.toString().substring(0, decimal_place)
       const decimal = genesisToken.value.amount.toString().substring(decimal_place)
@@ -348,7 +351,7 @@ const convertCommitment = () => {
 
 watch(() => genesisToken.value.commitment, (commitment) => {
   if (!commitment) {
-    return genesisToken.value.commitmentFormat = 'decimal' // 
+    return genesisToken.value.commitmentFormat = 'decimal' //
   }
   if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
     genesisToken.value.commitmentFormat = 'hex'
@@ -410,9 +413,9 @@ const constructAndStoreBcmr = async () => {
     bcmr.value.addIconUri(genesisTokenMetadata.value.iconUris.ipfs)
   }
 
-  if (genesisTokenMetadata.value.website) {
-    bcmr.value.addUri({ web: genesisTokenMetadata.value.website })
-  }
+  // if (genesisTokenMetadata.value.web) {
+  //   bcmr.value.addUri({ web: genesisTokenMetadata.value.web })
+  // }
 
   if (genesisTokenMetadata.value.links) {
     Object.keys(genesisTokenMetadata.value.links || {}).forEach((name) => {
@@ -471,7 +474,7 @@ const createToken = async () => {
       contentHash: bcmrStorageArtifact.value!.contentHash
     }
 
-    // We're initializing authKey's ownerWallet here 
+    // We're initializing authKey's ownerWallet here
     // because it's being used to initialize the AuthGuard contract
     cashToken.value.authKey!.ownerWallet = props.ownerWallet
     new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
@@ -520,10 +523,10 @@ const createToken = async () => {
 
 /**
  * Downloads the bcmr to users computer.
- * @dev This does not actually get the bcmr from the upload location, instead, 
+ * @dev This does not actually get the bcmr from the upload location, instead,
  *      this just re-uses the bcmr content that was used during upload. To save
  *      on network request.
- *      
+ *
  */
 const downloadBcmr = async () => {
   if (bcmrStorageArtifact.value?.uris.https && bcmr.value) {
