@@ -40,10 +40,7 @@
               :label="iconUploader?.uploadProgressLabel === '100.00%' ? 'Icon Uploaded' : 'Upload NFT Icon'"
               :url="`api/tokens/icon/upload?tokenId=1`" auto-upload size="lg" :disable="!tokenGenesisInputUtxo" />
           </div>
-          <div class="col-xs-12 q-mb-lg q-gutter-y-sm">
-            <label>Description</label>
-            <q-input v-model="identitySnapshot.description" label="Describe your NFT collection" outlined></q-input>
-          </div>
+
           <div class="col-xs-12">
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
@@ -54,8 +51,13 @@
                 <label>Token Symbol</label>
                 <q-input v-model="identitySnapshot.token!.symbol" outlined></q-input>
               </div>
-              <div class="col-xs-12 col-md-3 q-mb-lg q-gutter-y-sm items-center">
-                <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
+              <div class="col-xs-12 q-mb-lg q-gutter-y-sm">
+                <label>Description</label>
+                <q-input v-model="identitySnapshot.description" label="Describe your NFT collection" outlined></q-input>
+              </div>
+              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center">
+                <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'"
+                  style="width:100%">
                   Capability <sup><code class="text-caption">{{ token.capability }}</code></sup>
                   <q-option-group name="preferred_genre" v-model="token.capability" :options="[
                     { value: NFTCapability.minting, label: 'Minting' },
