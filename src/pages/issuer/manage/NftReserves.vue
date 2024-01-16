@@ -32,6 +32,7 @@
               <th>Brand</th>
               <th>Symbol</th>
               <th>Token Id</th>
+              <th>Txid</th>
               <th>Capability</th>
               <th>
                 <sup>
@@ -75,6 +76,9 @@
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
+              </td>
+              <td>
+                <TokenCategory :tokenId="identity.txid" />
               </td>
               <td>{{ identity.token?.capability || '---' }}</td>
               <td>
