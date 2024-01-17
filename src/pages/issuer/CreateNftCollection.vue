@@ -241,6 +241,14 @@ const onTokenIconUpload = (info: any) => {
       identitySnapshot.value.uris = {}
     }
     identitySnapshot.value.uris.icon = serverResponse.iconUris?.https
+    let iconUris: any = localStorage.getItem('iconUris')
+    if (iconUris !== undefined && iconUris !== null) {
+      iconUris = JSON.parse(iconUris)
+    } else {
+      iconUris = {}
+    }
+    iconUris[identitySnapshot.value.token!.category] = identitySnapshot.value.uris.icon
+    localStorage.setItem('iconUris', iconUris)
   } catch (error) {
     console.log(error)
   }
