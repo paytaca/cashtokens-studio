@@ -16,7 +16,7 @@ const { configure } = require('quasar/wrappers');
 
 if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-build') {
   require('dotenv').config({path: './.env.dev'})
-} 
+}
 if (process.env.NODE_ENV=='production') {
   require('dotenv').config({path: './.env.prod'})
 }
@@ -24,7 +24,7 @@ if (process.env.NODE_ENV=='production') {
 console.log('PROCESS ENV', process.env)
 
 module.exports = configure(function (ctx) {
-  
+
   console.log('Server IsServer', ctx.isServer)
 
   const envs = {
@@ -76,7 +76,8 @@ module.exports = configure(function (ctx) {
 
     // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-css
     css: [
-      'app.scss'
+      'app.scss',
+      '~dropzone/dist/dropzone.css'
     ],
 
     // https://github.com/quasarframework/quasar/tree/dev/extras

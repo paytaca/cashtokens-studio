@@ -1,5 +1,5 @@
 <template>
-  <q-dialog v-close-popup full-width>
+  <q-dialog full-width>
     <q-card class="q-px-sm q-py-lg full-width">
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
@@ -13,13 +13,12 @@
         <span class="q-mr-sm">Token Id</span>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
       </q-toolbar>
+      <div id="x"></div>
       <q-card-section class="q-gutter-sm">
         <div class="row" :class="$q.screen.width < $q.screen.sizes.sm ? 'column reverse' : ''">
           <div class="col-xs-12 col-sm-5" :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-px-lg' : ''">
-            <q-uploader v-if="form.uploadNftAsset" ref="nftAssetUploader" @uploaded="onNftAssetUploaded" field-name="icon"
-              :label="nftAssetUploader?.uploadProgressLabel === '100.00%' ? 'Asset Uploaded' : 'Upload NFT Asset'" flat
-              :url="`api/tokens/nft/asset-upload?tokenId=${minter.token!.tokenId}&commitment=${nftCommitment}`" dense
-              size="sm" style="width:100%;max-width: 100%;" />
+            <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
+              style="max-height:30em;overflow-y: scroll"></form>
           </div>
           <div class="col-xs-12 col-sm-7 ">
             <q-form class="q-gutter-sm">
@@ -114,9 +113,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
 import { NFTCapability } from 'mainnet-js';
 import { useQuasar } from 'quasar';
+import Dropzone from 'dropzone'
 import { CashToken } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
@@ -141,6 +141,8 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
 const nftAssetUploader = ref()
+const dropzone = ref<Dropzone>()
+
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParseableNftCollection will be handled
@@ -278,7 +280,7 @@ const excludeFromSequentialNftCollectionHelp = () => {
 
 watch(() => form.value.commitment, (commitment) => {
   if (!commitment) {
-    return form.value.commitmentFormat = 'decimal' // 
+    return form.value.commitmentFormat = 'decimal' //
   }
   if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
     form.value.commitmentFormat = 'hex'
@@ -302,7 +304,46 @@ watch(() => form.value.excludeFromSequentialNftCollection, (exclude) => {
   }
 })
 
+onBeforeMount(() => {
+  Dropzone.options.nftAssetsDropzone = {
+    maxFiles: 20,
+    autoProcessQueue: false,
+    init: function () {
+      dropzone.value = this
+      this.on('addedfile', (file: any) => {
+        console.log(file)
+      })
+      this.on('accept', (file: any) => {
+        console.log(file)
+      })
+    }
+  }
+})
+
 onMounted(() => {
   initCommitment()
+  nextTick(() => {
+    Dropzone.discover();
+  });
 })
+
 </script>
+
+
+<style>
+.dropzone {
+  border: 2px dashed rgb(129 123 123 / 80%);
+  padding: unset;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.dropzone .dz-preview {
+  margin: .75em;
+}
+
+.dropzone .dz-preview.dz-image-preview {
+  background: #fff0;
+}
+</style>
