@@ -22,6 +22,7 @@
     "@walletconnect/sign-client": "^2.10.1",
     "cashscript": "^0.8.0",
     "dotenv": "^16.3.1",
+    "dropzone": "^6.0.0-beta.2",
     "express-throttle-bandwidth": "^1.0.1",
     "mainnet-js": "^2.3.0",
     "multer": "^1.4.5-lts.1",
@@ -33,7 +34,9 @@
   },
   "devDependencies": {
     "@quasar/app-webpack": "^3.0.0",
+    "@types/dropzone": "^5.7.8",
     "@types/jest": "^29.5.4",
+    "@types/jquery": "^3.5.29",
     "@types/node": "^12.20.21",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
