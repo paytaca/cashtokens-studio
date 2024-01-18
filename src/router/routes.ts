@@ -14,6 +14,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'create-token', path: 'tokens/create', component: () => import('pages/issuer/CreateToken.vue') },
       { name: 'create-nft-collection', path: 'tokens/create/nft-collection', component: () => import('pages/issuer/CreateNftCollection.vue') },
       { name: 'import-auth-utxo', path: 'tokens/import-auth-utxo', component: () => import('pages/issuer/ImportAuthUtxo.vue') },
+      { name: 'mint-child-nft', path: 'tokens/:tokenId/mint-child', component: () => import('pages/issuer/MintChildNft.vue') },
     ],
   },
   {
@@ -24,6 +25,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
+
       { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
     ],
   },
