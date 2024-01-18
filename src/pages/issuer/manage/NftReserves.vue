@@ -89,6 +89,11 @@
                         @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
+                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
+                        :to="`/issuer/tokens/${identity.token.tokenId}/mint-child`" clickable v-close-popup
+                        @click.stop="ui.tokenInView = identity">
+                        Mint Child NFT Page
+                      </q-item>
                       <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
                         Deploy a Minting Contract
