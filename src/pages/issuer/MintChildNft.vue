@@ -15,7 +15,7 @@
         <div class="row" :class="$q.screen.width < $q.screen.sizes.sm ? 'column reverse' : ''">
           <div class="col-xs-12 col-sm-5" :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : ''">
             <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
-              style="max-height:30em;overflow-y: scroll"></form>
+              style="min-height:100%;max-height:30em;overflow-y: scroll"></form>
           </div>
           <div class="col-xs-12 col-sm-7 ">
             <div class="row items-center flex justify-between">
@@ -30,45 +30,65 @@
                   </template>
                 </q-input>
               </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+              <!-- <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <label>Commitment of last mint</label>
-                <q-input :model-value="form.commitmentOfLastMint || '<none>'" filled outlined dense disable
+                <q-input :model-value="form.commitmentOfLastMint || '<none>'" dense outlined readonly
                   style="max-width: max-content;">
                 </q-input>
-              </div>
+              </div> -->
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Capability <sup><code>{{ form.capability }}</code></sup></label>
-                <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
-                  <q-option-group name="preferred_genre" v-model="form.capability" :options="[
-                    { value: 'minting', label: 'Minting' },
-                    { value: 'mutable', label: 'Mutable' },
-                    { value: 'none', label: 'None' }
-                  ]" color="primary" inline />
+                <div class="row q-gutter-x-sm items-center">
+                  <div class="col q-gutter-y-sm">
+                    <label>Commitment</label>
+                    <q-input v-if="form.capability !== 'minting'" v-model="form.commitment"
+                      :placeholder="tokenCommmitmentPlaceholderText"
+                      :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
+                      dense outlined>
+                      <template v-slot:prepend>
+                        <q-btn :label="form.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
+                          no-caps :icon-right="form.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+                      </template>
+                      <template v-slot:append>
+                        <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
+                          :class="$q.dark.isActive ? '' : 'text-black'"
+                          :label="form.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
+                          <q-tooltip>
+                            {{
+                              form.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                              : 'Click to convert value to a number'
+                            }}
+                          </q-tooltip>
+                        </q-btn>
+                      </template>
+                    </q-input>
+                  </div>
+
+                  <div class="col q-gutter-y-xs">
+                    <label>Capability <code>{{ form.capability.value }}</code></label>
+                    <!-- :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'" -->
+                    <q-select :options="[
+                      { value: 'none', label: 'None' },
+                      { value: 'minting', label: 'Minting' },
+                      { value: 'mutable', label: 'Mutable' }
+                    ]" v-model="form.capability" dense outlined class="q-mb-xs"></q-select>
+
+                  </div>
                 </div>
-              </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Commitment ( E.g. {{ form.commitment }} to indicate the NFT item id )</label>
-                <q-input v-if="form.capability !== 'minting'" v-model="form.commitment"
-                  :placeholder="tokenCommmitmentPlaceholderText"
-                  :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
-                  dense outlined>
-                  <template v-slot:prepend>
-                    <q-btn :label="form.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
-                      :icon-right="form.commitmentFormat === 'decimal' ? 'pin' : undefined" />
-                  </template>
-                  <template v-slot:append>
-                    <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
-                      :class="$q.dark.isActive ? '' : 'text-black'"
-                      :label="form.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
-                      <q-tooltip>
-                        {{
-                          form.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                          : 'Click to convert value to a number'
-                        }}
-                      </q-tooltip>
-                    </q-btn>
-                  </template>
-                </q-input>
+                <!-- <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                  <label>Capability <sup><code>{{ form.capability }}</code></sup></label>
+                  :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'"
+                  <div class="q-pa-sm border rounded-borders" style="border: solid 1px">
+                    <q-option-group name="minting_capability" v-model="form.capability" :options="[
+                      { value: 'minting', label: 'Minting' },
+                      { value: 'mutable', label: 'Mutable' },
+                      { value: 'none', label: 'None' }
+                    ]" color="primary" inline class="q-pa-xs" />
+                  </div>
+                </div> -->
+                <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                  <label>How many NFTs?</label>
+                  <q-input v-model="form.quantity" outlined dense clearable></q-input>
+                </div>
               </div>
 
             </div>
@@ -119,6 +139,7 @@ const form = ref<{
   commitmentFormat: 'decimal' | 'hex',
   excludeFromSequentialNftCollection: boolean,
   uploadNftAsset: boolean, NftAssetUploadUris: any
+  quantity: number,
 }>({
   capability: NFTCapability.none,
   commitmentOfLastMint: '', // Commitment of last mint (stored as commitment of the minter)
@@ -127,7 +148,8 @@ const form = ref<{
   commitmentFormat: 'decimal',
   excludeFromSequentialNftCollection: false,
   uploadNftAsset: false,
-  NftAssetUploadUris: null
+  NftAssetUploadUris: null,
+  quantity: 1,
 })
 
 const tokenCommmitmentPlaceholderText = computed<string>(() => {
