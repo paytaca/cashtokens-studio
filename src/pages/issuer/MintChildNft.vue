@@ -43,7 +43,7 @@
           <div class="col-xs-12 col-sm-5 justify-center "
             :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
             <div class="row flex justify-center">
-              <q-img
+              <q-img :id="token.commitment"
                 src="https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png"
                 fit="scale-down" style="max-height: 250px; max-width:250px" />
             </div>
@@ -152,8 +152,6 @@
               </div>
             </div>
           </q-expansion-item>
-
-
         </div>
       </div>
     </div>
@@ -200,7 +198,7 @@ import { shortenTokenId } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
-
+const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -401,28 +399,52 @@ watch(() => state.value.excludeFromSequentialNftCollection, (exclude) => {
 
 onBeforeMount(() => {
   Dropzone.options.nftAssetsDropzone = {
-    maxFiles: 20,
+    maxFiles: 2,
     autoProcessQueue: false,
+    addRemoveLinks: true,
     init: function () {
       dropzone.value = this
       this.on('addedfile', (file: any) => {
-        console.log(file)
+        console.log(dropzone.value)
         if (file.type === 'application/json') {
           const fileReader = new FileReader()
           fileReader.onload = (e) => {
             const content: any = e.target?.result
+            console.log('content', content)
             try {
               attributes.value = JSON.parse(content)
-
             } catch (error) {
-
+              console.log(error)
             }
-
           }
-
           fileReader.readAsText(file)
+        } else {
+          for (const f of dropzone.value!.files) {
+            if (f.name !== file.name) {
+              dropzone.value?.removeFile(f)
+            }
+          }
+        }
+        if (file.type.includes('image')) {
+          const fileReader = new FileReader()
+          fileReader.onload = (e) => {
+            const dataURL: any = e.target?.result
+            const element: HTMLImageElement | null = document.querySelector('div[role="img"][id="1"] img')
+            if (element) {
+              element.src = dataURL
+            }
+          }
+          fileReader.readAsDataURL(file)
         }
       })
+
+      this.on('removedfile', () => {
+        const element: HTMLImageElement | null = document.querySelector('div[role="img"][id="1"] img')
+        if (element) {
+          element.src = 'https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png'
+        }
+      })
+
       this.on('accept', (file: any) => {
         console.log(file)
       })
@@ -444,7 +466,7 @@ onMounted(() => {
 </script>
 
 
-<style>
+<style lang="scss">
 .dropzone {
   border: 2px dashed rgb(129 123 123 / 80%);
   padding: unset;
@@ -459,5 +481,9 @@ onMounted(() => {
 
 .dropzone .dz-preview.dz-image-preview {
   background: #fff0;
+}
+
+.dropzone a.dz-remove {
+  color: $negative;
 }
 </style>
