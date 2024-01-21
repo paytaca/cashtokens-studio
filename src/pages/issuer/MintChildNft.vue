@@ -37,18 +37,18 @@
               </template>
             </form>
           </div>
-          <div class="col-xs-12">
-            {{ nftType.extensions!.attributes }}
-          </div>
+
         </div>
-        <div class="row rounded-borders q-pa-lg" :class="$q.screen.width < $q.screen.sizes.sm ? 'column reverse' : ''"
-          style="border: 1px solid grey;">
-          <div class="col-xs-12 col-sm-5" :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : ''">
-            <q-img
-              src="https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png"
-              fit="scale-down" style="max-height: 250px; max-width:250px" />
+        <div class="row rounded-borders q-pa-lg" style="border: 1px solid grey;">
+          <div class="col-xs-12 col-sm-5 justify-center "
+            :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
+            <div class="row flex justify-center">
+              <q-img
+                src="https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png"
+                fit="scale-down" style="max-height: 250px; max-width:250px" />
+            </div>
           </div>
-          <div class="col-xs-12 col-sm-7 ">
+          <div class="col-xs-12 col-sm-7 q-mt-lg">
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <label>Recipient (Defaults to your token address)</label>
@@ -60,12 +60,6 @@
                   </template>
                 </q-input>
               </div>
-              <!-- <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Commitment of last mint</label>
-                <q-input :model-value="nftType.commitmentOfLastMint || '<none>'" dense outlined readonly
-                  style="max-width: max-content;">
-                </q-input>
-              </div> -->
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <div class="text-h5">Token</div>
                 <div class="row q-gutter-x-sm items-center">
@@ -110,27 +104,56 @@
                   <q-input v-model="state.quantity" outlined dense clearable style="width:fit-content"></q-input>
                 </div>
               </div>
-              <div class="text-h5 q-mb-sm">Metadata</div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Name</label>
-                <q-input v-model="nftType.name" outlined dense clearable></q-input>
-              </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Description</label>
-                <q-input v-model="nftType.description" outlined dense clearable></q-input>
-              </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Icon URI</label>
-                <q-input v-model="nftType.uris!.icon" outlined dense clearable></q-input>
-              </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Asset URI / Image URI</label>
-                <q-input v-model="nftType.uris!.asset" outlined dense clearable></q-input>
-              </div>
-              <div class="text-h5 q-mb-sm">Attributes <q-btn flat color="primary" icon="add"
-                  @click="attributeDialogState.dialog = !attributeDialogState.dialog" /></div>
+
             </div>
           </div>
+          <q-expansion-item label="Metadata" class="col-xs-12">
+            <div>
+              <div class="row">
+                <div class="col-xs-12 col-sm-6 q-px-lg">
+                  <div class="row items-center flex justify-between">
+                    <div class="text-h5 q-mb-lg">NFT Type</div>
+                    <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                      <label>Name</label>
+                      <q-input v-model="nftType.name" outlined dense clearable></q-input>
+                    </div>
+                    <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                      <label>Description</label>
+                      <q-input v-model="nftType.description" outlined dense clearable></q-input>
+                    </div>
+                    <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                      <label>Icon URI</label>
+                      <q-input v-model="nftType.uris!.icon" outlined dense clearable></q-input>
+                    </div>
+                    <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                      <label>Asset URI / Image URI</label>
+                      <q-input v-model="nftType.uris!.asset" outlined dense clearable></q-input>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xs-12 col-sm-6 q-px-lg">
+                  <div class="row items-center flex justify-between">
+                    <div class="text-h5 q-mb-lg">Attributes <q-btn flat color="primary" icon="add" size="xs"
+                        @click="addAttribute" />
+                    </div>
+                  </div>
+                  <div class="row items-center flex justify-between">
+                    <div v-for="attrKey, i in Object.keys(attributes)"
+                      class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right" :key="i">
+                      <label>{{ attrKey }}</label>
+                      <q-input v-model="attributes[attrKey]" outlined dense clearable>
+                        <template v-slot:after>
+                          <q-icon name="remove" @click.stop="() => delete attributes[attrKey]" color="negative"></q-icon>
+                        </template>
+                      </q-input>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </q-expansion-item>
+
+
         </div>
       </div>
     </div>
@@ -155,7 +178,7 @@
         </q-card-section>
         <q-card-actions align="right" class="text-primary">
           <q-btn flat label="Cancel" @click="clearAttribute" v-close-popup />
-          <q-btn flat label="Ok" v-close-popup @click="addAttribute" />
+          <q-btn flat label="Ok" v-close-popup @click="confirmAddAttribute" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -235,7 +258,7 @@ const state = ref<{
 
 const attributes = ref<any>({})
 
-const attributeDialogState = ref<{ dialog: boolean, key: string, value: string | { [k: string]: string } }>({
+const attributeDialogState = ref<{ dialog: boolean, key: string, value: string }>({
   dialog: false,
   key: '',
   value: ''
@@ -297,6 +320,11 @@ const clearAttribute = () => {
 }
 
 const addAttribute = () => {
+  clearAttribute()
+  attributeDialogState.value.dialog = !attributeDialogState.value.dialog
+}
+
+const confirmAddAttribute = () => {
   if (attributeDialogState.value.key && attributeDialogState.value.value) {
     attributes.value = { ...attributes.value, [attributeDialogState.value.key]: attributeDialogState.value.value }
   }
@@ -379,6 +407,21 @@ onBeforeMount(() => {
       dropzone.value = this
       this.on('addedfile', (file: any) => {
         console.log(file)
+        if (file.type === 'application/json') {
+          const fileReader = new FileReader()
+          fileReader.onload = (e) => {
+            const content: any = e.target?.result
+            try {
+              attributes.value = JSON.parse(content)
+
+            } catch (error) {
+
+            }
+
+          }
+
+          fileReader.readAsText(file)
+        }
       })
       this.on('accept', (file: any) => {
         console.log(file)
