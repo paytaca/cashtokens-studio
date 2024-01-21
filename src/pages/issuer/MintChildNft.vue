@@ -5,7 +5,7 @@
         <div class="row items-center q-gutter-sm page-header q-mb-lg">
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
           <span class="text-h5">
-            Mint {{ ui.tokenInView?.tokenUris?.icon || ui.tokenInView?.tokenCategory?.symbol }} NFT
+            Mint {{ ui.minterInView?.tokenUris?.icon || ui.minterInView?.tokenCategory?.symbol }} NFT
           </span>
         </div>
         <div class="row items-center q-gutter-sm q-mb-md">
@@ -19,47 +19,32 @@
               </tr>
               <tr>
                 <td>Commitment of last mint:</td>
-                <td><span class="text-light">{{ state.commitmentOfLastMint || '<none>' }}</span></td>
+                <td><span class="text-light">{{ options.commitmentOfLastMint || '<none>' }}</span></td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <div class="row q-mb-lg">
-          <div class="col-xs-12">
-            <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
-              style="min-height:100%;max-height:30em;overflow-y: scroll">
-              <template id="dz-button-label">
-                <div class="row justify-center">
-                  <div class="col-xs-12">Drop NFT asset(s) here</div>
-                  <div class="col-xs-12"><q-icon name="attach_file"></q-icon></div>
-                </div>
-              </template>
-            </form>
-          </div>
-
-        </div>
         <div class="row rounded-borders q-pa-lg" style="border: 1px solid grey;">
           <div class="col-xs-12 col-sm-5 justify-center "
             :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
             <div class="row flex justify-center">
-              <q-img :id="token.commitment"
+              <!-- <q-img :id="token.commitment"
                 src="https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png"
-                fit="scale-down" style="max-height: 250px; max-width:250px" />
+                fit="scale-down" style="max-height: 250px; max-width:250px" /> -->
+              <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
+                style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
+                <template id="dz-button-label">
+                  <div class="row justify-center">
+                    <div class="col-xs-12">Drop NFT asset(s) here</div>
+                    <div class="col-xs-12"><q-icon name="attach_file"></q-icon></div>
+                  </div>
+                </template>
+              </form>
             </div>
           </div>
-          <div class="col-xs-12 col-sm-7 q-mt-lg">
+          <div class="col-xs-12 col-sm-7">
             <div class="row items-center flex justify-between">
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Recipient (Defaults to your token address)</label>
-                <q-input v-model="state.recipient" outlined dense clearable>
-                  <template v-slot:append>
-                    <q-btn v-if="!state.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
-                      color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
-                      @click="state.recipient = user.walletTokenAddress!" />
-                  </template>
-                </q-input>
-              </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <div class="text-h5">Token</div>
                 <div class="row q-gutter-x-sm items-center">
@@ -70,16 +55,16 @@
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
                       dense outlined>
                       <template v-slot:prepend>
-                        <q-btn :label="state.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
-                          no-caps :icon-right="state.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+                        <q-btn :label="options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
+                          no-caps :icon-right="options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
                       </template>
                       <template v-slot:append>
                         <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
                           :class="$q.dark.isActive ? '' : 'text-black'"
-                          :label="state.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
+                          :label="options.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
                           <q-tooltip>
                             {{
-                              state.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                              options.commitmentFormat === 'decimal' ? 'Click to value to hex'
                               : 'Click to convert value to a number'
                             }}
                           </q-tooltip>
@@ -101,13 +86,23 @@
                 </div>
                 <div class="q-gutter-y-sm">
                   <label>Number of NFTs to mint for this type</label>
-                  <q-input v-model="state.quantity" outlined dense clearable style="width:fit-content"></q-input>
+                  <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"></q-input>
                 </div>
               </div>
-
+              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
+                <div class="text-h5">Send To</div>
+                <label>Recipient (Defaults to your token address)</label>
+                <q-input v-model="options.recipient" outlined dense clearable>
+                  <template v-slot:append>
+                    <q-btn v-if="!options.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
+                      color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
+                      @click="options.recipient = user.walletTokenAddress!" />
+                  </template>
+                </q-input>
+              </div>
             </div>
           </div>
-          <q-expansion-item label="Metadata" class="col-xs-12">
+          <q-expansion-item label="Metadata" class="col-xs-12" style="border-top: 1px solid grey;">
             <div>
               <div class="row">
                 <div class="col-xs-12 col-sm-6 q-px-lg">
@@ -133,17 +128,18 @@
                 </div>
                 <div class="col-xs-12 col-sm-6 q-px-lg">
                   <div class="row items-center flex justify-between">
-                    <div class="text-h5 q-mb-lg">Attributes <q-btn flat color="primary" icon="add" size="xs"
-                        @click="addAttribute" />
+                    <div class="text-h5 q-mb-lg">NftAttributes <q-btn flat color="primary" icon="add" size="xs"
+                        @click="addNftAttribute" />
                     </div>
                   </div>
                   <div class="row items-center flex justify-between">
-                    <div v-for="attrKey, i in Object.keys(attributes)"
+                    <div v-for="attrKey, i in Object.keys(nftAttributes)"
                       class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right" :key="i">
                       <label>{{ attrKey }}</label>
-                      <q-input v-model="attributes[attrKey]" outlined dense clearable>
+                      <q-input v-model="nftAttributes[attrKey]" outlined dense clearable>
                         <template v-slot:after>
-                          <q-icon name="remove" @click.stop="() => delete attributes[attrKey]" color="negative"></q-icon>
+                          <q-icon name="remove" @click.stop="() => delete nftAttributes[attrKey]"
+                            color="negative"></q-icon>
                         </template>
                       </q-input>
                     </div>
@@ -152,31 +148,54 @@
               </div>
             </div>
           </q-expansion-item>
+          <q-expansion-item label="Advanced Options" class="col-xs-12" style="border-top: 1px solid grey;">
+            <div class="text-left">
+              <q-checkbox v-model="options.excludeFromSequentialNftCollection"
+                label="Exclude from Sequential NFT Collection" />
+              <q-icon name="info" class="q-ml-sm" @click.stop="excludeFromSequentialNftCollectionHelp">
+                <q-tooltip>
+                  If checked,the minter won't keep track on the commitment of this NFT. Click for more info.
+                </q-tooltip>
+              </q-icon>
+            </div>
+            <div class="text-left">
+              <q-checkbox v-model="options.deferRegistryPublication"
+                label="Defer registry publication (Recommended if your minting multiple NFTs)" />
+              <q-icon name="info" class="q-ml-sm" @click.stop="deferRegistryPublicationHelp">
+                <q-tooltip>
+                  If checked,the NFT metadata will be cached and registry update won't be published on-chain
+                </q-tooltip>
+              </q-icon>
+            </div>
+          </q-expansion-item>
+          <div class="col-xs-12 text-right">
+            <q-btn color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
+          </div>
         </div>
       </div>
     </div>
-    <q-dialog v-model="attributeDialogState.dialog" v-close-on-popup>
+    <q-dialog v-model="nftAttributeDialogData.dialog" v-close-on-popup>
       <q-card style="min-width: 350px">
         <q-card-section>
-          <div class="text-h6">Add NFT Attribute</div>
+          <div class="text-h6">Add NFT NftAttribute</div>
         </q-card-section>
         <q-card-section class="q-pt-none">
           <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-lg-9">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Attribute Name</label>
-                <q-input v-model="attributeDialogState.key" outlined dense clearable></q-input>
+                <label>NftAttribute Name</label>
+                <q-input v-model="nftAttributeDialogData.key" outlined dense clearable></q-input>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <label>Value</label>
-                <q-input v-model="attributeDialogState.value" outlined dense clearable></q-input>
+                <q-input v-model="nftAttributeDialogData.value" outlined dense clearable></q-input>
               </div>
             </div>
           </div>
         </q-card-section>
         <q-card-actions align="right" class="text-primary">
-          <q-btn flat label="Cancel" @click="clearAttribute" v-close-popup />
-          <q-btn flat label="Ok" v-close-popup @click="confirmAddAttribute" />
+          <q-btn flat label="Cancel" @click="clearNftAttribute" v-close-popup />
+          <q-btn flat label="Ok" v-close-popup @click="confirmAddNftAttribute" />
         </q-card-actions>
       </q-card>
     </q-dialog>
@@ -185,7 +204,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
-import { NFTCapability, NftType, TokenI } from 'mainnet-js';
+import { NFTCapability, NftType, TokenI, binToHex, sha256 } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
 import { CashToken } from 'src/app';
@@ -223,10 +242,10 @@ const nftType = ref<NftType>({
     image: '',
     asset: ''
   },
-  extensions: {
-    attributes: {}
-  }
+  extensions: {}
 })
+
+const nftAttributes = ref<any>({})
 
 // utxo
 const token = ref<TokenI>({
@@ -236,27 +255,35 @@ const token = ref<TokenI>({
   commitment: ''
 })
 
-const state = ref<{
+const options = ref<{
+  collectionType: NftCollectionType,
   commitmentOfLastMint: string,
   recipient: string,
   commitmentFormat: 'decimal' | 'hex',
   excludeFromSequentialNftCollection: boolean,
+  deferRegistryPublication: boolean,
   uploadNftAsset: boolean,
+  nftAssetDataURL: string,
+  nftAssetFileType: string,
   NftAssetUploadUris: any
   quantity: number,
 }>({
+  collectionType: 'SequentialNftCollection',
   commitmentOfLastMint: '',
   recipient: '',
   commitmentFormat: 'decimal',
   excludeFromSequentialNftCollection: false,
+  deferRegistryPublication: true,
   uploadNftAsset: false,
+  nftAssetDataURL: '',
+  nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
   quantity: 1,
 })
 
-const attributes = ref<any>({})
 
-const attributeDialogState = ref<{ dialog: boolean, key: string, value: string }>({
+
+const nftAttributeDialogData = ref<{ dialog: boolean, key: string, value: string }>({
   dialog: false,
   key: '',
   value: ''
@@ -275,11 +302,11 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
  */
 const nftCommitment = computed<string>(() => {
   let commitment = token.value.commitment
-  if (commitment && state.value.commitmentFormat === 'decimal') {
+  if (commitment && options.value.commitmentFormat === 'decimal') {
     commitment = convertBigIntToHexLE(BigInt(commitment))
   }
 
-  if (commitment && state.value.commitmentFormat === 'hex') {
+  if (commitment && options.value.commitmentFormat === 'hex') {
     if (nftCollectionType.value === 'SequentialNftCollection') {
       commitment = parseInt(commitment, 16).toString()
       commitment = convertBigIntToHexLE(BigInt(commitment))
@@ -289,17 +316,15 @@ const nftCommitment = computed<string>(() => {
 })
 
 const disableMint = computed(() => {
-  if (!state.value.recipient) {
+  if (!options.value.recipient) {
     return true
   }
   console.log(nftAssetUploader.value)
-  if (state.value.uploadNftAsset && nftAssetUploader.value.queuedFiles?.length <= 0) {
+  if (options.value.uploadNftAsset && nftAssetUploader.value.queuedFiles?.length <= 0) {
     return true
   }
   return false
 })
-
-
 
 const onNftAssetUploaded = (info: any) => {
   try {
@@ -311,56 +336,55 @@ const onNftAssetUploaded = (info: any) => {
   }
 }
 
-
-const clearAttribute = () => {
-  attributeDialogState.value.key = ''
-  attributeDialogState.value.value = '' as string
+const clearNftAttribute = () => {
+  nftAttributeDialogData.value.key = ''
+  nftAttributeDialogData.value.value = '' as string
 }
 
-const addAttribute = () => {
-  clearAttribute()
-  attributeDialogState.value.dialog = !attributeDialogState.value.dialog
+const addNftAttribute = () => {
+  clearNftAttribute()
+  nftAttributeDialogData.value.dialog = !nftAttributeDialogData.value.dialog
 }
 
-const confirmAddAttribute = () => {
-  if (attributeDialogState.value.key && attributeDialogState.value.value) {
-    attributes.value = { ...attributes.value, [attributeDialogState.value.key]: attributeDialogState.value.value }
+const confirmAddNftAttribute = () => {
+  if (nftAttributeDialogData.value.key && nftAttributeDialogData.value.value) {
+    nftAttributes.value = { ...nftAttributes.value, [nftAttributeDialogData.value.key]: nftAttributeDialogData.value.value }
   }
 }
 
 
 const convertCommitment = () => {
-  if (token.value.commitment && state.value.commitmentFormat === 'decimal') {
+  if (token.value.commitment && options.value.commitmentFormat === 'decimal') {
     token.value.commitment = BigInt(token.value.commitment).toString(16)
     token.value.commitment = token.value.commitment.length < 2 ? token.value.commitment.padStart(2, '0') : token.value.commitment
-    state.value.commitmentFormat = 'hex'
-  } else if (token.value.commitment && state.value.commitmentFormat === 'hex') {
+    options.value.commitmentFormat = 'hex'
+  } else if (token.value.commitment && options.value.commitmentFormat === 'hex') {
     token.value.commitment = parseInt(token.value.commitment, 16).toString()
-    state.value.commitmentFormat = 'decimal'
+    options.value.commitmentFormat = 'decimal'
   }
 }
 
 const initCommitment = () => {
-  if (ui.tokenInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
-    const commitmentOfLastMint = convertHexLEtoBigInt(ui.tokenInView?.token?.commitment)
-    state.value.commitmentOfLastMint = commitmentOfLastMint.toString()
+  if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
+    const commitmentOfLastMint = convertHexLEtoBigInt(ui.minterInView?.token?.commitment)
+    options.value.commitmentOfLastMint = commitmentOfLastMint.toString()
     token.value.commitment = (commitmentOfLastMint + BigInt(1)).toString()
-    state.value.commitmentFormat = 'decimal'
+    options.value.commitmentFormat = 'decimal'
   } else {
     token.value.commitment = '1'
-    state.value.commitmentFormat = 'decimal'
+    options.value.commitmentFormat = 'decimal'
   }
 }
 
 const initstate = () => {
-  if (ui.tokenInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
-    const commitmentOfLastMint = convertHexLEtoBigInt(ui.tokenInView?.token?.commitment)
-    state.value.commitmentOfLastMint = commitmentOfLastMint.toString()
+  if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
+    const commitmentOfLastMint = convertHexLEtoBigInt(ui.minterInView?.token?.commitment)
+    options.value.commitmentOfLastMint = commitmentOfLastMint.toString()
     token.value.commitment = (commitmentOfLastMint + BigInt(1)).toString()
-    state.value.commitmentFormat = 'decimal'
+    options.value.commitmentFormat = 'decimal'
   } else {
     token.value.commitment = '1'
-    state.value.commitmentFormat = 'decimal'
+    options.value.commitmentFormat = 'decimal'
   }
 }
 
@@ -371,25 +395,71 @@ const excludeFromSequentialNftCollectionHelp = () => {
   })
 }
 
+const deferRegistryPublicationHelp = () => {
+  ui.setStatusMessage({
+    statusMessage: 'If checked, the NFT metadata will be cached but minting won\'t include registry publication on-chain.',
+    statusMessageType: 'info'
+  })
+}
+
+const confirmMint = async () => {
+  console.log('minter', ui.minterInView)
+  console.log('quantity', options.value.quantity)
+  if (ui.minterInView) {
+    try {
+      const tx = await ui.minterInView.mintChildren({
+        capability: token.value.capability!,
+        commitment: token.value.commitment!,
+        commitmentFormat: options.value.commitmentFormat,
+        nftCollectionType: options.value.collectionType,
+        recipient: options.value.recipient,
+        excludeFromSequentialNftCollection: options.value.excludeFromSequentialNftCollection,
+        quantity: options.value.quantity
+      })
+      if (tx) {
+        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...form.value })
+        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'CashToken.mintChild',
+          timestamp: new Date().getTime(),
+          successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
+        })
+        ui.setStatusMessage({
+          statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
+          statusMessageType: 'success',
+          statusMessageTxid: tx
+        })
+      }
+    } catch (error: any) {
+      ui.setStatusMessage({
+        statusMessage: error,
+        statusMessageType: 'error',
+      })
+      $q.notify({ type: 'negative', message: 'Error!' + error.message })
+    }
+  }
+}
+
 watch(() => token.value.commitment, (commitment) => {
   if (!commitment) {
-    return state.value.commitmentFormat = 'decimal' //
+    return options.value.commitmentFormat = 'decimal' //
   }
   if (/^(?!^\d+$)[0-9A-Fa-f]+$/.test(commitment)) {
-    state.value.commitmentFormat = 'hex'
+    options.value.commitmentFormat = 'hex'
   }
 })
 
 watch(() => token.value.capability, (c) => {
   if (c === NFTCapability.minting || c === NFTCapability.mutable) {
-    state.value.excludeFromSequentialNftCollection = true
+    options.value.excludeFromSequentialNftCollection = true
   } else {
-    state.value.excludeFromSequentialNftCollection = false
+    options.value.excludeFromSequentialNftCollection = false
   }
 
 })
 
-watch(() => state.value.excludeFromSequentialNftCollection, (exclude) => {
+watch(() => options.value.excludeFromSequentialNftCollection, (exclude) => {
   if (exclude) {
     token.value.commitment = ''
   } else {
@@ -405,14 +475,15 @@ onBeforeMount(() => {
     init: function () {
       dropzone.value = this
       this.on('addedfile', (file: any) => {
-        console.log(dropzone.value)
+        console.log('FILE', file)
+        // binToHex(sha256.hash(utf8ToBin(this.getContent())))
+        const fileReader = new FileReader()
         if (file.type === 'application/json') {
-          const fileReader = new FileReader()
           fileReader.onload = (e) => {
             const content: any = e.target?.result
             console.log('content', content)
             try {
-              attributes.value = JSON.parse(content)
+              nftAttributes.value = JSON.parse(content)
             } catch (error) {
               console.log(error)
             }
@@ -424,24 +495,23 @@ onBeforeMount(() => {
               dropzone.value?.removeFile(f)
             }
           }
+
+          fileReader.onload = function () {
+            const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
+            const uint8Array = new Uint8Array(arrayBuffer);
+            console.log('hash', binToHex(sha256.hash(uint8Array)))
+          };
+
+
+          fileReader.readAsArrayBuffer(file);
         }
-        if (file.type.includes('image')) {
-          const fileReader = new FileReader()
-          fileReader.onload = (e) => {
-            const dataURL: any = e.target?.result
-            const element: HTMLImageElement | null = document.querySelector('div[role="img"][id="1"] img')
-            if (element) {
-              element.src = dataURL
-            }
-          }
-          fileReader.readAsDataURL(file)
-        }
+
       })
 
-      this.on('removedfile', () => {
-        const element: HTMLImageElement | null = document.querySelector('div[role="img"][id="1"] img')
-        if (element) {
-          element.src = 'https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png'
+      this.on('removedfile', (file) => {
+        options.value.nftAssetDataURL = ''
+        if (file.type === 'application/json') {
+          nftAttributes.value = {}
         }
       })
 
@@ -454,7 +524,7 @@ onBeforeMount(() => {
 
 onMounted(() => {
   initCommitment()
-  state.value.recipient = user.walletTokenAddress
+  options.value.recipient = user.walletTokenAddress
   nextTick(() => {
     Dropzone.discover();
     if (document.querySelector('.dz-button')) {
@@ -485,5 +555,6 @@ onMounted(() => {
 
 .dropzone a.dz-remove {
   color: $negative;
+  margin-top: 1em;
 }
 </style>
