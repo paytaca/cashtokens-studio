@@ -1,5 +1,6 @@
-import { Network } from "mainnet-js"
+import { Network, Wallet } from "mainnet-js"
 import { IdentityHistory } from "./bcmr/bcmr-v2.schema"
+import { TransactionSigner } from "./types"
 
 export type NFTProjectPublishingOptions = {
   tokenId: string,
@@ -27,10 +28,10 @@ export class CTSRegistry {
   CTS_API_KEY_CUSTOM_HEADER?: string
   CTS_API_KEY?: string
   constructor(){
-    if (!process.env.CTS_REGISTRY_API || !process.env.CTS_API_KEY_CUSTOM_HEADER || !process.env.CTS_API_KEY) throw new Error('CTS Registry required envs not set')
+    if (!process.env.CTS_REGISTRY_API) throw new Error('CTS Registry required envs not set')
     this.apiBaseUri = process.env.CTS_REGISTRY_API
   }
-  
+
   /**
    * Add the new identity to registry
    */
@@ -50,5 +51,23 @@ export class CTSRegistry {
     } catch (error) {
       console.log(error)
     }
+  }
+
+  async createWorkspace(signer: TransactionSigner, message: string){
+    const signedMessage = await signer.signMessage(message)
+    try {
+      const headers = new Headers();
+      headers.append('Content-Type', 'application/json');
+
+      const resp = await fetch(`${this.apiBaseUri}v1/workspace/temp/nfts`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({message: message, sig: signedMessage})
+      })
+      console.log(await resp.json())
+    } catch (error) {
+      throw error
+    }
+
   }
 }
