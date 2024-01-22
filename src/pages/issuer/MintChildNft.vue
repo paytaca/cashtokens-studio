@@ -50,8 +50,7 @@
                 <div class="row q-gutter-x-sm items-center">
                   <div class="col q-gutter-y-sm">
                     <label>Commitment</label>
-                    <q-input v-if="token.capability !== 'minting'" v-model="token.commitment"
-                      :placeholder="tokenCommmitmentPlaceholderText"
+                    <q-input v-model="token.commitment" :placeholder="tokenCommmitmentPlaceholderText"
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
                       dense outlined>
                       <template v-slot:prepend>
@@ -70,24 +69,44 @@
                           </q-tooltip>
                         </q-btn>
                       </template>
+                      <template v-slot:hint>
+                        <div v-if="token.commitment && options.commitmentFormat === 'hex'"
+                          class="row justify-end items-center">
+                          <code>{{ convertBigIntToHexLE(BigInt(parseInt(token.commitment, 16))) }}</code>
+                          <i>(Raw commitment value)
+                            <q-icon name="info">
+                              <q-tooltip>The actual value on-chain.</q-tooltip>
+                            </q-icon>
+                          </i>
+                        </div>
+                        <div v-if="token.commitment && options.commitmentFormat === 'decimal'"
+                          class="row justify-end items-center">
+                          <code>{{ convertBigIntToHexLE(BigInt(token.commitment)) }}</code>
+                          <i>(Raw commitment value)
+                            <q-icon name="info">
+                              <q-tooltip>The actual value on-chain.</q-tooltip>
+                            </q-icon>
+                          </i>
+                        </div>
+                      </template>
                     </q-input>
                   </div>
-
-                  <div class="col q-gutter-y-xs">
-                    <label>Capability <code>{{ token.capability }}</code></label>
-                    <!-- :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'" -->
-                    <q-select :options="[
-                      { value: 'none', label: 'None' },
-                      { value: 'minting', label: 'Minting' },
-                      { value: 'mutable', label: 'Mutable' }
-                    ]" v-model="token.capability" dense outlined class="q-mb-xs"></q-select>
-
-                  </div>
                 </div>
-                <div class="q-gutter-y-sm">
-                  <label>Number of NFTs to mint for this type</label>
-                  <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"></q-input>
+                <div class="col-xs-12 q-mt-lg">
+                  <label>Capability <code>{{ token.capability }}</code></label>
+                  <q-select :options="[
+                    { value: 'none', label: 'None' },
+                    { value: 'minting', label: 'Minting' },
+                    { value: 'mutable', label: 'Mutable' }
+                  ]" :model-value="token.capability" v-on:update:model-value="(v) => token.capability = v.value" dense
+                    outlined class="q-mb-xs"></q-select>
                 </div>
+              </div>
+              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
+                <div class="text-h5">Quantity</div>
+                <label>Number of NFTs to mint for this type</label>
+                <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"
+                  :onchange="(v: any) => options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"></q-input>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <div class="text-h5">Send To</div>
@@ -417,7 +436,7 @@ const confirmMint = async () => {
         quantity: options.value.quantity
       })
       if (tx) {
-        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...form.value })
+        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
         $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
         $ebus?.emit('transaction', {
           txid: tx,
