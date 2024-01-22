@@ -69,15 +69,15 @@ export declare interface PaginatedData {
   results: any[]
 }
 
-export type CashTokenTransactionType = 
+export type CashTokenTransactionType =
   'AuthKey.transfer'|
   'AuthKey.createGenesis' |
   'AuthchainIdentity.unguard' |
   'AuthchainIdentity.publishRegistry' |
-  'AuthchainIdentity.releaseTokensFromReserveSupply' | 
+  'AuthchainIdentity.releaseTokensFromReserveSupply' |
   'Cashtoken.mintChild' |
   'Cashtoken.createGenesis' |
-  'GenesisInput.generate' 
+  'GenesisInput.generate'
 
 
 export declare interface CashTokenTransaction {
@@ -102,8 +102,10 @@ export type NftProjectDrop = {
 }
 
 export type SignTransaction = (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?: string) => Promise<any>
+export type SignMessage = (message:any, broadcast?:boolean, prompt?: string) => Promise<any>
 
 export interface TransactionSigner {
   type: 'paytaca' | 'walletconnect',
-  signTransaction: SignTransaction
+  signTransaction: SignTransaction,
+  signMessage: SignMessage
 }
