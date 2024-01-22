@@ -4,6 +4,7 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row items-center q-gutter-sm page-header q-mb-lg">
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
+          Authhead {{ ui.minterInView?.txid }}
           <span class="text-h5">
             Mint {{ ui.minterInView?.tokenUris?.icon || ui.minterInView?.tokenCategory?.symbol }} NFT
           </span>
@@ -70,18 +71,8 @@
                         </q-btn>
                       </template>
                       <template v-slot:hint>
-                        <div v-if="token.commitment && options.commitmentFormat === 'hex'"
-                          class="row justify-end items-center">
-                          <code>{{ convertBigIntToHexLE(BigInt(parseInt(token.commitment, 16))) }}</code>
-                          <i>(Raw commitment value)
-                            <q-icon name="info">
-                              <q-tooltip>The actual value on-chain.</q-tooltip>
-                            </q-icon>
-                          </i>
-                        </div>
-                        <div v-if="token.commitment && options.commitmentFormat === 'decimal'"
-                          class="row justify-end items-center">
-                          <code>{{ convertBigIntToHexLE(BigInt(token.commitment)) }}</code>
+                        <div v-if="token.commitment" class="row justify-end items-center">
+                          <code>{{ nftCommitment }}</code>
                           <i>(Raw commitment value)
                             <q-icon name="info">
                               <q-tooltip>The actual value on-chain.</q-tooltip>
@@ -196,13 +187,13 @@
     <q-dialog v-model="nftAttributeDialogData.dialog" v-close-on-popup>
       <q-card style="min-width: 350px">
         <q-card-section>
-          <div class="text-h6">Add NFT NftAttribute</div>
+          <div class="text-h6">Add Attribute</div>
         </q-card-section>
         <q-card-section class="q-pt-none">
           <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-lg-9">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>NftAttribute Name</label>
+                <label>Name</label>
                 <q-input v-model="nftAttributeDialogData.key" outlined dense clearable></q-input>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
@@ -223,7 +214,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
-import { NFTCapability, NftType, TokenI, binToHex, sha256 } from 'mainnet-js';
+import { NFTCapability, NftType, TokenI, Wallet, binToHex, sha256 } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
 import { CashToken } from 'src/app';
@@ -236,6 +227,7 @@ import { shortenTokenId } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
+import { CTSRegistry } from 'src/app/CTSRegistry';
 const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
@@ -247,7 +239,7 @@ const dropzone = ref<Dropzone>()
 
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
- * SequentialNftCollection, we'll use the default. ParseableNftCollection will be handled
+ * SequentialNftCollection, we'll use the default. ParsableNftCollection will be handled
  * differently
  */
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
@@ -317,20 +309,21 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
 })
 
 /**
- * Actual commitment on chain
+ * Actual commitment on chain. LE
  */
-const nftCommitment = computed<string>(() => {
+const nftCommitment = computed<string | undefined>(() => {
+  if (nftCollectionType.value === 'ParsableNftCollection') {
+    return token.value.commitment
+  }
   let commitment = token.value.commitment
   if (commitment && options.value.commitmentFormat === 'decimal') {
     commitment = convertBigIntToHexLE(BigInt(commitment))
   }
 
   if (commitment && options.value.commitmentFormat === 'hex') {
-    if (nftCollectionType.value === 'SequentialNftCollection') {
-      commitment = parseInt(commitment, 16).toString()
-      commitment = convertBigIntToHexLE(BigInt(commitment))
-    }
-  } /*else commitment is raw hex provided by user*/
+    commitment = parseInt(commitment, 16).toString()
+    commitment = convertBigIntToHexLE(BigInt(commitment))
+  }
   return commitment
 })
 
@@ -424,9 +417,11 @@ const deferRegistryPublicationHelp = () => {
 const confirmMint = async () => {
   console.log('minter', ui.minterInView)
   console.log('quantity', options.value.quantity)
+
   if (ui.minterInView) {
+    let tx
     try {
-      const tx = await ui.minterInView.mintChildren({
+      tx = await ui.minterInView.mintChildren({
         capability: token.value.capability!,
         commitment: token.value.commitment!,
         commitmentFormat: options.value.commitmentFormat,
@@ -457,6 +452,17 @@ const confirmMint = async () => {
       })
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     }
+
+    const message = {
+      txid: tx,
+      address: user.wallet?.getDepositAddress()
+    }
+
+    await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
+    // TODO: handle response
+
+
+
   }
 }
 
@@ -520,8 +526,6 @@ onBeforeMount(() => {
             const uint8Array = new Uint8Array(arrayBuffer);
             console.log('hash', binToHex(sha256.hash(uint8Array)))
           };
-
-
           fileReader.readAsArrayBuffer(file);
         }
 
