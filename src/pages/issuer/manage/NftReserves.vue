@@ -91,7 +91,7 @@
                       </q-item>
                       <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         :to="`/issuer/tokens/${identity.token.tokenId}/mint-child`" clickable v-close-popup
-                        @click.stop="ui.tokenInView = identity">
+                        @click.stop="loadMinterToView(identity)">
                         Mint Child NFT Page
                       </q-item>
                       <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
@@ -142,6 +142,7 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import NewNFTMinterDialog from 'src/components/dialogs/NewNFTMinterDialog.vue';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+import router from 'src/router';
 
 const user = useUser()
 const ui = useUI()
@@ -173,12 +174,21 @@ const formatCommitment = computed(() => {
     return commitment
   }
 })
+
 const openMintChildDialog = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
   openDialog(NewNFTMinterDialog.__name, ct)
 }
+
+const loadMinterToView = (identity: AuthchainIdentity) => {
+  const ct = new CashToken({ ...identity }, user.transactionSigner)
+  ct.tokenCategory = identity.tokenCategory
+  ct.tokenUris = identity.tokenUris
+  ui.minterInView = ct
+}
+
 const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
   // check if wallet has a minter
   if (!identity.tokenCategory) {

@@ -1,8 +1,8 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <TransactionLogger />
-    <q-header elevated>
-      <q-toolbar class="bg-teal-10 q-py-sm">
+    <q-header>
+      <q-toolbar class="q-py-sm" style="background-color: rgb(20,20,20)">
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
         <q-toolbar-title>
           <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')" src="images/cts_transparent.png"
@@ -17,7 +17,10 @@
       </q-toolbar>
     </q-header>
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay>
-      <q-btn flat dense round icon="close" aria-label="Menu" @click="toggleLeftDrawer" />
+      <div class="text-right q-ma-sm">
+        <q-btn flat dense round icon="close" aria-label="Menu" @click="toggleLeftDrawer" class="justify-right" />
+      </div>
+
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">

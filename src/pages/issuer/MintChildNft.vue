@@ -30,9 +30,11 @@
           <div class="col-xs-12 col-sm-5 justify-center "
             :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
             <div class="row flex justify-center">
-              <!-- <q-img :id="token.commitment"
-                src="https://raw.githubusercontent.com/julien-gargot/images-placeholder/master/placeholder-portrait.png"
-                fit="scale-down" style="max-height: 250px; max-width:250px" /> -->
+              <div class="col-xs-12">
+                <q-option-group v-model="options.loadAssetFrom"
+                  :options="[{ label: 'Upload New', value: 'File' }, { label: 'Load from URL', value: 'URL' }]"
+                  color="primary" inline dense />
+              </div>
               <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
                 style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
                 <template id="dz-button-label">
@@ -228,12 +230,14 @@ import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { CTSRegistry } from 'src/app/CTSRegistry';
+import { useRoute } from 'vue-router';
 const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
+const route = useRoute()
 const nftAssetUploader = ref()
 const dropzone = ref<Dropzone>()
 
@@ -278,6 +282,7 @@ const options = ref<{
   nftAssetFileType: string,
   NftAssetUploadUris: any
   quantity: number,
+  loadAssetFrom: any
 }>({
   collectionType: 'SequentialNftCollection',
   commitmentOfLastMint: '',
@@ -290,6 +295,7 @@ const options = ref<{
   nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
   quantity: 1,
+  loadAssetFrom: { label: 'Upload New', value: 'File' }
 })
 
 
@@ -419,43 +425,47 @@ const confirmMint = async () => {
   console.log('quantity', options.value.quantity)
 
   if (ui.minterInView) {
-    let tx
-    try {
-      tx = await ui.minterInView.mintChildren({
-        capability: token.value.capability!,
-        commitment: token.value.commitment!,
-        commitmentFormat: options.value.commitmentFormat,
-        nftCollectionType: options.value.collectionType,
-        recipient: options.value.recipient,
-        excludeFromSequentialNftCollection: options.value.excludeFromSequentialNftCollection,
-        quantity: options.value.quantity
-      })
-      if (tx) {
-        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
-        $ebus?.emit('transaction', {
-          txid: tx,
-          txType: 'CashToken.mintChild',
-          timestamp: new Date().getTime(),
-          successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
-        })
-        ui.setStatusMessage({
-          statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
-          statusMessageType: 'success',
-          statusMessageTxid: tx
-        })
-      }
-    } catch (error: any) {
-      ui.setStatusMessage({
-        statusMessage: error,
-        statusMessageType: 'error',
-      })
-      $q.notify({ type: 'negative', message: 'Error!' + error.message })
-    }
+    // let tx
+    // try {
+    //   tx = await ui.minterInView.mintChildren({
+    //     capability: token.value.capability!,
+    //     commitment: token.value.commitment!,
+    //     commitmentFormat: options.value.commitmentFormat,
+    //     nftCollectionType: options.value.collectionType,
+    //     recipient: options.value.recipient,
+    //     excludeFromSequentialNftCollection: options.value.excludeFromSequentialNftCollection,
+    //     quantity: options.value.quantity
+    //   })
+    //   if (tx) {
+    //     // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
+    //     $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+    //     $ebus?.emit('transaction', {
+    //       txid: tx,
+    //       txType: 'CashToken.mintChild',
+    //       timestamp: new Date().getTime(),
+    //       successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
+    //     })
+    //     ui.setStatusMessage({
+    //       statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
+    //       statusMessageType: 'success',
+    //       statusMessageTxid: tx
+    //     })
+    //   }
+    // } catch (error: any) {
+    //   ui.setStatusMessage({
+    //     statusMessage: error,
+    //     statusMessageType: 'error',
+    //   })
+    //   $q.notify({ type: 'negative', message: 'Error!' + error.message })
+    // }
 
     const message = {
-      txid: tx,
-      address: user.wallet?.getDepositAddress()
+      txid: '003dc5cb469ddc96f2d720a9a2f45dc415745110e86ca10d2e21bf235c1c0608',
+      tokenId: token.value.tokenId,
+      nftCapability: 'none',
+      nftCommitment: '02',
+      address: user.wallet?.getDepositAddress(),
+      nftType: nftType.value
     }
 
     await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
@@ -548,6 +558,7 @@ onBeforeMount(() => {
 onMounted(() => {
   initCommitment()
   options.value.recipient = user.walletTokenAddress
+  token.value.tokenId = route.params.tokenId! as string
   nextTick(() => {
     Dropzone.discover();
     if (document.querySelector('.dz-button')) {
