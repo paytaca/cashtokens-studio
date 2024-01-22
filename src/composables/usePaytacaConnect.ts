@@ -50,7 +50,6 @@ export const usePaytacaConnect = () => {
           }
         }
       }
-      console.log('ADDRESS', address)
       if (address) {
         paytacaWalletAddress.value = formatAddress(address)
         paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
