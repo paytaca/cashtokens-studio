@@ -4,7 +4,7 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row items-center q-gutter-sm page-header q-mb-lg">
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
-          Authhead {{ ui.minterInView?.txid }}
+          <!-- Authhead {{ ui.minterInView?.txid }} -->
           <span class="text-h5">
             Mint {{ ui.minterInView?.tokenUris?.icon || ui.minterInView?.tokenCategory?.symbol }} NFT
           </span>
@@ -30,12 +30,15 @@
           <div class="col-xs-12 col-sm-5 justify-center "
             :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
             <div class="row flex justify-center">
-              <div class="col-xs-12">
+              <div class="col-xs-12 q-mb-sm justify-center flex">
+                <span class="text-h5">NFT Asset</span>
+              </div>
+              <div class="col-xs-12 q-mb-lg justify-center flex">
                 <q-option-group v-model="options.loadAssetFrom"
-                  :options="[{ label: 'Upload New', value: 'File' }, { label: 'Load from URL', value: 'URL' }]"
+                  :options="[{ label: 'Upload New', value: 'file' }, { label: 'Load from URL', value: 'url' }]"
                   color="primary" inline dense />
               </div>
-              <form action="/file-upload" class="dropzone" id="nft-assets-dropzone"
+              <form v-if="options.loadAssetFrom == 'file'" action="/file-upload" class="dropzone" id="nft-assets-dropzone"
                 style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
                 <template id="dz-button-label">
                   <div class="row justify-center">
@@ -44,6 +47,11 @@
                   </div>
                 </template>
               </form>
+              <div v-else class="col-xs-12 q-gutter-y-sm dropurl items-center q-px-lg"
+                style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
+                <q-input v-model="nftType.uris!.asset" outlined label="Enter the NFT asset url here!" style="width: 100%"
+                  class="q-mx-lg"></q-input>
+              </div>
             </div>
           </div>
           <div class="col-xs-12 col-sm-7">
@@ -295,7 +303,7 @@ const options = ref<{
   nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
   quantity: 1,
-  loadAssetFrom: { label: 'Upload New', value: 'File' }
+  loadAssetFrom: 'file'
 })
 
 
@@ -555,6 +563,17 @@ onBeforeMount(() => {
   }
 })
 
+watch(() => options.value.loadAssetFrom, (v) => {
+  if (v == 'file') {
+    nextTick(() => {
+      Dropzone.discover();
+      if (document.querySelector('.dz-button')) {
+        document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
+      }
+    });
+  }
+})
+
 onMounted(() => {
   initCommitment()
   options.value.recipient = user.walletTokenAddress
@@ -571,6 +590,14 @@ onMounted(() => {
 
 
 <style lang="scss">
+.dropurl {
+  border: 2px dashed rgb(129 123 123 / 80%);
+  padding: unset;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .dropzone {
   border: 2px dashed rgb(129 123 123 / 80%);
   padding: unset;
