@@ -6,21 +6,32 @@
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
           <!-- Authhead {{ ui.minterInView?.txid }} -->
           <span class="text-h5">
-            Mint {{ ui.minterInView?.tokenUris?.icon || ui.minterInView?.tokenCategory?.symbol }} NFT
+            Mint
+            <q-avatar v-if="ui.minterInView?.tokenUris?.icon">
+              <q-img :src="ui.minterInView?.tokenUris?.icon"></q-img>
+            </q-avatar>
+            <span v-else-if="ui.minterInView?.tokenCategory?.symbol">
+              {{ ui.minterInView?.tokenCategory?.symbol }}
+            </span>
+            <span v-else>
+              NFT
+            </span>
           </span>
         </div>
         <div class="row items-center q-gutter-sm q-mb-md">
           <table>
             <tbody>
-              <tr>
+              <tr class="items-center">
                 <td class="q-pr-lg">Token Id:</td>
                 <td>
                   <TokenCategory v-if="$route.params.tokenId" :token-id="($route.params.tokenId! as string)" />
                 </td>
               </tr>
               <tr>
-                <td>Commitment of last mint:</td>
-                <td><span class="text-light">{{ options.commitmentOfLastMint || '<none>' }}</span></td>
+                <td>Minter's commitment: </td>
+                <td><span class="text-light">{{ options.commitmentOfLastMint || '<none>'
+                }}</span>
+                </td>
               </tr>
             </tbody>
           </table>
@@ -38,14 +49,16 @@
                   :options="[{ label: 'Upload New', value: 'file' }, { label: 'Load from URL', value: 'url' }]"
                   color="primary" inline dense />
               </div>
-              <form v-if="options.loadAssetFrom == 'file'" action="/file-upload" class="dropzone" id="nft-assets-dropzone"
+              <form v-if="options.loadAssetFrom == 'file'"
+                :action="`/api/tokens/nft/asset-upload?tokenId=${token.tokenId}&commitment=${token.commitment}`"
+                class="dropzone" id="nft-assets-dropzone"
                 style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
-                <template id="dz-button-label">
+                <!-- <template id="dz-button-label">
                   <div class="row justify-center">
                     <div class="col-xs-12">Drop NFT asset(s) here</div>
                     <div class="col-xs-12"><q-icon name="attach_file"></q-icon></div>
                   </div>
-                </template>
+                </template> -->
               </form>
               <div v-else class="col-xs-12 q-gutter-y-sm dropurl items-center q-px-lg"
                 style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
@@ -188,7 +201,7 @@
               </q-icon>
             </div>
           </q-expansion-item>
-          <div class="col-xs-12 text-right">
+          <div class="col-xs-12 text-right q-mt-lg">
             <q-btn color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
           </div>
         </div>
@@ -224,7 +237,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
-import { NFTCapability, NftType, TokenI, Wallet, binToHex, sha256 } from 'mainnet-js';
+import { NFTCapability, NftType, TokenI, Wallet, binToHex, delay, sha256 } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
 import { CashToken } from 'src/app';
@@ -239,6 +252,7 @@ import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { CTSRegistry } from 'src/app/CTSRegistry';
 import { useRoute } from 'vue-router';
+import { sha1 } from '@bitauth/libauth';
 const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
@@ -468,14 +482,15 @@ const confirmMint = async () => {
     // }
 
     const message = {
-      txid: '003dc5cb469ddc96f2d720a9a2f45dc415745110e86ca10d2e21bf235c1c0608',
-      tokenId: token.value.tokenId,
+      txid: '46a81267860da53a4b76dd00ad39dd1cbf2ff7f7b13524c83a361d9941958c25',
+      tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
       nftCapability: 'none',
-      nftCommitment: '02',
+      nftCommitment: '01', //nftCommitment.value
       address: user.wallet?.getDepositAddress(),
       nftType: nftType.value
     }
 
+    await delay(3000)
     await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
     // TODO: handle response
 
@@ -513,8 +528,9 @@ watch(() => options.value.excludeFromSequentialNftCollection, (exclude) => {
 onBeforeMount(() => {
   Dropzone.options.nftAssetsDropzone = {
     maxFiles: 2,
-    autoProcessQueue: false,
+    autoProcessQueue: true,
     addRemoveLinks: true,
+    paramName: 'file',
     init: function () {
       dropzone.value = this
       this.on('addedfile', (file: any) => {
@@ -539,12 +555,12 @@ onBeforeMount(() => {
             }
           }
 
-          fileReader.onload = function () {
-            const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
-            const uint8Array = new Uint8Array(arrayBuffer);
-            console.log('hash', binToHex(sha256.hash(uint8Array)))
-          };
-          fileReader.readAsArrayBuffer(file);
+          // fileReader.onload = function () {
+          //   const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
+          //   const uint8Array = new Uint8Array(arrayBuffer);
+          //   console.log('sha1', binToHex(sha1.hash(uint8Array)))
+          // };
+          // fileReader.readAsArrayBuffer(file);
         }
 
       })
@@ -554,6 +570,17 @@ onBeforeMount(() => {
         if (file.type === 'application/json') {
           nftAttributes.value = {}
         }
+      })
+
+      this.on('success', (file, response) => {
+        console.log('SUCCESS', response)
+        const fileReader = new FileReader()
+        fileReader.onload = function () {
+          const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          console.log('sha1', binToHex(sha1.hash(uint8Array)))
+        };
+        fileReader.readAsArrayBuffer(file);
       })
 
       this.on('accept', (file: any) => {
@@ -617,5 +644,9 @@ onMounted(() => {
 .dropzone a.dz-remove {
   color: $negative;
   margin-top: 1em;
+}
+
+.dz-progress {
+  margin-top: -50px !important;
 }
 </style>
