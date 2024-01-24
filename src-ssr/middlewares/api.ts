@@ -56,13 +56,16 @@ export default ssrMiddleware(async ({ app, resolve }) => {
   })
 
   app.post('/api/tokens/icon/upload', upload.single('icon'), async (req:any, res:any) => {
+    let ext = req.file.originalname?.split('.')
+    ext = ext[ext.length - 1]
+
     const metadata = await nftStorageClient().store({
       name: 'CTStudio',
       description: 'Test',
       image: new File(
         [req.file.buffer],
-        `${req.query.tokenId}.png`,
-        { type: 'image/png' }
+        `${req.query.tokenId}.${ext}`,
+        { type: req.file.mimetype }
       )
     })
     const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
