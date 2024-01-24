@@ -55,6 +55,11 @@ export class CTSRegistry {
 
   async createWorkspace(signer: TransactionSigner, message: string){
     const signedMessage = await signer.signMessage(message)
+
+    if (!signedMessage) {
+      return
+    }
+
     try {
       const headers = new Headers();
       headers.append('Content-Type', 'application/json');
