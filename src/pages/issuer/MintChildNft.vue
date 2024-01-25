@@ -278,10 +278,12 @@
             </div>
           </q-expansion-item>
           <div class="col-xs-12 text-right q-mt-lg">
-            <q-btn v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
+            <!-- <q-btn v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
             <q-btn v-if="mintTx && options.addMetadata" color="primary" size="lg" @click.stop="">Save Metadata</q-btn>
             <q-btn v-if="mintTx && !options.deferRegistryPublication" color="primary" size="lg" @click.stop="">Publish
-              Registry</q-btn>
+              Registry</q-btn> -->
+            <BusyButton color="primary" size="lg" @click.stop="confirmMint" :busy-label="ui.minterInView?.processing"
+              label="Mint"> </BusyButton>
           </div>
         </div>
       </div>
@@ -319,7 +321,7 @@ import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
 import { NFTCapability, NftType, TokenI, Wallet, binToHex, delay, sha256 } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
-import { CashToken } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, CashToken } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
@@ -633,9 +635,8 @@ const confirmMint = async () => {
       })
 
       if (tx) {
-        // mintTx.value = tx
-        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+        mintTx.value = tx
+        // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'CashToken.mintChild',
@@ -795,6 +796,12 @@ onMounted(() => {
       document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
     }
   });
+
+  $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
+    await ui.minterInView?.updateUtxo()
+    await ui.minterInView?.updateAuthKeyUtxo()
+    initCommitment()
+  })
 })
 
 </script>
