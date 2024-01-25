@@ -775,6 +775,171 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   }
 
+  /**
+   * Note: TokenI.commitment is used as is, no modification or formatting being done. Make sure to pass
+   * the VM number if it's a SequentialNftCollection
+   * @param {boolean} arg.newMinterCommitment - If present the minter's commitment will be updated using this value
+   */
+  async mintChildrenExt(arg: {tokens: [TokenI], recipient: string, newMinterCommitment?: string}){
+
+    if (!arg.tokens) return
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3 + arg.tokens.length})
+    const mintCost = minerFee + (DEFAULT_TOKEN_VALUE * arg.tokens.length)
+    // TODO: use watchtower
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+    const [minter, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authKey!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+
+    let transaction
+    let decoded
+    // track the commitment of last minted child NFT
+    // by storing the commitment in parent usually CashToken with minting capability
+    // TODO: test using mutable token as parent
+    if (arg.newMinterCommitment) {
+      minter.token!.nft!.commitment = arg.newMinterCommitment || minter.token!.nft!.commitment
+    }
+    const mintOutputs:any = arg.tokens.map((token:TokenI) => {
+      return {
+        to: arg.recipient, // token address
+        amount: BigInt(DEFAULT_TOKEN_VALUE),
+        token: {
+          amount: BigInt(0),
+          category: minter.token!.category,
+          nft: {
+            commitment: token.commitment,
+            capability: token.capability
+          }
+        }
+      }
+    })
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(true)
+          .from(minter) // contract
+          .fromP2PKH([authKeyInput], sig) // AuthNFT/minting baton
+          .fromP2PKH([funderInput], sig) //  Funder
+          .to([{
+            // return authchain identity output to contract
+            to: contractAddress,
+            amount: minter.satoshis,
+            token: minter.token
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authKey!.satoshis),
+            token: authKeyInput.token
+          }])
+          .to(mintOutputs)
+          .to(funderInput.satoshis - BigInt(mintCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(mintCost)
+          }]:[])
+        .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+      if (typeof decoded === 'string') {
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      const sourceOutputs = [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(minter.satoshis),
+          token: minter.token && {
+            ...minter.token,
+            category: hexToBin(minter.token!.category),
+            nft: minter.token.nft && {
+              ...minter.token.nft,
+              commitment: hexToBin(minter.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authKeyInput.satoshis),
+          token: authKeyInput.token && {
+            ...authKeyInput.token,
+            category: hexToBin(authKeyInput.token!.category),
+            nft: authKeyInput.token.nft && {
+              ...authKeyInput.token.nft,
+              commitment: hexToBin(authKeyInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+
+    if (!signingResult) {
+      delete this._processing
+      return
+    }
+
+    signingResult.signedTransaction
+    this._processing = 'Minting'
+    let tx
+    try {
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
+      if (tx) {
+        this._processing = 'Minted'
+        setTimeout(()=> {
+          delete this._processing
+        }, 2000)
+      }
+      return tx
+    } catch (error: any) {
+      throw new Error(error.message)
+    } finally {
+      delete this._processing
+    }
+  }
+
   async resolveTokenCategory(quite?:boolean){
     if (!this.token?.tokenId) return
     try {

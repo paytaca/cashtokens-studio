@@ -4,7 +4,6 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row items-center q-gutter-sm page-header q-mb-lg">
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
-          <!-- Authhead {{ ui.minterInView?.txid }} -->
           <span class="text-h5">
             Mint
             <q-avatar v-if="ui.minterInView?.tokenUris?.icon">
@@ -18,6 +17,7 @@
             </span>
           </span>
         </div>
+
         <div class="row items-center q-gutter-sm q-mb-md">
           <table>
             <tbody>
@@ -36,44 +36,77 @@
             </tbody>
           </table>
         </div>
-
-        <div class="row rounded-borders q-pa-lg" style="border: 1px solid grey;">
-          <div class="col-xs-12 col-sm-5 justify-center "
-            :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
-            <div class="row flex justify-center">
-              <div class="col-xs-12 q-mb-sm justify-center flex">
-                <span class="text-h5">NFT Asset</span>
+        <!-- <div class="row">
+          <div class="col-xs-12 q-my-sm items-end">
+            <div class="row text-h6">Mint Receipt</div>
+            <div class="row">
+              <div class="col-xs-4 col-sm-3">Txid</div>
+              <div class="col-xs-4 col-sm-6">
+                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
               </div>
-              <div class="col-xs-12 q-mb-lg justify-center flex">
-                <q-option-group v-model="options.loadAssetFrom"
-                  :options="[{ label: 'Upload New', value: 'file' }, { label: 'Load from URL', value: 'url' }]"
-                  color="primary" inline dense />
+              <div class="col-xs-4 col-sm-3 text-right">{{
+                shortenTx('5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463') }}
               </div>
-              <form v-if="options.loadAssetFrom == 'file'"
-                :action="`/api/tokens/nft/asset-upload?tokenId=${token.tokenId}&commitment=${token.commitment}`"
-                class="dropzone" id="nft-assets-dropzone"
-                style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
-                <!-- <template id="dz-button-label">
-                  <div class="row justify-center">
-                    <div class="col-xs-12">Drop NFT asset(s) here</div>
-                    <div class="col-xs-12"><q-icon name="attach_file"></q-icon></div>
-                  </div>
-                </template> -->
-              </form>
-              <div v-else class="col-xs-12 q-gutter-y-sm dropurl items-center q-px-lg"
-                style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
-                <q-input v-model="nftType.uris!.asset" outlined label="Enter the NFT asset url here!" style="width: 100%"
-                  class="q-mx-lg"></q-input>
+            </div>
+            <div class="row">
+              <div class="col-xs-4 col-sm-3">Commitment</div>
+              <div class="col-xs-4 col-sm-6">
+                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
+              </div>
+              <div class="col-xs-4 col-sm-3 text-right">02</div>
+            </div>
+            <div class="row">
+              <div class="col-xs-4 col-sm-3">Capability</div>
+              <div class="col-xs-4 col-sm-6">
+                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
+              </div>
+              <div class="col-xs-4 col-sm-3 text-right">minting</div>
+            </div>
+            <div class="row">
+              <div class="col-xs-4 col-sm-3">Sent To</div>
+              <div class="col-xs-2 col-sm-6">
+                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
+              </div>
+              <div class="col-xs-6 col-sm-3 text-right">{{
+                shortenAddress('bchtest:qzs3ymruv8vzvnj45vnzk8pnx800l85k25yj4eae3v')
+              }}
               </div>
             </div>
           </div>
-          <div class="col-xs-12 col-sm-7">
+          <div class="col-xs-12 text-right">
+            <q-btn>Add NFT Metadata</q-btn>
+          </div>
+        </div> -->
+        <div class="row rounded-borders q-pa-lg" style="border: 1px solid grey;">
+          <div class="col-xs-12">
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <div class="text-h5">Token</div>
+                <!-- <div class="text-h5">Token</div> -->
+                <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
+                  <label>I want to</label>
+                  <q-select :options="[
+                      { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
+                      { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
+                      { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
+                      { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
+                      { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
+                    ]" :model-value="options.mintOption" v-on:update:model-value="(v) => options.mintOption = v.value"
+                    dense outlined class="q-mb-xs"></q-select>
+                </div>
+                <div
+                  v-if="options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS || options.mintOption === MINT_SUPPLY_FOR_A_COMMITMENT"
+                  class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
+                  <label>
+                    <span v-if="options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS">Number of unique NFTs to mint</span>
+                    <span v-else-if="options.mintOption === MINT_SUPPLY_FOR_A_COMMITMENT">Number of NFTs to mint with the
+                      below commitment</span>
+                  </label>
+                  <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"
+                    :onchange="(v: any) => options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"></q-input>
+                </div>
                 <div class="row q-gutter-x-sm items-center">
                   <div class="col q-gutter-y-sm">
-                    <label>Commitment</label>
+                    <label>Commitment <span v-if="options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS">(first)</span></label>
                     <q-input v-model="token.commitment" :placeholder="tokenCommmitmentPlaceholderText"
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
                       dense outlined>
@@ -95,8 +128,32 @@
                       </template>
                       <template v-slot:hint>
                         <div v-if="token.commitment" class="row justify-end items-center">
-                          <code>{{ nftCommitment }}</code>
-                          <i>(Raw commitment value)
+                          <code>{{ rawNftCommitment }}</code>
+                          <i>Actual value on-chain
+                            <q-icon name="info">
+                              <q-tooltip>VM Number. The actual value on-chain.</q-tooltip>
+                            </q-icon>
+                          </i>
+                        </div>
+                      </template>
+                    </q-input>
+                  </div>
+                </div>
+                <div v-if="options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS && options.quantity > 1"
+                  class="row q-gutter-x-sm items-center q-mt-lg">
+                  <div class="col q-gutter-y-sm">
+                    <label>Commitment (Last)</label>
+                    <q-input :model-value="commitmentLast" :placeholder="tokenCommmitmentPlaceholderText"
+                      :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
+                      dense outlined disable>
+                      <template v-slot:prepend>
+                        <q-btn :label="options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
+                          no-caps :icon-right="options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+                      </template>
+                      <template v-slot:hint>
+                        <div v-if="commitmentLast" class="row justify-end items-center">
+                          <code>{{ rawNftCommitmentLast }}</code>
+                          <i>Actual value on-chain
                             <q-icon name="info">
                               <q-tooltip>The actual value on-chain.</q-tooltip>
                             </q-icon>
@@ -106,21 +163,16 @@
                     </q-input>
                   </div>
                 </div>
-                <div class="col-xs-12 q-mt-lg">
+                <div class="col-xs-12 q-mt-lg q-gutter-y-sm ">
                   <label>Capability <code>{{ token.capability }}</code></label>
-                  <q-select :options="[
+                  <q-input :model-value="token.capability" dense outlined disable></q-input>
+                  <!-- <q-select :options="[
                     { value: 'none', label: 'None' },
                     { value: 'minting', label: 'Minting' },
                     { value: 'mutable', label: 'Mutable' }
                   ]" :model-value="token.capability" v-on:update:model-value="(v) => token.capability = v.value" dense
-                    outlined class="q-mb-xs"></q-select>
+                    outlined class="q-mb-xs"></q-select> -->
                 </div>
-              </div>
-              <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
-                <div class="text-h5">Quantity</div>
-                <label>Number of NFTs to mint for this type</label>
-                <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"
-                  :onchange="(v: any) => options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"></q-input>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                 <div class="text-h5">Send To</div>
@@ -135,10 +187,34 @@
               </div>
             </div>
           </div>
-          <q-expansion-item label="Metadata" class="col-xs-12" style="border-top: 1px solid grey;">
+          <q-expansion-item v-if="options.addMetadata && mintTx" label="Metadata" class="col-xs-12"
+            style="border-top: 1px solid grey;">
             <div>
               <div class="row">
-                <div class="col-xs-12 col-sm-6 q-px-lg">
+                <div class="col-xs-12 col-sm-5 justify-center "
+                  :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
+                  <div class="row flex justify-center">
+                    <div class="col-xs-12 q-mb-sm justify-center flex">
+                      <span class="text-h5">NFT Asset</span>
+                    </div>
+                    <div class="col-xs-12 q-mb-lg justify-center flex">
+                      <q-option-group v-model="options.loadAssetFrom"
+                        :options="[{ label: 'Upload New', value: 'file' }, { label: 'Load from URL', value: 'url' }]"
+                        color="primary" inline dense />
+                    </div>
+                    <form v-if="options.loadAssetFrom == 'file'"
+                      :action="`/api/tokens/nft/asset-upload?tokenId=${token.tokenId}&commitment=${token.commitment}`"
+                      class="dropzone" id="nft-assets-dropzone"
+                      style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
+                    </form>
+                    <div v-else class="col-xs-12 q-gutter-y-sm dropurl items-center q-px-lg"
+                      style="overflow-y: scroll;width: 100%;max-height: 40em; min-height: 20em;">
+                      <q-input v-model="nftType.uris!.asset" outlined label="Enter the NFT asset url here!"
+                        style="width: 100%" class="q-mx-lg"></q-input>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-xs-12 col-sm-7 q-px-lg">
                   <div class="row items-center flex justify-between">
                     <div class="text-h5 q-mb-lg">NFT Type</div>
                     <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
@@ -159,9 +235,9 @@
                     </div>
                   </div>
                 </div>
-                <div class="col-xs-12 col-sm-6 q-px-lg">
+                <div class="col-xs-12 q-mt-lg">
                   <div class="row items-center flex justify-between">
-                    <div class="text-h5 q-mb-lg">NftAttributes <q-btn flat color="primary" icon="add" size="xs"
+                    <div class="text-h5 q-mb-lg">NFT Attributes <q-btn flat color="primary" icon="add" size="xs"
                         @click="addNftAttribute" />
                     </div>
                   </div>
@@ -181,7 +257,7 @@
               </div>
             </div>
           </q-expansion-item>
-          <q-expansion-item label="Advanced Options" class="col-xs-12" style="border-top: 1px solid grey;">
+          <q-expansion-item v-if="mintTx" label="Advanced Options" class="col-xs-12" style="border-top: 1px solid grey;">
             <div class="text-left">
               <q-checkbox v-model="options.excludeFromSequentialNftCollection"
                 label="Exclude from Sequential NFT Collection" />
@@ -202,7 +278,10 @@
             </div>
           </q-expansion-item>
           <div class="col-xs-12 text-right q-mt-lg">
-            <q-btn color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
+            <q-btn v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
+            <q-btn v-if="mintTx && options.addMetadata" color="primary" size="lg" @click.stop="">Save Metadata</q-btn>
+            <q-btn v-if="mintTx && !options.deferRegistryPublication" color="primary" size="lg" @click.stop="">Publish
+              Registry</q-btn>
           </div>
         </div>
       </div>
@@ -246,13 +325,14 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenTokenId, shortenTx, shortenAddress } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { CTSRegistry } from 'src/app/CTSRegistry';
 import { useRoute } from 'vue-router';
-import { sha1 } from '@bitauth/libauth';
+import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
+import NonFungibleTokens from '../account/balances/NonFungibleTokens.vue';
 const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
@@ -284,7 +364,7 @@ const nftType = ref<NftType>({
 
 const nftAttributes = ref<any>({})
 
-// utxo
+// for single mint
 const token = ref<TokenI>({
   amount: BigInt(0),
   tokenId: '',
@@ -292,32 +372,67 @@ const token = ref<TokenI>({
   commitment: ''
 })
 
+// for multiple mints
+// const tokens = ref<[TokenI]>()
+
+const commitmentLast = computed(() => {
+  if (!token.value.commitment) return ''
+
+  let v
+  if (options.value.commitmentFormat === 'decimal') {
+    v = Number(token.value.commitment) + Number(options.value.quantity) - 1
+  }
+  if (options.value.commitmentFormat === 'hex') {
+    v = Number(parseInt(token.value.commitment, 16)) + Number(options.value.quantity) - 1
+    v = BigInt(v).toString(16)
+    v = v.length < 2 ? v.padStart(2, '0') : v
+  }
+  return v
+})
+
+// tx of successful mint
+const mintTx = ref<string>()
+const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
+const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
+const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
+const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
+const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
+
+
 const options = ref<{
   collectionType: NftCollectionType,
   commitmentOfLastMint: string,
   recipient: string,
   commitmentFormat: 'decimal' | 'hex',
   excludeFromSequentialNftCollection: boolean,
+  addMetadata: boolean,
   deferRegistryPublication: boolean,
   uploadNftAsset: boolean,
   nftAssetDataURL: string,
   nftAssetFileType: string,
   NftAssetUploadUris: any
   quantity: number,
-  loadAssetFrom: any
+  uniqueNftQuantity: number,
+  mintOption: any,
+  loadAssetFrom: any,
+  commitmentLast: string
 }>({
   collectionType: 'SequentialNftCollection',
   commitmentOfLastMint: '',
   recipient: '',
   commitmentFormat: 'decimal',
   excludeFromSequentialNftCollection: false,
+  addMetadata: true,
   deferRegistryPublication: true,
   uploadNftAsset: false,
   nftAssetDataURL: '',
   nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
   quantity: 1,
-  loadAssetFrom: 'file'
+  uniqueNftQuantity: 1,
+  mintOption: MINT_ONE_UNIQUE_NFT,
+  loadAssetFrom: 'file',
+  commitmentLast: ''
 })
 
 
@@ -337,9 +452,9 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
 })
 
 /**
- * Actual commitment on chain. LE
+ * VM Number, actual commitment on chain. 
  */
-const nftCommitment = computed<string | undefined>(() => {
+const rawNftCommitment = computed<string | undefined>(() => {
   if (nftCollectionType.value === 'ParsableNftCollection') {
     return token.value.commitment
   }
@@ -353,6 +468,26 @@ const nftCommitment = computed<string | undefined>(() => {
     commitment = convertBigIntToHexLE(BigInt(commitment))
   }
   return commitment
+})
+
+/**
+ * VM Number, actual commitment on chain, this if for  
+ */
+const rawNftCommitmentLast = computed<string>(() => {
+  if (nftCollectionType.value === 'ParsableNftCollection') {
+    return commitmentLast.value
+  }
+
+  let commitment = commitmentLast.value
+  if (commitment && options.value.commitmentFormat === 'decimal') {
+    commitment = convertBigIntToHexLE(BigInt(commitment))
+  }
+
+  if (commitment && options.value.commitmentFormat === 'hex') {
+    commitment = parseInt(String(commitment), 16).toString()
+    commitment = convertBigIntToHexLE(BigInt(commitment))
+  }
+  return commitment || ''
 })
 
 const disableMint = computed(() => {
@@ -442,62 +577,101 @@ const deferRegistryPublicationHelp = () => {
   })
 }
 
+
+
 const confirmMint = async () => {
-  console.log('minter', ui.minterInView)
-  console.log('quantity', options.value.quantity)
 
-  if (ui.minterInView) {
-    // let tx
-    // try {
-    //   tx = await ui.minterInView.mintChildren({
-    //     capability: token.value.capability!,
-    //     commitment: token.value.commitment!,
-    //     commitmentFormat: options.value.commitmentFormat,
-    //     nftCollectionType: options.value.collectionType,
-    //     recipient: options.value.recipient,
-    //     excludeFromSequentialNftCollection: options.value.excludeFromSequentialNftCollection,
-    //     quantity: options.value.quantity
-    //   })
-    //   if (tx) {
-    //     // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
-    //     $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
-    //     $ebus?.emit('transaction', {
-    //       txid: tx,
-    //       txType: 'CashToken.mintChild',
-    //       timestamp: new Date().getTime(),
-    //       successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
-    //     })
-    //     ui.setStatusMessage({
-    //       statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
-    //       statusMessageType: 'success',
-    //       statusMessageTxid: tx
-    //     })
-    //   }
-    // } catch (error: any) {
-    //   ui.setStatusMessage({
-    //     statusMessage: error,
-    //     statusMessageType: 'error',
-    //   })
-    //   $q.notify({ type: 'negative', message: 'Error!' + error.message })
-    // }
+  const tokens: any = []
+  if (options.value.quantity == 1) {
+    const t = Object.assign(token.value)
+    t.commitment = rawNftCommitment.value
+    tokens.push(t)
+  }
 
-    const message = {
-      txid: '46a81267860da53a4b76dd00ad39dd1cbf2ff7f7b13524c83a361d9941958c25',
-      tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
-      nftCapability: 'none',
-      nftCommitment: '01', //nftCommitment.value
-      address: user.wallet?.getDepositAddress(),
-      nftType: nftType.value
+  if (options.value.quantity > 1) {
+    let firstCommitment =
+      options.value.commitmentFormat === 'decimal' ? Number(token.value.commitment) : Number(parseInt(token.value.commitment!, 16))
+    if (options.value.mintOption === MINT_MULTIPLE_UNIQUE_NFTS) {
+      for (let i = firstCommitment; i <= options.value.quantity + 1; i++) {
+        tokens.push({
+          amount: BigInt(0),
+          tokenId: ui.minterInView?.token?.tokenId,
+          commitment: bigIntToVmNumber(BigInt(i)), // Use sequential commitment 
+          capability: token.value.capability,
+        })
+      }
     }
 
-    await delay(3000)
-    await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
-    // TODO: handle response
+    if (options.value.mintOption === MINT_SUPPLY_FOR_A_COMMITMENT) {
+      for (let i = firstCommitment; i <= options.value.quantity + 1; i++) {
+        tokens.push({
+          amount: BigInt(0),
+          tokenId: ui.minterInView?.token?.tokenId,
+          commitment: rawNftCommitment.value, // Use same commitment on all tokens
+          capability: token.value.capability,
+        })
+      }
+    }
+  }
+
+  if (ui.minterInView) {
+    let tx
+    try {
+
+      const lastToken = tokens[tokens.length - 1]
+      let newMinterCommitment = ui.minterInView.token?.commitment
+      if (lastToken.capability == NFTCapability.none && options.value.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
+        // only track commitment in minter if the child nft is none
+        // so we can preserve the sequence
+        newMinterCommitment = lastToken.commitment
+      }
+
+      tx = await ui.minterInView.mintChildrenExt({
+        tokens: tokens as [TokenI],
+        recipient: options.value.recipient,
+        newMinterCommitment: newMinterCommitment
+      })
+
+      if (tx) {
+        // mintTx.value = tx
+        // emit('nftMinted', { tokenId: ui.minterInView.token!.tokenId, ...options.value })
+        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'CashToken.mintChild',
+          timestamp: new Date().getTime(),
+          successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
+        })
+        ui.setStatusMessage({
+          statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
+          statusMessageType: 'success',
+          statusMessageTxid: tx
+        })
+      }
+    } catch (error: any) {
+      ui.setStatusMessage({
+        statusMessage: error,
+        statusMessageType: 'error',
+      })
+      $q.notify({ type: 'negative', message: 'Error!' + error.message })
+    }
 
 
+    // const message = {
+    //   txid: '46a81267860da53a4b76dd00ad39dd1cbf2ff7f7b13524c83a361d9941958c25',
+    //   tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
+    //   nftCapability: 'none',
+    //   rawNftCommitment: '01', //rawNftCommitment.value
+    //   address: user.wallet?.getDepositAddress(),
+    //   nftType: nftType.value
+    // }
 
+    // await delay(3000)
+    // await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
+    // // TODO: handle response
   }
 }
+
 
 watch(() => token.value.commitment, (commitment) => {
   if (!commitment) {
@@ -514,7 +688,16 @@ watch(() => token.value.capability, (c) => {
   } else {
     options.value.excludeFromSequentialNftCollection = false
   }
+})
 
+watch(() => options.value.mintOption, (o) => {
+  if (o === CREATE_MUTABLE_NFT) {
+    return token.value.capability = NFTCapability.mutable
+  }
+  if (o === CREATE_ANOTHER_MINTER) {
+    return token.value.capability = NFTCapability.minting
+  }
+  token.value.capability = NFTCapability.none
 })
 
 watch(() => options.value.excludeFromSequentialNftCollection, (exclude) => {
@@ -572,13 +755,14 @@ onBeforeMount(() => {
         }
       })
 
-      this.on('success', (file, response) => {
+      this.on('success', (file, response: any) => {
         console.log('SUCCESS', response)
+        nftType.value.uris!.asset = response?.assetUris?.ipfs
         const fileReader = new FileReader()
         fileReader.onload = function () {
           const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
           const uint8Array = new Uint8Array(arrayBuffer);
-          console.log('sha1', binToHex(sha1.hash(uint8Array)))
+          localStorage.setItem(`asseturis-${binToHex(sha1.hash(uint8Array))}`, JSON.stringify(response))
         };
         fileReader.readAsArrayBuffer(file);
       })
