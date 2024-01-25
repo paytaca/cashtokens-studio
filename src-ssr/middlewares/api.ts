@@ -88,7 +88,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     
   })
 
-  app.post('/api/tokens/nft/asset-upload', upload.single('icon'), async (req:any, res:any) => {
+  app.post('/api/tokens/nft/asset-upload', upload.single('file'), async (req:any, res:any) => {
     let ext = req.file.originalname?.split('.')
     ext = ext[ext.length - 1]
     const metadata = await nftStorageClient().store({
@@ -107,7 +107,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
       res.status(200).send({
         nftStorageMetadata: metadata,
-        iconUris: {
+        assetUris: {
           ipfs: image,
           https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
         }
