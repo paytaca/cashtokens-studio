@@ -1,6 +1,5 @@
 <template>
-  <q-dialog ref="messageDialog" v-close-popup @before-hide="onBeforeHide" transition-show="slide-up"
-    transition-hide="fade">
+  <q-dialog ref="messageDialog" @before-hide="onBeforeHide" transition-show="slide-up" transition-hide="fade">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold text-center">{{ ui.statusMessageType }}</q-toolbar-title>
