@@ -36,61 +36,24 @@
             </tbody>
           </table>
         </div>
-        <!-- <div class="row">
-          <div class="col-xs-12 q-my-sm items-end">
-            <div class="row text-h6">Mint Receipt</div>
-            <div class="row">
-              <div class="col-xs-4 col-sm-3">Txid</div>
-              <div class="col-xs-4 col-sm-6">
-                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
-              </div>
-              <div class="col-xs-4 col-sm-3 text-right">{{
-                shortenTx('5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463') }}
-              </div>
-            </div>
-            <div class="row">
-              <div class="col-xs-4 col-sm-3">Commitment</div>
-              <div class="col-xs-4 col-sm-6">
-                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
-              </div>
-              <div class="col-xs-4 col-sm-3 text-right">02</div>
-            </div>
-            <div class="row">
-              <div class="col-xs-4 col-sm-3">Capability</div>
-              <div class="col-xs-4 col-sm-6">
-                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
-              </div>
-              <div class="col-xs-4 col-sm-3 text-right">minting</div>
-            </div>
-            <div class="row">
-              <div class="col-xs-4 col-sm-3">Sent To</div>
-              <div class="col-xs-2 col-sm-6">
-                <div style="margin-bottom: 8px;border-bottom: 1px dashed; min-height: 80%;"></div>
-              </div>
-              <div class="col-xs-6 col-sm-3 text-right">{{
-                shortenAddress('bchtest:qzs3ymruv8vzvnj45vnzk8pnx800l85k25yj4eae3v')
-              }}
-              </div>
-            </div>
-          </div>
-          <div class="col-xs-12 text-right">
-            <q-btn>Add NFT Metadata</q-btn>
-          </div>
-        </div> -->
         <div class="row rounded-borders q-pa-lg" style="border: 1px solid grey;">
           <div class="col-xs-12">
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <!-- <div class="text-h5">Token</div> -->
+                <div v-if="mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center flex text-left text-h6"
+                  style="color:rgb(26, 196, 26)">
+                  🎉 Minted! <q-btn v-if="mintTx" :href="openTxInExplorer(mintTx)" target="_blank" flat dense
+                    color="secondary" label="View Tx" />
+                </div>
                 <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
                   <label>I want to</label>
                   <q-select :options="[
-                      { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
-                      { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
-                      { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
-                      { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
-                      { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
-                    ]" :model-value="options.mintOption" v-on:update:model-value="(v) => options.mintOption = v.value"
+                    { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
+                    { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
+                    { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
+                    { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
+                    { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
+                  ]" :model-value="options.mintOption" v-on:update:model-value="(v) => options.mintOption = v.value"
                     dense outlined class="q-mb-xs"></q-select>
                 </div>
                 <div
@@ -175,8 +138,7 @@
                 </div>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <div class="text-h5">Send To</div>
-                <label>Recipient (Defaults to your token address)</label>
+                <label>Send To (Defaults to your token address)</label>
                 <q-input v-model="options.recipient" outlined dense clearable>
                   <template v-slot:append>
                     <q-btn v-if="!options.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
@@ -317,7 +279,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
 import { NFTCapability, NftType, TokenI, Wallet, binToHex, delay, sha256 } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
@@ -327,7 +289,7 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
-import { shortenTokenId, shortenTx, shortenAddress } from 'src/app/utils';
+import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer } from 'src/app/utils';
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
@@ -579,13 +541,10 @@ const deferRegistryPublicationHelp = () => {
   })
 }
 
-
-
 const confirmMint = async () => {
-
   const tokens: any = []
   if (options.value.quantity == 1) {
-    const t = Object.assign(token.value)
+    const t = Object.assign({}, token.value)
     t.commitment = rawNftCommitment.value
     tokens.push(t)
   }
@@ -617,18 +576,18 @@ const confirmMint = async () => {
   }
 
   if (ui.minterInView) {
-    let tx
+
     try {
 
       const lastToken = tokens[tokens.length - 1]
       let newMinterCommitment = ui.minterInView.token?.commitment
       if (lastToken.capability == NFTCapability.none && options.value.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
-        // only track commitment in minter if the child nft is none
+        // only track commitment in minter if the child's capability is `none`
         // so we can preserve the sequence
         newMinterCommitment = lastToken.commitment
       }
 
-      tx = await ui.minterInView.mintChildrenExt({
+      const tx = await ui.minterInView.mintChildrenExt({
         tokens: tokens as [TokenI],
         recipient: options.value.recipient,
         newMinterCommitment: newMinterCommitment
@@ -636,7 +595,6 @@ const confirmMint = async () => {
 
       if (tx) {
         mintTx.value = tx
-        // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'CashToken.mintChild',
@@ -648,6 +606,7 @@ const confirmMint = async () => {
           statusMessageType: 'success',
           statusMessageTxid: tx
         })
+
       }
     } catch (error: any) {
       ui.setStatusMessage({
@@ -800,7 +759,7 @@ onMounted(() => {
   $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
     await ui.minterInView?.updateUtxo()
     await ui.minterInView?.updateAuthKeyUtxo()
-    initCommitment()
+    // initCommitment()
   })
 })
 
