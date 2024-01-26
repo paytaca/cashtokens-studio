@@ -45,7 +45,7 @@
                   🎉 Minted! <q-btn v-if="mintTx" :href="openTxInExplorer(mintTx)" target="_blank" flat dense
                     color="secondary" label="View Tx" />
                 </div>
-                <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
+                <div v-if="!mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
                   <label>I want to</label>
                   <q-select :options="[
                     { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
@@ -66,6 +66,7 @@
                   </label>
                   <q-input v-model="options.quantity" outlined dense clearable style="width:fit-content"
                     :onchange="(v: any) => options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"></q-input>
+
                 </div>
                 <div class="row q-gutter-x-sm items-center">
                   <div class="col q-gutter-y-sm">
@@ -108,7 +109,7 @@
                     <label>Commitment (Last)</label>
                     <q-input :model-value="commitmentLast" :placeholder="tokenCommmitmentPlaceholderText"
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
-                      dense outlined disable>
+                      dense outlined>
                       <template v-slot:prepend>
                         <q-btn :label="options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                           no-caps :icon-right="options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -244,8 +245,16 @@
             <q-btn v-if="mintTx && options.addMetadata" color="primary" size="lg" @click.stop="">Save Metadata</q-btn>
             <q-btn v-if="mintTx && !options.deferRegistryPublication" color="primary" size="lg" @click.stop="">Publish
               Registry</q-btn> -->
-            <BusyButton color="primary" size="lg" @click.stop="confirmMint" :busy-label="ui.minterInView?.processing"
-              label="Mint"> </BusyButton>
+            <BusyButton v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint"
+              :busy-label="ui.minterInView?.processing" label="Mint">
+            </BusyButton>
+
+            <div v-if="mintTx && !options.addMetadata">
+              The NFT has been added to the blockchain. Do you want to add an asset(E.g. you can upload a digital
+              artwork.) or metadata for this NFT ?
+              <q-btn color="primary" size="lg" @click.stop="options.addMetadata = true">Yes</q-btn>
+            </div>
+
           </div>
         </div>
       </div>
@@ -335,9 +344,6 @@ const token = ref<TokenI>({
   capability: NFTCapability.none,
   commitment: ''
 })
-
-// for multiple mints
-// const tokens = ref<[TokenI]>()
 
 const commitmentLast = computed(() => {
   if (!token.value.commitment) return ''
