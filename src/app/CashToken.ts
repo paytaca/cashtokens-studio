@@ -1047,7 +1047,6 @@ export class CashToken implements UtxoI, PartialBcmr {
    * Invoke after spending this utxo. When watching wallet address
    */
   async updateUtxo(){
-    this.processing = 'Updating Minter'
     this.ensureOwnerWallet()
     if (this.authKey) {
       let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
@@ -1060,14 +1059,12 @@ export class CashToken implements UtxoI, PartialBcmr {
         this.utxo = updatedMinterUtxo[0]
       }
     }
-    delete this.processing
   }
 
   /**
    * Invoke after spending the AuthKey, e.g. after minting. 
    */
   async updateAuthKeyUtxo(){
-    this.processing = 'Updating AuthKey'
     this.ensureOwnerWallet()
     if (this.authKey) {
       const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
@@ -1079,7 +1076,6 @@ export class CashToken implements UtxoI, PartialBcmr {
         this.authKey.utxo = updatedAuthKeyUtxo[0]
       }
     }
-    delete this.processing
   }
 
 }
