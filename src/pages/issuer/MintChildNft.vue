@@ -29,7 +29,7 @@
               </tr>
               <tr>
                 <td>Minter's commitment: </td>
-                <td><span class="text-light">{{ options.commitmentOfLastMint || '<none>'
+                <td><span class="text-light">{{ state.commitmentOfLastMint || '<none>'
                 }}</span>
                 </td>
               </tr>
@@ -132,6 +132,7 @@
                       </template>
                       <template v-slot:hint>
                         <div v-if="token.commitment" class="row justify-end items-center">
+                          <!-- <code>{{ rawNftCommitment }}</code> -->
                           <code>{{ rawNftCommitment }}</code>
                           <i>Actual value on-chain
                             <q-icon name="info">
@@ -202,7 +203,7 @@
                 <p v-if="mintTx" class="text-left q-gutter-sm">
                   The NFT has been added to the blockchain. Do you want to add an asset(E.g. you can upload a digital
                   artwork.) or metadata for this NFT ?
-                  <q-btn color="primary" size="lg" @click.stop="options.addMetadata = true">Yes</q-btn>
+                  <q-btn color="primary" size="lg" @click.stop="addMetadata">Yes</q-btn>
                   <q-btn color="negative" size="lg" @click.stop="mintTx = ''">No</q-btn>
                 </p>
               </div>
@@ -337,32 +338,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
-import { NFTCapability, NftType, TokenI, Wallet, binToHex, delay, sha256 } from 'mainnet-js';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
+import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
-import { ADDRESS_WATCHER_TRIGGERED, CashToken } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
-import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
 import { NftCollectionType } from 'src/app/types';
-import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer } from 'src/app/utils';
-import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
+import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { CTSRegistry } from 'src/app/CTSRegistry';
 import { useRoute } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
-import NonFungibleTokens from '../account/balances/NonFungibleTokens.vue';
-const Validator = require('jsonschema').Validator
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
 const route = useRoute()
-const nftAssetUploader = ref()
 const dropzone = ref<Dropzone>()
 
 /**
@@ -396,31 +392,28 @@ const token = ref<TokenI>({
 
 const commitmentLast = computed(() => {
   if (!token.value.commitment) return ''
+  const v = BigInt(formatCommitment(token.value.commitment, options.value.commitmentFormat, 'decimal')) + BigInt(options.value.quantity) - BigInt(1)
+  return formatCommitment(v.toString(), 'decimal', options.value.commitmentFormat).toString()
 
-  let v
-  if (options.value.commitmentFormat === 'decimal') {
-    v = Number(token.value.commitment) + Number(options.value.quantity) - 1
-  }
-  if (options.value.commitmentFormat === 'hex') {
-    v = Number(parseInt(token.value.commitment, 16)) + Number(options.value.quantity) - 1
-    v = BigInt(v).toString(16)
-    v = v.length < 2 ? v.padStart(2, '0') : v
-  }
-  return v
 })
 
 // tx of successful mint
-const mintTx = ref<string>('cf168fefc2518386200901178ba4d54d5fd19a00fca06932195d9a24903e06a7')
+const mintTx = ref<string>()
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
+const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
 const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
 const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
 const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
 const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
 
+const state = ref<{
+  commitmentOfLastMint: string,
+}>({
+  commitmentOfLastMint: ''
+})
 
 const options = ref<{
   collectionType: NftCollectionType,
-  commitmentOfLastMint: string,
   recipient: string,
   commitmentFormat: 'decimal' | 'hex',
   excludeFromSequentialNftCollection: boolean,
@@ -431,24 +424,21 @@ const options = ref<{
   nftAssetFileType: string,
   NftAssetUploadUris: any
   quantity: number,
-  uniqueNftQuantity: number,
-  mintOption: any,
+  mintOption: string,
   loadAssetFrom: any,
   commitmentLast: string
 }>({
   collectionType: 'SequentialNftCollection',
-  commitmentOfLastMint: '',
   recipient: '',
   commitmentFormat: 'decimal',
   excludeFromSequentialNftCollection: false,
-  addMetadata: true,
+  addMetadata: false,
   deferRegistryPublication: true,
   uploadNftAsset: false,
   nftAssetDataURL: '',
   nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
   quantity: 1,
-  uniqueNftQuantity: 1,
   mintOption: MINT_ONE_UNIQUE_NFT,
   loadAssetFrom: 'file',
   commitmentLast: ''
@@ -477,58 +467,19 @@ const rawNftCommitment = computed<string | undefined>(() => {
   if (nftCollectionType.value === 'ParsableNftCollection') {
     return token.value.commitment
   }
-  let commitment = token.value.commitment
-  if (commitment && options.value.commitmentFormat === 'decimal') {
-    commitment = convertBigIntToHexLE(BigInt(commitment))
-  }
-
-  if (commitment && options.value.commitmentFormat === 'hex') {
-    commitment = parseInt(commitment, 16).toString()
-    commitment = convertBigIntToHexLE(BigInt(commitment))
-  }
-  return commitment
+  return formatCommitment(token.value.commitment || '', options.value.commitmentFormat, 'vm-number').toString()
 })
 
 /**
  * VM Number, actual commitment on chain, this if for  
  */
-const rawNftCommitmentLast = computed<string>(() => {
+const rawNftCommitmentLast = computed<string>((): string => {
   if (nftCollectionType.value === 'ParsableNftCollection') {
     return commitmentLast.value
   }
-
-  let commitment = commitmentLast.value
-  if (commitment && options.value.commitmentFormat === 'decimal') {
-    commitment = convertBigIntToHexLE(BigInt(commitment))
-  }
-
-  if (commitment && options.value.commitmentFormat === 'hex') {
-    commitment = parseInt(String(commitment), 16).toString()
-    commitment = convertBigIntToHexLE(BigInt(commitment))
-  }
-  return commitment || ''
+  return formatCommitment(commitmentLast.value || '', options.value.commitmentFormat, 'vm-number').toString()
 })
 
-const disableMint = computed(() => {
-  if (!options.value.recipient) {
-    return true
-  }
-  console.log(nftAssetUploader.value)
-  if (options.value.uploadNftAsset && nftAssetUploader.value.queuedFiles?.length <= 0) {
-    return true
-  }
-  return false
-})
-
-const onNftAssetUploaded = (info: any) => {
-  try {
-    const serverResponse = JSON.parse(info.xhr.responseText)
-    console.log(serverResponse.iconUris)
-
-  } catch (error) {
-    console.log(error)
-  }
-}
 
 const clearNftAttribute = () => {
   nftAttributeDialogData.value.key = ''
@@ -546,36 +497,29 @@ const confirmAddNftAttribute = () => {
   }
 }
 
+const addMetadata = () => {
+  options.value.addMetadata = true
+  if (!nftType.value.name && ui.minterInView?.tokenCategory?.symbol) {
+    nftType.value.name = ui.minterInView?.tokenCategory?.symbol + token.value.commitment
+  }
+}
+
 
 const convertCommitment = () => {
   if (token.value.commitment && options.value.commitmentFormat === 'decimal') {
-    token.value.commitment = BigInt(token.value.commitment).toString(16)
-    token.value.commitment = token.value.commitment.length < 2 ? token.value.commitment.padStart(2, '0') : token.value.commitment
     options.value.commitmentFormat = 'hex'
+    token.value.commitment = formatCommitment(token.value.commitment || '', 'decimal', 'hex')
   } else if (token.value.commitment && options.value.commitmentFormat === 'hex') {
-    token.value.commitment = parseInt(token.value.commitment, 16).toString()
+    token.value.commitment = formatCommitment(token.value.commitment || '', 'hex', 'decimal')
     options.value.commitmentFormat = 'decimal'
   }
 }
 
 const initCommitment = () => {
   if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
-    const commitmentOfLastMint = convertHexLEtoBigInt(ui.minterInView?.token?.commitment)
-    options.value.commitmentOfLastMint = commitmentOfLastMint.toString()
-    token.value.commitment = (commitmentOfLastMint + BigInt(1)).toString()
     options.value.commitmentFormat = 'decimal'
-  } else {
-    token.value.commitment = '1'
-    options.value.commitmentFormat = 'decimal'
-  }
-}
-
-const initstate = () => {
-  if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
-    const commitmentOfLastMint = convertHexLEtoBigInt(ui.minterInView?.token?.commitment)
-    options.value.commitmentOfLastMint = commitmentOfLastMint.toString()
-    token.value.commitment = (commitmentOfLastMint + BigInt(1)).toString()
-    options.value.commitmentFormat = 'decimal'
+    state.value.commitmentOfLastMint = formatCommitment(ui.minterInView?.token?.commitment, 'vm-number', 'decimal').toString()
+    token.value.commitment = (BigInt(state.value.commitmentOfLastMint) + BigInt(1)).toString()
   } else {
     token.value.commitment = '1'
     options.value.commitmentFormat = 'decimal'
