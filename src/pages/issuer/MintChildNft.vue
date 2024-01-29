@@ -419,7 +419,6 @@ const options = ref<{
   excludeFromSequentialNftCollection: boolean,
   addMetadata: boolean,
   deferRegistryPublication: boolean,
-  uploadNftAsset: boolean,
   nftAssetDataURL: string,
   nftAssetFileType: string,
   NftAssetUploadUris: any
@@ -434,7 +433,6 @@ const options = ref<{
   excludeFromSequentialNftCollection: false,
   addMetadata: false,
   deferRegistryPublication: true,
-  uploadNftAsset: false,
   nftAssetDataURL: '',
   nftAssetFileType: 'image/png',
   NftAssetUploadUris: null,
@@ -500,8 +498,14 @@ const confirmAddNftAttribute = () => {
 const addMetadata = () => {
   options.value.addMetadata = true
   if (!nftType.value.name && ui.minterInView?.tokenCategory?.symbol) {
-    nftType.value.name = ui.minterInView?.tokenCategory?.symbol + token.value.commitment
+    nftType.value.name = ui.minterInView?.tokenCategory?.symbol + '-' + token.value.commitment
   }
+  nextTick(() => {
+    Dropzone.discover();
+    if (document.querySelector('.dz-button')) {
+      document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
+    }
+  });
 }
 
 
@@ -742,6 +746,7 @@ watch(() => options.value.loadAssetFrom, (v) => {
         document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
       }
     });
+
   }
 })
 
@@ -749,12 +754,7 @@ onMounted(() => {
   initCommitment()
   options.value.recipient = user.walletTokenAddress
   token.value.tokenId = route.params.tokenId! as string
-  nextTick(() => {
-    Dropzone.discover();
-    if (document.querySelector('.dz-button')) {
-      document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
-    }
-  });
+
 
   $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
     await ui.minterInView?.updateUtxo()
