@@ -170,8 +170,7 @@
                 </div>
                 <div class="col-xs-12 q-mt-lg q-gutter-y-sm ">
                   <label>Capability <code>{{ token.capability }}</code></label>
-                  <q-input :model-value="token.capability" dense :outlined="!mintTx" :disable="!!mintTx"
-                    :borderless="!!mintTx"></q-input>
+                  <q-input :model-value="token.capability" dense :outlined="!mintTx" disable></q-input>
                   <!-- <q-select :options="[
                     { value: 'none', label: 'None' },
                     { value: 'minting', label: 'Minting' },
@@ -353,6 +352,7 @@ import { useUI } from 'src/stores/ui';
 import { CTSRegistry } from 'src/app/CTSRegistry';
 import { useRoute } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
+import { Console } from 'console';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -548,22 +548,23 @@ const confirmMint = async () => {
     tokens.push(t)
   }
 
+  console.log(options)
+
   if (options.value.quantity > 1) {
-    let firstCommitment =
-      options.value.commitmentFormat === 'decimal' ? Number(token.value.commitment) : Number(parseInt(token.value.commitment!, 16))
     if (options.value.mintOption === MINT_MULTIPLE_UNIQUE_NFTS) {
-      for (let i = firstCommitment; i <= options.value.quantity + 1; i++) {
+      let firstCommitment = formatCommitment(token.value.commitment as string, options.value.commitmentFormat, 'decimal')
+      for (let i = 0; i < options.value.quantity; i++) {
         tokens.push({
           amount: BigInt(0),
           tokenId: ui.minterInView?.token?.tokenId,
-          commitment: bigIntToVmNumber(BigInt(i)), // Use sequential commitment 
+          commitment: binToHex(bigIntToVmNumber(BigInt(firstCommitment) + BigInt(i))), // Use sequential commitment 
           capability: token.value.capability,
         })
       }
     }
 
     if (options.value.mintOption === MINT_SUPPLY_FOR_A_COMMITMENT) {
-      for (let i = firstCommitment; i <= options.value.quantity + 1; i++) {
+      for (let i = 0; i < options.value.quantity; i++) {
         tokens.push({
           amount: BigInt(0),
           tokenId: ui.minterInView?.token?.tokenId,
@@ -577,7 +578,6 @@ const confirmMint = async () => {
   if (ui.minterInView) {
 
     try {
-
       const lastToken = tokens[tokens.length - 1]
       let newMinterCommitment = ui.minterInView.token?.commitment
       if (lastToken.capability == NFTCapability.none && options.value.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
@@ -585,6 +585,7 @@ const confirmMint = async () => {
         // so we can preserve the sequence
         newMinterCommitment = lastToken.commitment
       }
+
 
       const tx = await ui.minterInView.mintChildrenExt({
         tokens: tokens as [TokenI],
