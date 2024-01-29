@@ -29,7 +29,7 @@
               </tr>
               <tr>
                 <td>Minter's commitment: </td>
-                <td><span class="text-light">{{ state.commitmentOfLastMint || '<none>'
+                <td><span class="text-light">{{ state.mintersCommitment || '<none>'
                 }}</span>
                 </td>
               </tr>
@@ -37,7 +37,7 @@
           </table>
 
         </div>
-        <q-expansion-item v-if="mintTx && options.addMetadata" label="Mint Receipt" class="q-mb-lg">
+        <q-expansion-item v-if="state.mintTx && options.addMetadata" label="Mint Receipt" class="q-mb-lg">
           <div class="row">
             <div class="col-xs-12 q-gutter-y-sm" style="color:green">
               <div class="row">
@@ -46,7 +46,7 @@
                   <div class="col-xs-12" style="border-bottom: 2px dashed green; min-height: 80%"></div>
                 </div>
                 <div class="col-xs-4 col-sm-3 text-right">{{
-                  shortenTx(mintTx) }}
+                  shortenTx(state.mintTx) }}
                 </div>
               </div>
               <div class="row">
@@ -79,12 +79,12 @@
           <div v-if="!options.addMetadata" class="col-xs-12">
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <div v-if="mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center flex text-left text-h6"
+                <div v-if="state.mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center flex text-left text-h6"
                   style="color:rgb(26, 196, 26)">
-                  🎉 Minted! <q-btn v-if="mintTx" :href="openTxInExplorer(mintTx)" target="_blank" flat dense
+                  🎉 Minted! <q-btn v-if="state.mintTx" :href="openTxInExplorer(state.mintTx)" target="_blank" flat dense
                     color="secondary" label="View Tx" />
                 </div>
-                <div v-if="!mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
+                <div v-if="!state.mintTx" class="col-xs-12 q-mb-lg q-gutter-y-sm items-center q-gutter-y-sm">
                   <label>I want to</label>
                   <q-select :options="[
                     { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
@@ -105,7 +105,8 @@
                   </label>
                   <q-input v-model="options.quantity" style="width:fit-content"
                     :onchange="(v: any) => options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"
-                    :outlined="!mintTx" :disable="!!mintTx" :borderless="!!mintTx" dense clearable></q-input>
+                    :outlined="!state.mintTx" :disable="!!state.mintTx" :borderless="!!state.mintTx" dense
+                    clearable></q-input>
 
                 </div>
                 <div class="row q-gutter-x-sm items-center">
@@ -113,7 +114,7 @@
                     <label>Commitment <span v-if="options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS">(first)</span></label>
                     <q-input v-model="token.commitment" :placeholder="tokenCommmitmentPlaceholderText"
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
-                      dense :outlined="!mintTx" :disable="!!mintTx" :borderless="!!mintTx">
+                      dense :outlined="!state.mintTx" :disable="!!state.mintTx" :borderless="!!state.mintTx">
                       <template v-slot:prepend>
                         <q-btn :label="options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                           no-caps :icon-right="options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -150,7 +151,7 @@
                     <label>Commitment (Last)</label>
                     <q-input :model-value="commitmentLast" :placeholder="tokenCommmitmentPlaceholderText"
                       :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" style="padding-bottom:unset;"
-                      dense :outlined="!mintTx" :disable="!!mintTx" :borderless="!!mintTx">
+                      dense :outlined="!state.mintTx" :disable="!!state.mintTx" :borderless="!!state.mintTx">
                       <template v-slot:prepend>
                         <q-btn :label="options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                           no-caps :icon-right="options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -170,19 +171,13 @@
                 </div>
                 <div class="col-xs-12 q-mt-lg q-gutter-y-sm ">
                   <label>Capability <code>{{ token.capability }}</code></label>
-                  <q-input :model-value="token.capability" dense :outlined="!mintTx" disable></q-input>
-                  <!-- <q-select :options="[
-                    { value: 'none', label: 'None' },
-                    { value: 'minting', label: 'Minting' },
-                    { value: 'mutable', label: 'Mutable' }
-                  ]" :model-value="token.capability" v-on:update:model-value="(v) => token.capability = v.value" dense
-                    outlined class="q-mb-xs"></q-select> -->
+                  <q-input :model-value="token.capability" dense :outlined="!state.mintTx" disable></q-input>
                 </div>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
-                <label>Sen{{ mintTx ? 't' : 'd' }} To (Defaults to your token address)</label>
-                <q-input v-model="options.recipient" dense clearable :outlined="!mintTx" :disable="!!mintTx"
-                  :borderless="!!mintTx">
+                <label>Sen{{ state.mintTx ? 't' : 'd' }} To (Defaults to your token address)</label>
+                <q-input v-model="options.recipient" dense clearable :outlined="!state.mintTx" :disable="!!state.mintTx"
+                  :borderless="!!state.mintTx">
                   <template v-slot:append>
                     <q-btn v-if="!options.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
                       color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
@@ -191,24 +186,20 @@
                 </q-input>
               </div>
               <div class="col-xs-12 text-right q-mt-lg">
-                <!-- <q-btn v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint">Mint</q-btn>
-                <q-btn v-if="mintTx && options.addMetadata" color="primary" size="lg" @click.stop="">Save Metadata</q-btn>
-                <q-btn v-if="mintTx && !options.deferRegistryPublication" color="primary" size="lg" @click.stop="">Publish
-                  Registry</q-btn> -->
-                <BusyButton v-if="!mintTx" color="primary" size="lg" @click.stop="confirmMint"
+                <BusyButton v-if="!state.mintTx" color="primary" size="lg" @click.stop="confirmMint"
                   :busy-label="ui.minterInView?.processing" label="Mint">
                 </BusyButton>
 
-                <p v-if="mintTx" class="text-left q-gutter-sm">
+                <p v-if="state.mintTx" class="text-left q-gutter-sm">
                   The NFT has been added to the blockchain. Do you want to add an asset(E.g. you can upload a digital
                   artwork.) or metadata for this NFT ?
                   <q-btn color="primary" size="lg" @click.stop="addMetadata">Yes</q-btn>
-                  <q-btn color="negative" size="lg" @click.stop="mintTx = ''">No</q-btn>
+                  <q-btn color="negative" size="lg" @click.stop="state.mintTx = ''">No</q-btn>
                 </p>
               </div>
             </div>
           </div>
-          <div v-if="mintTx && options.addMetadata" class="col-xs-12">
+          <div v-if="state.mintTx && options.addMetadata" class="col-xs-12">
             <div>
               <div class="text-h5">Metadata</div>
               <div>
@@ -301,7 +292,7 @@
             </div>
             <div class="text-right q-gutter-sm">
               <q-btn color="negative" size="lg" @click.stop="options.addMetadata = false">Cancel</q-btn>
-              <q-btn color="primary" size="lg" @click.stop="">Save</q-btn>
+              <q-btn color="primary" size="lg" @click.stop="saveNftType">Save</q-btn>
             </div>
           </div>
 
@@ -349,7 +340,7 @@ import { NftCollectionType } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
-import { CTSRegistry } from 'src/app/CTSRegistry';
+import { RegistryNftType } from 'src/app';
 import { useRoute } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import { Console } from 'console';
@@ -369,7 +360,7 @@ const dropzone = ref<Dropzone>()
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
 
 // metadata
-const nftType = ref<NftType>({
+const nftType = ref<RegistryNftType>(new RegistryNftType({
   name: '',
   description: '',
   uris: {
@@ -378,7 +369,7 @@ const nftType = ref<NftType>({
     asset: ''
   },
   extensions: {}
-})
+}))
 
 const nftAttributes = ref<any>({})
 
@@ -398,7 +389,7 @@ const commitmentLast = computed(() => {
 })
 
 // tx of successful mint
-const mintTx = ref<string>()
+// const state.mintTx = ref<string>()
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
 const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
 const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
@@ -407,9 +398,11 @@ const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
 const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
 
 const state = ref<{
-  commitmentOfLastMint: string,
+  mintTx: string,
+  mintersCommitment: string,
 }>({
-  commitmentOfLastMint: ''
+  mintTx: '',
+  mintersCommitment: ''
 })
 
 const options = ref<{
@@ -522,8 +515,8 @@ const convertCommitment = () => {
 const initCommitment = () => {
   if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
     options.value.commitmentFormat = 'decimal'
-    state.value.commitmentOfLastMint = formatCommitment(ui.minterInView?.token?.commitment, 'vm-number', 'decimal').toString()
-    token.value.commitment = (BigInt(state.value.commitmentOfLastMint) + BigInt(1)).toString()
+    state.value.mintersCommitment = formatCommitment(ui.minterInView?.token?.commitment, 'vm-number', 'decimal').toString()
+    token.value.commitment = (BigInt(state.value.mintersCommitment) + BigInt(1)).toString()
   } else {
     token.value.commitment = '1'
     options.value.commitmentFormat = 'decimal'
@@ -551,8 +544,6 @@ const confirmMint = async () => {
     t.commitment = rawNftCommitment.value
     tokens.push(t)
   }
-
-  console.log(options)
 
   if (options.value.quantity > 1) {
     if (options.value.mintOption === MINT_MULTIPLE_UNIQUE_NFTS) {
@@ -598,7 +589,7 @@ const confirmMint = async () => {
       })
 
       if (tx) {
-        mintTx.value = tx
+        state.value.mintTx = tx
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'CashToken.mintChild',
@@ -619,21 +610,28 @@ const confirmMint = async () => {
       })
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     }
-
-
-    // const message = {
-    //   txid: '46a81267860da53a4b76dd00ad39dd1cbf2ff7f7b13524c83a361d9941958c25',
-    //   tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
-    //   nftCapability: 'none',
-    //   rawNftCommitment: '01', //rawNftCommitment.value
-    //   address: user.wallet?.getDepositAddress(),
-    //   nftType: nftType.value
-    // }
-
-    // await delay(3000)
-    // await (new CTSRegistry()).createWorkspace(user.transactionSigner!, JSON.stringify(message))
-    // // TODO: handle response
   }
+}
+
+const saveNftType = async () => {
+  try {
+    nftType.value.extensions = {
+      ...nftType.value.extensions,
+      attributes: nftAttributes.value
+    }
+    const t = Object.assign({}, token.value, { commitment: rawNftCommitment.value })
+    await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
+    ui.setStatusMessage({
+      statusMessage: `Saved Nft metadata`,
+      statusMessageType: 'success',
+    })
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error',
+    })
+  }
+
 }
 
 
@@ -669,6 +667,18 @@ watch(() => options.value.excludeFromSequentialNftCollection, (exclude) => {
     token.value.commitment = ''
   } else {
     // initCommitment()
+  }
+})
+
+watch(() => options.value.loadAssetFrom, (v) => {
+  if (v == 'file') {
+    nextTick(() => {
+      Dropzone.discover();
+      if (document.querySelector('.dz-button')) {
+        document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
+      }
+    });
+
   }
 })
 
@@ -735,18 +745,6 @@ onBeforeMount(() => {
         console.log(file)
       })
     }
-  }
-})
-
-watch(() => options.value.loadAssetFrom, (v) => {
-  if (v == 'file') {
-    nextTick(() => {
-      Dropzone.discover();
-      if (document.querySelector('.dz-button')) {
-        document.querySelector('.dz-button')!.innerHTML! = 'Drop your NFT asset here.'
-      }
-    });
-
   }
 })
 
