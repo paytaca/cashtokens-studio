@@ -92,6 +92,7 @@ export class RegistryNftType extends CtsRegistry implements NftType{
       })
       const rj = await r.json()
       console.log(rj)
+      this.saved = true
       return rj
     } catch (error) {
       throw error
