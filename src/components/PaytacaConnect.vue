@@ -42,20 +42,27 @@ const paytacaConnectDisconnect = async () => {
   if (!window.paytaca) return
   if (user.walletAddress) {
     await paytacaConnect.paytacaDisconnect()
-    user.walletType = undefined
-    user.walletAddress = ''
-    user.walletTokenAddress = ''
-    user.wallet = undefined
-    user.transactionSigner = undefined
+
+    user.$patch({
+      walletType: undefined,
+      walletAddress: '',
+      walletTokenAddress: '',
+      wallet: undefined,
+      transactionSigner: undefined
+    })
     return
   }
   if (!user.walletAddress) {
     await paytacaConnect.paytacaConnect()
-    user.walletType = 'paytaca'
-    user.walletTokenAddress = paytacaConnect.paytacaWalletTokenAddress.value
-    user.walletAddress = paytacaConnect.paytacaWalletAddress.value
-    user.wallet = paytacaConnect.paytacaWallet.value
-    user.transactionSigner = paytacaConnect.paytacaTransactionSigner
+
+
+    user.$patch({
+      walletType: 'paytaca',
+      walletTokenAddress: paytacaConnect.paytacaWalletTokenAddress.value,
+      walletAddress: paytacaConnect.paytacaWalletAddress.value,
+      wallet: paytacaConnect.paytacaWallet.value,
+      transactionSigner: paytacaConnect.paytacaTransactionSigner,
+    })
   }
 }
 

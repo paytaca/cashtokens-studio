@@ -106,6 +106,7 @@ export type SignMessage = (message:any, broadcast?:boolean, prompt?: string) => 
 
 export interface TransactionSigner {
   type: 'paytaca' | 'walletconnect',
+  address?: string,
   signTransaction: SignTransaction,
   signMessage: SignMessage
 }
