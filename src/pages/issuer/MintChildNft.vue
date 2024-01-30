@@ -38,7 +38,7 @@
         </div>
 
         <q-stepper v-model="state.step" vertical color="primary" animated flat>
-          <q-step :name="1" title="Mint the token" icon="settings" :done="state.step > 1">
+          <q-step :name="1" title="Mint the token" :icon="nftType.saved ? 'done_all' : 'token'" :done="state.step > 1">
             <!-- <div class="row items-center flex justify-between rounded-borders q-pa-lg" style="border: 1px solid grey;"> -->
             <div class="row items-center flex justify-between">
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
@@ -133,7 +133,8 @@
                 </div>
                 <div class="col-xs-12 q-mt-lg q-gutter-y-sm ">
                   <label>Capability <code>{{ token.capability }}</code></label>
-                  <q-input :model-value="token.capability" dense :outlined="!state.mintTx" disable></q-input>
+                  <q-input :model-value="token.capability" dense :outlined="!state.mintTx" :borderless="!!state.mintTx"
+                    disable></q-input>
                 </div>
               </div>
               <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
@@ -158,7 +159,8 @@
             </q-stepper-navigation>
           </q-step>
 
-          <q-step :name="2" title="Describe your NFT" caption="Optional" icon="create_new_folder" :done="state.step > 2">
+          <q-step :name="2" title="Describe your NFT" caption="Optional"
+            :icon="nftType.saved ? 'done_all' : 'description'" :done="state.step > 2">
             <span>Describe your NFT by creating its metadata <q-icon v-if="nftType.saved" name="done_all" color="primary"
                 size="md"></q-icon></span>
             <div class="row">
@@ -190,35 +192,41 @@
                   <div class="text-h6 q-mb-lg">NFT Type</div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Name</label>
-                    <q-input v-model="nftType.name" outlined dense clearable></q-input>
+                    <q-input v-model="nftType.name" :outlined="!nftType.saved" :disable="!!nftType.saved"
+                      :borderless="!!nftType.saved" clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Description</label>
-                    <q-input v-model="nftType.description" outlined dense clearable></q-input>
+                    <q-input v-model="nftType.description" :outlined="!nftType.saved" :disable="!!nftType.saved"
+                      :borderless="!!nftType.saved" dense clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Icon URI</label>
-                    <q-input v-model="nftType.uris!.icon" outlined dense clearable></q-input>
+                    <q-input v-model="nftType.uris!.icon" :outlined="!nftType.saved" :disable="!!nftType.saved"
+                      :borderless="!!nftType.saved" dense clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Asset URI / Image URI</label>
-                    <q-input v-model="nftType.uris!.asset" outlined dense clearable></q-input>
+                    <q-input v-model="nftType.uris!.asset" :outlined="!nftType.saved" :disable="!!nftType.saved"
+                      :borderless="!!nftType.saved" dense clearable></q-input>
                   </div>
                 </div>
               </div>
               <div class="col-xs-12 q-mt-lg">
                 <div class="row items-center flex justify-between">
                   <div class="text-h5 q-mb-lg">NFT Attributes <q-btn flat color="primary" icon="add" size="xs"
-                      @click="addNftAttribute" />
+                      @click="addNftAttribute" :disable="!!nftType.saved" />
                   </div>
                 </div>
                 <div class="row items-center flex justify-between">
                   <div v-for="attrKey, i in Object.keys(nftAttributes)"
                     class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right" :key="i">
                     <label>{{ attrKey }}</label>
-                    <q-input v-model="nftAttributes[attrKey]" outlined dense clearable>
+                    <q-input v-model="nftAttributes[attrKey]" :outlined="!nftType.saved" :disable="!!nftType.saved"
+                      :borderless="!!nftType.saved" dense clearable>
                       <template v-slot:after>
-                        <q-icon name="remove" @click.stop="() => delete nftAttributes[attrKey]" color="negative"></q-icon>
+                        <q-icon v-if="!nftType.saved" name="remove" @click.stop="() => delete nftAttributes[attrKey]"
+                          color="negative"></q-icon>
                       </template>
                     </q-input>
                   </div>
@@ -228,23 +236,25 @@
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
                 <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" />
-                <q-btn v-if="nftType.saved" flat @click="state.step = 1" color="primary" label="Continue"
+                <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue"
                   class="q-ml-sm" />
                 <q-btn v-if="!nftType.saved" color="primary" @click.stop="saveNftType">Save</q-btn>
               </div>
             </q-stepper-navigation>
           </q-step>
 
-          <q-step :name="3" title="Publish Registry" icon="assignment">
+          <q-step :name="3" title="Publish Registry" :icon="nftType.saved ? 'done_all' : 'data_object'">
             <span>Do you want to publish an updated registry that includes this recently added NFT?</span>
             <q-option-group v-model="options.publishOption"
               :options="[{ label: 'Publish Now', value: 'now' }, { label: 'Publish Later (Recommended if you minting another NFT)', value: 'later' }]"
               color="primary" />
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
-                <q-btn flat @click="state.step = 1" color="primary" label="Back" class="q-ml-sm" />
-                <BusyButton v-if="!state.mintTx" color="primary" size="md" @click.stop="publishRegistry"
-                  :busy-label="ui.minterInView?.processing" label="Proceed">
+                <q-btn flat @click="state.step = 2" label="Back" class="q-ml-sm" />
+                <q-btn v-if="options.publishOption == 'later'" @click="state.step = 4" color="primary" label="Next"
+                  class="q-ml-sm" />
+                <BusyButton v-if="nftType.saved && options.publishOption == 'now'" color="primary" size="md"
+                  @click.stop="publishRegistry" :busy-label="ui.minterInView?.processing" label="Publish Registry">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
@@ -254,9 +264,9 @@
             <span>Do you want to mint another one?</span>
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
-                <q-btn color="primary" label="Finish" />
-                <q-btn flat @click="state.step = 2" color="primary" label="Back" class="q-ml-sm" />
-                <q-btn color="negative" size="md" @click.stop="$router.back()">No</q-btn>
+
+                <q-btn flat @click="state.step = 3" label="Back" class="q-ml-sm" />
+                <q-btn color="negative" size="md" @click.stop="$router.back()">No i'm done here</q-btn>
                 <q-btn color="primary" size="md" @click.stop="mintAnother">Yes</q-btn>
               </div>
             </q-stepper-navigation>
@@ -324,6 +334,7 @@ const dropzone = ref<Dropzone>()
  */
 const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
 
+
 // metadata
 const nftType = ref<RegistryNftType>(new RegistryNftType({
   name: '',
@@ -333,7 +344,9 @@ const nftType = ref<RegistryNftType>(new RegistryNftType({
     image: '',
     asset: ''
   },
-  extensions: {}
+  extensions: {
+    attributes: {}
+  }
 }))
 
 const nftAttributes = ref<any>({})
@@ -368,7 +381,7 @@ const state = ref<{
   mintersCommitment: string,
 }>({
   step: 1,
-  mintTx: '',
+  mintTx: '74ffd8340376bec60db456f5c0fa1cd63c6b03503946170236bd5ecf0be2c0a0',
   mintersCommitment: ''
 })
 
@@ -596,7 +609,7 @@ const saveNftType = async () => {
       statusMessage: `Saved Nft metadata`,
       statusMessageType: 'success',
     })
-    state.value.step = 3
+
   } catch (error: any) {
     ui.setStatusMessage({
       statusMessage: error,
@@ -615,9 +628,16 @@ const publishRegistry = async () => {
 }
 
 const mintAnother = async () => {
-  await ui.minterInView?.updateUtxo()
-  await ui.minterInView?.updateAuthKeyUtxo()
-  state.value.mintTx = ''
+  try {
+    await ui.minterInView?.updateUtxo()
+    await ui.minterInView?.updateAuthKeyUtxo()
+    state.value.mintTx = ''
+  } catch (error: any) {
+    ui.setStatusMessage({
+      statusMessage: error,
+      statusMessageType: 'error',
+    })
+  }
 }
 
 

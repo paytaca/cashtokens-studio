@@ -1048,34 +1048,49 @@ export class CashToken implements UtxoI, PartialBcmr {
    */
   async updateUtxo(){
     this.ensureOwnerWallet()
-    if (this.authKey) {
-      let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
-      updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
-        u.vout == this.utxo.vout &&
-        u.token?.tokenId == this.utxo.token?.tokenId &&
-        u.token?.capability == NFTCapability.minting
-      ))
-      if (updatedMinterUtxo) {
-        this.utxo = updatedMinterUtxo[0]
+    this.processing = 'Updating minter'
+    try {
+      if (this.authKey) {
+        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
+          u.vout == this.utxo.vout &&
+          u.token?.tokenId == this.utxo.token?.tokenId &&
+          u.token?.capability == NFTCapability.minting
+        ))
+        if (updatedMinterUtxo) {
+          this.utxo = updatedMinterUtxo[0]
+        }
       }
+    } catch (error) {
+      throw error
+    } finally {
+      delete this.processing
     }
+    
   }
 
   /**
    * Invoke after spending the AuthKey, e.g. after minting. 
    */
   async updateAuthKeyUtxo(){
-    this.ensureOwnerWallet()
-    if (this.authKey) {
-      const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
-        u.vout == this.authKey?.utxo.vout &&
-        u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-        u.token?.capability == this.authKey?.utxo.token?.capability
-      ))
-      if (updatedAuthKeyUtxo) {
-        this.authKey.utxo = updatedAuthKeyUtxo[0]
+    try {
+      this.ensureOwnerWallet()
+      if (this.authKey) {
+        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+          u.vout == this.authKey?.utxo.vout &&
+          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+          u.token?.capability == this.authKey?.utxo.token?.capability
+        ))
+        if (updatedAuthKeyUtxo) {
+          this.authKey.utxo = updatedAuthKeyUtxo[0]
+        }
       }
+    } catch (error) {
+      throw error
+    } finally {
+      delete this.processing
     }
+    
   }
 
 }
