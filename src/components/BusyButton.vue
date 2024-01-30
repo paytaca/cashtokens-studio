@@ -16,9 +16,12 @@ watch(() => props.busyLabel, (v) => {
 
     inputs.forEach(function (input) {
       input.disabled = true;
+      // input.classList.add('q-field--disabled');
+      // input.classList.add('q-field--borderless');
     });
     selects.forEach(function (input) {
       input.classList.add('q-field--disabled');
+      // input.classList.add('q-field--borderless');
     });
 
   } else {
@@ -26,9 +29,13 @@ watch(() => props.busyLabel, (v) => {
     const selects = document.querySelectorAll('.q-select');
     inputs.forEach(function (input) {
       input.disabled = false;
+      // input.classList.remove('q-field--disabled');
+      // input.classList.remove('q-field--borderless');
     });
     selects.forEach(function (input) {
       input.classList.remove('q-field--disabled');
+      // input.classList.remove('q-field--borderless');
+
     });
 
   }

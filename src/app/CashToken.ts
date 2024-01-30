@@ -54,6 +54,7 @@ export class CashToken implements UtxoI, PartialBcmr {
   private _processing?: string
   private static _processing?: string
 
+
   constructor(
     u?: {
       txid: string;
@@ -1052,6 +1053,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     try {
       if (this.authKey) {
         let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        console.log(updatedMinterUtxo)
         updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
           u.vout == this.utxo.vout &&
           u.token?.tokenId == this.utxo.token?.tokenId &&
@@ -1064,9 +1066,8 @@ export class CashToken implements UtxoI, PartialBcmr {
     } catch (error) {
       throw error
     } finally {
-      delete this.processing
+      this.processing = ''
     }
-    
   }
 
   /**
@@ -1075,6 +1076,7 @@ export class CashToken implements UtxoI, PartialBcmr {
   async updateAuthKeyUtxo(){
     try {
       this.ensureOwnerWallet()
+      this.processing = 'Updating AuthKey'
       if (this.authKey) {
         const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
           u.vout == this.authKey?.utxo.vout &&
@@ -1088,7 +1090,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     } catch (error) {
       throw error
     } finally {
-      delete this.processing
+      this.processing = ''
     }
     
   }
