@@ -1,7 +1,5 @@
 export {default as calcMinerFee} from "./calcMinerFee"
 export {default as copyText} from "./copyText"
-export {default as fetchAuthChainAuthheadFromChainGraph} from "./fetchAuthChainAuthheadFromChaingraph"
-export {default as fetchAuthhead} from "./fetchAuthhead"
 export {default as formatAddress} from "./formatAddress"
 export {default as getAppEnv} from "./getAppEnv"
 export {default as getByteCount} from "./getByteCount"
