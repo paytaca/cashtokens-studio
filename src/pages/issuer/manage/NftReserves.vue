@@ -90,7 +90,7 @@
                         Mint Child NFT
                       </q-item>
                       <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        :to="`/issuer/tokens/${identity.token.tokenId}/mint-child`" clickable v-close-popup
+                        :to="`/issuer/tokens/${identity.token.tokenId}/mint-child`" clickable
                         @click.stop="loadMinterToView(identity)">
                         Mint Child NFT Page
                       </q-item>
