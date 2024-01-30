@@ -1053,7 +1053,6 @@ export class CashToken implements UtxoI, PartialBcmr {
     try {
       if (this.authKey) {
         let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
-        console.log(updatedMinterUtxo)
         updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
           u.vout == this.utxo.vout &&
           u.token?.tokenId == this.utxo.token?.tokenId &&

@@ -35,7 +35,7 @@
               </tr>
               <tr>
                 <td>Minter's Utxo: </td>
-                <td><span class="text-light">{{ ui.minterInView?.txid || '<none>'
+                <td><span class="text-light">{{ shortenTx(ui.minterInView?.txid || '') || '<none>'
                 }}</span>
                 </td>
               </tr>
@@ -166,7 +166,7 @@
             </q-stepper-navigation>
           </q-step>
 
-          <q-step :name="2" title="Describe your NFT" caption="Optional"
+          <q-step :name="2" title="Upload asset or describe your NFT" caption="Optional"
             :icon="nftType.saved ? 'done_all' : 'description'" :done="state.step > 2">
             <div v-if="nftType.saved" class="text-right">
               <q-icon v-if="nftType.saved" name="done_all" color="primary"></q-icon> Saved
@@ -239,17 +239,19 @@
             </div>
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
-                <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" :disable="!!nftType?.processing" />
-                <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue"
-                  class="q-ml-sm" />
-                <q-btn v-if="!nftType.saved" flat @click="state.step = 3" color="primary" label="Skip" class="q-ml-sm" />
+                <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" :disable="!!nftType?.processing"
+                  size="lg" />
+                <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue" class="q-ml-sm"
+                  size="lg" />
+                <q-btn v-if="!nftType.saved" flat @click="state.step = 3" color="primary" label="Skip" class="q-ml-sm"
+                  size="lg" />
                 <BusyButton color="primary" @click.stop="saveNftType" :busy-label="nftType?.processing" label="Save"
                   :disable="!nftType.name">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
           </q-step>
-          <q-step :name="3" title="Publish Registry" :icon="nftType.saved ? 'done_all' : 'data_object'"
+          <q-step :name="3" title="Publish Registry" caption="Optional" :icon="nftType.saved ? 'done_all' : 'data_object'"
             :disable="!nftType.saved">
             <span>Do you want to publish an updated registry that includes this recently added NFT?</span>
             <q-option-group v-model="options.publishOption"
@@ -257,10 +259,10 @@
               color="primary" />
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
-                <q-btn flat @click="state.step = 2" label="Back" class="q-ml-sm" />
+                <q-btn flat @click="state.step = 2" label="Back" class="q-ml-sm" size="lg" />
                 <q-btn v-if="options.publishOption == 'later'" @click="state.step = 4" color="primary" label="Next"
-                  class="q-ml-sm" />
-                <BusyButton v-if="options.publishOption == 'now'" color="primary" size="md" @click.stop="publishRegistry"
+                  class="q-ml-sm" size="lg" />
+                <BusyButton v-if="options.publishOption == 'now'" color="primary" @click.stop="publishRegistry"
                   :busy-label="ui.minterInView?.processing" label="Publish Registry">
                 </BusyButton>
               </div>
@@ -272,8 +274,9 @@
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
 
-                <q-btn flat @click="nftType.saved ? (state.step = 3) : (state.step = 2)" label="Back" class="q-ml-sm" />
-                <q-btn color="negative" @click.stop="$router.back()">No i'm done here</q-btn>
+                <q-btn flat @click="nftType.saved ? (state.step = 3) : (state.step = 2)" label="Back" class="q-ml-sm"
+                  size="lg" />
+                <q-btn color="negative" @click.stop="$router.back()" size="lg">No i'm done here</q-btn>
                 <BusyButton color="primary" @click.stop="mintAnother" :busy-label="ui.minterInView?.processing"
                   label="Yes">
                 </BusyButton>
@@ -567,6 +570,7 @@ const confirmMint = async () => {
 
     try {
       const lastToken = tokens[tokens.length - 1]
+      console.log('LASTTOKEN', lastToken)
       let newMinterCommitment = ui.minterInView.token?.commitment
       if (lastToken.capability == NFTCapability.none && options.value.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
         // only track commitment in minter if the child's capability is `none`
@@ -641,11 +645,19 @@ const publishRegistry = async () => {
     await ui.minterInView.updateUtxo()
     await ui.minterInView.updateAuthKeyUtxo()
   }
+
+  const d = $q.dialog({
+    dark: true,
+    message: 'Authenticating, minter\'s utxo from the authchain',
+    ok: false,
+    cancel: false,
+    progress: true,
+  })
+
   const authhead = await (new ChainGraph()).fetchAuthheadTxid(ui.minterInView!.token!.tokenId!)
 
-  if (authhead == ui.minterInView?.txid) {
-    console.log('Publishing')
-  } else {
+  if (authhead != ui.minterInView?.txid) {
+
     $q.dialog({
       dark: true,
       message: 'Unauthorized, invalid auth identity.',
@@ -658,7 +670,11 @@ const publishRegistry = async () => {
     })
   }
 
-  console.log('authhead', authhead)
+  d.update({ message: 'Authentication ok, creating a draft of the new registry. Please wait...' })
+
+  const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(ui.minterInView!.token!.tokenId!)
+  console.log('prevPublication', prevPublication)
+  d.hide()
 }
 
 const mintAnother = async () => {
@@ -807,6 +823,8 @@ onMounted(async () => {
   options.value.recipient = user.walletTokenAddress
   token.value.tokenId = route.params.tokenId! as string
 
+
+
   // console.log('authhead', authhead)
   // $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
   //   await ui.minterInView?.updateUtxo()
@@ -820,8 +838,8 @@ onBeforeRouteLeave((to, from, next) => {
     dark: true,
     message: 'Are you sure you want to leave the page?',
     persistent: true,
-    ok: true,
-    cancel: true,
+    ok: 'Yes',
+    cancel: 'No',
     focus: 'cancel'
   }).onOk(() => {
     next()
