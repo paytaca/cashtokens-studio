@@ -3,7 +3,7 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row items-center q-gutter-sm page-header q-mb-lg">
-          <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="$router.back()" />
+          <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="router.back()" />
           <span class="text-h5">
             Mint
             <q-avatar v-if="ui.minterInView?.tokenUris?.icon">
@@ -37,7 +37,7 @@
           </table>
         </div>
 
-        <q-stepper v-model="state.step" vertical color="primary" animated flat>
+        <q-stepper v-model="state.step" vertical color="info" animated flat>
           <q-step :name="1" title="Mint the token" :icon="nftType.saved ? 'done_all' : 'token'" :done="state.step > 1">
             <!-- <div class="row items-center flex justify-between rounded-borders q-pa-lg" style="border: 1px solid grey;"> -->
             <div class="row items-center flex justify-between">
@@ -161,8 +161,10 @@
 
           <q-step :name="2" title="Describe your NFT" caption="Optional"
             :icon="nftType.saved ? 'done_all' : 'description'" :done="state.step > 2">
-            <span>Describe your NFT by creating its metadata <q-icon v-if="nftType.saved" name="done_all" color="primary"
-                size="md"></q-icon></span>
+            <div v-if="nftType.saved" class="text-right">
+              <q-icon v-if="nftType.saved" name="done_all" color="primary"></q-icon> Saved
+            </div>
+
             <div class="row">
               <div class="col-xs-12 col-sm-5 justify-center "
                 :class="$q.screen.width >= $q.screen.sizes.sm ? 'q-pr-lg' : 'q-mb-lg'">
@@ -187,43 +189,38 @@
                   </div>
                 </div>
               </div>
-              <div class="col-xs-12 col-sm-7 q-px-lg">
+              <div class="col-xs-12 col-sm-7">
                 <div class="row items-center flex justify-between">
                   <div class="text-h6 q-mb-lg">NFT Type</div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Name</label>
-                    <q-input v-model="nftType.name" :outlined="!nftType.saved" :disable="!!nftType.saved"
-                      :borderless="!!nftType.saved" clearable></q-input>
+                    <q-input v-model="nftType.name" outlined dense clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Description</label>
-                    <q-input v-model="nftType.description" :outlined="!nftType.saved" :disable="!!nftType.saved"
-                      :borderless="!!nftType.saved" dense clearable></q-input>
+                    <q-input v-model="nftType.description" outlined dense clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Icon URI</label>
-                    <q-input v-model="nftType.uris!.icon" :outlined="!nftType.saved" :disable="!!nftType.saved"
-                      :borderless="!!nftType.saved" dense clearable></q-input>
+                    <q-input v-model="nftType.uris!.icon" outlined dense clearable></q-input>
                   </div>
                   <div class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right">
                     <label>Asset URI / Image URI</label>
-                    <q-input v-model="nftType.uris!.asset" :outlined="!nftType.saved" :disable="!!nftType.saved"
-                      :borderless="!!nftType.saved" dense clearable></q-input>
+                    <q-input v-model="nftType.uris!.asset" outlined dense clearable></q-input>
                   </div>
                 </div>
               </div>
               <div class="col-xs-12 q-mt-lg">
                 <div class="row items-center flex justify-between">
-                  <div class="text-h5 q-mb-lg">NFT Attributes <q-btn flat color="primary" icon="add" size="xs"
-                      @click="addNftAttribute" :disable="!!nftType.saved" />
+                  <div class="text-h5 q-mb-lg">NFT Attributes <q-btn flat color="primary" icon="add" size="md"
+                      @click="addNftAttribute" />
                   </div>
                 </div>
                 <div class="row items-center flex justify-between">
                   <div v-for="attrKey, i in Object.keys(nftAttributes)"
                     class="col-xs-12 q-mb-lg q-gutter-y-sm items-center justify-right" :key="i">
                     <label>{{ attrKey }}</label>
-                    <q-input v-model="nftAttributes[attrKey]" :outlined="!nftType.saved" :disable="!!nftType.saved"
-                      :borderless="!!nftType.saved" dense clearable>
+                    <q-input v-model="nftAttributes[attrKey]" outlined dense clearable>
                       <template v-slot:after>
                         <q-icon v-if="!nftType.saved" name="remove" @click.stop="() => delete nftAttributes[attrKey]"
                           color="negative"></q-icon>
@@ -238,14 +235,15 @@
                 <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" :disable="!!nftType?.processing" />
                 <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue"
                   class="q-ml-sm" />
+                <q-btn v-if="!nftType.saved" flat @click="state.step = 4" color="primary" label="Skip" class="q-ml-sm" />
                 <BusyButton v-if="!nftType.saved" color="primary" @click.stop="saveNftType"
-                  :busy-label="nftType?.processing" label="Save">
+                  :busy-label="nftType?.processing" label="Save" :disable="!nftType.name">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
           </q-step>
-
-          <q-step :name="3" title="Publish Registry" :icon="nftType.saved ? 'done_all' : 'data_object'">
+          <q-step :name="3" title="Publish Registry" :icon="nftType.saved ? 'done_all' : 'data_object'"
+            :disable="!nftType.saved">
             <span>Do you want to publish an updated registry that includes this recently added NFT?</span>
             <q-option-group v-model="options.publishOption"
               :options="[{ label: 'Publish Now', value: 'now' }, { label: 'Publish Later (Recommended if you minting another NFT)', value: 'later' }]"
@@ -267,7 +265,7 @@
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
 
-                <q-btn flat @click="state.step = 3" label="Back" class="q-ml-sm" />
+                <q-btn flat @click="nftType.saved ? (state.step = 3) : (state.step = 2)" label="Back" class="q-ml-sm" />
                 <q-btn color="negative" size="md" @click.stop="$router.back()">No i'm done here</q-btn>
                 <BusyButton color="primary" size="md" @click.stop="mintAnother" :busy-label="ui.minterInView?.processing"
                   label="Yess">
@@ -307,7 +305,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount, onBeforeUnmount } from 'vue';
 import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
@@ -320,7 +318,7 @@ import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatComm
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { RegistryNftType } from 'src/app';
-import { useRoute } from 'vue-router';
+import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import { Console } from 'console';
 
@@ -329,6 +327,7 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
 const route = useRoute()
+const router = useRouter()
 const dropzone = ref<Dropzone>()
 
 /**
@@ -771,6 +770,22 @@ onMounted(() => {
   //   await ui.minterInView?.updateAuthKeyUtxo()
   //   // initCommitment()
   // })
+})
+
+onBeforeRouteLeave((to, from, next) => {
+  $q.dialog({
+    dark: true,
+    message: 'Are you sure you want to leave the page?',
+    persistent: true,
+    ok: true,
+    cancel: true,
+    focus: 'cancel'
+  }).onOk(() => {
+    next()
+    // router.back()
+  }).onCancel(() => {
+    next(false)
+  })
 })
 
 </script>
