@@ -235,10 +235,12 @@
             </div>
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
-                <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" />
+                <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" :disable="!!nftType?.processing" />
                 <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue"
                   class="q-ml-sm" />
-                <q-btn v-if="!nftType.saved" color="primary" @click.stop="saveNftType">Save</q-btn>
+                <BusyButton v-if="!nftType.saved" color="primary" @click.stop="saveNftType"
+                  :busy-label="nftType?.processing" label="Save">
+                </BusyButton>
               </div>
             </q-stepper-navigation>
           </q-step>
@@ -267,7 +269,9 @@
 
                 <q-btn flat @click="state.step = 3" label="Back" class="q-ml-sm" />
                 <q-btn color="negative" size="md" @click.stop="$router.back()">No i'm done here</q-btn>
-                <q-btn color="primary" size="md" @click.stop="mintAnother">Yes</q-btn>
+                <BusyButton color="primary" size="md" @click.stop="mintAnother" :busy-label="ui.minterInView?.processing"
+                  label="Yess">
+                </BusyButton>
               </div>
             </q-stepper-navigation>
           </q-step>
@@ -381,7 +385,7 @@ const state = ref<{
   mintersCommitment: string,
 }>({
   step: 1,
-  mintTx: '74ffd8340376bec60db456f5c0fa1cd63c6b03503946170236bd5ecf0be2c0a0',
+  mintTx: '',
   mintersCommitment: ''
 })
 
@@ -604,11 +608,13 @@ const saveNftType = async () => {
       attributes: nftAttributes.value
     }
     const t = Object.assign({}, token.value, { commitment: rawNftCommitment.value })
-    await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
-    ui.setStatusMessage({
-      statusMessage: `Saved Nft metadata`,
-      statusMessageType: 'success',
-    })
+    const r = await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
+    if (r) {
+      ui.setStatusMessage({
+        statusMessage: `Saved Nft metadata`,
+        statusMessageType: 'success',
+      })
+    }
 
   } catch (error: any) {
     ui.setStatusMessage({
@@ -632,6 +638,8 @@ const mintAnother = async () => {
     await ui.minterInView?.updateUtxo()
     await ui.minterInView?.updateAuthKeyUtxo()
     state.value.mintTx = ''
+    initCommitment()
+    state.value.step = 1
   } catch (error: any) {
     ui.setStatusMessage({
       statusMessage: error,

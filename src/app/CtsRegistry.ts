@@ -69,6 +69,7 @@ export class RegistryNftType extends CtsRegistry implements NftType{
    * @param {string} minterAddress The minter's token address
    */
   async saveNft(txid: string, token: TokenI, signer: TransactionSigner, minterAddress: string){
+    this.processing = 'Saving'
     const message = {
       txid,
       token: Object.assign({}, token, {amount: token.amount.toString()}),
@@ -78,8 +79,10 @@ export class RegistryNftType extends CtsRegistry implements NftType{
     const signedMessage = await signer.signMessage(JSON.stringify(message))
 
     if (!signedMessage) {
+      this.processing = '' 
       return
     }
+
     try {
       const headers = new Headers();
       headers.append('Content-Type', 'application/json');
@@ -90,12 +93,12 @@ export class RegistryNftType extends CtsRegistry implements NftType{
         body: JSON.stringify({message, sig: signedMessage})
         
       })
-      const rj = await r.json()
-      console.log(rj)
       this.saved = true
-      return rj
+      return await r.json()
     } catch (error) {
       throw error
+    } finally {
+      this.processing = ''
     }
   }
 }
