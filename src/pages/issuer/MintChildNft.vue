@@ -33,6 +33,12 @@
                 }}</span>
                 </td>
               </tr>
+              <tr>
+                <td>Minter's Utxo: </td>
+                <td><span class="text-light">{{ ui.minterInView?.txid || '<none>'
+                }}</span>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -152,6 +158,7 @@
             <q-stepper-navigation>
               <div class="text-right">
                 <q-btn flat v-if="state.mintTx" @click="addMetadata" color="primary" label="Continue" class="q-ml-sm" />
+
                 <BusyButton v-if="!state.mintTx" color="primary" @click.stop="confirmMint"
                   :busy-label="ui.minterInView?.processing" label="Mint">
                 </BusyButton>
@@ -235,9 +242,9 @@
                 <q-btn flat @click="state.step = 1" label="Back" class="q-ml-sm" :disable="!!nftType?.processing" />
                 <q-btn v-if="nftType.saved" flat @click="state.step = 3" color="primary" label="Continue"
                   class="q-ml-sm" />
-                <q-btn v-if="!nftType.saved" flat @click="state.step = 4" color="primary" label="Skip" class="q-ml-sm" />
-                <BusyButton v-if="!nftType.saved" color="primary" @click.stop="saveNftType"
-                  :busy-label="nftType?.processing" label="Save" :disable="!nftType.name">
+                <q-btn v-if="!nftType.saved" flat @click="state.step = 3" color="primary" label="Skip" class="q-ml-sm" />
+                <BusyButton color="primary" @click.stop="saveNftType" :busy-label="nftType?.processing" label="Save"
+                  :disable="!nftType.name">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
@@ -246,15 +253,15 @@
             :disable="!nftType.saved">
             <span>Do you want to publish an updated registry that includes this recently added NFT?</span>
             <q-option-group v-model="options.publishOption"
-              :options="[{ label: 'Publish Now', value: 'now' }, { label: 'Publish Later (Recommended if you minting another NFT)', value: 'later' }]"
+              :options="[{ label: 'Publish Now', value: 'now' }, { label: 'Publish Later (Recommended if you\'re minting another NFT)', value: 'later' }]"
               color="primary" />
             <q-stepper-navigation>
               <div class="text-right q-gutter-sm">
                 <q-btn flat @click="state.step = 2" label="Back" class="q-ml-sm" />
                 <q-btn v-if="options.publishOption == 'later'" @click="state.step = 4" color="primary" label="Next"
                   class="q-ml-sm" />
-                <BusyButton v-if="nftType.saved && options.publishOption == 'now'" color="primary" size="md"
-                  @click.stop="publishRegistry" :busy-label="ui.minterInView?.processing" label="Publish Registry">
+                <BusyButton v-if="options.publishOption == 'now'" color="primary" size="md" @click.stop="publishRegistry"
+                  :busy-label="ui.minterInView?.processing" label="Publish Registry">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
@@ -266,9 +273,9 @@
               <div class="text-right q-gutter-sm">
 
                 <q-btn flat @click="nftType.saved ? (state.step = 3) : (state.step = 2)" label="Back" class="q-ml-sm" />
-                <q-btn color="negative" size="md" @click.stop="$router.back()">No i'm done here</q-btn>
-                <BusyButton color="primary" size="md" @click.stop="mintAnother" :busy-label="ui.minterInView?.processing"
-                  label="Yess">
+                <q-btn color="negative" @click.stop="$router.back()">No i'm done here</q-btn>
+                <BusyButton color="primary" @click.stop="mintAnother" :busy-label="ui.minterInView?.processing"
+                  label="Yes">
                 </BusyButton>
               </div>
             </q-stepper-navigation>
@@ -309,7 +316,7 @@ import { ref, computed, watch, onMounted, nextTick, onBeforeMount, onBeforeUnmou
 import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import Dropzone from 'dropzone'
-import { ADDRESS_WATCHER_TRIGGERED } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
@@ -626,10 +633,32 @@ const saveNftType = async () => {
 
 const publishRegistry = async () => {
 
-  if (options.value.publishOption == 'later') {
-    return state.value.step = 4
+  // if (options.value.publishOption == 'later') {
+  //   return state.value.step = 4
+  // }
+  // check if this is an authchain authhead
+  if (ui.minterInView?.utxoSpent) {
+    await ui.minterInView.updateUtxo()
+    await ui.minterInView.updateAuthKeyUtxo()
   }
-  // TODO: publish
+  const authhead = await (new ChainGraph()).fetchAuthheadTxid(ui.minterInView!.token!.tokenId!)
+
+  if (authhead == ui.minterInView?.txid) {
+    console.log('Publishing')
+  } else {
+    $q.dialog({
+      dark: true,
+      message: 'Unauthorized, invalid auth identity.',
+      persistent: true,
+      ok: true,
+      focus: 'ok',
+
+    }).onOk(() => {
+      console.log('OK')
+    })
+  }
+
+  console.log('authhead', authhead)
 }
 
 const mintAnother = async () => {
@@ -639,6 +668,18 @@ const mintAnother = async () => {
     state.value.mintTx = ''
     initCommitment()
     state.value.step = 1
+    nftType.value = new RegistryNftType({
+      name: '',
+      description: '',
+      uris: {
+        icon: '',
+        image: '',
+        asset: ''
+      },
+      extensions: {
+        attributes: {}
+      }
+    })
   } catch (error: any) {
     ui.setStatusMessage({
       statusMessage: error,
@@ -761,10 +802,12 @@ onBeforeMount(() => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
   initCommitment()
   options.value.recipient = user.walletTokenAddress
   token.value.tokenId = route.params.tokenId! as string
+
+  // console.log('authhead', authhead)
   // $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
   //   await ui.minterInView?.updateUtxo()
   //   await ui.minterInView?.updateAuthKeyUtxo()

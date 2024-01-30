@@ -49,9 +49,8 @@ import shortenTx from 'src/app/utils/shortenTx';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
-import { fetchAuthChainAuthheadFromChainGraph, fetchAuthhead, shortenTokenId } from 'src/app/utils';
+import { shortenTokenId } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
-import { BCMR, Network } from 'mainnet-js';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -73,11 +72,6 @@ onMounted(async () => {
     form.value.contentHash = props.contentHash
   }
 
-  const authhead = await fetchAuthChainAuthheadFromChainGraph({
-    chaingraphUrl: 'https://gql.chaingraph.pat.mn/v1/graphql',
-    transactionHash: props.authchainIdentity.token?.tokenId || props.authchainIdentity.txid,
-    network: props.authchainIdentity.ownerWallet!.network
-  })
   // TODO: authenticate authchainIdentity check if it's the authhead, show Authentication Failure dialog if not.
 })
 
