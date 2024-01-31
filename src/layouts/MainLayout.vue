@@ -41,10 +41,12 @@
     </q-drawer>
     <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }">
-      <q-page-container class="q-mb-lg">
+      <q-page-container class="q-mb-lg q-px-sm">
+        <q-toolbar v-if="ui.routeBack" class="q-my-lg">
+          <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="router.back()" />
+          <!-- <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title> -->
+        </q-toolbar>
         <router-view />
-        <!-- <q-inner-loading :showing="ui.pageLoader.show" :label="ui.pageLoader.label" label-class="text-teal"
-          label-style="font-size: 1.1em" /> -->
       </q-page-container>
     </q-scroll-area>
     <MessageDialog v-model="messageDialog" />
