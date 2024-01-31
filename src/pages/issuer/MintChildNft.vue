@@ -1,25 +1,25 @@
 <template>
   <q-page>
     <div class="row justify-center q-gutter-md">
-      <div class="col-xs-12 col-sm-10 col-lg-9 q-gutter-sm">
-        <q-avatar v-if="ui.minterInView?.tokenUris?.icon" square size="5em">
-          <q-img :src="ui.minterInView?.tokenUris?.icon"></q-img>
-        </q-avatar>
-        <q-input
-          :model-value="$q.screen.lt.sm ? shortenTx(ui.minterInView?.token?.tokenId!) : ui.minterInView?.token?.tokenId"
-          dense disabled readonly borderless filled>
-          <template v-slot:before>
-            <label>Token ID:</label>
-          </template>
-          <template v-slot:append>
-            <q-icon name="clipboard" @click.stop="copyText(ui.minterInView?.token?.tokenId!)"></q-icon>
-          </template>
-        </q-input>
-        <q-input :model-value="state.mintersCommitment" dense disabled readonly borderless filled>
-          <template v-slot:before>
-            <label>Minter's Commitment:</label>
-          </template>
-        </q-input>
+      <div class="col-xs-12 col-sm-10 col-lg-9 bg-dark q-pa-lg">
+        <div class="row q-gutter-md">
+          <div class="col-xs-12">
+            <q-avatar v-if="ui.minterInView?.tokenUris?.icon" square size="5em">
+              <q-img :src="ui.minterInView?.tokenUris?.icon"></q-img>
+            </q-avatar>
+          </div>
+          <div class="col-xs-12">
+            <div class="row">
+              <div class="col-xs-5 col-sm-4">Token ID</div>
+              <div class="col-xs-7 col-sm-auto">{{ $q.screen.lt.md ? shortenTx(ui.minterInView?.token?.tokenId!) :
+                ui.minterInView?.token?.tokenId }}</div>
+            </div>
+            <div class="row">
+              <div class="col-xs-5 col-sm-4">Minter's Commitment</div>
+              <div class="col-xs-7 col-sm-auto ">{{ state.mintersCommitment }}</div>
+            </div>
+          </div>
+        </div>
       </div>
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <q-stepper v-model="state.step" active-color="warning" done-icon="done_all" done-color="primary" vertical animated
@@ -30,7 +30,7 @@
               🎉 NFT Minted! <q-btn :href="openTxInExplorer(state.mintTx)" target="_blank" flat dense color="secondary"
                 label="View Tx" />
             </q-chip>
-            <q-form class="q-gutter-md q-pa-lg" @submit.prevent="mint">
+            <q-form ref="mintForm" class="q-gutter-md q-pa-lg" @submit.prevent="mint">
               <q-select :options="[
                 { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
                 { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
@@ -118,21 +118,22 @@
                     @click="options.recipient = user.walletTokenAddress!" />
                 </template>
               </q-input>
-              <div v-if="!state.mintTx" class="row justify-end">
-                <q-btn name="stepper-nav" type="submit" color="primary" label="Mint" class="q-ml-sm self-right"
-                  size="lg" />
+              <div class="row justify-end">
+                <q-btn type="submit" color="primary" :label="!state.mintTx ? 'Mint' : 'Mint Again'"
+                  class="q-ml-sm self-right" size="lg" />
               </div>
 
             </q-form>
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-              <q-btn v-if="state.mintTx" name="stepper-nav" flat @click.stop="handleStepperNav" color="primary"
-                label="Continue" class="q-ml-sm" size="lg" />
+              <q-btn v-if="state.mintTx && options.mintOption != MINT_ONE_UNIQUE_NFT" name="stepper-nav" flat
+                @click.stop="handleStepperNav" color="primary" label="Continue" class="q-ml-sm" size="lg" />
               <!-- <q-btn name="stepper-nav" @click.stop="handleStepperNav" color="primary" label="Mint" class="q-ml-sm"
                 size="lg" /> -->
             </q-stepper-navigation>
           </q-step>
-          <q-step :name="2" title="Provide NFT asset" caption="Optional" icon="attach_file" done-icon="done_all"
-            class="q-gutter-md">
+          <q-step :name="2" title="Provide NFT asset"
+            :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="attach_file"
+            done-icon="done_all" class="q-gutter-md">
             <q-chip v-if="nftType.saved" square>
               <q-avatar color="success" text-color="positive" icon="done_all" size="lg"></q-avatar>
               Saved
@@ -169,7 +170,9 @@
             </q-stepper-navigation>
 
           </q-step>
-          <q-step :name="3" title="Publish registry update" caption="Optional" icon="data_object" done-icon="done_all">
+          <q-step :name="3" title="Publish registry update"
+            :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
+            done-icon="done_all">
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
                 size="lg" />
@@ -179,7 +182,8 @@
                 class="q-ml-sm" size="lg" />
             </q-stepper-navigation>
           </q-step>
-          <q-step :name="4" title="Wrap up" icon="exit_to_app" done-icon="done_all">
+          <q-step v-if="options.mintOption == MINT_ONE_UNIQUE_NFT" :name="4" title="Wrap up" icon="exit_to_app"
+            done-icon="done_all">
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
                 size="lg" />
@@ -211,6 +215,18 @@ import { RegistryNftType } from 'src/app';
 import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import { Console } from 'console';
+import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue';
+
+
+// tx of successful mint
+// const state.mintTx = ref<string>()
+const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
+const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
+const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
+const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
+const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
+const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
+
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -219,8 +235,7 @@ const ui = useUI()
 const route = useRoute()
 const router = useRouter()
 const dropzone = ref<Dropzone>()
-const dialog = ref<DialogChainObject>()
-
+const mintForm = ref()
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParsableNftCollection will be handled
@@ -260,14 +275,6 @@ const commitmentLast = computed(() => {
 
 })
 
-// tx of successful mint
-// const state.mintTx = ref<string>()
-const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
-const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
-const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
-const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
-const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
-const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
 
 const state = ref<{
   step: number,
@@ -275,7 +282,7 @@ const state = ref<{
   mintersCommitment: string,
 }>({
   step: 1,
-  mintTx: 'teset',
+  mintTx: '',
   mintersCommitment: ''
 })
 
@@ -414,25 +421,36 @@ const deferRegistryPublicationHelp = () => {
   })
 }
 
-watch(() => ui.minterInView?.processing, (v) => {
-  if (v) {
-    if (!dialog.value) {
-      dialog.value = $q.dialog({
-        message: v,
-        progress: true,
-        ok: false
-      })
-    } else {
-      dialog.value.update({
-        message: v,
-        progress: true,
-        ok: false
-      })
+watch(() => ui.minterInView!.processing, (v, oldV) => {
+  if (v && !ui.dialog) {
+    return ui.dialog = $q.dialog({
+      message: v,
+      ok: false,
+      progress: true
+    })
+  } else if (v && ui.dialog) {
+    return ui.dialog = ui.dialog.update({
+      message: v,
+      ok: false,
+      progress: true
+    })
+  }
+  if (!v && ui.dialog) {
+    try {
+      ui.dialog.hide()
+    } catch (error) {
+      ui.dialog = undefined
     }
   }
 })
 
 const mint = async () => {
+
+  if (state.value.mintTx) {
+    await ui.minterInView?.updateUtxo()
+    await ui.minterInView?.updateAuthKeyUtxo()
+    return state.value.mintTx = ''
+  }
 
   const tokens: any = []
   if (options.value.quantity == 1) {
@@ -507,7 +525,6 @@ const mint = async () => {
       })
       $q.notify({ type: 'negative', message: 'Error!' + error.message })
     } finally {
-      dialog.value.hide()
     }
   }
 }
