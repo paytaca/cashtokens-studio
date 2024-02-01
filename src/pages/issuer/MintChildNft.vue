@@ -24,7 +24,8 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <q-stepper v-model="state.step" active-color="warning" done-icon="done_all" done-color="primary" vertical animated
           flat>
-          <q-step :name="1" title="Mint the token" icon="token" :done="state.step > 1">
+          <q-step :name="1" :title="!state.mintTx ? 'Mint the token' : '🎉 NFT Minted!'" icon="token"
+            :done="state.step > 1">
             <q-chip v-if="state.mintTx" square>
               <q-avatar color="success" text-color="positive" icon="done_all" size="lg"></q-avatar>
               🎉 NFT Minted! <q-btn :href="openTxInExplorer(state.mintTx)" target="_blank" flat dense color="secondary"
@@ -187,15 +188,16 @@
                   </template>
                 </q-input>
               </div>
+              <q-stepper-navigation class="text-right q-my-lg q-px-lg">
+                <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
+                  size="lg" />
+                <q-btn v-if="nftType.saved" name="stepper-nav" flat @click.stop="handleStepperNav" color="primary"
+                  label="Continue" class="q-ml-sm" size="lg" />
+                <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm" size="lg"
+                  :disable="!nftType.name" />
+              </q-stepper-navigation>
             </q-form>
-            <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
-                size="lg" />
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Skip" class="q-ml-sm"
-                size="lg" />
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Continue"
-                class="q-ml-sm" size="lg" />
-            </q-stepper-navigation>
+
 
           </q-step>
           <q-step :name="3" title="Publish registry update"
@@ -415,22 +417,6 @@ const confirmAddNftAttribute = () => {
     nftAttributes.value = { ...nftAttributes.value, [nftAttributeDialogData.value.key]: nftAttributeDialogData.value.value }
   }
 }
-
-const addMetadata = () => {
-  state.value.step = 2
-  options.value.addMetadata = true
-  if (!nftType.value.name && ui.minterInView?.tokenCategory?.symbol) {
-    nftType.value.name = ui.minterInView?.tokenCategory?.symbol + '-' + token.value.commitment
-  }
-  nextTick(() => {
-    Dropzone.discover();
-    if (document.querySelector('.dz-button')) {
-      document.querySelector('.dz-button')!.innerHTML! = `Drop your NFT asset here. \n The NFT asset is the off-chain resource that the token represents. 
-      This could be an image, pdf, music, etc... Tupload an icon, drop a file with name 'icon', e.g. icon.png`
-    }
-  });
-}
-
 
 const convertCommitment = () => {
   if (token.value.commitment && options.value.commitmentFormat === 'decimal') {
@@ -710,6 +696,14 @@ const handleStepperNav = (e: any) => {
     case 'back':
       state.value.step = state.value.step - 1
       break
+  }
+  if (state.value.step === 2 && !nftType.value.name && token.value.commitment) {
+    if (ui.minterInView?.tokenCategory?.symbol) {
+      nftType.value.name = `${ui.minterInView?.tokenCategory?.symbol} - ${formatCommitment(token.value.commitment!, options.value.commitmentFormat, 'decimal')}`
+    } else {
+      nftType.value.name = `NFT - ${formatCommitment(token.value.commitment!, options.value.commitmentFormat, 'decimal')}`
+    }
+
   }
 }
 
