@@ -114,7 +114,8 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           ipfs: image,
           https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
         },
-        originalFilename: req.file.originalname
+        originalFilename: req.file.originalname,
+        h: req.query.h
       });
       
     } catch (error) {
