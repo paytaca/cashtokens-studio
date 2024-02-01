@@ -188,9 +188,13 @@ export class Watchtower {
             transaction: tx
           })
         })
+        if (r.status >= 400) {
+          this.error = 'Problem occured while contacting server. Please try again later.'  
+          throw this.error
+        } 
         return await r.json()
       } catch (error) {
-        this.error = error
+        throw error
       } finally {
         delete this.processing
       }

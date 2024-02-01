@@ -282,6 +282,7 @@ const state = ref<{
   mintersCommitment: string,
 }>({
   step: 1,
+  // mintTx: '760923415a8138082deb731e680cc066316a6a4d066bd808eb338d1852512b7c',
   mintTx: '',
   mintersCommitment: ''
 })
@@ -523,7 +524,6 @@ const mint = async () => {
         statusMessage: error,
         statusMessageType: 'error',
       })
-      $q.notify({ type: 'negative', message: 'Error!' + error.message })
     } finally {
     }
   }
