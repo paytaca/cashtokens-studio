@@ -129,12 +129,6 @@
               </q-stepper-navigation>
 
             </q-form>
-            <!-- <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-              <q-btn v-if="state.mintTx && options.mintOption == MINT_ONE_UNIQUE_NFT" name="stepper-nav" flat
-                @click.stop="handleStepperNav" color="primary" label="Continue" class="q-ml-sm" size="lg" />
-              <q-btn name="stepper-nav" @click.stop="handleStepperNav" color="primary" label="Mint" class="q-ml-sm"
-                size="lg" />
-            </q-stepper-navigation> -->
           </q-step>
           <q-step :name="2" title="Provide NFT asset"
             :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="attach_file"
@@ -150,10 +144,11 @@
               This could be an image, pdf, music, etc... To upload an icon, drop a file with name 'icon', e.g.
               icon.png
             </p>
-            <q-uploader ref="fileUploader" @uploaded="onFileUploaded" field-name="file" :label="'Upload'"
-              :url="`/api/tokens/nft/asset-upload?tokenId=${token.tokenId}&commitment=${token.commitment}`" auto-upload
-              flat dense size="sm" style="width:100%;max-width: 100%; border: 2px dashed rgb(129 123 123 / 80%); "
-              color="dark" class="q-my-md" multiple square bordered no-thumbnails />
+            <q-uploader ref="fileUploader" @uploaded="onFileUploaded" @added="onFileAdded" :factory="fileUploaderFactory"
+              field-name="file" :label="'Upload'"
+              :url="`/api/tokens/nft/asset-upload?tokenId=${token.tokenId}&commitment=${token.commitment}`" flat dense
+              size="sm" style="width:100%;max-width: 100%; border: 2px dashed rgb(129 123 123 / 80%); " color="dark"
+              class="q-my-md" multiple square bordered no-thumbnails />
             <div class="text-center text-h6 q-my-lg">Or</div>
             <div class="text-center">You can paste the asset URI here below. We recommend using IPFS (ipfs://). </div>
 
@@ -162,29 +157,27 @@
                 <q-avatar v-if="nftTypeAssetHttpUri" rounded>
                   <q-img :src="nftTypeAssetHttpUri"></q-img>
                 </q-avatar>
-                <q-input class="col" v-model="nftType.uris!.asset" label="NFT Asset URI" outlined clearable></q-input>
+                <q-input class="col" v-model="nftType.uris!.asset" label="NFT Asset URI" outlined></q-input>
               </div>
               <div class="row items-center q-gutter-sm">
                 <q-avatar v-if="nftTypeIconHttpUri" rounded>
                   <q-img :src="nftTypeIconHttpUri"></q-img>
                 </q-avatar>
-                <q-input class="col" v-model="nftType.uris!.icon" label="Icon URI" outlined clearable></q-input>
+                <q-input class="col" v-model="nftType.uris!.icon" label="Icon URI" outlined></q-input>
               </div>
-              <!-- <q-input v-model="nftType.uris!.asset" label="NFT Asset URI" outlined clearable></q-input>
-              <q-input v-model="nftType.uris!.icon" label="Icon URI" outlined clearable></q-input> -->
-
               <div class="text-h6 q-mt-md">NFT Details</div>
-              <q-input v-model="nftType.name" label="Name" outlined clearable></q-input>
+              <q-input v-model="nftType.name" label="Name*" outlined></q-input>
               <q-input v-model="nftType.description" label="Description" outlined clearable></q-input>
 
-              <div class="text-h6 q-mt-md">Attributes<q-btn flat color="primary" icon="add" size="md"
-                  @click="addNftAttribute" type="button" /></div>
-              <div class="row">
+              <div class="text-h6 q-mt-md">NFT Attributes<q-btn flat color="primary" icon="add" size="md"
+                  @click="openAttributeDialog" type="button" /></div>
+              <div class="row q-gutter-md">
                 <q-input v-for="attrKey, i in Object.keys(nftAttributes)" v-model="nftAttributes[attrKey]" outlined dense
-                  clearable :label="attrKey" :key="i">
+                  :label="attrKey" :key="i">
                   <template v-slot:after>
-                    <q-icon v-if="!nftType.saved" name="remove" @click.stop="() => delete nftAttributes[attrKey]"
-                      color="negative"></q-icon>
+                    <q-icon v-if="!nftType.saved" name="delete_forever" @click.stop="() => delete nftAttributes[attrKey]"
+                      color="negative" class="cursor-pointer">
+                    </q-icon>
                   </template>
                 </q-input>
               </div>
@@ -197,8 +190,6 @@
                   :disable="!nftType.name" />
               </q-stepper-navigation>
             </q-form>
-
-
           </q-step>
           <q-step :name="3" title="Publish registry update"
             :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
@@ -229,27 +220,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
 import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { Dialog, DialogChainObject, useQuasar } from 'quasar';
-import Dropzone from 'dropzone'
 import { ADDRESS_WATCHER_TRIGGERED, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
-import TokenCategory from 'src/components/TokenCategory.vue'
-import BusyButton from 'src/components/BusyButton.vue'
 import { NftCollectionType } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { RegistryNftType } from 'src/app';
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
-import { Console } from 'console';
-import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue';
+import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 
-
-// tx of successful mint
-// const state.mintTx = ref<string>()
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
 const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
 const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
@@ -265,8 +249,6 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
 const route = useRoute()
-const router = useRouter()
-const dropzone = ref<Dropzone>()
 const mintForm = ref()
 const fileUploader = ref()
 /**
@@ -366,14 +348,6 @@ const options = ref<{
 })
 
 
-
-const nftAttributeDialogData = ref<{ dialog: boolean, key: string, value: string }>({
-  dialog: false,
-  key: '',
-  value: ''
-})
-
-
 const tokenCommmitmentPlaceholderText = computed<string>(() => {
   if (nftCollectionType.value === 'SequentialNftCollection') {
     return 'Enter a number'
@@ -401,21 +375,12 @@ const rawNftCommitmentLast = computed<string>((): string => {
   return formatCommitment(commitmentLast.value || '', options.value.commitmentFormat, 'vm-number').toString()
 })
 
-
-const clearNftAttribute = () => {
-  nftAttributeDialogData.value.key = ''
-  nftAttributeDialogData.value.value = '' as string
-}
-
-const addNftAttribute = () => {
-  clearNftAttribute()
-  nftAttributeDialogData.value.dialog = !nftAttributeDialogData.value.dialog
-}
-
-const confirmAddNftAttribute = () => {
-  if (nftAttributeDialogData.value.key && nftAttributeDialogData.value.value) {
-    nftAttributes.value = { ...nftAttributes.value, [nftAttributeDialogData.value.key]: nftAttributeDialogData.value.value }
-  }
+const openAttributeDialog = () => {
+  $q.dialog({
+    component: NftAttributeDialog,
+  }).onOk((attribute) => {
+    nftAttributes.value = { ...nftAttributes.value, [attribute.name]: attribute.value }
+  })
 }
 
 const convertCommitment = () => {
@@ -439,33 +404,65 @@ const initCommitment = () => {
   }
 }
 
-const excludeFromSequentialNftCollectionHelp = () => {
-  ui.setStatusMessage({
-    statusMessage: 'If the box is checked, the commitment of the child NFT being minted won\'t be tracked by the minter. This means that the sequence number will NOT increase. Recommended values are already set by default, i.e. exclude child with `minting` and `mutable` capability, include child with `none` capability.',
-    statusMessageType: 'info'
+const fileUploaderFactory = (files: any): Promise<any> => {
+  console.log('FILES', files)
+  return new Promise((resolve) => {
+    const fileReader = new FileReader()
+    fileReader.onload = function () {
+      const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
+      const uint8Array = new Uint8Array(arrayBuffer);
+      const h = binToHex(sha1.hash(uint8Array))
+      resolve({
+        url: `/api/tokens/nft/asset-upload?tokenId=${token.value.tokenId}&commitment=${token.value.commitment}&h=${h}`
+      })
+    };
+    fileReader.readAsArrayBuffer(files[0]);
+
   })
 }
-
-const deferRegistryPublicationHelp = () => {
-  ui.setStatusMessage({
-    statusMessage: 'If checked, the NFT metadata will be cached but minting won\'t include registry publication on-chain.',
-    statusMessageType: 'info'
-  })
-}
-
 
 const onFileUploaded = (info: any) => {
   try {
     const serverResponse = JSON.parse(info.xhr.responseText)
-    console.log('SERVER RESPONSE', serverResponse)
     if (serverResponse.originalFilename?.startsWith('icon')) {
       nftType.value.uris!.icon = serverResponse.uris.ipfs
     } else {
       nftType.value.uris!.asset = serverResponse.uris.ipfs
     }
+    localStorage.setItem(`h-${serverResponse.h}`, JSON.stringify(serverResponse))
   } catch (error) {
     console.log(error)
   }
+}
+
+const onFileAdded = async (files: readonly any[]) => {
+  for (const f of files) {
+    try {
+      await new Promise((res, rej) => {
+        const fileReader = new FileReader()
+        fileReader.onload = function () {
+          const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
+          const uint8Array = new Uint8Array(arrayBuffer);
+          const h = binToHex(sha1.hash(uint8Array))
+          if (localStorage.getItem(`h-${h}`)) {
+            let data = JSON.parse(localStorage.getItem(`h-${h}`) as string)
+            if (data.originalFilename.startsWith('icon')) {
+              nftType.value.uris!.icon = data.uris.ipfs
+            } else {
+              nftType.value.uris!.asset = data.uris.ipfs
+              nftType.value.uris!.image = data.uris.ipfs
+            }
+            rej()
+          }
+
+        };
+        fileReader.readAsArrayBuffer(f);
+      })
+    } catch (error) {
+      fileUploader.value.removeFile(f)
+    }
+  }
+  fileUploader.value.upload()
 }
 
 watch(() => ui.minterInView!.processing, (v, oldV) => {
@@ -707,14 +704,6 @@ const handleStepperNav = (e: any) => {
   }
 }
 
-const initDropzone = () => {
-  Dropzone.discover();
-  if (document.querySelector('.dz-button')) {
-    document.querySelector('.dz-button')!.innerHTML! = `Drop your NFT asset here. <br/> The NFT asset is the off-chain resource that the token represents. 
-      This could be an image, pdf, music, etc... <br/> To upload an icon, drop an image file with name 'icon', e.g. icon.png`
-  }
-}
-
 watch(() => token.value.commitment, (commitment) => {
   if (!commitment) {
     return options.value.commitmentFormat = 'decimal' //
@@ -759,77 +748,6 @@ watch(() => state.value.step, (step) => {
     if (!nftType.value.name && ui.minterInView?.tokenCategory?.symbol) {
       nftType.value.name = ui.minterInView?.tokenCategory?.symbol + '-' + token.value.commitment
     }
-    nextTick(() => {
-      initDropzone()
-    });
-  }
-})
-
-onBeforeMount(() => {
-  Dropzone.options.nftAssetsDropzone = {
-    maxFiles: 3, // 1 for asset, 1 for icon, 1 for attributes.json
-    maxFilesize: 50000,
-    autoProcessQueue: true,
-    addRemoveLinks: true,
-    paramName: 'file',
-    uploadMultiple: true,
-    init: function () {
-      dropzone.value = this
-      this.on('addedfile', (file: any) => {
-        console.log('FILE', file)
-        // binToHex(sha256.hash(utf8ToBin(this.getContent())))
-        const fileReader = new FileReader()
-        if (file.type === 'application/json') {
-          fileReader.onload = (e) => {
-            const content: any = e.target?.result
-            console.log('content', content)
-            try {
-              nftAttributes.value = JSON.parse(content)
-            } catch (error) {
-              console.log(error)
-            }
-          }
-          fileReader.readAsText(file)
-        } else {
-          for (const f of dropzone.value!.files) {
-            if (f.name !== file.name) {
-              dropzone.value?.removeFile(f)
-            }
-          }
-
-          // fileReader.onload = function () {
-          //   const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
-          //   const uint8Array = new Uint8Array(arrayBuffer);
-          //   console.log('sha1', binToHex(sha1.hash(uint8Array)))
-          // };
-          // fileReader.readAsArrayBuffer(file);
-        }
-
-      })
-
-      this.on('removedfile', (file) => {
-        options.value.nftAssetDataURL = ''
-        if (file.type === 'application/json') {
-          nftAttributes.value = {}
-        }
-      })
-
-      this.on('success', (file, response: any) => {
-        console.log('SUCCESS', response)
-        nftType.value.uris!.asset = response?.assetUris?.ipfs
-        const fileReader = new FileReader()
-        fileReader.onload = function () {
-          const arrayBuffer: ArrayBuffer = fileReader.result as ArrayBuffer;
-          const uint8Array = new Uint8Array(arrayBuffer);
-          localStorage.setItem(`asseturis-${binToHex(sha1.hash(uint8Array))}`, JSON.stringify(response))
-        };
-        fileReader.readAsArrayBuffer(file);
-      })
-
-      this.on('accept', (file: any) => {
-        console.log('ACCEPTED', file)
-      })
-    }
   }
 })
 
@@ -871,39 +789,6 @@ onBeforeRouteLeave((to, from, next) => {
 
 
 <style lang="scss">
-.dropurl {
-  border: 2px dashed rgb(129 123 123 / 80%);
-  padding: unset;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.dropzone {
-  border: 2px dashed rgb(129 123 123 / 80%);
-  padding: unset;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.dropzone .dz-preview {
-  margin: .75em;
-}
-
-.dropzone .dz-preview.dz-image-preview {
-  background: #fff0;
-}
-
-.dropzone a.dz-remove {
-  color: $negative;
-  margin-top: 1em;
-}
-
-.dz-progress {
-  margin-top: -50px !important;
-}
-
 .q-stepper__title {
   font-size: medium;
 }
