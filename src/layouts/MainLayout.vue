@@ -44,7 +44,7 @@
       <q-page-container class="q-mb-lg q-px-sm">
         <q-toolbar v-if="ui.routeBack" class="q-my-lg">
           <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="router.back()" />
-          <!-- <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title> -->
+          <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title>
         </q-toolbar>
         <router-view />
       </q-page-container>
