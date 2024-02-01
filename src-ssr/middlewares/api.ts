@@ -92,17 +92,19 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     
     let ext = req.file.originalname?.split('.')
     ext = ext[ext.length - 1]
-    const metadata = await nftStorageClient().store({
-      name: 'CTStudio',
-      description: 'NFT asset',
-      image: new File(
-        [req.file.buffer],
-        `${req.query.tokenId}-${req.query.commitment}.${ext}`,
-        { type: req.file.mimetype }
-      )
-    })
-    const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
+    
     try {
+      const metadata = await nftStorageClient().store({
+        name: 'CTStudio',
+        description: 'NFT asset',
+        image: new File(
+          [req.file.buffer],
+          `${req.query.tokenId}-${req.query.commitment}.${ext}`,
+          { type: req.file.mimetype }
+        )
+      })
+      const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
+
       const metadataContents = await fetch(`https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`)
       const {/*name, description,*/image } = await metadataContents.json()
       const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
