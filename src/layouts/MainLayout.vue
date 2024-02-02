@@ -1,24 +1,63 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <TransactionLogger />
-    <q-header>
-      <q-toolbar class="q-py-sm" style="background-color: rgb(20,20,20)">
-        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+    <q-header style="background-color: rgb(20,20,20)">
+      <q-toolbar class="q-py-sm">
+        <q-btn flat dense round icon="menu" aria-label="Menu" size="lg" @click="toggleLeftDrawer" />
         <q-toolbar-title>
           <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')" src="images/cts_transparent.png"
             style="max-height: 3em;object-fit: fill;max-width:8em"></q-img>
           <code v-if="getAppEnv() !== 'production'" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
+        <div v-if="user.walletAddress">
+          <q-btn-group flat class="text-right">
+            <q-btn-dropdown auto-close rounded icon="manage_accounts" size="lg">
+              <q-list padding style="width: 300px">
+
+                <!-- <q-separator inset />  -->
+                <q-item-label header>Addresses</q-item-label>
+                <q-item clickable
+                  @click="() => { copyText(user.walletAddress); $q.notify({ message: 'Wallet Address Copied', timeout: 500 }) }">
+                  <q-item-section avatar>
+                    <q-avatar color="teal" text-color="white">
+                      <q-img src="images/bitcoin-cash-circle.svg"></q-img>
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>BCH Address</q-item-label>
+                    <q-item-label caption>{{ shortenAddress(user.walletAddress) }}</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable
+                  @click="() => { copyText(user.walletTokenAddress); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
+                  <q-item-section avatar>
+                    <q-avatar icon="token" color="teal" text-color="white" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Token Address</q-item-label>
+                    <q-item-label caption>{{ shortenAddress(user.walletTokenAddress) }}</q-item-label>
+                  </q-item-section>
+                  <!-- <q-item-section side>
+                    <q-icon name="content_copy" color="amber" />
+                  </q-item-section> -->
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+          </q-btn-group>
+        </div>
         <light-switch />
-        <span v-if="user.walletAddress">
+        <span v-if="user.walletAddress" class="q-mx-md">
           <paytaca-connect v-if="user.walletType == 'paytaca'" variant="icon" />
           <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="icon" />
         </span>
       </q-toolbar>
+
+
     </q-header>
-    <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay>
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay v-close-popup>
       <div class="text-right q-ma-sm">
-        <q-btn flat dense round icon="close" aria-label="Menu" @click="toggleLeftDrawer" class="justify-right" />
+        <q-btn flat size="lg" round icon="close" aria-label="Menu" @click="toggleLeftDrawer" class="justify-right" />
       </div>
 
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
@@ -30,10 +69,6 @@
                 <q-img src="images/cts_icon.png"></q-img>
               </q-avatar>
             </q-btn>
-          </div>
-          <div v-if="user.wallet" class="col-12 text-center q-gutter-sm">
-            <CashAddress :cashaddr="user.walletAddress" type="cash" />
-            <CashAddress :cashaddr="user.wallet!.getTokenDepositAddress()" type="token" />
           </div>
         </div>
         <SidebarMenu />
@@ -68,6 +103,7 @@ import { useRoute, useRouter } from 'vue-router'
 import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useDialogs } from 'src/composables';
 import { useInit } from 'src/composables/useInit';
+import { shortenAddress, copyText } from 'src/app/utils'
 
 const leftDrawerOpen = ref(false)
 const user = useUser()
