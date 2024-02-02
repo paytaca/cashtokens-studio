@@ -4,6 +4,7 @@ export class ChainGraph {
 
   chainGraphUrl: string
   network?: string
+  processing?: string
   constructor(options?: { chainGraphUrl?: string}) {
     this.chainGraphUrl = options?.chainGraphUrl || 'https://gql.chaingraph.pat.mn/v1/graphql'
   }
@@ -36,6 +37,8 @@ export class ChainGraph {
 
   
   async retrieveLastRegistryPublication(tokenId: string): Promise<any> {
+    this.processing = ''
+    this.processing = 'Checking last registry publication, please wait...'
 
     let n:any = this.network || 'chipnet'
       if (this.network === NetworkType.Testnet) {
@@ -58,8 +61,12 @@ export class ChainGraph {
           query: `{transaction(where:{hash:{_eq:\"\\\\x${tokenId}\"},node_validation_timeline:{node:{name:{_ilike:\"%${n}%\"}}}}){hash authchains{authhead{hash}, authchain_length migrations(where:{transaction:{outputs:{locking_bytecode_pattern:{_like:\"6a04%\"}}}},order_by:{migration_index:desc}limit:1){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{locking_bytecode_pattern:{_like:\"6a04%\"}}){output_index locking_bytecode}}}}}}`
         })
       });
+
+      if(response.status >= 400) {
+        throw response.statusText
+      }
+
       response = await response.json()
-      console.log('RESPONSE', response)
       
       const result:any = []
 
@@ -67,6 +74,7 @@ export class ChainGraph {
       if (!migrations) {
           return result;
       }
+      this.processing = 'Registry publication found, parsing...'
       for (const migration of migrations) {
           const transaction = migration.transaction[0];
           if (!transaction) {
@@ -85,9 +93,10 @@ export class ChainGraph {
       }
       return result
     } catch (error) {
-      console.log(error)
+      throw error
+    } finally {
+      this.processing = ''
     }
-    return []
   }
 
 
