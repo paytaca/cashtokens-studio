@@ -202,7 +202,7 @@
             <div class="row justify-center q-gutter-md">
               <q-btn color="primary" icon="download" @click.stop="downloadPublishedRegistry">Download Current
                 Version</q-btn>
-              <q-btn color="primary" icon="download">Download Revision </q-btn>
+              <q-btn color="primary" icon="download" @click.stop="downloadRevisedRegistry">Download Revision </q-btn>
             </div>
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
@@ -233,7 +233,7 @@
 import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
 import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { Dialog, DialogChainObject, useQuasar } from 'quasar';
-import { ADDRESS_WATCHER_TRIGGERED, ChainGraph } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, Bcmr, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
 import { NftCollectionType } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
@@ -485,8 +485,7 @@ const onFileAdded = async (files: readonly any[]) => {
   fileUploader.value.upload()
 }
 
-const downloadPublishedRegistry = async () => {
-
+const fetchPublishedRegistry = async () => {
   const pubInfo = await chainGraph.value.retrieveLastRegistryPublication(token.value.tokenId)
   const d = $q.dialog({
     class: 'col-auto',
@@ -495,6 +494,7 @@ const downloadPublishedRegistry = async () => {
   })
 
   let url
+  let registry
   const downloadUrls = [pubInfo[0].httpsUrl, ...pubInfo[0].uris]
   for (const uri of downloadUrls) {
     try {
@@ -518,15 +518,8 @@ const downloadPublishedRegistry = async () => {
       })
       const resp = await fetch(url)
       if (resp.status === 200) {
-        const blob = new Blob([JSON.stringify(await resp.json())], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'bitcoin-cash-metadata-registry.json'; // Specify the desired file name with the appropriate extension
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-
+        registry = await resp.json()
+        if (registry) break
       } else {
         d.update({
           message: 'Checking other URLs'
@@ -539,6 +532,42 @@ const downloadPublishedRegistry = async () => {
 
     }
   }
+  d.hide()
+  return registry
+}
+
+const downloadRegistryFile = (registry: any) => {
+  const blob = new Blob([registry], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'bitcoin-cash-metadata-registry.json'; // Specify the desired file name with the appropriate extension
+  document.body.appendChild(a);
+  a.click();
+  window.URL.revokeObjectURL(url);
+}
+
+const downloadPublishedRegistry = async () => {
+  const registry = await fetchPublishedRegistry()
+  if (registry) {
+    downloadRegistryFile(JSON.stringify(registry))
+  }
+}
+
+const downloadRevisedRegistry = async () => {
+  const registry = await fetchPublishedRegistry()
+  const bcmr = new Bcmr(registry)
+  console.log(bcmr)
+  console.log(await localForage.nftTypesStore.keys())
+  const keys = (await localForage.nftTypesStore.keys()).filter((key) => key.startsWith(token.value.tokenId))
+  for (const k of keys) {
+    const commitmentNftType: any = JSON.parse(await localForage.nftTypesStore.getItem(k) as string)
+    const commitment = Object.keys(commitmentNftType)[0]
+    const nftType = commitmentNftType[commitment]
+    bcmr.addNft(commitment, nftType)
+    bcmr.setLatestRevision(new Date().toISOString())
+  }
+  downloadRegistryFile(bcmr.getContent())
 }
 
 watch(() => ui.minterInView!.processing, (v, oldV) => {
