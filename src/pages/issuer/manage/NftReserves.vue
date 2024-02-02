@@ -114,7 +114,7 @@
             </tr>
           </tbody>
         </q-markup-table>
-        <NewNFTMinterDialog v-if="dialog" :model-value="dialog === NewNFTMinterDialog.__name"
+        <NFTMinterDialog v-if="dialog" :model-value="dialog === NFTMinterDialog.__name"
           :minter="(dialogData as CashToken)" @hide="onHide" @nft-minted="onMint" />
         <NFTMintingContractDeployerDialog v-if="dialog" :model-value="dialog === NFTMintingContractDeployerDialog.__name"
           :minter="(dialogData as CashToken)" @hide="onHide" />
@@ -140,7 +140,7 @@ import { PaginatedData } from 'src/app/types';
 import { getWalletClass, shortenTokenId } from 'src/app/utils';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-import NewNFTMinterDialog from 'src/components/dialogs/NewNFTMinterDialog.vue';
+import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
 import router from 'src/router';
 
@@ -179,7 +179,7 @@ const openMintChildDialog = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
-  openDialog(NewNFTMinterDialog.__name, ct)
+  openDialog(NFTMinterDialog.__name, ct)
 }
 
 const loadMinterToView = (identity: AuthchainIdentity) => {
