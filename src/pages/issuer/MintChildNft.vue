@@ -182,12 +182,11 @@
                 </q-input>
               </div>
               <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-                <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
-                  size="lg" />
+                <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" label="Back" class="q-ml-sm" size="lg" />
                 <q-btn v-if="nftType.saved" name="stepper-nav" flat @click.stop="handleStepperNav" color="primary"
                   label="Continue" class="q-ml-sm" size="lg" />
                 <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm" size="lg"
-                  :disable="!nftType.name" />
+                  :disable="!nftType.name" :icon-right="nftType.saved ? 'done_all' : undefined" />
               </q-stepper-navigation>
             </q-form>
           </q-step>
@@ -220,7 +219,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
 import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
 import { Dialog, DialogChainObject, useQuasar } from 'quasar';
 import { ADDRESS_WATCHER_TRIGGERED, ChainGraph } from 'src/app';
@@ -233,6 +232,8 @@ import { RegistryNftType } from 'src/app';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import { useLocalForage } from 'src/composables/useLocalForage';
+import localforage from 'localforage';
 
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
 const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
@@ -251,6 +252,7 @@ const ui = useUI()
 const route = useRoute()
 const mintForm = ref()
 const fileUploader = ref()
+const localForage = useLocalForage()
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParsableNftCollection will be handled
@@ -575,17 +577,35 @@ const mint = async () => {
 const saveNftType = async () => {
   try {
 
+    let proceed = false
+    if (await localForage.nftTypesStore.getItem(`${token.value.tokenId}-${rawNftCommitment.value}`)) {
+      proceed = await new Promise((res) => {
+        $q.dialog({
+          message: 'This will overwrite the existing data. Do you want to proceed?',
+          class: 'q-pa-md',
+          ok: { label: 'Yes', color: 'primary', flat: true },
+          cancel: { label: 'No', color: 'negative', flat: true },
+          focus: 'cancel'
+        }).onCancel(() => {
+          res(false)
+        }).onOk(() => {
+          res(true)
+        })
+      })
+    }
+
+    if (!proceed) return
+
     nftType.value.extensions = {
       ...nftType.value.extensions,
       attributes: nftAttributes.value
     }
-    const t = Object.assign({}, token.value, { commitment: rawNftCommitment.value })
-    const r = await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
-    if (r) {
-      ui.setStatusMessage({
-        statusMessage: `Saved Nft metadata`,
-        statusMessageType: 'success',
-      })
+    // const t = Object.assign({}, token.value, { commitment: rawNftCommitment.value })
+    // const r = await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
+    await localForage.nftTypesStore.setItem(`${token.value.tokenId}-${rawNftCommitment.value}`, JSON.stringify({ [rawNftCommitment.value as string]: nftType.value.value }))
+    const item = await localForage.nftTypesStore.getItem(`${token.value.tokenId}-${rawNftCommitment.value}`)
+    if (item) {
+      nftType.value.saved = true
     }
 
   } catch (error: any) {
@@ -756,8 +776,6 @@ onMounted(async () => {
   initCommitment()
   options.value.recipient = user.walletTokenAddress
   token.value.tokenId = route.params.tokenId! as string
-
-
 
   // console.log('authhead', authhead)
   // $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
