@@ -184,21 +184,32 @@
               <q-stepper-navigation class="text-right q-my-lg q-px-lg">
                 <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" label="Back" class="q-ml-sm" size="lg" />
                 <q-btn v-if="nftType.saved" name="stepper-nav" flat @click.stop="handleStepperNav" color="primary"
-                  label="Continue" class="q-ml-sm" size="lg" />
+                  label="Continue" class="q-ml-sm" size="lg" :disable="!nftType.saved" />
                 <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm" size="lg"
                   :disable="!nftType.name" :icon-right="nftType.saved ? 'done_all' : undefined" />
               </q-stepper-navigation>
             </q-form>
           </q-step>
-          <q-step :name="3" title="Publish registry update"
+          <q-step :name="3" title="Token Registry"
             :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
-            done-icon="done_all">
+            done-icon="done_all" class="q-gutter-md">
+            <p style="text-align: justify;">
+              You can check the currently published and the unpublished revision of the registry by downloading it
+              here-below.
+              The unpublished revision contains the new NFT types that you've saved. Clicking on `Publish Revision`
+              will publish the revision on-chain.
+            </p>
+            <div class="row justify-center q-gutter-md">
+              <q-btn color="primary" icon="download" @click.stop="downloadPublishedRegistry">Download Current
+                Version</q-btn>
+              <q-btn color="primary" icon="download">Download Revision </q-btn>
+            </div>
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
                 size="lg" />
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Skip" class="q-ml-sm"
                 size="lg" />
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Continue"
+              <q-btn name="stepper-nav" @click.stop="publishRegistry" color="primary" label="Publish Revision"
                 class="q-ml-sm" size="lg" />
             </q-stepper-navigation>
           </q-step>
@@ -253,6 +264,7 @@ const route = useRoute()
 const mintForm = ref()
 const fileUploader = ref()
 const localForage = useLocalForage()
+const chainGraph = ref<ChainGraph>(new ChainGraph())
 /**
  * Value of this should be resolved from bcmr, but since we're just currently supporting
  * SequentialNftCollection, we'll use the default. ParsableNftCollection will be handled
@@ -310,11 +322,15 @@ const state = ref<{
   step: number,
   mintTx: string,
   mintersCommitment: string,
+  splitterModel: any,
+  tab: any
 }>({
-  step: 1,
+  step: 3,
   mintTx: '760923415a8138082deb731e680cc066316a6a4d066bd808eb338d1852512b7c',
   // mintTx: '',
-  mintersCommitment: ''
+  mintersCommitment: '',
+  splitterModel: '',
+  tab: ''
 })
 
 const options = ref<{
@@ -332,6 +348,7 @@ const options = ref<{
   commitmentLast: string,
   publishOption: 'now' | 'later',
   useAssetImageAsIcon: boolean,
+  includeRevisionHistory: boolean // download revision option
 }>({
   collectionType: 'SequentialNftCollection',
   recipient: '',
@@ -347,6 +364,7 @@ const options = ref<{
   commitmentLast: '',
   publishOption: 'later',
   useAssetImageAsIcon: false,
+  includeRevisionHistory: false
 })
 
 
@@ -467,7 +485,86 @@ const onFileAdded = async (files: readonly any[]) => {
   fileUploader.value.upload()
 }
 
+const downloadPublishedRegistry = async () => {
+
+  const pubInfo = await chainGraph.value.retrieveLastRegistryPublication(token.value.tokenId)
+  const d = $q.dialog({
+    class: 'col-auto',
+    message: 'Fetching registry from published URL, please wait...',
+    progress: true
+  })
+
+  let url
+  const downloadUrls = [pubInfo[0].httpsUrl, ...pubInfo[0].uris]
+  for (const uri of downloadUrls) {
+    try {
+      url = new URL(uri)
+    } catch (error) {
+      try {
+        if (uri && uri.includes('.')) {
+          url = new URL('https://' + uri)
+        } else {
+          url = ipfsToGatewayUrl('ipfs://' + uri)
+        }
+      } catch (error) {
+        console.log(error)
+        continue
+      }
+    }
+    if (!url) continue
+    try {
+      d.update({
+        message: `Downloading...${url}`
+      })
+      const resp = await fetch(url)
+      if (resp.status === 200) {
+        const blob = new Blob([JSON.stringify(await resp.json())], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'bitcoin-cash-metadata-registry.json'; // Specify the desired file name with the appropriate extension
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+
+      } else {
+        d.update({
+          message: 'Checking other URLs'
+        })
+        continue
+      }
+      d.hide()
+      break
+    } catch (error) {
+
+    }
+  }
+}
+
 watch(() => ui.minterInView!.processing, (v, oldV) => {
+  if (v && !ui.dialog) {
+    return ui.dialog = $q.dialog({
+      message: v,
+      ok: false,
+      progress: true
+    })
+  } else if (v && ui.dialog) {
+    return ui.dialog = ui.dialog.update({
+      message: v,
+      ok: false,
+      progress: true
+    })
+  }
+  if (!v && ui.dialog) {
+    try {
+      ui.dialog.hide()
+    } catch (error) {
+      ui.dialog = undefined
+    }
+  }
+})
+
+watch(() => chainGraph.value.processing, (v, oldV) => {
   if (v && !ui.dialog) {
     return ui.dialog = $q.dialog({
       message: v,
