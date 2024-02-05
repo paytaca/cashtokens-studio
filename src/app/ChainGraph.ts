@@ -37,7 +37,6 @@ export class ChainGraph {
 
   
   async retrieveLastRegistryPublication(tokenId: string): Promise<any> {
-    this.processing = ''
     this.processing = 'Checking last registry publication, please wait...'
 
     let n:any = this.network || 'chipnet'
