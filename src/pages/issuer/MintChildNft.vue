@@ -11,7 +11,7 @@
           <div class="col-xs-12">
             <div class="row">
               <div class="col-xs-5 col-sm-4">Token ID</div>
-              <div class="col-xs-7 col-sm-auto">{{ $q.screen.lt.md ? shortenTx(ui.minterInView?.token?.tokenId!) :
+              <div class="col-xs-7 col-sm-auto">{{ $q.screen.lt.md ? shortenTx(ui.minterInView?.token?.tokenId! || '') :
                 ui.minterInView?.token?.tokenId }}</div>
             </div>
             <div class="row">
@@ -193,6 +193,11 @@
           <q-step :name="3" title="Token Registry"
             :caption="options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
             done-icon="done_all" class="q-gutter-md">
+            <q-chip v-if="state.publishTx" square>
+              <q-avatar color="success" text-color="positive" icon="done_all" size="lg"></q-avatar>
+              Registry Revision Pupblished! <q-btn :href="openTxInExplorer(state.publishTx)" target="_blank" flat dense
+                color="secondary" label="View Tx" />
+            </q-chip>
             <p style="text-align: justify;">
               You can check the currently published and the unpublished revision of the registry by downloading it
               here-below.
@@ -215,6 +220,7 @@
           </q-step>
           <q-step v-if="options.mintOption == MINT_ONE_UNIQUE_NFT" :name="4" title="Wrap up" icon="exit_to_app"
             done-icon="done_all">
+
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
                 size="lg" />
@@ -230,7 +236,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref, onBeforeUnmount } from 'vue';
 import { NFTCapability, NftType, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js';
 import { Dialog, DialogChainObject, useQuasar } from 'quasar';
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app';
@@ -243,6 +249,7 @@ import { RegistryNftType } from 'src/app';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import localforage from 'localforage';
 
@@ -261,6 +268,7 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const ui = useUI()
 const route = useRoute()
+const router = useRouter()
 const mintForm = ref()
 const fileUploader = ref()
 const localForage = useLocalForage()
@@ -321,12 +329,14 @@ const commitmentLast = computed(() => {
 const state = ref<{
   step: number,
   mintTx: string,
+  publishTx: string,
   mintersCommitment: string,
   splitterModel: any,
   tab: any
 }>({
   step: 3,
   mintTx: '760923415a8138082deb731e680cc066316a6a4d066bd808eb338d1852512b7c',
+  publishTx: '',
   // mintTx: '',
   mintersCommitment: '',
   splitterModel: '',
@@ -575,7 +585,7 @@ const downloadRevisedRegistry = async () => {
   downloadRegistryFile(bcmr.getContent())
 }
 
-watch(() => ui.minterInView!.processing, (v, oldV) => {
+watch(() => ui.minterInView?.processing, (v, oldV) => {
   if (v && !ui.dialog) {
     return ui.dialog = $q.dialog({
       message: v,
@@ -598,7 +608,7 @@ watch(() => ui.minterInView!.processing, (v, oldV) => {
   }
 })
 
-watch(() => chainGraph.value.processing, (v, oldV) => {
+watch(() => chainGraph.value?.processing, (v, oldV) => {
   if (v && !ui.dialog) {
     return ui.dialog = $q.dialog({
       message: v,
@@ -759,7 +769,8 @@ const publishRegistry = async () => {
     await ui.minterInView.updateAuthKeyUtxo()
   }
 
-  const d = $q.dialog({
+  let d = $q.dialog({
+    class: 'q-pa-md',
     dark: true,
     message: 'Authenticating, minter\'s utxo from the authchain',
     ok: false,
@@ -768,20 +779,26 @@ const publishRegistry = async () => {
   })
 
   const authhead = await (new ChainGraph()).fetchAuthheadTxid(ui.minterInView!.token!.tokenId!)
-
+  console.log('AUTHHEAD', authhead)
+  console.log('MINTER', ui.minterInView?.txid)
+  let proceed = false
   if (authhead != ui.minterInView?.txid) {
-
-    $q.dialog({
+    d.update({
       dark: true,
-      message: 'Unauthorized, invalid auth identity.',
+      message: 'Unauthorized, invalid auth identity. ',
       persistent: true,
       ok: true,
       focus: 'ok',
-
-    }).onOk(() => {
-      console.log('OK')
+      progress: false
+    }).onDismiss(() => {
+      proceed = false
     })
+  } else {
+    proceed = true
   }
+
+  if (!proceed) return
+
 
   d.update({ message: 'Authentication ok, creating a draft of the new registry. Please wait...' })
 
@@ -812,15 +829,29 @@ const publishRegistry = async () => {
       authchainIdentity.transactionSigner = user.transactionSigner
 
       d.update({ message: 'Publishing registry' })
+
       const tx = await authchainIdentity.publish({ url: storageArtifact.uris.https, contentHash: storageArtifact.contentHash })
       console.log('TX', tx)
       if (tx) {
-        d.update({
-          message: `Registry published`,
+        d.hide()
+        state.value.publishTx = tx
+        d = $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            txid: tx,
+            statusType: 'success',
+            statusText: 'Registry Published'
+          },
           persistent: true,
+          progress: false,
           ok: true,
-        }).onOk(() => {
+        }).onDismiss(() => {
           state.value.step = 4
+          nextTick(() => {
+            ui.minterInView!.utxoSpent = true
+          })
+          d.hide()
+
         })
       }
     }
@@ -833,8 +864,6 @@ const publishRegistry = async () => {
   } finally {
     d.hide()
   }
-
-
 }
 
 const mintAnother = async () => {
@@ -950,36 +979,48 @@ watch(() => state.value.step, (step) => {
 })
 
 onMounted(async () => {
-  ui.routeBack = true
   initCommitment()
   options.value.recipient = user.walletTokenAddress
-  token.value.tokenId = route.params.tokenId! as string
+  token.value.tokenId = route.query!.tokenId! as string
 
-  // console.log('authhead', authhead)
-  // $ebus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-  //   await ui.minterInView?.updateUtxo()
-  //   await ui.minterInView?.updateAuthKeyUtxo()
-  //   // initCommitment()
-  // })
+  // window.onbeforeunload = async () => {
+  //   const yes: boolean = await new Promise((res, rej) => {
+  //     $q.dialog({
+  //       dark: true,
+  //       message: 'Are you sure you want to leave the page?',
+  //       persistent: true,
+  //       ok: 'Yes',
+  //       cancel: 'No',
+  //       focus: 'cancel'
+  //     }).onOk(() => {
+  //       res(true)
+  //     }).onCancel(() => {
+  //       res(false)
+  //     })
+  //   })
+  //   if (yes) {
+  //     router.back()
+  //   }
+  // }
 })
 
-onBeforeRouteLeave((to, from, next) => {
-  $q.dialog({
-    dark: true,
-    message: 'Are you sure you want to leave the page?',
-    persistent: true,
-    ok: 'Yes',
-    cancel: 'No',
-    focus: 'cancel'
-  }).onOk(() => {
-    ui.routeBack = false
-    next()
-    // router.back()
-  }).onCancel(() => {
-    next(false)
+onBeforeRouteLeave(async (to, from, next) => {
+  const yes: boolean = await new Promise((res, rej) => {
+    $q.dialog({
+      dark: true,
+      message: 'Are you sure you want to leave the page?',
+      persistent: true,
+      ok: 'Yes',
+      cancel: 'No',
+      focus: 'cancel'
+    }).onOk(() => {
+      res(true)
+    }).onCancel(() => {
+      res(false)
+    })
   })
+  next(yes)
 })
-
 
 </script>
 
