@@ -1,4 +1,4 @@
-import { TokenI, UtxoI, Wallet } from "mainnet-js";
+import { TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
@@ -21,7 +21,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   authKey?: AuthKey
-  ownerWallet?: Wallet
+  ownerWallet?: Wallet | TestNetWallet
   useAuthGuard?: true   // default
   /**
    * TokenCategory is a portion of the BCMR schema, we attached it here 
@@ -46,7 +46,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       coinbase?: boolean | undefined;
       token?: TokenI | undefined;
       authKey: AuthKey
-      ownerWallet?: Wallet
+      ownerWallet?: Wallet | TestNetWallet
     },
     transactionSigner?: TransactionSigner
   ){
@@ -258,6 +258,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete this._processing
       throw new Error('Insufficient balance to fund the txn')
     }
+    console.log('PROCESSING')
     const [authchainIdentityOutput, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     const contract = this.authKey!.authGuard!.contract!
@@ -307,9 +308,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
+      console.log(error)
       delete this._processing
       throw error
     }
+    console.log('DECODED', decoded)
     this._processing = 'Waiting for signature'
     let signingResult
     try {
@@ -362,7 +365,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       ]
 
       signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Publish registry update')
+      
     } catch (error) {
+      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
