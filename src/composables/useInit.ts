@@ -1,13 +1,20 @@
-import { inject, onMounted, ref, watch } from "vue"
+import { inject, onMounted, ref, unref, watch } from "vue"
 import { getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE, Watchtower } from 'src/app';
 import { UtxoI, delay } from 'mainnet-js';
 import { useRouter } from 'vue-router';
 import { EventBus } from 'quasar';
+import { useUI } from "src/stores/ui";
+import { usePage } from "src/stores/page";
+import { useLocalForage } from "./useLocalForage";
+import { stringify } from "@bitauth/libauth";
 
 export const useInit = () => {
   const user = useUser()
+  const ui = useUI()
+  const localForage = useLocalForage()
+  const page = usePage()
   const watchtower = ref<Watchtower>()
   const router = useRouter()
   const eventBus = inject<EventBus>('eventBus')
@@ -18,6 +25,20 @@ export const useInit = () => {
     window.onbeforeunload = () => {
       localStorage.setItem('user.walletType', user.walletType || '')
     }
+
+    page.$subscribe((mutation:any, state)=>{
+      console.log('MUTATION', mutation)
+      console.log('STATE', state)
+      if (mutation.events?.key == 'state') {
+        console.log('PAGE PATH', state.path)
+        localForage.pageStore.setItem(state.path, stringify(state.state))
+        console.log('SAVING NEW VALUE', mutation.events.newValue)
+      }
+      
+    })
+
+    
+
   })
 
   const loadWalletBchBalance = async (address: string) => {
