@@ -189,6 +189,8 @@
                 <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" label="Back" class="q-ml-sm" size="lg" />
                 <q-btn v-if="nftType.saved" name="stepper-nav" flat @click.stop="handleStepperNav" color="primary"
                   label="Continue" class="q-ml-sm" size="lg" :disable="!nftType.saved" />
+                <q-btn name="stepper-nav" flat @click.stop="state.step = 4" color="primary" label="Skip" class="q-ml-sm"
+                  size="lg" />
                 <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm" size="lg"
                   :disable="!nftType.name" :icon-right="nftType.saved ? 'done_all' : undefined" />
               </q-stepper-navigation>
@@ -226,10 +228,10 @@
             done-icon="done_all">
 
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Back" class="q-ml-sm"
+              <q-btn name="stepper-nav" flat @click.stop="router.back()" color="primary" label="Exit" class="q-ml-sm"
                 size="lg" />
-              <q-btn name="stepper-nav" flat @click.stop="handleStepperNav" color="primary" label="Skip" class="q-ml-sm"
-                size="lg" />
+              <q-btn name="stepper-nav" color="primary" size="lg" @click.stop="mintAnother" label="Mint Another"
+                class="q-ml-sm" />
             </q-stepper-navigation>
           </q-step>
         </q-stepper>
@@ -240,12 +242,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount } from 'vue';
 import { NFTCapability, NftType, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js';
-import { Dialog, DialogChainObject, useQuasar } from 'quasar';
+import { useQuasar } from 'quasar';
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
-import { BcmrStorageArtifact, NftCollectionType, TransactionSigner } from 'src/app/types';
+import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
@@ -255,9 +257,7 @@ import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { useLocalForage } from 'src/composables/useLocalForage';
-import localforage from 'localforage';
 import { usePage } from 'src/stores/page';
-import { Console } from 'console';
 
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
 const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
@@ -362,7 +362,7 @@ const state = ref<{
   }
 }>({
   // step: 3,
-  step: 1,
+  step: 4,
   // mintTx: '760923415a8138082deb731e680cc066316a6a4d066bd808eb338d1852512b7c',
   mintTx: '',
   publishTx: '',
@@ -658,17 +658,11 @@ watch(() => chainGraph.value?.processing, (v, oldV) => {
 })
 
 watch(() => authchainIdentity.value?.processing, (v) => {
-  if (v) {
-    ui.setStatusMessage({
-      statusMessage: v,
-      statusMessageSpinner: true,
-      statusMessageType: 'info'
-    })
-  } else {
-    ui.setStatusMessage({
-      statusMessage: ''
-    })
-  }
+  ui.setStatusMessage({
+    statusMessage: v || '',
+    statusMessageSpinner: true,
+    statusMessageType: 'info'
+  })
 })
 
 const mint = async () => {
@@ -676,8 +670,10 @@ const mint = async () => {
   if (state.value.mintTx) {
     await ui.minterInView?.updateUtxo()
     await ui.minterInView?.updateAuthKeyUtxo()
-    return state.value.mintTx = ''
+    // return state.value.mintTx = ''
   }
+
+  ui.minterInView!.processing = 'Processing'
 
   const tokens: any = []
   if (state.value.options.quantity == 1) {
@@ -912,15 +908,21 @@ const publishRegistry = async () => {
 
 const mintAnother = async () => {
   let proceed = false
+  console.log(supportAssetUpload)
+  console.log(supportAssetUpload.includes(state.value.options.mintOption) && !nftType.value.saved)
   if (supportAssetUpload.includes(state.value.options.mintOption) && !nftType.value.saved) {
-    $q.dialog({
-      class: 'q-pa-md',
-      focus: 'cancel',
-      message: 'Are you sure you don\'t want to upload NFT metadata?',
-      ok: { label: 'Yes, I\'m Sure', color: 'primary', flat: true },
-      cancel: { label: 'No', color: 'negative', flat: true },
-    }).onOk(() => {
-      proceed = true
+    proceed = await new Promise((res, rej) => {
+      $q.dialog({
+        class: 'q-pa-md',
+        focus: 'cancel',
+        message: 'Are you sure you don\'t want to save the NFT metadata?',
+        ok: { label: 'Yes, I\'m Sure', color: 'primary', flat: true },
+        cancel: { label: 'No', color: 'negative', flat: true },
+      }).onOk(() => {
+        res(true)
+      }).onCancel(() => {
+        res(false)
+      })
     })
   }
 
