@@ -231,11 +231,11 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick, onBeforeMount, unref } from 'vue';
-import { NFTCapability, NftType, TokenI, binToHex } from 'mainnet-js';
+import { NFTCapability, NftType, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js';
 import { Dialog, DialogChainObject, useQuasar } from 'quasar';
-import { ADDRESS_WATCHER_TRIGGERED, Bcmr, ChainGraph } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
-import { NftCollectionType } from 'src/app/types';
+import { BcmrStorageArtifact, NftCollectionType, TransactionSigner } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
@@ -536,6 +536,22 @@ const fetchPublishedRegistry = async () => {
   return registry
 }
 
+const createRegistryRevision = async () => {
+  const registry = await fetchPublishedRegistry()
+  const bcmr = new Bcmr(registry)
+  console.log(bcmr)
+  console.log(await localForage.nftTypesStore.keys())
+  const keys = (await localForage.nftTypesStore.keys()).filter((key) => key.startsWith(token.value.tokenId))
+  for (const k of keys) {
+    const commitmentNftType: any = JSON.parse(await localForage.nftTypesStore.getItem(k) as string)
+    const commitment = Object.keys(commitmentNftType)[0]
+    const nftType = commitmentNftType[commitment]
+    bcmr.addNft(commitment, nftType)
+    bcmr.setLatestRevision(new Date().toISOString())
+  }
+  return bcmr
+}
+
 const downloadRegistryFile = (registry: any) => {
   const blob = new Blob([registry], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -555,18 +571,7 @@ const downloadPublishedRegistry = async () => {
 }
 
 const downloadRevisedRegistry = async () => {
-  const registry = await fetchPublishedRegistry()
-  const bcmr = new Bcmr(registry)
-  console.log(bcmr)
-  console.log(await localForage.nftTypesStore.keys())
-  const keys = (await localForage.nftTypesStore.keys()).filter((key) => key.startsWith(token.value.tokenId))
-  for (const k of keys) {
-    const commitmentNftType: any = JSON.parse(await localForage.nftTypesStore.getItem(k) as string)
-    const commitment = Object.keys(commitmentNftType)[0]
-    const nftType = commitmentNftType[commitment]
-    bcmr.addNft(commitment, nftType)
-    bcmr.setLatestRevision(new Date().toISOString())
-  }
+  const bcmr = await createRegistryRevision()
   downloadRegistryFile(bcmr.getContent())
 }
 
@@ -780,9 +785,56 @@ const publishRegistry = async () => {
 
   d.update({ message: 'Authentication ok, creating a draft of the new registry. Please wait...' })
 
-  const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(ui.minterInView!.token!.tokenId!)
-  console.log('prevPublication', prevPublication)
-  d.hide()
+  try {
+    const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(ui.minterInView!.token!.tokenId!)
+    console.log('prevPublication', prevPublication)
+    d.update({ message: 'Adding NFTs to new registry' })
+    const bcmr = await createRegistryRevision()
+    d.update({ message: 'Storing registry in IPFS' })
+    // const storageArtifact: BcmrStorageArtifact | undefined = await bcmr.storeRegistry()
+    // console.log('ARTIFACT', storageArtifact)
+    const storageArtifact = {
+      "uris": {
+        "https": "https://nftstorage.link/ipfs/bafkreifh57yp5xlvpwfn5rb43uvcf7z6veaum4tzyrnh7xio6bsrm443se",
+        "ipfs": "ipfs://bafkreifh57yp5xlvpwfn5rb43uvcf7z6veaum4tzyrnh7xio6bsrm443se"
+      },
+      "contentHash": "a7eff0fedd757d8adec43cdd2a22ff3ea901467279c45a7fdd0ef06516739b91"
+    }
+    if (storageArtifact) {
+      const authchainIdentity = new AuthchainIdentity(
+        {
+          ...ui.minterInView!.utxo,
+          authKey: ui.minterInView?.authKey as AuthKey,
+          ownerWallet: ui.minterInView?.ownerWallet as TestNetWallet | Wallet
+        },
+        // transactionSigner: user.transactionSigner as TransactionSigner
+      )
+      authchainIdentity.transactionSigner = user.transactionSigner
+
+      d.update({ message: 'Publishing registry' })
+      const tx = await authchainIdentity.publish({ url: storageArtifact.uris.https, contentHash: storageArtifact.contentHash })
+      console.log('TX', tx)
+      if (tx) {
+        d.update({
+          message: `Registry published`,
+          persistent: true,
+          ok: true,
+        }).onOk(() => {
+          state.value.step = 4
+        })
+      }
+    }
+  } catch (error: any) {
+    d.update({
+      message: error?.message || error,
+      persistent: true,
+      ok: true,
+    })
+  } finally {
+    d.hide()
+  }
+
+
 }
 
 const mintAnother = async () => {
