@@ -852,19 +852,13 @@ const publishRegistry = async () => {
 
   try {
     const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(ui.minterInView!.token!.tokenId!)
-    console.log('prevPublication', prevPublication)
+
     d.update({ message: 'Adding NFTs to new registry' })
     const bcmr = await createRegistryRevision()
     d.update({ message: 'Storing registry in IPFS' })
     const storageArtifact: BcmrStorageArtifact | undefined = await bcmr.storeRegistry()
-    // console.log('ARTIFACT', storageArtifact)
-    // const storageArtifact = {
-    //   "uris": {
-    //     "https": "https://nftstorage.link/ipfs/bafkreifh57yp5xlvpwfn5rb43uvcf7z6veaum4tzyrnh7xio6bsrm443se",
-    //     "ipfs": "ipfs://bafkreifh57yp5xlvpwfn5rb43uvcf7z6veaum4tzyrnh7xio6bsrm443se"
-    //   },
-    //   "contentHash": "a7eff0fedd757d8adec43cdd2a22ff3ea901467279c45a7fdd0ef06516739b91"
-    // }
+    d.hide()
+
     if (storageArtifact) {
       authchainIdentity.value = new AuthchainIdentity(
         {
@@ -872,16 +866,12 @@ const publishRegistry = async () => {
           authKey: ui.minterInView?.authKey as AuthKey,
           ownerWallet: ui.minterInView?.ownerWallet as TestNetWallet | Wallet
         },
-        // transactionSigner: user.transactionSigner as TransactionSigner
       )
       authchainIdentity.value.transactionSigner = user.transactionSigner
 
-      // d.update({ message: 'Publishing registry' })
-
       const tx = await authchainIdentity.value.publish({ url: storageArtifact.uris.https, contentHash: storageArtifact.contentHash })
-      console.log('TX', tx)
+
       if (tx) {
-        d.hide()
         state.value.publishTx = tx
         $ebus?.emit('transaction', {
           txid: tx,
@@ -1074,6 +1064,7 @@ onBeforeRouteLeave(async (to, from, next) => {
       focus: 'cancel'
     }).onOk(() => {
       // localForage.pageStore.removeItem(page.path)
+      ui.routeBack = false
       res(true)
     }).onCancel(async () => {
       // page.state = await localForage.pageStore.getItem(route.path)
