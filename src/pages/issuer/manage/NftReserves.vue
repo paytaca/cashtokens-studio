@@ -82,16 +82,15 @@
               </td>
               <td>
                 <q-btn icon="more_vert" size="md" round flat dense
-                  :disable="identity.token?.capability !== NFTCapability.minting">
+                  :disable="identity.token?.capability !== NFTCapability.minting || !!identity.processing">
                   <q-menu>
                     <q-list>
                       <q-item v-if="identity.token?.capability === NFTCapability.minting"
                         @click="openMintChildDialog(identity)" clickable v-close-popup>
                         Mint Child NFT
                       </q-item>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        :to="`/issuer/tokens/${identity.token.tokenId}/mint-child`" clickable
-                        @click.stop="loadMinterToView(identity)">
+                      <q-item v-if="identity.token?.capability === NFTCapability.minting" clickable
+                        @click.stop="openMintChildNftPage(identity)">
                         Mint Child NFT Page
                       </q-item>
                       <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
@@ -142,10 +141,11 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
-import router from 'src/router';
+import { useRouter } from 'vue-router';
 
 const user = useUser()
 const ui = useUI()
+const router = useRouter()
 const authchainIdentities = ref<AuthchainIdentity[]>()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
@@ -182,11 +182,12 @@ const openMintChildDialog = (identity: AuthchainIdentity) => {
   openDialog(NFTMinterDialog.__name, ct)
 }
 
-const loadMinterToView = (identity: AuthchainIdentity) => {
+const openMintChildNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
   ui.minterInView = ct
+  router.push(`/issuer/tokens/mint-child-nft?tokenId=${identity.token!.tokenId}`)
 }
 
 const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
@@ -326,6 +327,7 @@ onMounted(async () => {
       populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
     }
     // refreshData()
+
   }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
     refreshData()
