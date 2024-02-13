@@ -1,5 +1,5 @@
-import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE, Watchtower } from '.'
+import { AuthChain, BCMR, IdentitySnapshot, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
+import { AuthKey, BcmrIndexer, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE, Watchtower } from '.'
 import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
 import requestPaytacaSignature from "./utils/requestPaytacaSignature";
@@ -53,6 +53,7 @@ export class CashToken implements UtxoI, PartialBcmr {
   utxoSpent?: boolean
   private _processing?: string
   private static _processing?: string
+  identitySnapshot?: IdentitySnapshot
 
 
   constructor(
@@ -983,6 +984,21 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
   }
 
+  async resolveIdentitySnapshot(quite?:boolean) {
+    if (!this.token?.tokenId) return
+    try {
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
+      const r = await (new BcmrIndexer()).getIdentitySnapshot(this.token!.tokenId)  
+      this.identitySnapshot = r
+
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
+  
   static async scanWalletForTokens(tokenType: 'ft'|'nft'|'all', ownerWallet: Wallet): Promise<UtxoI[]> {
     if(tokenType === 'ft') {
       return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability) || []
