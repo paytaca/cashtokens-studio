@@ -8,7 +8,7 @@ import { binToHex, binToNumberUint16LE, cashAddressToLockingBytecode, decodeTran
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { NftType, TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 import { ProcessingMessage } from "."
@@ -53,7 +53,9 @@ export class CashToken implements UtxoI, PartialBcmr {
   utxoSpent?: boolean
   private _processing?: string
   private static _processing?: string
+  // Metadata
   identitySnapshot?: IdentitySnapshot
+  nftType?: { [key:string]: NftType, _meta: any }
 
 
   constructor(
@@ -113,6 +115,11 @@ export class CashToken implements UtxoI, PartialBcmr {
     this.utxoSpent = false
   }
 
+  get nftTypeMetadata(): NftType |undefined {
+    const commitment = this.nftType?._meta?.commitment
+    return commitment ? this.nftType![commitment]: undefined
+  }
+
   get processing():string|undefined {
     return this._processing
   }
@@ -127,6 +134,13 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   static set processing(msg: string|undefined) {
     CashToken._processing = msg
+  }
+
+  get nftCollectionType():NftCollectionType {
+    if (!this.identitySnapshot?.token?.nfts?.parse?.bytecode || this.identitySnapshot?.token?.nfts?.parse?.bytecode == '00d26b') {
+      return 'SequentialNftCollection'
+    }
+    return 'ParsableNftCollection'
   }
 
   get genesisCost(): number {
@@ -855,12 +869,12 @@ export class CashToken implements UtxoI, PartialBcmr {
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
       if (typeof decoded === 'string') {
-        delete this._processing
+        this._processing = ''
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
       console.log(error)
-      delete this._processing
+      this._processing = ''
       throw error
     }
     this._processing = 'Waiting for signature'
@@ -915,12 +929,12 @@ export class CashToken implements UtxoI, PartialBcmr {
       signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
     } catch (error) {
       console.log(error)
-      delete this._processing
+      this._processing = ''
       throw error
     }
 
     if (!signingResult) {
-      delete this._processing
+      this._processing = ''
       return
     }
 
@@ -933,7 +947,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       if (tx) {
         this._processing = 'Minted'
         setTimeout(()=> {
-          delete this._processing
+          this._processing = ''
         }, 2000)
       }
       this.utxoSpent = true
@@ -941,7 +955,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     } catch (error: any) {
       throw error
     } finally {
-      delete this._processing
+      this._processing = ''
     }
   }
 
@@ -992,6 +1006,23 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
       const r = await (new BcmrIndexer()).getIdentitySnapshot(this.token!.tokenId)  
       this.identitySnapshot = r
+
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
+
+  async resolveNftType(quite?:boolean) {
+    if (!this.token?.tokenId || !this.token?.capability) return
+
+    try {
+      if (quite !== true) {
+        this._processing = 'Downloading nft metadata'
+      }
+      const r = await (new BcmrIndexer()).getNftType(this.token!.tokenId, this.token!.commitment!)  
+      console.log('NFT TYPE', r)
+      this.nftType = r
 
     } catch (error:any) {
     } finally {
