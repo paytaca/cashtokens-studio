@@ -57,4 +57,61 @@ export class BcmrIndexer {
     }
     return
   }
+
+
+  /**
+   * @returns {undefined|'SequentialNftCollection'|'ParsableNftCollection'} The nft collection type if token is an nft.
+   */
+  async getNftCollectionType(tokenId:string): Promise<undefined|'SequentialNftCollection'|'ParsableNftCollection'> {
+    try {
+      this.processing = 'Fetching token registry'
+      const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/token-category/nfts/parse/bytecode/`)  
+      if (r.status == 200) {
+        const rj = await r.json()
+        if (!rj.bytecode || rj.bytecode == '00d26b') { // see https://github.com/bitjson/chip-bcmr/blob/master/bcmr-v2.schema.ts#L405
+          return 'SequentialNftCollection'
+        }
+        return 'ParsableNftCollection'
+      }
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
+  }
+
+  async getNftType(tokenId:string, commitment: string): Promise<any> {
+    try {
+      this.processing = 'Fetching token registry'
+      const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/token-category/nfts/parse/types/${commitment}/?include_metadata=true`)  
+      if (r.status == 200) {
+        const rj = await r.json()
+        return rj
+      }
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
+  }
+
+    /**
+   * @returns {undefined|'SequentialNftCollection'|'ParsableNftCollection'} The nft collection type if token is an nft.
+   */
+    async getIdentitySnapshot(tokenId:string): Promise<undefined|any> {
+      try {
+        this.processing = 'Fetching token registry'
+        const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/`)  
+        if (r.status == 200) {
+          const rj = await r.json()
+          return rj
+        }
+      } catch (error) {
+        throw error 
+      } finally {
+        delete this.processing
+      }
+    }
+
+
 }
