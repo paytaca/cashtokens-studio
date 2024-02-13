@@ -1,5 +1,5 @@
-import { TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, DEFAULT_TOKEN_VALUE } from ".";
+import { IdentitySnapshot, Registry, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
+import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
 import { SignatureTemplate} from "cashscript";
@@ -32,6 +32,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
    */
   tokenCategory?: TokenCategory
   tokenUris?: URIs
+  identitySnapshot?: IdentitySnapshot
 
   private _processing?: string
   private static _processing?: string
@@ -87,6 +88,20 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this.coinbase = u.coinbase
     this.token = u.token
   }
+
+  // get identitySnapshot (): IdentitySnapshot|undefined {
+  //   if (this.registry?.identities) {
+  //     let authbase:string|string[] = Object.keys(this.registry!.identities || {})
+  //     if (authbase) {
+  //       authbase = authbase[0]
+  //       let identity_history:string|string[] = Object.keys(this.registry!.identities[authbase] || {})
+  //       if (identity_history) {
+  //         identity_history = identity_history[0]
+  //         return this.registry.identities[authbase][identity_history]
+  //       }
+  //     }
+  //   }
+  // }
 
   get processing(): string|undefined {
     return this._processing
@@ -715,6 +730,21 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       if (!rj.error) {
         this.tokenUris = rj
       }
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
+
+  async resolveIdentitySnapshot(quite?:boolean) {
+    if (!this.token?.tokenId) return
+    try {
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
+      const r = await (new BcmrIndexer()).getIdentitySnapshot(this.token!.tokenId)  
+      this.identitySnapshot = r
+
     } catch (error:any) {
     } finally {
       delete this._processing
