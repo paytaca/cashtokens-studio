@@ -4,21 +4,42 @@
       <div class="col-xs-12 col-sm-10 col-lg-9 bg-dark q-pa-lg">
         <div class="row q-gutter-md">
           <div class="col-xs-12">
-            <q-avatar v-if="ui.minterInView?.tokenUris?.icon" square size="5em">
-              <q-img :src="ui.minterInView?.tokenUris?.icon"></q-img>
+            <q-avatar v-if="minter.value?.identitySnapshot?.uris?.icon" square size="5em">
+              <q-img :src="minter.value.identitySnapshot.uris.icon"></q-img>
             </q-avatar>
           </div>
           <div class="col-xs-12">
+            <div v-if="minter.value?.identitySnapshot?.token?.symbol" class="row">
+              <div class="col-xs-5 col-sm-4">Symbol</div>
+              <div class="col-xs-7 col-sm-auto"><strong>{{ minter.value.identitySnapshot.token.symbol }}</strong></div>
+            </div>
             <div class="row">
               <div class="col-xs-5 col-sm-4">Token ID</div>
               <div class="col-xs-7 col-sm-auto">{{ $q.screen.lt.md ? shortenTx(state.token.tokenId || '') :
                 state.token.tokenId }}</div>
             </div>
             <div class="row">
+              <div class="col-xs-5 col-sm-4">Nft Collection Type</div>
+              <div class="col-xs-7 col-sm-auto">{{ minter.value?.nftCollectionType }}</div>
+            </div>
+            <div v-if="minter.value?.nftCollectionType == 'ParsableNftCollection'" class="row">
+              <div class="col-xs-5 col-sm-4">Parsing Bytecode</div>
+              <div class="col-xs-7 col-sm-auto">{{ minter.value.identitySnapshot.token.nfts.parse.bytecode }}</div>
+            </div>
+            <div class="row">
               <div class="col-xs-5 col-sm-4">Minter's Commitment</div>
               <div class="col-xs-7 col-sm-auto ">
                 {{
-                  formatCommitment(state.mintersCommitment, 'vm-number', 'decimal').toString()
+                  state.mintersCommitment?.length == 0 ? '--' : formatCommitment(state.mintersCommitment, 'vm-number',
+                    'decimal').toString()
+                }}
+              </div>
+            </div>
+            <div v-if="state.newMintersCommitment" class="row">
+              <div class="col-xs-5 col-sm-4">New Minter's Commitment</div>
+              <div class="col-xs-7 col-sm-auto ">
+                {{
+                  state.newMintersCommitment
                 }}
               </div>
             </div>
@@ -36,25 +57,27 @@
                 label="View Tx" />
             </q-chip>
             <q-form ref="mintForm" class="q-gutter-md q-pa-lg" @submit.prevent="mint">
-              <q-select :options="[
-                { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
-                { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
-                { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
-                { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
-                { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
-              ]" :model-value="state.options.mintOption"
+              <q-select
+                :options="minter.value.nftCollectionType == 'SequentialNftCollection' ? sequentialOpts : parsableOpts"
+                :model-value="state.options.mintOption"
                 v-on:update:model-value="(v) => state.options.mintOption = v.value" :outlined="!state.mintTx"
-                :disable="!!state.mintTx" :readonly="!!state.mintTx" class="q-mb-xs" label="I want to" stack-label>
+                :disable="!!state.mintTx" :readonly="!!state.mintTx" class="q-mb-xs" label="I want to" stack-label
+                bottom-slots>
+                <template v-slot:hint>
+                  <div class="ellipsis">{{ hints[state.options.mintOption] }}</div>
+                </template>
               </q-select>
               <q-input v-if="state.options.mintOption != MINT_ONE_UNIQUE_NFT" v-model="state.options.quantity"
-                style="width:fit-content"
+                :style="`width:${$q.screen.lt.sm ? '' : 'fit-content'}`"
                 :onchange="(v: any) => state.options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"
                 :outlined="!state.mintTx" :disable="!!state.mintTx" :readonly="!!state.mintTx" clearable type="number"
-                label="Number of tokens to mint">
+                min="1" label="Number of tokens to mint">
               </q-input>
               <q-input v-model="state.token.commitment" :placeholder="tokenCommmitmentPlaceholderText"
                 :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :outlined="!state.mintTx"
-                :disable="!!state.mintTx" :readonly="!!state.mintTx" label="Commitment">
+                :disable="!!state.mintTx" :readonly="!!state.mintTx"
+                :label="state.options.quantity > 1 && state.options.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT ? 'Commitment (first)' : 'Commitment'"
+                :bottom-slot="!!state.token.commitment">
                 <template v-slot:prepend>
                   <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                     no-caps :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -73,18 +96,19 @@
                 </template>
                 <template v-slot:hint>
                   <div v-if="state.token.commitment" class="row justify-end items-center">
-                    <code>{{ rawNftCommitment }}</code>
-                    <i>Actual value on-chain
+                    <i>
                       <q-icon name="info">
-                        <q-tooltip>VM Number. The actual value on-chain.</q-tooltip>
+                        <q-tooltip>The actual value on-chain.</q-tooltip>
                       </q-icon>
+                      vm number =
                     </i>
+                    <code>{{ rawNftCommitment }}</code>
                   </div>
                 </template>
               </q-input>
-              <q-input v-if="state.options.quantity > 1" :model-value="commitmentLast"
-                :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :outlined="!state.mintTx"
-                :disable="!!state.mintTx" :readonly="!!state.mintTx" label="Commitment (last)">
+              <q-input v-if="state.options.quantity > 1 && state.options.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT"
+                :model-value="commitmentLast" :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']"
+                :outlined="!state.mintTx" :disable="!!state.mintTx" :readonly="!!state.mintTx" label="Commitment (last)">
                 <template v-slot:prepend>
                   <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                     no-caps :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -103,12 +127,13 @@
                 </template>
                 <template v-slot:hint>
                   <div v-if="state.token.commitment" class="row justify-end items-center">
-                    <code>{{ rawNftCommitmentLast }}</code>
-                    <i>Actual value on-chain
+                    <i>
                       <q-icon name="info">
-                        <q-tooltip>VM Number. The actual value on-chain.</q-tooltip>
+                        <q-tooltip>The actual value on-chain.</q-tooltip>
                       </q-icon>
+                      vm number =
                     </i>
+                    <code>{{ rawNftCommitmentLast }}</code>
                   </div>
                 </template>
               </q-input>
@@ -123,6 +148,43 @@
                     @click="state.options.recipient = user.walletTokenAddress!" />
                 </template>
               </q-input>
+              <q-expansion-item label="Advanced">
+                <div class="q-my-md">
+                  <q-input v-model="state.newMintersCommitment" :placeholder="tokenCommmitmentPlaceholderText"
+                    :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :outlined="!state.mintTx"
+                    label="Minter's new commitment after mint" :bottom-slot="!!state.token.commitment">
+                    <template v-slot:prepend>
+                      <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
+                        no-caps :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+                    </template>
+                    <template v-slot:append>
+                      <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
+                        :class="$q.dark.isActive ? '' : 'text-black'"
+                        :label="state.options.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
+                        <q-tooltip>
+                          {{
+                            state.options.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                            : 'Click to convert value to a number'
+                          }}
+                        </q-tooltip>
+                      </q-btn>
+                    </template>
+                    <template v-slot:hint>
+                      <div v-if="state.newMintersCommitment" class="row justify-end items-center">
+                        <i>
+                          <q-icon name="info">
+                            <q-tooltip>The actual value on-chain.</q-tooltip>
+                          </q-icon>
+                          vm number =
+                        </i>
+                        <code>{{ formatCommitment(state.newMintersCommitment, state.options.commitmentFormat, 'vm-number') }}</code>
+                      </div>
+                    </template>
+                  </q-input>
+                </div>
+
+
+              </q-expansion-item>
               <q-stepper-navigation class="text-right q-my-lg q-px-lg">
                 <q-btn v-if="state.mintTx && state.options.mintOption == MINT_ONE_UNIQUE_NFT" name="stepper-nav" flat
                   @click.stop="handleStepperNav" color="primary" label="Continue" class="q-ml-sm" size="lg" />
@@ -133,6 +195,7 @@
               </q-stepper-navigation>
 
             </q-form>
+
           </q-step>
           <q-step :name="2" title="Provide NFT asset"
             :caption="state.options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="attach_file"
@@ -236,16 +299,15 @@
           </q-step>
         </q-stepper>
       </div>
-
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount } from 'vue';
+import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount, unref } from 'vue';
 import { NFTCapability, NftType, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
 import { useUser } from 'src/stores/user'
 import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types';
 import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
@@ -258,15 +320,42 @@ import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import { usePage } from 'src/stores/page';
+import { useMinter } from 'src/stores/minter';
 
+const MINT_ONE_NFT = 'Mint 1 NFT'
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
 const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
 const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
 const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
 const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
 const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
+
 const supportAssetUpload = [
   MINT_ONE_UNIQUE_NFT
+]
+
+const hints: any = {
+  [MINT_ONE_NFT]: `Will mint 1 NFT`,
+  [MINT_ONE_UNIQUE_NFT]: `Will mint 1 unique NFT. The minter's commitment will be updated if it's a Sequential NFT Collection.`,
+  [MINT_MULTIPLE_UNIQUE_NFTS]: `Will mint multiple NFTs.`,
+  [MINT_SUPPLY_FOR_A_COMMITMENT]: `Will mint one or more NFTs having the same commitment.`,
+  [CREATE_MUTABLE_NFT]: `Will mint one or more mutable NFT(s) having no or the same commitment.`,
+  [CREATE_ANOTHER_MINTER]: `Will mint one or more minting NFT(s) having no or the same commitment.`
+}
+
+const sequentialOpts = [
+  { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
+  { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
+  { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
+  { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
+  { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
+]
+
+const parsableOpts = [
+  { value: MINT_ONE_NFT, label: MINT_ONE_NFT },
+  { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
+  { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
+  { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
 ]
 
 const $q = useQuasar()
@@ -274,19 +363,14 @@ const { $ebus } = useEventBus()
 const user = useUser()
 const page = usePage()
 const ui = useUI()
+const minter = useMinter()
 const route = useRoute()
 const router = useRouter()
 const mintForm = ref()
 const fileUploader = ref()
+
 const localForage = useLocalForage()
 const chainGraph = ref<ChainGraph>(new ChainGraph())
-/**
- * Value of this should be resolved from bcmr, but since we're just currently supporting
- * SequentialNftCollection, we'll use the default. ParsableNftCollection will be handled
- * differently
- */
-const nftCollectionType = ref<NftCollectionType>('SequentialNftCollection')
-
 
 // metadata
 const nftType = ref<RegistryNftType>(new RegistryNftType({
@@ -319,13 +403,6 @@ const nftTypeAssetHttpUri = computed(() => {
 const nftAttributes = ref<any>({})
 
 const authchainIdentity = ref<AuthchainIdentity>()
-// for single mint
-// const token = ref<TokenI>({
-//   amount: BigInt(0),
-//   tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
-//   capability: NFTCapability.none,
-//   commitment: ''
-// })
 
 const commitmentLast = computed(() => {
   if (!state.value.token.commitment) return ''
@@ -339,12 +416,11 @@ const state = ref<{
   mintTx: string,
   publishTx: string,
   mintersCommitment: string,
+  newMintersCommitment: string,
   splitterModel: any,
   tab: any,
   token: TokenI,
-  nftCollectionType: NftCollectionType,
   options: {
-    collectionType: NftCollectionType,
     recipient: string,
     commitmentFormat: 'decimal' | 'hex',
     excludeFromSequentialNftCollection: boolean,
@@ -358,28 +434,26 @@ const state = ref<{
     commitmentLast: string,
     publishOption: 'now' | 'later',
     useAssetImageAsIcon: boolean,
-    includeRevisionHistory: boolean // download revision option
+    includeRevisionHistory: boolean, // download revision option
+    advanced: {
+      includeAdvancedMintOptions: boolean
+    }
   }
 }>({
-  // step: 3,
-  step: 4,
-  // mintTx: '760923415a8138082deb731e680cc066316a6a4d066bd808eb338d1852512b7c',
+  step: 1,
   mintTx: '',
   publishTx: '',
-  // mintTx: '',
   mintersCommitment: '',
+  newMintersCommitment: '',
   splitterModel: '',
   tab: '',
   token: {
     amount: BigInt(0),
-    tokenId: '5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463',
+    tokenId: minter.value.token.tokenId,
     capability: NFTCapability.none,
-    // commitment: '26'
     commitment: ''
   },
-  nftCollectionType: 'SequentialNftCollection',
   options: {
-    collectionType: 'SequentialNftCollection',
     recipient: '',
     commitmentFormat: 'decimal',
     excludeFromSequentialNftCollection: false,
@@ -393,16 +467,16 @@ const state = ref<{
     commitmentLast: '',
     publishOption: 'later',
     useAssetImageAsIcon: false,
-    includeRevisionHistory: false
+    includeRevisionHistory: false,
+    advanced: {
+      includeAdvancedMintOptions: false
+    }
   }
 })
 
 
-
-
-
 const tokenCommmitmentPlaceholderText = computed<string>(() => {
-  if (nftCollectionType.value === 'SequentialNftCollection') {
+  if (minter.value.nftCollectionType === 'SequentialNftCollection') {
     return 'Enter a number'
   }
   return 'Enter commitment'
@@ -412,7 +486,7 @@ const tokenCommmitmentPlaceholderText = computed<string>(() => {
  * VM Number, actual commitment on chain. 
  */
 const rawNftCommitment = computed<string | undefined>(() => {
-  if (nftCollectionType.value === 'ParsableNftCollection') {
+  if (minter.value.nftCollectionType === 'ParsableNftCollection') {
     return state.value.token.commitment
   }
   return formatCommitment(state.value.token.commitment || '', state.value.options.commitmentFormat, 'vm-number').toString()
@@ -422,7 +496,7 @@ const rawNftCommitment = computed<string | undefined>(() => {
  * VM Number, actual commitment on chain, this if for  
  */
 const rawNftCommitmentLast = computed<string>((): string => {
-  if (nftCollectionType.value === 'ParsableNftCollection') {
+  if (minter.value.nftCollectionType === 'ParsableNftCollection') {
     return commitmentLast.value
   }
   return formatCommitment(commitmentLast.value || '', state.value.options.commitmentFormat, 'vm-number').toString()
@@ -447,10 +521,10 @@ const convertCommitment = () => {
 }
 
 const initCommitment = () => {
-  if (ui.minterInView?.token?.commitment && nftCollectionType.value === 'SequentialNftCollection') {
+  if (minter.value?.token?.commitment && minter.value.nftCollectionType === 'SequentialNftCollection') {
     state.value.options.commitmentFormat = 'decimal'
-    // state.value.mintersCommitment = formatCommitment(ui.minterInView?.token?.commitment, 'vm-number', 'decimal').toString()
-    state.value.mintersCommitment = ui.minterInView.token.commitment
+    // state.value.mintersCommitment = formatCommitment(minter.value?.token?.commitment, 'vm-number', 'decimal').toString()
+    state.value.mintersCommitment = minter.value.token.commitment
     const mintersCommitment = formatCommitment(state.value.mintersCommitment, 'vm-number', 'decimal').toString()
     state.value.token.commitment = (BigInt(mintersCommitment) + BigInt(1)).toString()
   } else {
@@ -611,50 +685,57 @@ const downloadRevisedRegistry = async () => {
   downloadRegistryFile(bcmr.getContent())
 }
 
-watch(() => ui.minterInView?.processing, (v, oldV) => {
-  if (v && !ui.dialog) {
-    return ui.dialog = $q.dialog({
-      message: v,
-      ok: false,
-      progress: true
+watch(() => state.value, (v) => {
+  page.$patch({
+    path: route.path,
+    state: v as any
+  })
+}, { deep: true })
+
+// if the commitment change
+// update the minter's commitment if it's a sequential NFT only
+// if the lastCommitment has value, use it
+// if not use the first commitment
+
+watch(() => commitmentLast.value, (v) => {
+  console.log('TOKEN COMMITMENT', v)
+  console.log('COMMITMENT', commitmentLast)
+  if (minter.value.nftCollectionType == 'SequentialNftCollection') {
+    nextTick(() => {
+      if ([MINT_ONE_UNIQUE_NFT, MINT_MULTIPLE_UNIQUE_NFTS].includes(state.value.options.mintOption)) {
+        state.value.newMintersCommitment = commitmentLast.value
+      } else {
+        state.value.newMintersCommitment = formatCommitment(minter.value.token.commitment, 'vm-number', state.value.options.commitmentFormat)
+      }
     })
-  } else if (v && ui.dialog) {
-    return ui.dialog = ui.dialog.update({
-      message: v,
-      ok: false,
-      progress: true
-    })
-  }
-  if (!v && ui.dialog) {
-    try {
-      ui.dialog.hide()
-    } catch (error) {
-      ui.dialog = undefined
-    }
   }
 })
 
+watch(() => state.value.options.mintOption, (v) => {
+  if (minter.value.nftCollectionType == 'SequentialNftCollection') {
+    nextTick(() => {
+      if ([MINT_ONE_UNIQUE_NFT, MINT_MULTIPLE_UNIQUE_NFTS].includes(v)) {
+        state.value.newMintersCommitment = commitmentLast.value
+      } else {
+        state.value.newMintersCommitment = formatCommitment(minter.value.token.commitment, 'vm-number', state.value.options.commitmentFormat)
+      }
+    })
+  }
+})
+
+
+watch(() => minter.value?.processing, (v, oldV) => {
+  ui.setStatusMessage({
+    statusMessage: v,
+    statusMessageSpinner: true
+  })
+})
+
 watch(() => chainGraph.value?.processing, (v, oldV) => {
-  if (v && !ui.dialog) {
-    return ui.dialog = $q.dialog({
-      message: v,
-      ok: false,
-      progress: true
-    })
-  } else if (v && ui.dialog) {
-    return ui.dialog = ui.dialog.update({
-      message: v,
-      ok: false,
-      progress: true
-    })
-  }
-  if (!v && ui.dialog) {
-    try {
-      ui.dialog.hide()
-    } catch (error) {
-      ui.dialog = undefined
-    }
-  }
+  ui.setStatusMessage({
+    statusMessage: v || '',
+    statusMessageSpinner: true
+  })
 })
 
 watch(() => authchainIdentity.value?.processing, (v) => {
@@ -668,12 +749,10 @@ watch(() => authchainIdentity.value?.processing, (v) => {
 const mint = async () => {
 
   if (state.value.mintTx) {
-    await ui.minterInView?.updateUtxo()
-    await ui.minterInView?.updateAuthKeyUtxo()
+    await minter.value?.updateUtxo()
+    await minter.value?.updateAuthKeyUtxo()
     // return state.value.mintTx = ''
   }
-
-  ui.minterInView!.processing = 'Processing'
 
   const tokens: any = []
   if (state.value.options.quantity == 1) {
@@ -688,7 +767,7 @@ const mint = async () => {
       for (let i = 0; i < state.value.options.quantity; i++) {
         tokens.push({
           amount: BigInt(0),
-          tokenId: ui.minterInView?.token?.tokenId,
+          tokenId: minter.value?.token?.tokenId,
           commitment: binToHex(bigIntToVmNumber(BigInt(firstCommitment) + BigInt(i))), // Use sequential commitment 
           capability: state.value.token.capability,
         })
@@ -699,7 +778,7 @@ const mint = async () => {
       for (let i = 0; i < state.value.options.quantity; i++) {
         tokens.push({
           amount: BigInt(0),
-          tokenId: ui.minterInView?.token?.tokenId,
+          tokenId: minter.value?.token?.tokenId,
           commitment: rawNftCommitment.value, // Use same commitment on all tokens
           capability: state.value.token.capability,
         })
@@ -707,12 +786,12 @@ const mint = async () => {
     }
   }
 
-  if (ui.minterInView) {
+  if (minter.value) {
 
     try {
       const lastToken = tokens[tokens.length - 1]
       console.log('LASTTOKEN', lastToken)
-      let newMinterCommitment = ui.minterInView.token?.commitment
+      let newMinterCommitment = minter.value.token?.commitment
       if (lastToken.capability == NFTCapability.none && state.value.options.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
         // only track commitment in minter if the child's capability is `none`
         // so we can preserve the sequence
@@ -720,7 +799,7 @@ const mint = async () => {
       }
 
 
-      const tx = await ui.minterInView.mintChildrenExt({
+      const tx = await minter.value.mintChildrenExt({
         tokens: tokens as [TokenI],
         recipient: state.value.options.recipient,
         newMinterCommitment: newMinterCommitment
@@ -732,10 +811,10 @@ const mint = async () => {
           txid: tx,
           txType: 'CashToken.mintChild',
           timestamp: new Date().getTime(),
-          successMsg: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`
+          successMsg: `Minted new ${minter.value?.identitySnapshot?.token?.symbol || shortenTokenId(minter.value.token!.tokenId)} NFT`
         })
         ui.setStatusMessage({
-          statusMessage: `Minted new ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(ui.minterInView.token!.tokenId)} NFT`,
+          statusMessage: `Minted new ${minter.value?.identitySnapshot?.token?.symbol || shortenTokenId(minter.value.token!.tokenId)} NFT`,
           statusMessageType: 'success',
           statusMessageTxid: tx
         })
@@ -808,9 +887,9 @@ const publishRegistry = async () => {
   //   return state.value.step = 4
   // }
   // check if this is an authchain authhead
-  if (ui.minterInView?.utxoSpent) {
-    await ui.minterInView.updateUtxo()
-    await ui.minterInView.updateAuthKeyUtxo()
+  if (minter.value?.utxoSpent) {
+    await minter.value.updateUtxo()
+    await minter.value.updateAuthKeyUtxo()
   }
 
   let d = $q.dialog({
@@ -822,11 +901,11 @@ const publishRegistry = async () => {
     progress: true,
   })
 
-  const authhead = await (new ChainGraph()).fetchAuthheadTxid(ui.minterInView!.token!.tokenId!)
+  const authhead = await (new ChainGraph()).fetchAuthheadTxid(minter.value!.token!.tokenId!)
   console.log('AUTHHEAD', authhead)
-  console.log('MINTER', ui.minterInView?.txid)
+  console.log('MINTER', minter.value?.txid)
   let proceed = false
-  if (authhead != ui.minterInView?.txid) {
+  if (authhead != minter.value?.txid) {
     d.update({
       dark: true,
       message: 'Unauthorized, invalid auth identity. ',
@@ -847,7 +926,7 @@ const publishRegistry = async () => {
   d.update({ message: 'Authentication ok, creating a draft of the new registry. Please wait...' })
 
   try {
-    const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(ui.minterInView!.token!.tokenId!)
+    const prevPublication = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value!.token!.tokenId!)
 
     d.update({ message: 'Adding NFTs to new registry' })
     const bcmr = await createRegistryRevision()
@@ -858,9 +937,9 @@ const publishRegistry = async () => {
     if (storageArtifact) {
       authchainIdentity.value = new AuthchainIdentity(
         {
-          ...ui.minterInView!.utxo,
-          authKey: ui.minterInView?.authKey as AuthKey,
-          ownerWallet: ui.minterInView?.ownerWallet as TestNetWallet | Wallet
+          ...minter.value!.utxo,
+          authKey: minter.value?.authKey as AuthKey,
+          ownerWallet: minter.value?.ownerWallet as TestNetWallet | Wallet
         },
       )
       authchainIdentity.value.transactionSigner = user.transactionSigner
@@ -873,7 +952,7 @@ const publishRegistry = async () => {
           txid: tx,
           txType: 'AuthchainIdentity.publish',
           timestamp: new Date().getTime(),
-          successMsg: `Published ${ui.minterInView?.tokenCategory?.symbol || shortenTokenId(state.value.token.tokenId)}'s registry`
+          successMsg: `Published ${minter.value?.identitySnapshot?.token?.symbol || shortenTokenId(state.value.token.tokenId)}'s registry`
         })
         d = $q.dialog({
           component: TransactionStatusDialog,
@@ -888,7 +967,7 @@ const publishRegistry = async () => {
         }).onDismiss(() => {
           state.value.step = 4
           nextTick(() => {
-            ui.minterInView!.utxoSpent = true
+            minter.value!.utxoSpent = true
           })
           d.hide()
 
@@ -929,8 +1008,8 @@ const mintAnother = async () => {
   if (!proceed) return
 
   try {
-    await ui.minterInView?.updateUtxo()
-    await ui.minterInView?.updateAuthKeyUtxo()
+    await minter.value?.updateUtxo()
+    await minter.value?.updateAuthKeyUtxo()
     state.value.mintTx = ''
     initCommitment()
     state.value.step = 1
@@ -968,8 +1047,8 @@ const handleStepperNav = (e: any) => {
       break
   }
   if (state.value.step === 2 && !nftType.value.name && state.value.token.commitment) {
-    if (ui.minterInView?.tokenCategory?.symbol) {
-      nftType.value.name = `${ui.minterInView?.tokenCategory?.symbol} - ${formatCommitment(state.value.token.commitment!, state.value.options.commitmentFormat, 'decimal')}`
+    if (minter.value?.identitySnapshot?.token?.symbol) {
+      nftType.value.name = `${minter.value?.identitySnapshot?.token?.symbol} - ${formatCommitment(state.value.token.commitment!, state.value.options.commitmentFormat, 'decimal')}`
     } else {
       nftType.value.name = `NFT - ${formatCommitment(state.value.token.commitment!, state.value.options.commitmentFormat, 'decimal')}`
     }
@@ -995,16 +1074,25 @@ watch(() => state.value.token?.capability, (c) => {
 })
 
 watch(() => state.value.options.mintOption, (o) => {
-  if (o === MINT_ONE_UNIQUE_NFT) {
+  state.value.token.capability = NFTCapability.none
+  if (o === MINT_ONE_UNIQUE_NFT || o === MINT_MULTIPLE_UNIQUE_NFTS) {
+    if (!state.value.token.commitment) {
+      initCommitment()
+    }
     return state.value.options.quantity = 1
   }
   if (o === CREATE_MUTABLE_NFT) {
+    state.value.options.quantity = 1
     return state.value.token.capability = NFTCapability.mutable
   }
   if (o === CREATE_ANOTHER_MINTER) {
+    state.value.options.quantity = 1
     return state.value.token.capability = NFTCapability.minting
   }
-  state.value.token.capability = NFTCapability.none
+  if (o === MINT_SUPPLY_FOR_A_COMMITMENT) {
+    return state.value.token.commitment = ''
+  }
+
 })
 
 watch(() => state.value.options.excludeFromSequentialNftCollection, (exclude) => {
@@ -1018,16 +1106,23 @@ watch(() => state.value.options.excludeFromSequentialNftCollection, (exclude) =>
 watch(() => state.value.step, (step) => {
   if (step == 2) {
     state.value.options.addMetadata = true
-    if (!nftType.value.name && ui.minterInView?.tokenCategory?.symbol) {
-      nftType.value.name = ui.minterInView?.tokenCategory?.symbol + '-' + state.value.token.commitment
+    if (!nftType.value.name && minter.value?.identitySnapshot?.token?.symbol) {
+      nftType.value.name = minter.value?.identitySnapshot?.token?.symbol + '-' + state.value.token.commitment
     }
   }
 })
 
+
 onMounted(async () => {
 
-  ui.routeBack = true
-  await localForage.pageStore.removeItem(route.path)
+  ui.routeBack = `nft-reserves`
+  state.value.token.tokenId = minter.value!.token!.tokenId
+
+  // const savedState = await localForage.pageLocalForage.getItem(route.path)
+  // console.log('SAVED STATE', savedState)
+  // if (savedState) {
+  //   state.value = JSON.parse(savedState as string)
+  // }
 
   // console.log('ROUTE PATH', route.path)
   // const pageState = await localForage.pageStore.getItem(route.path)
@@ -1041,41 +1136,49 @@ onMounted(async () => {
   initCommitment()
   state.value.options.recipient = user.walletTokenAddress
   state.value.token.tokenId = route.query!.tokenId! as string
+  window.onbeforeunload = (e) => {
+    console.log(e)
+    return true
+  }
 
-})
+  //check for Navigation Timing API support
+  if (window.performance) {
+    console.info("window.performance works fine on this browser");
+  }
+  console.info(performance.navigation.type);
+  if (performance.navigation.type == performance.navigation.TYPE_RELOAD) {
+    console.info("This page is reloaded");
+  } else {
+    console.info("This page is not reloaded");
+  }
 
-onBeforeUnmount(async () => {
-  console.log('UNMOUNTED')
-  // page.path = route.path
-  // page.state = state.value
-})
-
-onBeforeRouteUpdate(() => {
-  console.log('Updating route')
+  const collectionType = await new BcmrIndexer().getNftCollectionType(route.query!.tokenId! as string)
+  console.log('COLLECTION TYPE', collectionType)
 })
 
 onBeforeRouteLeave(async (to, from, next) => {
   console.log('state.value before route leave', state.value)
-  const yes: boolean = await new Promise((res, rej) => {
-    $q.dialog({
-      dark: true,
-      message: 'Are you sure you want to leave the page?',
-      persistent: true,
-      ok: 'Yes',
-      cancel: 'No',
-      focus: 'cancel'
-    }).onOk(() => {
-      // localForage.pageStore.removeItem(page.path)
-      ui.routeBack = false
-      res(true)
-    }).onCancel(async () => {
-      // page.state = await localForage.pageStore.getItem(route.path)
-      // page.path = route.path
-      // page.state = state.value
-      res(false)
-    })
-  })
-  next(yes)
+  next(true)
+  // const yes: boolean = await new Promise((res, rej) => {
+  //   $q.dialog({
+  //     dark: true,
+  //     message: 'Are you sure you want to leave the page?',
+  //     persistent: true,
+  //     ok: 'Yes',
+  //     cancel: 'No',
+  //     focus: 'cancel'
+  //   }).onOk(() => {
+  //     // localForage.pageStore.removeItem(page.path)
+  //     ui.routeBack = false
+  //     res(true)
+  //   }).onCancel(async () => {
+  //     // page.state = await localForage.pageStore.getItem(route.path)
+  //     // page.path = route.path
+  //     // page.state = state.value
+  //     res(false)
+  //   })
+  // })
+  // next(yes)
 })
 
 </script>
