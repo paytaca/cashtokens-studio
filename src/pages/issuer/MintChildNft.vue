@@ -575,7 +575,7 @@ const onFileAdded = async (files: readonly any[]) => {
           const h = binToHex(sha1.hash(uint8Array))
           if (localStorage.getItem(`h-${h}`)) {
             let data = JSON.parse(localStorage.getItem(`h-${h}`) as string)
-            if (data.originalFilename.startsWith('icon')) {
+            if (f.name.startsWith('icon')) {
               nftType.value.uris!.icon = data.uris.ipfs
             } else {
               nftType.value.uris!.asset = data.uris.ipfs
