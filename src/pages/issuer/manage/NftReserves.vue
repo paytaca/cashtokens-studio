@@ -5,7 +5,7 @@
         <h5 class="text-center">
           NFT Reserves
           <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedNftAuthchainIdentities?.count || 0 }}
+            {{ identityOutputs.nftReserves.count || 0 }}
           </q-badge>
         </h5>
         <q-expansion-item label="More Info">
@@ -17,16 +17,19 @@
           </p>
         </q-expansion-item>
         <div class="q-pa-lg flex flex-center">
-          <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
-            :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
+          <q-pagination v-model="identityOutputs.paginator.currentPage" :max="identityOutputs.paginator.numberOfPages"
+            :max-pages="identityOutputs.paginator.maxRowsPerPage" :boundary-numbers="false" />
         </div>
+        <!-- {{
+          identityOutputs.nftReserves?.results
+        }} -->
         <q-markup-table>
           <thead>
-            <tr v-if="watchtower.processing && authchainIdentities">
+            <!-- <tr v-if="watchtower.processing && authchainIdentities">
               <th colspan="7">
                 <q-spinner-grid size="xs"></q-spinner-grid> Loading
               </th>
-            </tr>
+            </tr> -->
             <tr>
               <th>#</th>
               <th>Brand</th>
@@ -51,27 +54,21 @@
               <th>Action</th>
             </tr>
           </thead>
-          <TableBodySkeleton v-if="watchtower.processing && !authchainIdentities" :col-count="7" :row-count="4"
-            :caption="'Scanning wallet for NFT reserves'" />
-          <tbody v-else class="text-center">
-            <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
-              <td>{{ i + pagination.offset + 1 }}</td>
+          <!-- <TableBodySkeleton v-if="watchtower.processing && !authchainIdentities" :col-count="7" :row-count="4"
+            :caption="'Scanning wallet for NFT reserves'" /> -->
+          <tbody class="text-center">
+            <tr v-for="identity, i in identityOutputs.nftReserves?.results" :key="'ai-rec-' + i">
+              <td>{{ i + identityOutputs.paginator.offset + 1 }}</td>
               <td>
-                <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="String(identity.tokenUris.icon)" alt="na">
+                <q-avatar v-if="identity.identitySnapshot?.uris?.icon" square>
+                  <q-img :src="String(identity.identitySnapshot.uris.icon)" alt="na" />
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
               </td>
               <td>
-                <q-spinner
-                  v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
-                <span v-else>
-                  <q-chip v-if="ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol"
-                    color="primary" class="q-p-sm" square outline>
-                    {{ ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol }}
-                  </q-chip>
-                  <span v-else>---</span>
-                </span>
+                <q-chip v-if="identity.identitySnapshot?.token?.symbol" color="primary" class="q-p-sm" square outline>
+                  {{ identity.identitySnapshot?.token?.symbol }}
+                </q-chip>
               </td>
               <td>
                 <TokenCategory :tokenId="identity.token?.tokenId" />
@@ -106,7 +103,7 @@
                 </q-btn>
               </td>
             </tr>
-            <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
+            <tr v-if="identityOutputs.nftReserves?.results?.length === 0 && !watchtower.processing">
               <td colspan="7">
                 No data
               </td>
@@ -142,28 +139,16 @@ import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
 import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
 import { useRouter } from 'vue-router';
+import { useIdentityOutputs } from 'src/stores/identityoutputs';
+import { useMinter } from 'src/stores/minter';
 
 const user = useUser()
 const ui = useUI()
 const router = useRouter()
-const authchainIdentities = ref<AuthchainIdentity[]>()
+const minter = useMinter()
+const identityOutputs = useIdentityOutputs()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-const paginatedNftAuthchainIdentities = ref<PaginatedData>({
-  count: 0,
-  limit: 10,
-  offset: 0,
-  next: '',
-  previous: '',
-  results: []
-})
-const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
-  numberOfPages: 0,
-  currentPage: 0,
-  maxRowsPerPage: 10,
-  rowCount: 0,
-  offset: 0,
-})
 const watchtower = ref<Watchtower>(new Watchtower())
 const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
 const formatCommitment = computed(() => {
@@ -186,151 +171,64 @@ const openMintChildNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
   ct.tokenUris = identity.tokenUris
-  ui.minterInView = ct
+  ct.identitySnapshot = identity.identitySnapshot
+  minter.value = ct
   router.push(`/issuer/tokens/mint-child-nft?tokenId=${identity.token!.tokenId}`)
 }
 
-const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
-  // check if wallet has a minter
-  if (!identity.tokenCategory) {
-    ui.setStatusMessage({
-      statusMessage: `Sorry, we only allow deploying a minting contract if the token has a valid registry`,
-      statusMessageType: 'error',
-    })
-    return
-  }
-  ui.setStatusMessage({
-    statusMessage: `Checking if you have a minter for ${identity.tokenCategory!.symbol} token in your wallet...`,
-    statusMessageType: 'info',
-    statusMessageSpinner: true
-  })
-  await delay(1500)
-  const utxos = await user.wallet!.getAddressUtxos()
-  const mintingNFT = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
-  if (!mintingNFT) {
-    ui.setStatusMessage({
-      statusMessage: `The contract requires you to have a minter for token ${shortenTokenId(identity.token!.tokenId)} ${identity.tokenCategory!.symbol ? `(${identity.tokenCategory!.symbol})` : ''} in your wallet which currently you don't have. Although you own the NFT reserve, it is not in your wallet it's in the AuthGuard contract. Don't worry you can create a minter from the Mint Child NFT menu.`,
-      statusMessageType: 'error',
-    })
-    return
-  }
-  // encapsulating mintingNFT utxo as CashToken
-  const ct = new CashToken({ ...mintingNFT })
-  // borrowing the already present metadata from the authchain identity output
+// const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
+//   // check if wallet has a minter
+//   if (!identity.tokenCategory) {
+//     ui.setStatusMessage({
+//       statusMessage: `Sorry, we only allow deploying a minting contract if the token has a valid registry`,
+//       statusMessageType: 'error',
+//     })
+//     return
+//   }
+//   ui.setStatusMessage({
+//     statusMessage: `Checking if you have a minter for ${identity.tokenCategory!.symbol} token in your wallet...`,
+//     statusMessageType: 'info',
+//     statusMessageSpinner: true
+//   })
+//   await delay(1500)
+//   const utxos = await user.wallet!.getAddressUtxos()
+//   const mintingNFT = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
+//   if (!mintingNFT) {
+//     ui.setStatusMessage({
+//       statusMessage: `The contract requires you to have a minter for token ${shortenTokenId(identity.token!.tokenId)} ${identity.tokenCategory!.symbol ? `(${identity.tokenCategory!.symbol})` : ''} in your wallet which currently you don't have. Although you own the NFT reserve, it is not in your wallet it's in the AuthGuard contract. Don't worry you can create a minter from the Mint Child NFT menu.`,
+//       statusMessageType: 'error',
+//     })
+//     return
+//   }
+//   // encapsulating mintingNFT utxo as CashToken
+//   const ct = new CashToken({ ...mintingNFT })
+//   // borrowing the already present metadata from the authchain identity output
 
-  ct.tokenCategory = identity.tokenCategory
-  ct.tokenUris = identity.tokenUris
-  ct.ownerWallet = identity.ownerWallet
-  ui.clearStatusMessage()
-  openDialog(NFTMintingContractDeployerDialog.__name, ct)
-}
-const populateAuthchainIdentities = (paginated: PaginatedData) => {
-  authchainIdentities.value = []
-  const results = paginated?.results || []
-  for (let i = 0; i < results.length; i++) {
-    const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
-    const {
-      txid,
-      vout,
-      satoshis,
-      height,
-      coinbase,
-      token
-    } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
-    authchainIdentities.value.push(authchainIdentity)
-  }
+//   ct.tokenCategory = identity.tokenCategory
+//   ct.tokenUris = identity.tokenUris
+//   ct.ownerWallet = identity.ownerWallet
+//   ui.clearStatusMessage()
+//   openDialog(NFTMintingContractDeployerDialog.__name, ct)
+// }
 
-  authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
-      await a.resolveTokenCategory()
-      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
-        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
-      }
-    } else {
-      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
-    }
-
-    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
-      await a.resolveTokenUris()
-      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
-        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
-      }
-    } else {
-      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
-    }
-  })
-}
-const initPagination = () => {
-  if (paginatedNftAuthchainIdentities.value && paginatedNftAuthchainIdentities.value?.count > 0) {
-    pagination.value.currentPage = Math.ceil((paginatedNftAuthchainIdentities.value.offset + 1) / paginatedNftAuthchainIdentities.value.limit)
-    pagination.value.maxRowsPerPage = paginatedNftAuthchainIdentities.value.limit
-    pagination.value.rowCount = paginatedNftAuthchainIdentities.value.count
-    pagination.value.numberOfPages = Math.ceil(paginatedNftAuthchainIdentities.value.count / paginatedNftAuthchainIdentities.value.limit)
-    pagination.value.offset = paginatedNftAuthchainIdentities.value.offset
-  }
-}
-const refreshData = async (immediate?: boolean) => {
-  if (!immediate) {
-    await delay(2500)
-  }
-  if (user.wallet) {
-
-    paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
-      user.wallet.getTokenDepositAddress(),
-      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
-    )
-    user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
-    initPagination()
-    populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-  }
-}
-
-watch(() => user.walletAddress, async (v) => {
-  if (v) {
-    // keep so page survives reload
-    user.wallet = await getWalletClass().watchOnly(v)
-    refreshData()
-    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-      refreshData()
-    })
-  } else {
-    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
-  }
-
+watch(() => identityOutputs.paginator.currentPage, async (pageNumber) => {
+  identityOutputs.paginator.offset = (pageNumber - 1) * identityOutputs.paginator.maxRowsPerPage
+  identityOutputs.populateNftReserves({ wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner })
 })
 
-watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
+onBeforeMount(async () => {
   if (user.wallet) {
-    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
-    paginatedNftAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
-      user.wallet.getTokenDepositAddress(),
-      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__eq: 0, token_is_nft: true }
+    identityOutputs.populateNftReserves(
+      { wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner }
     )
-    populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-    user.paginatedNftAuthchainIdentities = paginatedNftAuthchainIdentities.value
   }
-})
-
-onBeforeMount(() => {
-  refreshData(true)
 })
 
 onMounted(async () => {
-  if (user.wallet) {
-    /**
-     * Load from store by default then refresh
-     */
-    if (user.paginatedNftAuthchainIdentities) {
-      paginatedNftAuthchainIdentities.value = user.paginatedNftAuthchainIdentities
-      populateAuthchainIdentities(paginatedNftAuthchainIdentities.value)
-    }
-    // refreshData()
-
-  }
   eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-    refreshData()
+    identityOutputs.populateNftReserves(
+      { wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner }
+    )
   })
 })
 
