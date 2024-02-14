@@ -6,8 +6,8 @@
           Metadata
         </h5>
         <div>
-          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :columns="[
+          <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
+            :rows="ownedAuthHeads.results" :columns="[
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
@@ -47,7 +47,7 @@
                 headerStyle: 'padding: 1.5em'
 
               }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name">
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -55,6 +55,15 @@
                   <q-img :src="value.row.identitySnapshot.uris.icon" />
                 </q-avatar>
                 <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-symbol="value">
+              <q-td class="text-center">
+                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
+                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
+                </span>
+
+                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
               </q-td>
             </template>
             <template v-slot:body-cell-tokenid="value">
@@ -124,16 +133,23 @@ import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { UtxoI, Wallet } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
+import TokenSymbol from 'src/components/TokenSymbol.vue'
 import CashAddress from 'src/components/CashAddress.vue'
 import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
-import { EventBus } from 'quasar';
+import { EventBus, useQuasar } from 'quasar';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
+import { Token } from 'nft.storage';
+import { useTokenStore } from 'src/stores/token';
+import { useRouter } from 'vue-router';
 
 defineOptions({ name: 'NonFungibleTokens' })
+const $q = useQuasar()
+const router = useRouter()
 const user = useUser()
+const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
@@ -170,6 +186,13 @@ const isTokenTransferred = computed(() => {
   }
 })
 
+const visibleColumns = computed(() => {
+  if ($q.screen.lt.sm) {
+    return ['icon', 'symbol']
+  }
+  return ['icon', 'symbol', 'tokenid', 'actions']
+})
+
 const openNFTTransferDialog = (nft: CashToken) => {
   nft.ownerWallet = user.wallet as Wallet // embedding wallet
   nft.processing = ''
@@ -192,6 +215,11 @@ watch(() => excludePossibleAuthKeys.value, async (v) => {
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
   transferredTokens.value = []
 })
+
+const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
+  tokenStore.value = authHead
+  router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
+}
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
   if (wallet) {
