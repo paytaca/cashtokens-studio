@@ -26,6 +26,7 @@ const routes: RouteRecordRaw[] = [
     path: '/issuer/manage',
     component: () => import('layouts/MainLayout.vue'),
     children: [
+      { name: 'metadata', path: 'metadata', component: () => import('pages/issuer/manage/Metadata.vue') },
       { name: 'authchains', path: 'authchains', component: () => import('pages/issuer/manage/AuthChains.vue') },
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
