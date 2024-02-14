@@ -404,7 +404,7 @@ const constructAndStoreBcmr = async () => {
   bcmr.value.setTokenSymbol(genesisTokenMetadata.value.symbol)
 
   if (genesisTokenMetadata.value.decimals) {
-    bcmr.value.setTokenDecimals(genesisTokenMetadata.value.decimals)
+    bcmr.value.setTokenDecimals(Number(genesisTokenMetadata.value.decimals || 0))
   }
 
   if (genesisTokenMetadata.value.iconUris.https) {

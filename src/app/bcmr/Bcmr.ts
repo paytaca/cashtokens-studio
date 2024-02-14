@@ -208,7 +208,7 @@ export class Bcmr implements Registry {
 
   setTokenDecimals(decimals:number) {
     if (typeof (this.registryIdentity) === 'string' && this.identities) {
-      this.identities![this.registryIdentity!][this.latestRevision!].token!.decimals = decimals
+      this.identities![this.registryIdentity!][this.latestRevision!].token!.decimals = Number(decimals || 0)
     }
   }
 
