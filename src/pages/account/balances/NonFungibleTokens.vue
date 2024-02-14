@@ -1,144 +1,123 @@
 <template>
-    <q-page class="q-ma-lg">
-        <div class="row justify-center q-mx-sm">
+    <q-page class="q-ma-sm">
+        <div class="row justify-center">
             <div class="col-xs-12 col-md-10">
-                <h5 class="text-center">
+                <h5>
                     My Collectibles(NFTs)
                     <q-badge color="blue-5" text-color="black" align="top" rounded>
-                        {{ paginatedNftCollections?.count || 0 }}
+                        {{ nftCollections?.count || 0 }}
                     </q-badge>
                 </h5>
-                <div class="q-pa-lg flex flex-center">
-                    <q-pagination v-if="paginatedNftCollections?.count > 0" v-model="pagination.currentPage"
-                        :max="pagination.numberOfPages" :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
-                </div>
-                <div class="text-right q-my-sm">
-                    <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys" class="text-grey-6"
-                        dense>
-                        <q-tooltip>
-                            Excludes NFT that could be possibly an AuthKey so you don't accidentally send it to someone.
-                        </q-tooltip>
-                    </q-checkbox>
-                </div>
-                <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
-                    <q-markup-table grid>
-                        <thead>
-                            <tr v-if="watchtower.processing">
-                                <th colspan="7">
-                                    <q-spinner-grid size="xs"></q-spinner-grid> Loading
-                                </th>
-                            </tr>
-                            <tr>
-                                <th>#</th>
-                                <th>Brand</th>
-                                <th>Symbol</th>
-                                <th>Token Id</th>
-                                <th>Capability</th>
-                                <th>
-                                    <sup>
-                                        <q-icon name="info" size="xs">
-                                            <q-tooltip>
-                                                If the token is a minting token. Value would be the commitment of the last
-                                                minted
-                                                child. Value shown here are the decimal format of value on-chain.
-                                            </q-tooltip>
-                                        </q-icon>
-                                    </sup>
-                                    Commitment
-                                    <q-btn-toggle v-model="commitmentFormat" push toggle-color="teal" :options="[
-                                        { label: '0x', value: 'hex' },
-                                        { label: '123', value: 'decimal' },
-                                    ]" size="sm" dense no-caps />
-                                </th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <TableBodySkeleton v-if="watchtower.processing && !nftCollections" :col-count="4" :row-count="3"
-                            :caption="watchtower.processing" />
-                        <tbody v-else class="text-center">
-
-                            <tr v-for="b, i in nftCollections" :key="'ai-rec-' + i">
-                                <td>{{ i + pagination.offset + 1 }}</td>
-                                <td>
-                                    <q-avatar v-if="b.tokenUris?.icon">
-                                        <img :src="b.tokenUris?.icon" alt="na">
-                                    </q-avatar>
-                                    <q-icon v-else name="token" size="xl" color="disabled" />
-                                </td>
-                                <td>
-                                    <q-spinner v-if="b.processing === 'Checking token registry'"></q-spinner>
-                                    <div v-else>
-                                        <q-chip v-if="b.tokenCategory?.symbol" color="primary" class="q-p-sm" square
-                                            outline>
-                                            {{ b.tokenCategory?.symbol }}
-                                        </q-chip>
-                                        <span v-else>---</span>
+                <div>
+                    <q-table v-model:pagination="pagination" @request="onRequest" flat bordered grid title="My Collections"
+                        :rows="nftCollections.results" :columns="[
+                            {
+                                name: 'name', label: 'Name',
+                                field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
+                            },
+                            {
+                                name: 'commitment', label: 'Commitment',
+                                field: r => r.nftType?._meta?.commitment ? r.nftType._meta.commitment : '---',
+                            }
+                        ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header>
+                        <template v-slot:top>
+                            <div class="col-12 text-right q-my-sm">
+                                <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys"
+                                    class="text-grey-6" dense>
+                                    <q-tooltip>
+                                        Excludes NFT that could be possibly an AuthKey so you don't accidentally send it to
+                                        someone.
+                                    </q-tooltip>
+                                </q-checkbox>
+                            </div>
+                        </template>
+                        <template v-slot:item="i">
+                            <q-card class="my-card q-ma-sm text-center col-grow" style="border-radius: 15px;">
+                                <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px"
+                                    fit="fill"
+                                    :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
+                                    alt="na">
+                                    <div class="absolute-bottom text-left">
+                                        <div class="text-subtitle1">
+                                            {{
+                                                i.row.token?.commitment ? (i.row.nftCollectionType ==
+                                                    'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
+                                                        'vm-number',
+                                                        'decimal') : i.row.token.commitment) : ''
+                                            }}
+                                        </div>
                                     </div>
-                                </td>
-                                <td>
-                                    <TokenCategory :tokenId="b.token?.tokenId" />
-                                </td>
+                                </q-img>
+                                <q-icon v-else name="token" size="170px" color="grey"></q-icon>
+                                <div class="q-px-sm text-left">
+                                    <code class="text-caption">{{ `<${i.row.token.commitment}>` }}</code>
+                                    <div v-if="i.row.nftTypeMetadata?.name" class="ellipsis">
+                                        {{ i.row.nftTypeMetadata?.name }}
+                                    </div>
+                                    <div v-else-if="i.row.token?.commitment" class="ellipsis">
+                                        <code class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
+                                    </div>
 
-                                <td>{{ b.token?.capability }}</td>
-                                <td>
-                                    {{ b.token?.commitment !== undefined ? commitmentDisplay(b.token?.commitment) : '---' }}
-                                </td>
-                                <td>
-                                    <q-btn color="primary" dense no-caps
-                                        @click="() => openNFTTransferDialog(b as CashToken)">Transfer
-                                        NFT</q-btn>
-                                </td>
-                            </tr>
-                            <tr v-if="nftCollections.length === 0 && !watchtower.processing">
-                                <td colspan="7">
-                                    No data
-                                </td>
-                            </tr>
-                        </tbody>
-                    </q-markup-table>
-                    <NFTOwnershipTransferDialog :model-value="dialog === NFTOwnershipTransferDialog.__name"
-                        :nft="dialogData" @hide="onHide" @nft-transferred="() => onNftTransfer()" />
-                </q-scroll-area>
+                                </div>
+                                <q-card-actions align="right">
+                                    <q-btn dense no-caps icon="send" size="lg" text-color="primary"
+                                        @click="() => openNFTTransferDialog(i.row as CashToken)">
+                                    </q-btn>
+                                </q-card-actions>
+                            </q-card>
+                        </template>
+
+                    </q-table>
+                </div>
             </div>
         </div>
+        <NFTOwnershipTransferDialog :model-value="dialog === NFTOwnershipTransferDialog.__name" :nft="dialogData"
+            @hide="onHide" @nft-transferred="() => onNftTransfer()" />
     </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, CashToken, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, CashToken, Watchtower } from 'src/app'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-import { PaginatedData } from 'src/app/types';
+import { PaginatedData, TransactionSigner } from 'src/app/types';
 import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { Wallet, delay } from 'mainnet-js';
-import { getWalletClass } from 'src/app/utils';
+import { formatCommitment, getWalletClass, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
 import { EventBus } from 'quasar';
 import { useUI } from 'src/stores/ui';
+import { useNftCollections } from 'src/stores/nftcollections';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
 const ui = useUI()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-const nftCollections = ref<CashToken[]>([])
-const paginatedNftCollections = ref<PaginatedData>({
+
+const nftCollections = ref<PaginatedData>({
     count: 0,
-    limit: 10,
+    limit: 0,
     offset: 0,
-    next: '',
-    previous: '',
+    next: null,
+    previous: null,
     results: []
 })
-const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
-    numberOfPages: 0,
-    currentPage: 0,
-    maxRowsPerPage: 10,
-    rowCount: 0,
-    offset: 0,
+
+const pagination = ref({
+    sortBy: 'desc',
+    descending: false,
+    page: 1,
+    rowsPerPage: 12,
+    rowsNumber: 12
 })
+
+const rowsPerPageOptions = computed(() => {
+    return [12, 24, 36]
+})
+
 const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
 const watchtower = ref<Watchtower>(new Watchtower())
 const excludePossibleAuthKeys = ref<boolean>(true)
@@ -151,87 +130,6 @@ const commitmentDisplay = computed(() => {
     }
 })
 
-const populateNftCollections = (paginated: PaginatedData) => {
-    // populate 
-    nftCollections.value = []
-    const results = paginated?.results || []
-    for (let i = 0; i < results.length; i++) {
-        const {
-            txid,
-            vout,
-            satoshis,
-            height,
-            coinbase,
-            token
-        } = results[i]
-
-        nftCollections.value.push(new CashToken({
-            txid,
-            vout,
-            satoshis,
-            height,
-            coinbase,
-            token
-        },
-            user.transactionSigner
-        ))
-    }
-
-    nftCollections.value.forEach(async (a) => {
-        // await a.resolveTokenCategory()
-        // await a.resolveTokenUris()
-        if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
-            await a.resolveTokenCategory()
-            if (a.tokenCategory) {
-                ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
-            }
-        } else {
-            a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
-        }
-
-        if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
-            await a.resolveTokenUris()
-            if (a.tokenUris) {
-                ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
-            }
-        } else {
-            a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
-        }
-    })
-}
-
-const initPagination = () => {
-    if (paginatedNftCollections.value && paginatedNftCollections.value?.count > 0) {
-        pagination.value.currentPage = Math.ceil((paginatedNftCollections.value.offset + 1) / paginatedNftCollections.value.limit)
-        pagination.value.maxRowsPerPage = paginatedNftCollections.value.limit
-        pagination.value.rowCount = paginatedNftCollections.value.count
-        pagination.value.numberOfPages = Math.ceil(paginatedNftCollections.value.count / paginatedNftCollections.value.limit)
-        pagination.value.offset = paginatedNftCollections.value.offset
-    }
-}
-
-const refreshData = async (immediate?: boolean) => {
-    if (!immediate) {
-        await delay(2500)
-    }
-    if (user.wallet) {
-        let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
-        if (excludePossibleAuthKeys.value) {
-            query.commitment_ne = '00'
-        }
-        paginatedNftCollections.value = await watchtower.value.fetchNfts(
-            user.wallet.getTokenDepositAddress(),
-            query
-        )
-        user.paginatedNftCollections = paginatedNftCollections.value
-        if (paginatedNftCollections.value) {
-            populateNftCollections(paginatedNftCollections.value)
-            initPagination()
-        }
-
-    }
-}
-
 const openNFTTransferDialog = (nft: CashToken) => {
     nft.ownerWallet = user.wallet as Wallet // embedding wallet
     nft.processing = ''
@@ -240,53 +138,72 @@ const openNFTTransferDialog = (nft: CashToken) => {
 
 const onNftTransfer = () => {
     hideDialog()
-    refreshData()
 }
 
-watch(() => user.walletAddress, async (v) => {
-    if (v) {
-        // keep so page survives reload
-        user.wallet = await getWalletClass().watchOnly(v)
-        refreshData()
-        eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-            refreshData()
-        })
-    } else {
-        eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
-    }
+// watch(() => nftCollectionz.paginator.currentPage, async (pageNumber) => {
+//     nftCollectionz.paginator.offset = (pageNumber - 1) * nftCollectionz.paginator.maxRowsPerPage
+//     nftCollectionz.populateNftCollections({ wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner })
+// })
 
+watch(() => excludePossibleAuthKeys.value, async (v) => {
+    await populateNftCollections(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
 })
 
-watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
-    if (user.wallet) {
-        pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
-        let query: FetchUtxoQueryParams = { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
-        if (excludePossibleAuthKeys.value) {
+const populateNftCollections = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
+    if (wallet) {
+        console.log('PAGINATION', pagination.value)
+        const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
+        if (excludePossibleAuthKeys) {
             query.commitment_ne = '00'
         }
 
-        paginatedNftCollections.value = await watchtower.value.fetchNfts(
-            user.wallet.getTokenDepositAddress(), query
+        const resp = await (new Watchtower()).fetchNfts(
+            wallet.getTokenDepositAddress(),
+            query
         )
-        populateNftCollections(paginatedNftCollections.value)
-        user.paginatedNftCollections = paginatedNftCollections.value
+
+
+        if (resp?.count > 0) {
+            nftCollections.value = resp
+            pagination.value.rowsNumber = resp.count
+            nftCollections.value.results?.forEach(async (cashtoken, i) => {
+                const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
+                const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+                const {
+                    txid,
+                    vout,
+                    satoshis,
+                    height,
+                    coinbase,
+                    token
+                } = cashtoken
+                nftCollections.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+                await nftCollections.value.results[i].resolveNftType()
+            })
+            // pagination.value.page = Math.ceil((nftCollections.value.offset + 1) / nftCollections.value.limit)
+
+        }
+
     }
+}
+
+onBeforeMount(async () => {
+    if (user.wallet) {
+        await populateNftCollections(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
+    }
+
 })
 
-watch(() => excludePossibleAuthKeys.value, async (v) => {
-    refreshData()
-})
+const onRequest = async (props: any) => {
+    console.log(props)
+    pagination.value = props.pagination
+    await populateNftCollections(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
+}
 
 onMounted(async () => {
-    if (user.wallet) {
-        if (user.paginatedNftCollections) {
-            paginatedNftCollections.value = user.paginatedNftCollections
-            populateNftCollections(paginatedNftCollections.value)
-        }
-        refreshData()
-    }
+
     eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-        refreshData()
+        // refreshData()
     })
 })
 
