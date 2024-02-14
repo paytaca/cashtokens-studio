@@ -39,7 +39,7 @@
             </template>
           </q-input>
           <q-input v-model="form.to" label="Input Recipient's Token Address*" filled dense
-            :disable="Boolean(nft.processing)" />
+            :disable="Boolean(nft.processing)" autofocus />
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
@@ -98,7 +98,6 @@ const transferNFT = async () => {
     try {
       const tx = await props.nft?.transferNFT({ newOwner: form.value.to })
       if (tx) {
-        $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'CashToken.transferNFT',
