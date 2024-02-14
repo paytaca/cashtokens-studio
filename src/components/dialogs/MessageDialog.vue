@@ -25,7 +25,7 @@
         </div>
       </q-card-section>
       <q-card-actions v-if="!ui.statusMessageSpinner" class="row justify-center">
-        <q-btn color="primary" size="lg" v-close-popup>Ok</q-btn>
+        <q-btn size="lg" v-close-popup text-color="primary">Ok</q-btn>
       </q-card-actions>
     </q-card>
   </q-dialog>
