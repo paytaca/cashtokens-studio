@@ -1,7 +1,7 @@
 import { RouteRecordRaw } from 'vue-router';
 
 const routes: RouteRecordRaw[] = [
-  {
+  { 
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
     children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
@@ -14,7 +14,12 @@ const routes: RouteRecordRaw[] = [
       { name: 'create-token', path: 'tokens/create', component: () => import('pages/issuer/CreateToken.vue') },
       { name: 'create-nft-collection', path: 'tokens/create/nft-collection', component: () => import('pages/issuer/CreateNftCollection.vue') },
       { name: 'import-auth-utxo', path: 'tokens/import-auth-utxo', component: () => import('pages/issuer/ImportAuthUtxo.vue') },
-      { name: 'mint-child-nft', path: 'tokens/mint-child-nft', component: () => import('pages/issuer/MintChildNft.vue'), meta: { pageTitle: 'Mint NFT'} },
+      { name: 'mint-child-nft', path: 'tokens/mint-child-nft', component: () => import('pages/issuer/MintChildNft.vue'), meta: { pageTitle: 'Mint NFT'},
+        beforeEnter: (route) => {
+          // check and load
+        }
+
+      },
     ],
   },
   {

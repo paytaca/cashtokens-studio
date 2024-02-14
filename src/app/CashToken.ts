@@ -1021,7 +1021,6 @@ export class CashToken implements UtxoI, PartialBcmr {
         this._processing = 'Downloading nft metadata'
       }
       const r = await (new BcmrIndexer()).getNftType(this.token!.tokenId, this.token!.commitment!)  
-      console.log('NFT TYPE', r)
       this.nftType = r
 
     } catch (error:any) {
