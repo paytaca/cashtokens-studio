@@ -61,12 +61,16 @@
                                 </div>
                                 <q-card-actions align="right">
                                     <q-btn dense no-caps icon="send" size="lg" text-color="primary"
+                                        :disable="!!isTokenTransferred(i.row.utxo)"
                                         @click="() => openNFTTransferDialog(i.row as CashToken)">
                                     </q-btn>
                                 </q-card-actions>
+                                <q-inner-loading :showing="!!isTokenTransferred(i.row.utxo)" label="Test">
+                                    <span class="text-bold text-negative q-px-sm rounded-borders">Sent</span>
+                                    <q-spinner-gears class="hidden"></q-spinner-gears>
+                                </q-inner-loading>
                             </q-card>
                         </template>
-
                     </q-table>
                 </div>
             </div>
@@ -80,20 +84,14 @@ import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, CashToken, Watchtower } from 'src/app'
-import TokenCategory from 'src/components/TokenCategory.vue'
-import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
-import { Wallet, delay } from 'mainnet-js';
-import { formatCommitment, getWalletClass, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
+import { UtxoI, Wallet } from 'mainnet-js';
+import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
 import { EventBus } from 'quasar';
-import { useUI } from 'src/stores/ui';
-import { useNftCollections } from 'src/stores/nftcollections';
 defineOptions({ name: 'NonFungibleTokens' })
 const user = useUser()
-const ui = useUI()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 
@@ -118,15 +116,16 @@ const rowsPerPageOptions = computed(() => {
     return [12, 24, 36]
 })
 
-const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
-const watchtower = ref<Watchtower>(new Watchtower())
 const excludePossibleAuthKeys = ref<boolean>(true)
-const commitmentDisplay = computed(() => {
-    return (commitment: string | undefined) => {
-        if (commitment && commitmentFormat.value === 'decimal') {
-            return binToBigIntUintLE(hexToBin(commitment))
-        }
-        return commitment
+
+const transferredToken = ref<UtxoI | null>()
+const transferredTokens = ref<UtxoI[]>()
+const isTokenTransferred = computed(() => {
+    return (utxo: UtxoI) => {
+        const trans = transferredTokens.value?.find((u: UtxoI) => (
+            Boolean(utxo.txid == u.txid && utxo.token?.commitment == u.token?.commitment && utxo.token?.tokenId == u.token?.tokenId)
+        ))
+        return trans
     }
 })
 
@@ -137,16 +136,20 @@ const openNFTTransferDialog = (nft: CashToken) => {
 }
 
 const onNftTransfer = () => {
+    if (!transferredTokens.value) {
+        transferredTokens.value = []
+    }
+    transferredTokens.value.push(Object.assign({}, dialogData.value?.utxo))
     hideDialog()
 }
 
-// watch(() => nftCollectionz.paginator.currentPage, async (pageNumber) => {
-//     nftCollectionz.paginator.offset = (pageNumber - 1) * nftCollectionz.paginator.maxRowsPerPage
-//     nftCollectionz.populateNftCollections({ wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner })
-// })
+watch(() => pagination.value, () => {
+    transferredTokens.value = []
+})
 
 watch(() => excludePossibleAuthKeys.value, async (v) => {
     await populateNftCollections(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
+    transferredTokens.value = []
 })
 
 const populateNftCollections = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
@@ -161,7 +164,6 @@ const populateNftCollections = async (wallet: Wallet, transactionSigner: Transac
             wallet.getTokenDepositAddress(),
             query
         )
-
 
         if (resp?.count > 0) {
             nftCollections.value = resp
@@ -202,9 +204,13 @@ const onRequest = async (props: any) => {
 
 onMounted(async () => {
 
+    transferredToken.value = null
+    transferredTokens.value = []
     eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
         // refreshData()
     })
+
+
 })
 
 onBeforeUnmount(() => {
