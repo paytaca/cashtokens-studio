@@ -2,15 +2,15 @@
     <q-page class="q-ma-sm">
         <div class="row justify-center">
             <div class="col-xs-12 col-md-10">
-                <h5>
+                <h5 class="text-center">
                     My Collectibles(NFTs)
                     <q-badge color="blue-5" text-color="black" align="top" rounded>
                         {{ nftCollections?.count || 0 }}
                     </q-badge>
                 </h5>
                 <div>
-                    <q-table v-model:pagination="pagination" @request="onRequest" flat bordered grid title="My Collections"
-                        :rows="nftCollections.results" :columns="[
+                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid
+                        title="My Collections" :rows="nftCollections.results" :columns="[
                             {
                                 name: 'name', label: 'Name',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
@@ -118,7 +118,6 @@ const rowsPerPageOptions = computed(() => {
 
 const excludePossibleAuthKeys = ref<boolean>(true)
 
-const transferredToken = ref<UtxoI | null>()
 const transferredTokens = ref<UtxoI[]>()
 const isTokenTransferred = computed(() => {
     return (utxo: UtxoI) => {
@@ -154,7 +153,6 @@ watch(() => excludePossibleAuthKeys.value, async (v) => {
 
 const populateNftCollections = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
     if (wallet) {
-        console.log('PAGINATION', pagination.value)
         const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
         if (excludePossibleAuthKeys) {
             query.commitment_ne = '00'
@@ -182,7 +180,6 @@ const populateNftCollections = async (wallet: Wallet, transactionSigner: Transac
                 nftCollections.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
                 await nftCollections.value.results[i].resolveNftType()
             })
-            // pagination.value.page = Math.ceil((nftCollections.value.offset + 1) / nftCollections.value.limit)
 
         }
 
@@ -196,21 +193,16 @@ onBeforeMount(async () => {
 
 })
 
-const onRequest = async (props: any) => {
-    console.log(props)
+const onTableRequest = async (props: any) => {
     pagination.value = props.pagination
     await populateNftCollections(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
 }
 
 onMounted(async () => {
-
-    transferredToken.value = null
     transferredTokens.value = []
     eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
         // refreshData()
     })
-
-
 })
 
 onBeforeUnmount(() => {

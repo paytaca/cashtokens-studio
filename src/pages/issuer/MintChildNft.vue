@@ -170,15 +170,21 @@
                       </q-btn>
                     </template>
                     <template v-slot:hint>
-                      <div v-if="state.newMintersCommitment" class="row justify-end items-center">
-                        <i>
-                          <q-icon name="info">
-                            <q-tooltip>The actual value on-chain.</q-tooltip>
-                          </q-icon>
-                          vm number =
-                        </i>
-                        <code>{{ formatCommitment(state.newMintersCommitment, state.options.commitmentFormat, 'vm-number') }}</code>
+                      <div class="row justify-between items-center">
+                        <span class="col text-justify">This allows us to track the last sequence number of
+                          a Sequential Nft Collection.</span>
+                        <span class="col-auto" v-if="state.newMintersCommitment">
+                          <i>
+                            <q-icon name="info">
+                              <q-tooltip>The actual value on-chain.</q-tooltip>
+                            </q-icon>
+                            vm number =
+                          </i>
+                          <code>{{ formatCommitment(state.newMintersCommitment, state.options.commitmentFormat, 'vm-number') }}</code>
+                        </span>
+
                       </div>
+
                     </template>
                   </q-input>
                 </div>
@@ -190,7 +196,7 @@
                   @click.stop="handleStepperNav" color="primary" label="Continue" class="q-ml-sm" size="lg" />
                 <q-btn v-if="!state.mintTx" type="submit" color="primary" label="Mint NFT" class="q-ml-sm self-right"
                   size="lg" />
-                <q-btn v-if="state.mintTx" @click.stop="mintAnother" color="primary" label="Mint Another One"
+                <q-btn v-if="state.mintTx" @click.stop="mintAgain" color="primary" label="Mint Again"
                   class="q-ml-sm self-right" size="lg" />
               </q-stepper-navigation>
 
@@ -293,7 +299,7 @@
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
               <q-btn name="stepper-nav" flat @click.stop="router.back()" color="primary" label="Exit" class="q-ml-sm"
                 size="lg" />
-              <q-btn name="stepper-nav" color="primary" size="lg" @click.stop="mintAnother" label="Mint Another"
+              <q-btn name="stepper-nav" color="primary" size="lg" @click.stop="mintAgain" label="Mint Again"
                 class="q-ml-sm" />
             </q-stepper-navigation>
           </q-step>
@@ -509,6 +515,7 @@ const openAttributeDialog = () => {
     nftAttributes.value = { ...nftAttributes.value, [attribute.name]: attribute.value }
   })
 }
+
 
 const convertCommitment = () => {
   if (state.value.token.commitment && state.value.options.commitmentFormat === 'decimal') {
@@ -985,7 +992,7 @@ const publishRegistry = async () => {
   }
 }
 
-const mintAnother = async () => {
+const mintAgain = async () => {
   let proceed = false
   console.log(supportAssetUpload)
   console.log(supportAssetUpload.includes(state.value.options.mintOption) && !nftType.value.saved)
@@ -994,15 +1001,17 @@ const mintAnother = async () => {
       $q.dialog({
         class: 'q-pa-md',
         focus: 'cancel',
-        message: 'Are you sure you don\'t want to save the NFT metadata?',
-        ok: { label: 'Yes, I\'m Sure', color: 'primary', flat: true },
-        cancel: { label: 'No', color: 'negative', flat: true },
+        message: 'Are you sure you don\'t want to add the metadata for this minted NFT?',
+        ok: { label: 'Yes, I\'m Sure', 'text-color': 'primary', flat: true },
+        cancel: { label: 'No', 'text-color': 'negative', flat: true },
       }).onOk(() => {
         res(true)
       }).onCancel(() => {
         res(false)
       })
     })
+  } else {
+    proceed = true
   }
 
   if (!proceed) return
