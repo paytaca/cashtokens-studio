@@ -21,24 +21,24 @@ export const useInit = () => {
   const unwatchAddress = ref()
   
   onMounted(()=>{
+
+    ui.routeBack = ''
+    
     watchtower.value = new Watchtower()
+
     window.onbeforeunload = () => {
       localStorage.setItem('user.walletType', user.walletType || '')
     }
 
-    page.$subscribe((mutation:any, state)=>{
-      console.log('MUTATION', mutation)
-      console.log('STATE', state)
-      if (mutation.events?.key == 'state') {
-        console.log('PAGE PATH', state.path)
-        localForage.pageStore.setItem(state.path, stringify(state.state))
-        console.log('SAVING NEW VALUE', mutation.events.newValue)
-      }
-      
-    })
+    // page.$subscribe(async (mutation:any, state)=>{
+    //   console.log('MUTATION', mutation)
+    //   console.log('STATE', state)
+    //   await localForage.pageLocalForage.setItem(state.path, stringify(state.state))
+    // })
 
-    
-
+    if (!user.walletAddress) {
+      router.push('/')
+    }
   })
 
   const loadWalletBchBalance = async (address: string) => {

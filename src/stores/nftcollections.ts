@@ -50,7 +50,6 @@ export const useNftCollections = defineStore('nftcollections', {
     },
 
     async populateNftCollections(user: Pick<UserState, 'wallet' | 'transactionSigner'>, excludePossibleAuthKeys?: boolean) {
-      console.log('populate')
       if (user.wallet) {
         
         const query: FetchUtxoQueryParams = { limit: this.paginator.maxRowsPerPage, offset: this.paginator.offset }
@@ -78,7 +77,6 @@ export const useNftCollections = defineStore('nftcollections', {
             this.nfts.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
             await this.nfts.results[i].resolveNftType()
           })
-          console.log('RESULTS', this.results)
           this.updatePaginator({
             currentPage: Math.ceil((this.paginator.offset + 1) / this.nfts.limit),
             maxRowsPerPage: this.nfts.limit,

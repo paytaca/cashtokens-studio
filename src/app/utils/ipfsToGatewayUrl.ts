@@ -7,7 +7,6 @@ export default (ipfsUrl: string) => {
     return `https://${url[0]}.ipfs.nftstorage.link`
   }
   if (url.length > 1) {
-    console.log(url)
     return `https://${url[0]}.ipfs.nftstorage.link/${url.slice(1).join('/')}`
   }
   
