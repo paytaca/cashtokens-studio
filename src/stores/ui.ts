@@ -39,7 +39,7 @@ type UIState = {
   tokenCategoryCache: TokenCategoryCache,
   tokenUrisCache: TokenUrisCache,
   minterInView?: CashToken,
-  routeBack?: string|boolean // The previous route, can be used by page to route back
+  routeBack: string|boolean // The previous route, can be used by page to route back
   pageTitle?: string
   dialog?: DialogChainObject
 }
@@ -62,7 +62,8 @@ export const useUI = defineStore('ui', {
     tokenSymbolCache: {},
     tokenDecimalsCache: {},
     tokenCategoryCache: {},
-    tokenUrisCache: {}
+    tokenUrisCache: {},
+    routeBack: ''
   }),
   actions: {
     clearStatusMessage() {
