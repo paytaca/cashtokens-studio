@@ -9,7 +9,7 @@ import shortenTokenId from "./utils/shortenTokenId";
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
 import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
-import { TransactionSigner } from "./types";
+import { NftCollectionType, TransactionSigner } from "./types";
 import { submitTransaction } from "./utils";
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
@@ -113,6 +113,13 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   get burningCost(): number {
     return calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2PKH: 2})
+  }
+
+  get nftCollectionType():NftCollectionType {
+    if (!this.identitySnapshot?.token?.nfts?.parse?.bytecode || this.identitySnapshot?.token?.nfts?.parse?.bytecode == '00d26b') {
+      return 'SequentialNftCollection'
+    }
+    return 'ParsableNftCollection'
   }
 
   ensureOwnerWallet() {

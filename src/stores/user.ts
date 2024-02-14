@@ -4,7 +4,7 @@ import { AuthKey } from 'src/app/AuthKey';
 import { AuthchainIdentity, CashToken } from 'src/app';
 import { PaginatedData, TransactionSigner } from 'src/app/types';
 
-type UserState = {
+export type UserState = {
   connectedPaytacaAddress?: string,
   connectedPaytacaWalletBchBalance?: string | number,
   walletBchBalance: string | number | undefined
