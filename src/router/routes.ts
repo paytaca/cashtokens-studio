@@ -29,7 +29,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'authchains', path: 'authchains', component: () => import('pages/issuer/manage/AuthChains.vue') },
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
-      { name: 'metadata', path: 'metadata', component: () => import('pages/issuer/manage/Metadata.vue') },
+      { name: 'registries', path: 'registries', component: () => import('pages/issuer/manage/Registries.vue') },
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'authguards', path: 'authguards', component: () => import('pages/issuer/manage/AuthGuards.vue') },
 

@@ -486,7 +486,7 @@ onBeforeMount(async () => {
 })
 
 onMounted(async () => {
-  ui.routeBack = `metadata`
+  ui.routeBack = `registries`
 })
 
 
