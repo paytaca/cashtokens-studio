@@ -3,7 +3,7 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
-          Metadata
+          AuthGuards
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
@@ -25,6 +25,24 @@
               {
                 name: 'tokenid', label: 'Category',
                 field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'utxotx', label: 'Utxo Tx',
+                field: r => shortenTx(r.txid),
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'authguard', label: 'Authguard',
+                field: r => '',
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'authkey', label: 'AuthKey ID',
+                field: r => '',
                 align: 'center',
                 headerStyle: 'padding: 1.5em'
               },
@@ -61,55 +79,71 @@
                 <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
               </q-td>
             </template>
+            <template v-slot:body-cell-authguard="value">
+              <q-td class="text-center">
+                <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
+                  :cashaddr="value.row.authKey.authGuard.contract.getTokenDepositAddress()"
+                  tool-tip="Copy Contract Address" icon-right="lock" />
+              </q-td>
+            </template>
+            <template v-slot:body-cell-authkey="value">
+              <q-td class="text-center">
+                <TokenCategory v-if="value.row.authKey?.token?.tokenId" :tokenId="value.row.authKey.token.tokenId"
+                  icon-right="key" />
+              </q-td>
+            </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
                 <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
                   @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup
-                        @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, value.row)">
-                        Publish Registry From URL
+                      <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, value.row)">
+                        Unguard Authchain
                       </q-item>
-                      <q-item clickable v-close-popup
-                        @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, value.row)">
-                        Publish Registry From File
+                      <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
+                        Burn Token
                       </q-item>
+                      <!-- <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item> -->
                     </q-list>
                   </q-menu>
                 </q-btn>
               </q-td>
             </template>
           </q-table>
-          <AuthchainRegistryPublisherDialog v-if="dialog"
-            :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
-            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @registry-published="() => { }" />
-          <AuthchainRegistryFromFilePublisherDialog v-if="dialog"
-            :model-value="dialog === AuthchainRegistryFromFilePublisherDialog.__name"
-            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @registry-published="() => { }" />
+          <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+            @identity-unguarded="() => onUnguard()" />
+          <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="() => onBurn()" />
         </div>
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, computed, inject, onBeforeUnmount, onBeforeMount, defineComponent } from 'vue';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
-import { Wallet } from 'mainnet-js';
+import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
+import { UtxoI, Wallet } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TokenSymbol from 'src/components/TokenSymbol.vue'
+import CashAddress from 'src/components/CashAddress.vue'
+import { formatCommitment, ipfsToGatewayUrl, shortenTokenId, shortenTx } from 'src/app/utils';
 import { EventBus, useQuasar } from 'quasar';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
+import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
+import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
+import { Token } from 'nft.storage';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
 
-defineComponent({ name: 'MetadataList' })
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
@@ -141,9 +175,9 @@ const rowsPerPageOptions = computed(() => {
 
 const visibleColumns = computed(() => {
   if ($q.screen.lt.sm) {
-    return ['icon', 'symbol', 'actions']
+    return ['symbol', 'authguard', 'actions']
   }
-  return ['icon', 'symbol', 'tokenid', 'actions']
+  return ['icon', 'symbol', 'tokenid', 'utxotx', 'authguard', 'authkey', 'actions']
 })
 
 
@@ -181,17 +215,27 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
   }
 }
 
+
+
+const onTableRequest = async (props: any) => {
+  pagination.value = props.pagination
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+}
+
+const onUnguard = async () => {
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+}
+
+const onBurn = async () => {
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+}
+
 onBeforeMount(async () => {
   if (user.wallet) {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
 
 })
-
-const onTableRequest = async (props: any) => {
-  pagination.value = props.pagination
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
-}
 
 onMounted(() => {
   ui.routeBack = ''

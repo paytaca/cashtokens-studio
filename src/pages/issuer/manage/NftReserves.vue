@@ -29,9 +29,15 @@
               },
               {
                 name: 'commitment', label: 'Commitment',
-                field: r => r.token?.commitment,
+                field: r => r.token?.commitment || '<empty>',
                 align: 'center',
-                headerStyle: 'padding: 1.5em'
+                headerStyle: 'padding: 1.5em',
+                classes: r => {
+                  if (r.token?.commitment == '') {
+                    return 'text-grey-8'
+                  }
+                  return ''
+                }
               },
               {
                 name: 'capability', label: 'Capability',
@@ -46,7 +52,8 @@
                 headerStyle: 'padding: 1.5em'
 
               }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+            :dense="$q.screen.lt.sm">
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -72,31 +79,14 @@
                 <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
               </q-td>
             </template>
-            <!-- <template v-slot:body-cell-authguardaddress="value">
-              <q-td class="text-center">
-                <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
-                  :cashaddr="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()" icon-right="lock" />
-              </q-td>
-            </template>
-            <template v-slot:body-cell-authkeytokenid="value">
-              <q-td class="text-center">
-                <TokenCategory v-if="value.row.authKey?.token?.tokenId" :tokenId="value.row.authKey.token.tokenId"
-                  icon-right="key" />
-              </q-td>
-            </template> -->
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
-                  @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
-                  <q-menu>
-                    <q-list>
-                      <q-item v-if="value.row.token?.capability === NFTCapability.minting" clickable
-                        @click.stop="openMintChildNftPage(value.row)">
-                        Mint Child NFT Page
-                      </q-item>
-                    </q-list>
-                  </q-menu>
+                <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
+                  size="md" dense color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
                 </q-btn>
+                <span v-else class="text-grey-8">
+                  N/A
+                </span>
               </q-td>
             </template>
           </q-table>
@@ -113,16 +103,17 @@ import { PaginatedData, TransactionSigner } from 'src/app/types';
 import { UtxoI, Wallet, NFTCapability } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TokenSymbol from 'src/components/TokenSymbol.vue'
-import { EventBus, useQuasar } from 'quasar';
+import { EventBus, uid, useQuasar } from 'quasar';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useMinter } from 'src/stores/minter';
+import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()
+const ui = useUI()
 const router = useRouter()
 const user = useUser()
 const minter = useMinter()
-const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 
 const ownedAuthHeads = ref<PaginatedData>({
@@ -149,7 +140,7 @@ const rowsPerPageOptions = computed(() => {
 
 const visibleColumns = computed(() => {
   if ($q.screen.lt.sm) {
-    return ['icon', 'symbol']
+    return ['icon', 'symbol', 'actions']
   }
   return ['icon', 'symbol', 'tokenid', 'commitment', 'capability', 'actions']
 })
@@ -202,6 +193,10 @@ onBeforeMount(async () => {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
 
+})
+
+onMounted(() => {
+  ui.routeBack = ''
 })
 
 const onTableRequest = async (props: any) => {

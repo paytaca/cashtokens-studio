@@ -1,5 +1,5 @@
 <template>
-  <q-page class="q-ma-sm">
+  <q-page :class="$q.screen.gt.xs ? 'q-ma-sm' : 'q-ma-xs'">
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
@@ -12,22 +12,19 @@
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
                 align: 'center',
-                headerStyle: 'padding: 1.5em',
+                headerStyle: $q.screen.lt.sm ? 'padding: 5px;' : 'padding: 1.5em',
                 classes: (r => !r.identitySnapshot?.token ? 'text-grey-8' : '')
               },
               {
                 name: 'symbol', label: 'Symbol',
                 field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
                 align: 'center',
-                headerStyle: 'padding: 1.5em',
-                style: 'font-size: 1em;font-weight: bold',
                 classes: (r => !r.identitySnapshot?.token?.symbol ? 'text-grey-8' : '')
               },
               {
                 name: 'tokenid', label: 'Category',
                 field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
                 align: 'center',
-                headerStyle: 'padding: 1.5em',
                 classes: (r => !r.identitySnapshot ? 'text-grey-8' : '')
               },
               {
@@ -42,22 +39,20 @@
                   return r.identitySnapshot?.token?.decimals
                 },
                 align: 'center',
-                headerStyle: 'padding: 1.5em',
                 classes: (r => !r.identitySnapshot?.token?.decimals ? 'text-grey-8' : '')
               },
               {
                 name: 'balance', label: 'Balance',
                 field: r => r.token?.amount || 0,
                 align: 'center',
-                headerStyle: 'padding: 1.5em'
               },
               {
                 name: 'actions', label: 'Actions',
                 field: r => '',
                 align: 'center',
-                headerStyle: 'padding: 1.5em'
               }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+            :dense="$q.screen.lt.sm">
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -72,7 +67,6 @@
                 <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
                   <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
                 </span>
-
                 <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
               </q-td>
             </template>
@@ -90,7 +84,7 @@
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
+                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" color="primary" dense no-caps
                   @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
                 </q-btn>
               </q-td>
@@ -151,7 +145,7 @@ const rowsPerPageOptions = computed(() => {
 
 const visibleColumns = computed(() => {
   if ($q.screen.lt.sm) {
-    return ['icon', 'symbol']
+    return ['symbol', 'balance', 'actions']
   }
   return ['icon', 'symbol', 'tokenid', 'balance', 'decimals', 'actions']
 })

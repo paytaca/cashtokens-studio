@@ -25,8 +25,8 @@
         <q-form class="row q-gutter-sm">
           <q-input class="col-12" :model-value="authchainIdentity.token?.tokenId" disable label="Token ID/Category"
             filled></q-input>
-          <q-input class="col-12" :model-value="authchainIdentity.token?.amount" disable label="Fungible Reserves"
-            filled></q-input>
+          <q-input class="col-12" :model-value="authchainIdentity.token?.amount?.toString()" disable
+            label="Fungible Reserves" filled></q-input>
           <q-input class="col-12" :model-value="authchainIdentity.token?.capability" disable label="NFT Capability"
             filled></q-input>
         </q-form>
@@ -61,7 +61,6 @@ const burn = async () => {
   try {
     const tx = await props.authchainIdentity.burn()
     if (tx) {
-      $q.notify({ type: 'positive', message: `${props.authchainIdentity.tokenCategory?.symbol || 'Token'} Burned!Tx=` + shortenTx(tx) })
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.burn',
