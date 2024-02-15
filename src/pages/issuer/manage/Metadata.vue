@@ -223,10 +223,10 @@ const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
   if (wallet) {
-
+    $q.loading.show()
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
     const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
-
+    $q.loading.hide()
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
       pagination.value.rowsNumber = resp.count
