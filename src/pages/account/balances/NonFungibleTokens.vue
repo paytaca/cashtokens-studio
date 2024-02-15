@@ -89,8 +89,9 @@ import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { UtxoI, Wallet } from 'mainnet-js';
 import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
-import { EventBus } from 'quasar';
+import { EventBus, useQuasar } from 'quasar';
 defineOptions({ name: 'NonFungibleTokens' })
+const $q = useQuasar()
 const user = useUser()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
@@ -157,11 +158,12 @@ const populateNftCollections = async (wallet: Wallet, transactionSigner: Transac
         if (excludePossibleAuthKeys) {
             query.commitment_ne = '00'
         }
-
+        $q.loading.show()
         const resp = await (new Watchtower()).fetchNfts(
             wallet.getTokenDepositAddress(),
             query
         )
+        $q.loading.hide()
 
         if (resp?.count > 0) {
             nftCollections.value = resp
