@@ -4,12 +4,13 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 row items-center">
-          <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
-            <img :src="authchainIdentity.tokenUris?.icon" alt="">
+          <q-avatar class="q-mx-sm" v-if="authchainIdentity.identitySnapshot?.uris?.icon">
+            <img :src="authchainIdentity.identitySnapshot?.uris?.icon" alt="">
           </q-avatar>
-          <span class="q-mx-sm text-bold">{{ authchainIdentity.tokenCategory?.symbol ?
-            authchainIdentity.tokenCategory.symbol : 'FT' }}</span>
-          <span v-if="authchainIdentity.tokenCategory?.decimals === undefined">
+          <TokenSymbol v-if="authchainIdentity.identitySnapshot?.token?.symbol"
+            :symbol="authchainIdentity.identitySnapshot.token.symbol" />
+          <span v-else class="q-mx-sm text-bold">FT</span>
+          <span v-if="authchainIdentity.identitySnapshot?.token?.decimals === undefined">
             <q-icon name="warning" color="warning" size="sm" flat dense>
               <q-tooltip>
                 Registry not found. Unable to determine symbol and decimals value. If you already uploaded the registry,
@@ -24,11 +25,11 @@
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
-          <q-input :model-value="authchainIdentity.tokenCategory?.decimals || 0" label="Decimals (Metadata)" borderless
-            filled dense disable>
+          <q-input :model-value="authchainIdentity.identitySnapshot?.token?.decimals || 0" label="Decimals (Metadata)"
+            borderless filled dense disable>
             <template v-slot:append>
-              <q-icon v-if="authchainIdentity.tokenCategory?.decimals === undefined" name="warning" color="warning"
-                size="sm" flat dense>
+              <q-icon v-if="authchainIdentity.identitySnapshot?.token?.decimals === undefined" name="warning"
+                color="warning" size="sm" flat dense>
                 <q-tooltip>
                   Registry not found. Unable to determine value. If you already uploaded the registry, the indexer might
                   just not have picked it
@@ -49,7 +50,7 @@
             <template v-slot:hint>
               <div class="row justify-end text-italic">
                 {{ Number(newReserveSupplyDecimal) > 0 ? ftAmtFormatter.toRaw(newReserveSupplyDecimal,
-                  props.authchainIdentity.tokenCategory?.decimals) : 0 }} (Raw
+                  props.authchainIdentity.identitySnapshot?.token?.decimals) : 0 }} (Raw
                 FT Amount)</div>
             </template>
           </q-input>
@@ -64,20 +65,20 @@
           <q-input ref="tokenAmountInputRef" v-model="form.amount" label="Enter Token amount in decimal" filled dense
             bottom-slots :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]"
             :disable="Boolean(authchainIdentity.processing)">
-            <template v-if="authchainIdentity?.tokenUris?.icon" v-slot:prepend>
+            <template v-if="authchainIdentity?.identitySnapshot?.uris?.icon" v-slot:prepend>
               <q-avatar>
-                <img :src="authchainIdentity.tokenUris.icon" alt="">
+                <img :src="authchainIdentity.identitySnapshot?.uris?.icon" alt="">
               </q-avatar>
             </template>
           </q-input>
-          <div v-if="!authchainIdentity.tokenCategory?.decimals && form.amount.includes('.')"
+          <div v-if="!authchainIdentity.identitySnapshot?.token?.decimals && form.amount.includes('.')"
             class="text-left text-italic q-mb-sm">
             <q-icon name="warning" color="warning" /> Token has 0 or no `decimals` metadata. Value after decimal point
             will be
             ignored.
           </div>
           <div
-            v-if="BigInt(ftAmtFormatter.toRaw(form.amount, props.authchainIdentity.tokenCategory?.decimals)) <= BigInt(ftAmtFormatter.toRaw(currentFtReserves, props.authchainIdentity.tokenCategory?.decimals))"
+            v-if="BigInt(ftAmtFormatter.toRaw(form.amount, props.authchainIdentity.identitySnapshot?.token?.decimals)) <= BigInt(ftAmtFormatter.toRaw(currentFtReserves, props.authchainIdentity.identitySnapshot?.token?.decimals))"
             class="row justify-end text-italic text-lg items-center text-caption q-gutter-sm">
             <span>Token amount </span>
             <span class="text-weight-bold text-green-6">{{
@@ -108,6 +109,7 @@ import shortenTokenId from 'src/app/utils/shortenTokenId';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui'
 import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
+import TokenSymbol from 'src/components/TokenSymbol.vue';
 
 const emit = defineEmits<{
   (e: 'tokensIssued', val: { tokenId: string, to: string, amount: string }): void
@@ -136,22 +138,22 @@ const form = ref<{ recipient: string, amount: string, tokeshiAmount?: string }>(
 
 
 const currentFtReserves = computed(() => BigInt(props.authchainIdentity.token!.amount).toString())
-const currentFtReservesDecimal = computed(() => ftAmtFormatter.toDecimal(currentFtReserves.value, props.authchainIdentity.tokenCategory?.decimals))
+const currentFtReservesDecimal = computed(() => ftAmtFormatter.toDecimal(currentFtReserves.value, props.authchainIdentity.identitySnapshot?.token?.decimals))
 const newReserveSupplyDecimal = computed(() => {
   if (!form.value.amount) return currentFtReservesDecimal.value
-  const currentReserves = ftAmtFormatter.toRaw(currentFtReservesDecimal.value, props.authchainIdentity.tokenCategory?.decimals)
-  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.authchainIdentity.tokenCategory?.decimals)
+  const currentReserves = ftAmtFormatter.toRaw(currentFtReservesDecimal.value, props.authchainIdentity.identitySnapshot?.token?.decimals)
+  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.authchainIdentity.identitySnapshot?.token?.decimals)
   const newReserves = BigInt(currentReserves) - BigInt(issuedAmount)
 
-  return ftAmtFormatter.toDecimal(newReserves.toString(), props.authchainIdentity.tokenCategory?.decimals)
+  return ftAmtFormatter.toDecimal(newReserves.toString(), props.authchainIdentity.identitySnapshot?.token?.decimals)
 })
 
 const tokenAmountInputRef = ref<QInput | null>(null)
 
 const amountToSendRaw = computed(() => {
   if (!form.value.amount) return '0'
-  if (props.authchainIdentity.tokenCategory?.decimals) {
-    return ftAmtFormatter.toRaw(form.value.amount, props.authchainIdentity.tokenCategory?.decimals)
+  if (props.authchainIdentity.identitySnapshot?.token?.decimals) {
+    return ftAmtFormatter.toRaw(form.value.amount, props.authchainIdentity.identitySnapshot?.token?.decimals)
   }
   // ignore value after decimal point, !!! handle BigInt in the future
   // return parseInt(form.value.amount || '0')
@@ -161,11 +163,11 @@ const amountToSendRaw = computed(() => {
 // Token Amount Rules
 const tokenAmountHonorsDecimalPlaces = (v: string) => {
   if (v.indexOf('.') !== -1) {
-    if (!props.authchainIdentity.tokenCategory?.decimals) {
+    if (!props.authchainIdentity.identitySnapshot?.token?.decimals) {
       return 'Invalid decimal value'
     }
     // be sure that the input has 2 decimal places only
-    return v.split('.')[1].length <= Number(props.authchainIdentity.tokenCategory?.decimals || 0) || 'Invalid decimal value'
+    return v.split('.')[1].length <= Number(props.authchainIdentity.identitySnapshot?.token?.decimals || 0) || 'Invalid decimal value'
   }
   return true
 }
@@ -173,7 +175,7 @@ const tokenAmountHonorsDecimalPlaces = (v: string) => {
 const tokenAmountIsLessThanSupply = (v: string) => {
   return (
     Number(newReserveSupplyDecimal.value) >= 0 &&
-    BigInt(ftAmtFormatter.toRaw(newReserveSupplyDecimal.value, props.authchainIdentity.tokenCategory?.decimals)) >= BigInt('0')
+    BigInt(ftAmtFormatter.toRaw(newReserveSupplyDecimal.value, props.authchainIdentity.identitySnapshot?.token?.decimals)) >= BigInt('0')
   ) ||
     'Amount exceeds available supply'
 }
@@ -189,16 +191,16 @@ const releaseTokensFromReserveSupply = async () => {
 
     const tx = await props.authchainIdentity.releaseTokensFromReserveSupply({ to: form.value.recipient, amount: amountToSendRaw.value.toString() })
     if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
+      // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTokenId(tx) })
 
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
         timestamp: new Date().getTime(),
-        successMsg: `Issued ${String(form.value.amount)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
+        successMsg: `Issued ${String(form.value.amount)} ${props.authchainIdentity.identitySnapshot?.token?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`
       })
       ui.setStatusMessage({
-        statusMessage: `Issued ${String(form.value.amount)} ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
+        statusMessage: `Issued ${String(form.value.amount)} ${props.authchainIdentity.identitySnapshot?.token?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)} FT to ${shortenAddress(form.value.recipient)}`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
