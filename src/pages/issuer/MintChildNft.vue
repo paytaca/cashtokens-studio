@@ -1124,7 +1124,10 @@ watch(() => state.value.step, (step) => {
 
 onMounted(async () => {
 
-  ui.routeBack = `nft-reserves`
+
+  nextTick(() => {
+    ui.routeBack = `nft-reserves`
+  })
   state.value.token.tokenId = minter.value!.token!.tokenId
 
   // const savedState = await localForage.pageLocalForage.getItem(route.path)

@@ -1,171 +1,158 @@
 <template>
-  <q-page class="q-ma-lg">
-    <div class="row justify-center q-mx-sm">
+  <q-page class="q-ma-sm">
+    <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
           NFT Reserves
-          <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ identityOutputs.nftReserves.count || 0 }}
-          </q-badge>
         </h5>
-        <q-expansion-item label="More Info">
-          <p>
-            These are the NFT identities that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
-              target="_blank" flat dense no-caps style="text-indent:0" class="text-secondary">AuthGuard</a> contract,
-            of which you own the AuthKey. Any NFT you create in CashTokens Studio will be listed here. If the NFT has
-            minting capability, you can mint new NFTs of the same category here.
-          </p>
-        </q-expansion-item>
-        <div class="q-pa-lg flex flex-center">
-          <q-pagination v-model="identityOutputs.paginator.currentPage" :max="identityOutputs.paginator.numberOfPages"
-            :max-pages="identityOutputs.paginator.maxRowsPerPage" :boundary-numbers="false" />
-        </div>
-        <!-- {{
-          identityOutputs.nftReserves?.results
-        }} -->
-        <q-markup-table>
-          <thead>
-            <!-- <tr v-if="watchtower.processing && authchainIdentities">
-              <th colspan="7">
-                <q-spinner-grid size="xs"></q-spinner-grid> Loading
-              </th>
-            </tr> -->
-            <tr>
-              <th>#</th>
-              <th>Brand</th>
-              <th>Symbol</th>
-              <th>Token Id</th>
-              <th>Capability</th>
-              <th>
-                <sup>
-                  <q-icon name="info" size="xs">
-                    <q-tooltip>
-                      If the token is a minting token. Value would be the commitment of the last minted
-                      child. Value shown here are the decimal format of value on-chain.
-                    </q-tooltip>
-                  </q-icon>
-                </sup>
-                Commitment
-                <q-btn-toggle v-model="commitmentFormat" push toggle-color="teal" :options="[
-                  { label: '0x', value: 'hex' },
-                  { label: '123', value: 'decimal' },
-                ]" size="sm" dense no-caps />
-              </th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <!-- <TableBodySkeleton v-if="watchtower.processing && !authchainIdentities" :col-count="7" :row-count="4"
-            :caption="'Scanning wallet for NFT reserves'" /> -->
-          <tbody class="text-center">
-            <tr v-for="identity, i in identityOutputs.nftReserves?.results" :key="'ai-rec-' + i">
-              <td>{{ i + identityOutputs.paginator.offset + 1 }}</td>
-              <td>
-                <q-avatar v-if="identity.identitySnapshot?.uris?.icon" square>
-                  <q-img :src="String(identity.identitySnapshot.uris.icon)" alt="na" />
+        <div>
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
+            :columns="[
+              {
+                name: 'icon', label: 'Icon',
+                field: r => r.identitySnapshot?.uris?.icon || '<not found>',
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'symbol', label: 'Symbol',
+                field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
+                align: 'center',
+                headerStyle: 'padding: 1.5em',
+                style: 'font-size: 1em;font-weight: bold'
+              },
+              {
+                name: 'tokenid', label: 'Category',
+                field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'commitment', label: 'Commitment',
+                field: r => r.token?.commitment,
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'capability', label: 'Capability',
+                field: r => r.token?.capability,
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+              },
+              {
+                name: 'actions', label: 'Actions',
+                field: r => '',
+                align: 'center',
+                headerStyle: 'padding: 1.5em'
+
+              }
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+
+            <template v-slot:body-cell-icon="value">
+              <q-td class="text-center">
+                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                  <q-img :src="value.row.identitySnapshot.uris.icon" />
                 </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
-              </td>
-              <td>
-                <q-chip v-if="identity.identitySnapshot?.token?.symbol" color="primary" class="q-p-sm" square outline>
-                  {{ identity.identitySnapshot?.token?.symbol }}
-                </q-chip>
-              </td>
-              <td>
-                <TokenCategory :tokenId="identity.token?.tokenId" />
-              </td>
-              <td>{{ identity.token?.capability || '---' }}</td>
-              <td>
-                {{ identity.token?.commitment ? formatCommitment(identity.token?.commitment) : '---' }}
-              </td>
-              <td>
-                <q-btn icon="more_vert" size="md" round flat dense
-                  :disable="identity.token?.capability !== NFTCapability.minting || !!identity.processing">
+                <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-symbol="value">
+              <q-td class="text-center">
+                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
+                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
+                </span>
+
+                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+              </q-td>
+            </template>
+            <template v-slot:body-cell-tokenid="value">
+              <q-td class="text-center">
+                <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
+                  :tokenId="value.row.identitySnapshot.token.category" />
+                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+              </q-td>
+            </template>
+            <!-- <template v-slot:body-cell-authguardaddress="value">
+              <q-td class="text-center">
+                <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
+                  :cashaddr="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()" icon-right="lock" />
+              </q-td>
+            </template>
+            <template v-slot:body-cell-authkeytokenid="value">
+              <q-td class="text-center">
+                <TokenCategory v-if="value.row.authKey?.token?.tokenId" :tokenId="value.row.authKey.token.tokenId"
+                  icon-right="key" />
+              </q-td>
+            </template> -->
+            <template v-slot:body-cell-actions="value">
+              <q-td class="text-center">
+                <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
+                  @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
                   <q-menu>
                     <q-list>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        @click="openMintChildDialog(identity)" clickable v-close-popup>
-                        Mint Child NFT
-                      </q-item>
-                      <q-item v-if="identity.token?.capability === NFTCapability.minting" clickable
-                        @click.stop="openMintChildNftPage(identity)">
+                      <q-item v-if="value.row.token?.capability === NFTCapability.minting" clickable
+                        @click.stop="openMintChildNftPage(value.row)">
                         Mint Child NFT Page
                       </q-item>
-                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
-                        Deploy a Minting Contract
-                      </q-item> -->
-                      <!-- <q-item v-if="identity.token?.capability === NFTCapability.minting"
-                        @click="openMintingContractDeployerDialog(identity)" clickable v-close-popup>
-                        Load a Minting Contract
-                      </q-item> -->
                     </q-list>
                   </q-menu>
                 </q-btn>
-              </td>
-            </tr>
-            <tr v-if="identityOutputs.nftReserves?.results?.length === 0 && !watchtower.processing">
-              <td colspan="7">
-                No data
-              </td>
-            </tr>
-          </tbody>
-        </q-markup-table>
-        <NFTMinterDialog v-if="dialog" :model-value="dialog === NFTMinterDialog.__name"
-          :minter="(dialogData as CashToken)" @hide="onHide" @nft-minted="onMint" />
-        <NFTMintingContractDeployerDialog v-if="dialog" :model-value="dialog === NFTMintingContractDeployerDialog.__name"
-          :minter="(dialogData as CashToken)" @hide="onHide" />
+              </q-td>
+            </template>
+          </q-table>
+        </div>
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
-import { NFTCapability, Wallet, delay } from 'mainnet-js';
-import { binToBigIntUintLE, hexToBin } from '@bitauth/libauth';
-import { EventBus } from 'quasar';
-import { onMounted, ref, computed, watch, inject, onBeforeUnmount, onBeforeMount } from 'vue';
-import { useUser } from 'src/stores/user';
-import { useUI } from 'src/stores/ui';
-import { useDialogs } from 'src/composables'
-import {
-  CashToken,
-  Watchtower,
-  AuthKey, AuthchainIdentity,
-  TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, ADDRESS_WATCHER_TRIGGERED
-} from 'src/app';
-import { PaginatedData } from 'src/app/types';
-import { getWalletClass, shortenTokenId } from 'src/app/utils';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
+import { useUser } from 'src/stores/user'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app'
+import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { UtxoI, Wallet, NFTCapability } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
-import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
-import NFTMinterDialog from 'src/components/dialogs/NFTMinterDialog.vue';
-import NFTMintingContractDeployerDialog from 'src/components/dialogs/NFTMintingContractDeployerDialog.vue'
+import TokenSymbol from 'src/components/TokenSymbol.vue'
+import { EventBus, useQuasar } from 'quasar';
+import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
-import { useIdentityOutputs } from 'src/stores/identityoutputs';
 import { useMinter } from 'src/stores/minter';
 
-const user = useUser()
-const ui = useUI()
+const $q = useQuasar()
 const router = useRouter()
+const user = useUser()
 const minter = useMinter()
-const identityOutputs = useIdentityOutputs()
+const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
-const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-const watchtower = ref<Watchtower>(new Watchtower())
-const commitmentFormat = ref<'hex' | 'decimal'>('decimal')
-const formatCommitment = computed(() => {
-  return (commitment: string | undefined) => {
-    if (commitment && commitmentFormat.value === 'decimal') {
-      return binToBigIntUintLE(hexToBin(commitment))
-    }
-    return commitment
-  }
+
+const ownedAuthHeads = ref<PaginatedData>({
+  count: 0,
+  limit: 0,
+  offset: 0,
+  next: null,
+  previous: null,
+  results: []
 })
 
-const openMintChildDialog = (identity: AuthchainIdentity) => {
-  const ct = new CashToken({ ...identity }, user.transactionSigner)
-  ct.tokenCategory = identity.tokenCategory
-  ct.tokenUris = identity.tokenUris
-  openDialog(NFTMinterDialog.__name, ct)
-}
+const pagination = ref({
+  sortBy: 'desc',
+  descending: false,
+  page: 1,
+  rowsPerPage: 12,
+  rowsNumber: 12
+})
+
+const rowsPerPageOptions = computed(() => {
+  return [12, 24, 36]
+})
+
+
+const visibleColumns = computed(() => {
+  if ($q.screen.lt.sm) {
+    return ['icon', 'symbol']
+  }
+  return ['icon', 'symbol', 'tokenid', 'commitment', 'capability', 'actions']
+})
 
 const openMintChildNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
@@ -173,71 +160,57 @@ const openMintChildNftPage = (identity: AuthchainIdentity) => {
   ct.tokenUris = identity.tokenUris
   ct.identitySnapshot = identity.identitySnapshot
   minter.value = ct
-  router.push(`/issuer/tokens/mint-child-nft?tokenId=${identity.token!.tokenId}`)
+  router.push({ name: 'mint-child-nft', query: { tokenId: identity.token!.tokenId } })
 }
 
-// const openMintingContractDeployerDialog = async (identity: AuthchainIdentity) => {
-//   // check if wallet has a minter
-//   if (!identity.tokenCategory) {
-//     ui.setStatusMessage({
-//       statusMessage: `Sorry, we only allow deploying a minting contract if the token has a valid registry`,
-//       statusMessageType: 'error',
-//     })
-//     return
-//   }
-//   ui.setStatusMessage({
-//     statusMessage: `Checking if you have a minter for ${identity.tokenCategory!.symbol} token in your wallet...`,
-//     statusMessageType: 'info',
-//     statusMessageSpinner: true
-//   })
-//   await delay(1500)
-//   const utxos = await user.wallet!.getAddressUtxos()
-//   const mintingNFT = utxos.find(u => u.token && u.token.capability === NFTCapability.minting && u.token.tokenId === identity.token!.tokenId)
-//   if (!mintingNFT) {
-//     ui.setStatusMessage({
-//       statusMessage: `The contract requires you to have a minter for token ${shortenTokenId(identity.token!.tokenId)} ${identity.tokenCategory!.symbol ? `(${identity.tokenCategory!.symbol})` : ''} in your wallet which currently you don't have. Although you own the NFT reserve, it is not in your wallet it's in the AuthGuard contract. Don't worry you can create a minter from the Mint Child NFT menu.`,
-//       statusMessageType: 'error',
-//     })
-//     return
-//   }
-//   // encapsulating mintingNFT utxo as CashToken
-//   const ct = new CashToken({ ...mintingNFT })
-//   // borrowing the already present metadata from the authchain identity output
+const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
+  if (wallet) {
+    $q.loading.show()
+    const query = {
+      limit: pagination.value.rowsPerPage,
+      offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
+      token_amount__eq: 0,
+      token_is_nft: true
+    }
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    $q.loading.hide()
+    if (resp?.count > 0) {
+      ownedAuthHeads.value = resp
+      pagination.value.rowsNumber = resp.count
+      ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
+        const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
+        const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+        const {
+          txid,
+          vout,
+          satoshis,
+          height,
+          coinbase,
+          token
+        } = cashtoken
+        ownedAuthHeads.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+      })
 
-//   ct.tokenCategory = identity.tokenCategory
-//   ct.tokenUris = identity.tokenUris
-//   ct.ownerWallet = identity.ownerWallet
-//   ui.clearStatusMessage()
-//   openDialog(NFTMintingContractDeployerDialog.__name, ct)
-// }
+    }
 
-watch(() => identityOutputs.paginator.currentPage, async (pageNumber) => {
-  identityOutputs.paginator.offset = (pageNumber - 1) * identityOutputs.paginator.maxRowsPerPage
-  identityOutputs.populateNftReserves({ wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner })
-})
+  }
+}
 
 onBeforeMount(async () => {
   if (user.wallet) {
-    identityOutputs.populateNftReserves(
-      { wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner }
-    )
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
+
 })
 
-onMounted(async () => {
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-    identityOutputs.populateNftReserves(
-      { wallet: user.wallet as Wallet, transactionSigner: user.transactionSigner }
-    )
-  })
-})
+const onTableRequest = async (props: any) => {
+  pagination.value = props.pagination
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+}
 
 onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
-
-const onMint = (minted: { tokenId: string, capability: NFTCapability, commitment: string }) => {
-  hideDialog()
-}
 
 </script>
