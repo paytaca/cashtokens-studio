@@ -174,18 +174,6 @@ const rowsPerPageOptions = computed(() => {
   return [12, 24, 36]
 })
 
-const excludePossibleAuthKeys = ref<boolean>(true)
-
-const transferredTokens = ref<UtxoI[]>()
-const isTokenTransferred = computed(() => {
-  return (utxo: UtxoI) => {
-    const trans = transferredTokens.value?.find((u: UtxoI) => (
-      Boolean(utxo.txid == u.txid && utxo.token?.commitment == u.token?.commitment && utxo.token?.tokenId == u.token?.tokenId)
-    ))
-    return trans
-  }
-})
-
 const visibleColumns = computed(() => {
   if ($q.screen.lt.sm) {
     return ['icon', 'symbol']
@@ -193,35 +181,13 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'actions']
 })
 
-const openNFTTransferDialog = (nft: CashToken) => {
-  nft.ownerWallet = user.wallet as Wallet // embedding wallet
-  nft.processing = ''
-  openDialog(NFTOwnershipTransferDialog.__name, nft)
-}
-
-const onNftTransfer = () => {
-  if (!transferredTokens.value) {
-    transferredTokens.value = []
-  }
-  transferredTokens.value.push(Object.assign({}, dialogData.value?.utxo))
-  hideDialog()
-}
-
-watch(() => pagination.value, () => {
-  transferredTokens.value = []
-})
-
-watch(() => excludePossibleAuthKeys.value, async (v) => {
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
-  transferredTokens.value = []
-})
 
 const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
   tokenStore.token = authHead
   router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
 }
 
-const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
+const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
     $q.loading.show()
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
@@ -252,22 +218,15 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
 
 onBeforeMount(async () => {
   if (user.wallet) {
-    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
 
 })
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, excludePossibleAuthKeys.value)
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
-
-onMounted(async () => {
-  transferredTokens.value = []
-  // eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-  //   // refreshData()
-  // })
-})
 
 onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
