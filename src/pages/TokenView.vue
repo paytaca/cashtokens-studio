@@ -1,13 +1,8 @@
 <template>
   <q-page class="q-ma-lg">
-    <div class="row justify-center q-mx-sm">
+    <div class="row justify-center" :class="$q.screen.gt.xs ? 'q-mx-sm' : ''">
       <div class="col-xs-12 col-md-10">
-        <q-banner :class="!$q.dark.isActive ? 'bg-grey-4' : ''" style="border-radius: 1em;">
-          <div class="row justify-end">
-            <q-btn color="negative" icon="close" @click.stop="router.replace('/issuer/manage/authchains')" flat>
-              <q-tooltip>Close</q-tooltip>
-            </q-btn>
-          </div>
+        <q-banner style="border-radius: .5em;">
           <div class="row q-px-md q-py-md flex justify-center">
             <div class="col-xs-12 col-sm-3 text-center q-gutter-sm">
               <div class="row justify-center q-px-sm q-py-sm border" style="border-radius: 1em;">
@@ -17,9 +12,11 @@
                 <div class="col-12 relative-position">
                   <q-file v-model="newTokenIconFile" accept=".jpg,.png, image/*" @rejected="() => console.log('rejected')"
                     style="visibility: hidden;" class="relative-position">
-                    <q-avatar class="col-12 q-mb-sm" size="8em" style="visibility: visible !important; cursor: pointer;">
-                      <img v-if="newTokenIconPreview || ui.tokenInView?.tokenUris?.icon"
-                        :src="newTokenIconPreview || ui.tokenInView?.tokenUris?.icon" alt="">
+                    <q-avatar class="col-12 q-mb-sm" size="5em" style="visibility: visible !important; cursor: pointer;"
+                      square>
+                      <q-img v-if="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon"
+                        :src="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon" alt=""
+                        style="width:150px" />
                       <q-icon v-else name="token" color="grey-8"></q-icon>
                     </q-avatar>
                     <q-tooltip>Click to change icon</q-tooltip>
@@ -36,37 +33,44 @@
                     <q-tooltip>Click to upload the new icon to IPFS.</q-tooltip>
                   </q-btn>
                 </div>
-                <TokenSymbol v-if="ui.tokenInView?.tokenCategory?.symbol"
-                  :symbol="ui.tokenInView?.tokenCategory?.symbol" />
+                <TokenSymbol v-if="tokenStore.token?.tokenCategory?.symbol"
+                  :symbol="tokenStore.token?.tokenCategory?.symbol" />
               </div>
             </div>
             <div class="col-xs-10 col-sm-9 q-mx-xs row justify-center items-center">
               <q-markup-table dense flat :class="!$q.dark.isActive ? 'bg-grey-4' : ''">
                 <tbody>
+                  <tr :class="$q.screen.lt.sm ? 'text-center' : 'text-left'">
+                    <td colspan="2" class="text-h6 cursor-pointer"
+                      @click="copyText(tokenStore.token?.token?.tokenId || '')">
+                      <TokenSymbol v-if="tokenStore.token?.identitySnapshot?.token?.symbol"
+                        :symbol="tokenStore.token?.identitySnapshot?.token?.symbol" />
+                    </td>
+                  </tr>
                   <tr>
                     <td class="text-h6 text-bold">Category</td>
-                    <td class="text-h6 cursor-pointer" @click="copyText(ui.tokenInView?.token?.tokenId || '')">
-                      <q-btn size="md" @click="copyText(ui.tokenInView?.token?.tokenId || '')" flat dense no-caps>
-                        {{ $q.screen.lt.sm ? shortenTokenId(ui.tokenInView?.token?.tokenId || '') :
-                          ui.tokenInView?.token?.tokenId }}
+                    <td class="text-h6 cursor-pointer" @click="copyText(tokenStore.token?.token?.tokenId || '')">
+                      <q-btn size="md" @click="copyText(tokenStore.token?.token?.tokenId || '')" flat dense no-caps>
+                        {{ $q.screen.lt.sm ? shortenTokenId(tokenStore.token?.token?.tokenId || '') :
+                          tokenStore.token?.token?.tokenId }}
                       </q-btn>
                       <q-tooltip>Click to copy</q-tooltip>
                     </td>
                   </tr>
-                  <tr v-if="ui.tokenInView?.token?.amount">
+                  <tr v-if="tokenStore.token?.token?.amount">
                     <td class="text-h6 text-bold">Fungible Amount</td>
-                    <td>{{ ui.tokenInView?.token?.amount }}</td>
+                    <td>{{ tokenStore.token?.token?.amount }}</td>
                   </tr>
-                  <tr v-if="ui.tokenInView?.tokenCategory?.decimals">
+                  <tr v-if="tokenStore.token?.tokenCategory?.decimals">
                     <td class="text-h6 text-bold">Decimals</td>
-                    <td>{{ ui.tokenInView?.tokenCategory?.decimals }}</td>
+                    <td>{{ tokenStore.token?.tokenCategory?.decimals }}</td>
                   </tr>
-                  <tr v-if="ui.tokenInView?.token?.capability">
+                  <!-- <tr v-if="tokenStore.token?.token?.capability">
                     <td class="text-h6 text-bold">Capability</td>
                     <td>
-                      {{ ui.tokenInView?.token?.capability }}
+                      {{ tokenStore.token?.token?.capability }}
                     </td>
-                  </tr>
+                  </tr> -->
                 </tbody>
               </q-markup-table>
 
@@ -78,19 +82,19 @@
               <q-menu>
                 <q-list>
                   <q-item clickable v-close-popup
-                    @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
                     Publish Registry From URL
                   </q-item>
                   <q-item clickable v-close-popup
-                    @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
                     Publish Registry From File
                   </q-item>
                   <q-item clickable v-close-popup
-                    @click.stop="openDialog(UnguardAuthchainDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    @click.stop="openDialog(UnguardAuthchainDialog.__name, tokenStore.token as AuthchainIdentity)">
                     Unguard Authchain
                   </q-item>
                   <q-item clickable v-close-popup
-                    @click.stop="openDialog(AuthchainBurnerDialog.__name, ui.tokenInView as AuthchainIdentity)">
+                    @click.stop="openDialog(AuthchainBurnerDialog.__name, tokenStore.token as AuthchainIdentity)">
                     Burn Token
                   </q-item>
                 </q-list>
@@ -120,15 +124,117 @@
             <i>{{ bcmrIndexer.processing }}</i>
           </span>
         </div>
-        <BcmrForm v-if="bcmr" :registry="bcmr" :registry-loading="Boolean(bcmrIndexer.processing)"
-          :authchain-identity="(ui.tokenInView as AuthchainIdentity)" :read-only="bcmrReadOnly" />
-        <div v-else-if="!bcmr && Boolean(!bcmrIndexer.processing)" class="row justify-center q-gutter-sm items-center">
-          <span><q-icon name="warning" color="warning" class="q-mr-sm"></q-icon>Registry not found!</span>
-          <q-btn color="primary" @click.stop="createNewRegistry">
-            Create Registry
-            <q-tooltip>If you've just published and the registry still doesn't appear please wait awhile, the BCMR indexer
-              may not have picked it up yet.</q-tooltip>
-          </q-btn>
+        <div>
+          <q-banner rounded>
+            <q-expansion-item label="Registry" class="q-px-md q-pt-sm q-my-sm" icon="menu_book">
+              <div class="q-mx-md q-gutter-sm q-my-md">
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setSchema(v)"
+                  :model-value="bcmr?.$schema" label="Schema" filled dense disable></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setVersion(v)"
+                  :model-value="bcmr?.versionString" label="Registry Version" filled dense></q-input>
+                <q-input class="registry-field" :model-value="bcmr?.latestRevision" label="Latest Revision" disable filled
+                  dense></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setLicense(v)"
+                  :model-value="bcmr?.license" label="License" placeholder="Example: CC0-1.0"
+                  aria-placeholder="Example: CC0-1.0" filled dense></q-input>
+              </div>
+            </q-expansion-item>
+            <q-expansion-item v-model="expansionItemTwo" label="IdentitySnapshot" class="q-px-md q-pt-sm q-my-sm"
+              icon="token">
+              <div class="q-mx-md q-gutter-sm q-my-md">
+                <q-input class="registry-field" :model-value="authbase" label="Authbase" filled dense disabled
+                  readonly></q-input>
+                <q-input class="registry-field" :model-value="identityHistoryTimestamp" label="Identity History Timestamp"
+                  filled dense disabled readonly></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
+                  :model-value="bcmr?.identitySnapshot?.name" label="Name" filled dense></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityDescription(v)"
+                  :model-value="bcmr?.identitySnapshot?.description" label="Description" filled dense></q-input>
+              </div>
+            </q-expansion-item>
+            <q-expansion-item v-model="expansionItemThree" label="Token" class="q-px-md q-pt-sm q-my-sm" icon="token">
+              <div class="q-mx-md q-gutter-sm q-my-md">
+                <q-input class="registry-field" :model-value="bcmr?.identitySnapshot?.token?.category" label="Category"
+                  filled dense disabled readonly></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
+                  :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Symbol" filled dense></q-input>
+                <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
+                  :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Decimals" filled dense></q-input>
+              </div>
+            </q-expansion-item>
+            <q-expansion-item v-model="expansionItemFour" label="Nfts" icon="token" class="q-px-md q-pt-sm q-my-sm">
+              <q-checkbox dense v-model="nftTypesShowMinted" label="Show Minted NFTs" class="q-my-md" />
+              <q-table v-model:pagination="nftTypesPagination" @request="onTableRequest" flat bordered
+                :rows="nftTypes.results" :columns="[
+                  {
+                    name: 'icon', label: 'Icon',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'name', label: 'Name',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'commitment', label: 'Commitment',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'capability', label: 'Capability',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="name"
+                :visible-columns="nftTypesTableVisibleCols">
+
+                <template v-slot:body-cell-icon="value">
+                  <q-td class="text-center">
+                    <q-avatar v-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.icon">
+                      <q-img
+                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.icon)" />
+                    </q-avatar>
+                    <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.image">
+                      <q-img
+                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.image)" />
+                    </q-avatar>
+                    <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.asset">
+                      <q-img
+                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.asset)" />
+                    </q-avatar>
+                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-name="value">
+                  <q-td class="text-center">
+                    <span v-if="!nftTypesShowMinted">{{ value.row[value.row._meta.commitment].name }}</span>
+                    <span v-else>
+                      <span v-if="value.row[value.row.commitment]?.name">
+                        {{ value.row[value.row.commitment].name }}
+                      </span>
+                      <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                    </span>
+
+                  </q-td>
+                </template>
+                <template v-slot:body-cell-commitment="value">
+                  <q-td class="text-center">
+                    <span>{{ value.row._meta?.commitment || value.row.commitment }}</span>
+                  </q-td>
+                </template>
+                <template v-if="nftTypesShowMinted" v-slot:body-cell-capability="value">
+                  <q-td class="text-center">
+                    <span>{{ value.row.capability }}</span>
+                  </q-td>
+                </template>
+              </q-table>
+            </q-expansion-item>
+          </q-banner>
         </div>
       </div>
     </div>
@@ -136,12 +242,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, reactive, watch } from 'vue';
+import { onMounted, ref, reactive, watch, onBeforeMount, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TokenSymbol from 'src/components/TokenSymbol.vue';
-import { AuthchainIdentity, Bcmr, BcmrIndexer } from 'src/app';
+import { AuthchainIdentity, Bcmr, BcmrIndexer, FetchUtxoQueryParams } from 'src/app';
 import { Registry } from 'src/app/bcmr/bcmr-v2.schema';
 import BcmrForm from 'src/components/forms/BcmrForm.vue'
 import { useDialogs } from 'src/composables/useDialogs';
@@ -150,10 +256,18 @@ import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialo
 import AuthchainBurnerDialog from 'src/components/dialogs/AuthchainBurnerDialog.vue';
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
 import { shortenTokenId, copyText } from 'src/app/utils';
-import { BcmrStorageArtifact, IconStorageArtifact } from 'src/app/types';
+import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
+import { route } from 'quasar/wrappers';
+import { useTokenStore } from 'src/stores/token'
+import { formatCommitment, ipfsToGatewayUrl } from 'src/app/utils'
+import { NftType } from 'mainnet-js';
+import { Console } from 'console';
+import { useQuasar } from 'quasar';
 
+const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
+const tokenStore = useTokenStore()
 const bcmr = ref<Bcmr>()
 const bcmrIndexer = reactive<BcmrIndexer>(new BcmrIndexer())
 const bcmrReadOnly = ref<boolean>(true)
@@ -163,7 +277,41 @@ const newTokenIconFile = ref()
 const newTokenIconPreview = ref()
 const newTokenIconUploading = ref<boolean>(false)
 const newTokenIconUploadArtifact = ref<IconStorageArtifact>()
+const expansionItemOne = ref<boolean>(true)
+const expansionItemTwo = ref<boolean>(false)
+const expansionItemThree = ref<boolean>(false)
+const expansionItemFour = ref<boolean>(false)
+const authbase = ref<string>()
+const identityHistoryTimestamp = ref<string>()
 
+const nftTypes = ref<PaginatedData>({
+  count: 0,
+  limit: 10,
+  offset: 0,
+  next: null,
+  previous: null,
+  results: [],
+})
+const nftTypesShowMinted = ref(false)
+// local cache, used when nftTypesShowMinted changes
+const nftTypesCache = ref<PaginatedData>()
+const nftTypesTableVisibleCols = computed(() => {
+  if (nftTypesShowMinted.value) {
+    return ['icon', 'name', 'commitment', 'capability']
+  }
+  return ['icon', 'name']
+})
+const nftTypesPagination = ref({
+  sortBy: 'desc',
+  descending: false,
+  page: 1,
+  rowsPerPage: 12,
+  rowsNumber: 12
+})
+
+const nftTypesRowsPerPage = computed(() => {
+  return [12, 24, 36]
+})
 
 const saveNewIconInIPFS = async () => {
   if (newTokenIconFile.value) {
@@ -171,7 +319,7 @@ const saveNewIconInIPFS = async () => {
       const formData = new FormData();
       formData.append('icon', newTokenIconFile.value);
       newTokenIconUploading.value = true
-      const resp = await fetch(`api/tokens/icon/upload?tokenId=${ui.tokenInView?.token?.tokenId}`, {
+      const resp = await fetch(`api/tokens/icon/upload?tokenId=${tokenStore.token?.token?.tokenId}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -191,10 +339,10 @@ const createNewRegistry = () => {
   bcmrReadOnly.value = false
   bcmr.value = new Bcmr({
     version: { major: 1, minor: 0, patch: 0 },
-    registryIdentity: ui.tokenInView!.token!.tokenId,
+    registryIdentity: tokenStore.token!.token!.tokenId,
     latestRevision: new Date().toISOString()
   })
-  bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
+  bcmr.value.authchainIdentity = tokenStore.token as AuthchainIdentity
 
 }
 
@@ -206,6 +354,61 @@ const onBurn = () => {
   status.value = 'burned'
 }
 
+const loadNftTypes = async () => {
+  const query = {
+    paginated: true,
+    limit: nftTypesPagination.value.rowsPerPage,
+    offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage
+  }
+
+  const fntResp = await (new BcmrIndexer()).fetchNftTypes(tokenStore.token.identitySnapshot.token.category, query)
+
+  if (fntResp) {
+    nftTypes.value = fntResp
+  }
+}
+
+const loadMintedNftTypes = async () => {
+  const query = {
+    paginated: true,
+    limit: nftTypesPagination.value.rowsPerPage,
+    offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
+    include_metadata: true
+  }
+  $q.loading.show()
+  const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
+  if (fntResp && fntResp.results) {
+
+    type ItemType = {
+      capability?: string,
+      commitment?: string,
+      amount?: number,
+      metadata: { nft?: { [key: string]: NftType } }
+    }
+
+    fntResp.results = fntResp.results.map((item: ItemType) => {
+      // Transform
+      const { metadata, ...rest } = item
+      if (item.metadata?.nft) {
+        return { ...rest, ...item.metadata.nft }
+      }
+      return { ...rest, ...{ [item.commitment as string]: {} } }
+    })
+    nftTypes.value = fntResp
+    $q.loading.hide()
+  }
+}
+
+
+const onTableRequest = async (props: any) => {
+  nftTypesPagination.value = props.pagination
+  if (!nftTypesShowMinted.value) {
+    await loadNftTypes()
+  } else {
+    await loadMintedNftTypes()
+  }
+
+}
 
 watch(() => newTokenIconFile.value, (b) => {
   if (b) {
@@ -214,21 +417,76 @@ watch(() => newTokenIconFile.value, (b) => {
   }
 })
 
-onMounted(async () => {
-  if (ui.tokenInView?.token?.tokenId) {
-    try {
-      const bcmrContents: any = await bcmrIndexer.fetchBcmrContents(ui.tokenInView.token.tokenId)
-      if (!bcmrContents || bcmrContents?.error) {
-        return
-      }
-      if (bcmrContents) {
-        bcmr.value = new Bcmr(bcmrContents)
-        bcmr.value.authchainIdentity = ui.tokenInView as AuthchainIdentity
-      }
-    } catch (error) {
-      console.log('Error downloading bcmr contents')
+watch(() => expansionItemTwo.value, async (v) => {
+  console.log('hello')
+  console.log('V', v)
+  console.log('Vv', bcmr.value?.identities)
+  if (v) {
+    console.log('hello')
+    const fisResp = await (new BcmrIndexer()).fetchIdentitySnapshot(tokenStore.token.identitySnapshot.token.category)
+    if (fisResp && bcmr.value?.version) {
+      const { _meta, ...identitySnapshot } = fisResp
+      bcmr.value.identities = bcmr.value.identities || {}
+      bcmr.value.identities[_meta.authbase][_meta.identity_history] = identitySnapshot
+      authbase.value = _meta.authbase
+      identityHistoryTimestamp.value = _meta.identity_history
     }
   }
+})
+
+watch(() => expansionItemTwo.value, async (v) => {
+  console.log('hello')
+  console.log('V', v)
+  console.log('Vv', bcmr.value?.identities)
+  if (v && !tokenStore.token.identitySnapshot.token.category) {
+    console.log('hello')
+    const fisResp = await (new BcmrIndexer()).fetchIdentitySnapshot(tokenStore.token.identitySnapshot.token.category)
+    if (fisResp && bcmr.value?.version) {
+      const { _meta, ...identitySnapshot } = fisResp
+      bcmr.value.identities = bcmr.value.identities || {}
+      bcmr.value.identities[_meta.authbase][_meta.identity_history] = identitySnapshot
+      authbase.value = _meta.authbase
+      identityHistoryTimestamp.value = _meta.identity_history
+    }
+  }
+})
+
+watch(() => expansionItemFour.value, async (v) => {
+  if (v) {
+    $q.loading.show()
+    if (!nftTypesShowMinted.value) {
+      await loadNftTypes()
+    }
+    $q.loading.hide()
+  }
+})
+
+watch(() => nftTypesShowMinted.value, async (v) => {
+  // if it changes if v
+  if (v) {
+    nftTypesCache.value = nftTypes.value
+    await loadMintedNftTypes()
+  } else {
+    if (nftTypesCache.value) {
+      nftTypes.value = nftTypesCache.value
+      $q.loading.show()
+      await loadNftTypes()
+    }
+  }
+})
+
+onBeforeMount(async () => {
+  if (tokenStore?.token?.identitySnapshot?.token?.category) {
+    const frResp = await (new BcmrIndexer()).fetchRegistry(tokenStore?.token?.identitySnapshot?.token?.category)
+    if (frResp) {
+      const { _meta, ...registry } = frResp
+      bcmr.value = new Bcmr({ ...registry })
+    }
+  }
+})
+
+onMounted(async () => {
+  ui.routeBack = `metadata`
 })
 
 
