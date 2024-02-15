@@ -5,9 +5,19 @@
         <h5 class="text-center">
           AuthGuards
         </h5>
+        <q-expansion-item label="More Info">
+          <p>
+            These are the identity-output UTXOs locked with an AuthGuard contract. These are the same UTXOs you're using
+            to manage the FT
+            reserves, NFT Reserves and Metadata. You can release this UTXO from the AuthGuard if you don't want CashTokens
+            Studio
+            to manage this identity-output.
+          </p>
+        </q-expansion-item>
         <div>
-          <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
-            :rows="ownedAuthHeads.results" :columns="[
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
+            :columns="[
+
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
@@ -28,12 +38,7 @@
                 align: 'center',
                 headerStyle: 'padding: 1.5em'
               },
-              {
-                name: 'utxotx', label: 'Utxo Tx',
-                field: r => shortenTx(r.txid),
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
+
               {
                 name: 'authguard', label: 'Authguard',
                 field: r => '',
@@ -52,8 +57,9 @@
                 align: 'center',
                 headerStyle: 'padding: 1.5em'
 
-              }
+              },
             ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -77,8 +83,15 @@
                 <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
                   :tokenId="value.row.identitySnapshot.token.category" />
                 <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+
               </q-td>
             </template>
+            <!-- <template v-slot:body-cell-utxotx="value">
+              <q-td class="text-center cursor-pointer" @click="() => { copyText(value.row.txid) }">
+                {{ shortenTx(value.row.txid) }}
+                <q-tooltip>Click To Copy</q-tooltip>
+              </q-td>
+            </template> -->
             <template v-slot:body-cell-authguard="value">
               <q-td class="text-center">
                 <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
@@ -133,7 +146,7 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TokenSymbol from 'src/components/TokenSymbol.vue'
 import CashAddress from 'src/components/CashAddress.vue'
-import { formatCommitment, ipfsToGatewayUrl, shortenTokenId, shortenTx } from 'src/app/utils';
+import { copyText, formatCommitment, ipfsToGatewayUrl, shortenTokenId, shortenTx } from 'src/app/utils';
 import { EventBus, useQuasar } from 'quasar';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
@@ -179,12 +192,6 @@ const visibleColumns = computed(() => {
   }
   return ['icon', 'symbol', 'tokenid', 'utxotx', 'authguard', 'authkey', 'actions']
 })
-
-
-const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
-  tokenStore.token = authHead
-  router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
-}
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
