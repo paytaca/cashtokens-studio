@@ -32,7 +32,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
 
-      { path: 'token/:identifier', component: () => import('pages/TokenView.vue') },
+      { path: 'token/:identifier', component: () => import('pages/TokenView.vue'), meta: { pageTitle: 'Token Details'}},
     ],
   },
   {
