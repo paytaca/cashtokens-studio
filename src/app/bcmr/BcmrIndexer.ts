@@ -1,3 +1,5 @@
+import { FetchUtxoQueryParams } from "../Watchtower"
+import querify from "../utils/querify"
 import { Bcmr } from "./Bcmr"
 import { Registry, TokenCategory, URIs } from "./bcmr-v2.schema"
 
@@ -95,13 +97,89 @@ export class BcmrIndexer {
     }
   }
 
-    /**
+  /**
+   * TODO: check usage
+   * @deprecated Use fetchIdentitySnapshot for consistency. 
    * @returns {undefined|'SequentialNftCollection'|'ParsableNftCollection'} The nft collection type if token is an nft.
    */
     async getIdentitySnapshot(tokenId:string): Promise<undefined|any> {
       try {
         this.processing = 'Fetching token registry'
         const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/`)  
+        if (r.status == 200) {
+          const rj = await r.json()
+          return rj
+        }
+      } catch (error) {
+        throw error 
+      } finally {
+        delete this.processing
+      }
+    }
+
+  async fetchNftTypes(tokenId:string, query?: any): Promise<any> {
+    try {
+      this.processing = 'Fetching token registry'
+      let url = `${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/token-category/nfts/parse/types/`
+        if (query) {
+          url += '?' + querify(query)
+        }
+      const r = await fetch(url)  
+      if (r.status == 200) {
+        const rj = await r.json()
+        return rj
+      }
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
+  }
+  
+  async fetchMintedNftTypes(tokenId:string, query?: any): Promise<any> {
+
+    try {
+      this.processing = 'Fetching token registry'
+      let url = `${process.env.BCMR_API}cashtokens/${tokenId}/`
+        if (query) {
+          url += '?' + querify(query)
+        }
+      const r = await fetch(url)  
+      if (r.status == 200) {
+        const rj = await r.json()
+        return rj
+      }
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
+  }
+  
+  async fetchIdentitySnapshot(tokenId:string): Promise<undefined|any> {
+    try {
+      this.processing = 'Fetching token identity snapshot'
+      const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/identity-snapshot/`)  
+      if (r.status == 200) {
+        const rj = await r.json()
+        return rj
+      }
+    } catch (error) {
+      throw error 
+    } finally {
+      delete this.processing
+    }
+  }
+
+
+  /**
+   * @returns {undefined|'SequentialNftCollection'|'ParsableNftCollection'} The nft collection type if token is an nft.
+   */
+    async fetchRegistry(tokenId:string): Promise<undefined|any> {
+      try {
+        console.log('FETCHING REGISTRY')
+        this.processing = 'Fetching token registry'
+        const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/`)  
         if (r.status == 200) {
           const rj = await r.json()
           return rj
