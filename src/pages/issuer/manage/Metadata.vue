@@ -217,7 +217,7 @@ watch(() => excludePossibleAuthKeys.value, async (v) => {
 })
 
 const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
-  tokenStore.value = authHead
+  tokenStore.token = authHead
   router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
 }
 
