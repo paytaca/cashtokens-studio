@@ -221,7 +221,7 @@
               field-name="file" :label="'Upload'"
               :url="`/api/tokens/nft/asset-upload?tokenId=${state.token.tokenId}&commitment=${state.token.commitment}`"
               flat dense size="sm" style="width:100%;max-width: 100%; border: 2px dashed rgb(129 123 123 / 80%); "
-              color="dark" class="q-my-md" multiple square bordered no-thumbnails />
+              color="dark" class="q-my-md" multiple square bordered no-thumbnails auto-upload />
             <div class="text-center text-h6 q-my-lg">Or</div>
             <div class="text-center">You can paste the asset URI here below. We recommend using IPFS (ipfs://). </div>
 
@@ -541,7 +541,6 @@ const initCommitment = () => {
 }
 
 const fileUploaderFactory = (files: any): Promise<any> => {
-  console.log('FILES', files)
   return new Promise((resolve) => {
     const fileReader = new FileReader()
     fileReader.onload = function () {
@@ -594,11 +593,12 @@ const onFileAdded = async (files: readonly any[]) => {
         };
         fileReader.readAsArrayBuffer(f);
       })
+      fileUploader.value.upload()
     } catch (error) {
       fileUploader.value.removeFile(f)
     }
   }
-  fileUploader.value.upload()
+
 }
 
 const fetchPublishedRegistry = async () => {
@@ -656,11 +656,13 @@ const fetchPublishedRegistry = async () => {
 const createRegistryRevision = async () => {
   const registry = await fetchPublishedRegistry()
   const bcmr = new Bcmr(registry)
-  console.log(bcmr)
-  console.log(await localForage.nftTypesStore.keys())
   const keys = (await localForage.nftTypesStore.keys()).filter((key) => key.startsWith(state.value.token.tokenId))
   for (const k of keys) {
-    const commitmentNftType: any = JSON.parse(await localForage.nftTypesStore.getItem(k) as string)
+    let item = await localForage.nftTypesStore.getItem(k)
+    if (typeof (item) == 'string') {
+      item = JSON.parse(await localForage.nftTypesStore.getItem(k) as string)
+    }
+    const commitmentNftType: any = item
     const commitment = Object.keys(commitmentNftType)[0]
     const nftType = commitmentNftType[commitment]
     bcmr.addNft(commitment, nftType)
@@ -705,8 +707,6 @@ watch(() => state.value, (v) => {
 // if not use the first commitment
 
 watch(() => commitmentLast.value, (v) => {
-  console.log('TOKEN COMMITMENT', v)
-  console.log('COMMITMENT', commitmentLast)
   if (minter.value.nftCollectionType == 'SequentialNftCollection') {
     nextTick(() => {
       if ([MINT_ONE_UNIQUE_NFT, MINT_MULTIPLE_UNIQUE_NFTS].includes(state.value.options.mintOption)) {
@@ -797,7 +797,6 @@ const mint = async () => {
 
     try {
       const lastToken = tokens[tokens.length - 1]
-      console.log('LASTTOKEN', lastToken)
       let newMinterCommitment = minter.value.token?.commitment
       if (lastToken.capability == NFTCapability.none && state.value.options.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT) {
         // only track commitment in minter if the child's capability is `none`
@@ -854,7 +853,6 @@ const saveNftType = async () => {
         }).onCancel(() => {
           res(false)
         }).onOk(() => {
-          console.log('PROCEEDING')
           res(true)
         })
       })
@@ -870,11 +868,8 @@ const saveNftType = async () => {
       ...nftType.value.extensions,
       attributes: nftAttributes.value
     }
-    // const t = Object.assign({}, state.value.token, { commitment: rawNftCommitment.value })
-    // const r = await nftType.value.saveNft(state.value.mintTx!, t, user.transactionSigner!, user.walletAddress!)
-    await localForage.nftTypesStore.setItem(`${state.value.token.tokenId}-${rawNftCommitment.value}`, JSON.stringify({ [rawNftCommitment.value as string]: nftType.value.value }))
+    await localForage.nftTypesStore.setItem(`${state.value.token.tokenId}-${rawNftCommitment.value}`, { [rawNftCommitment.value as string]: JSON.parse(JSON.stringify(nftType.value.value)) })
     const item = await localForage.nftTypesStore.getItem(`${state.value.token.tokenId}-${rawNftCommitment.value}`)
-    console.log('ITEM', item)
     if (item) {
       nftType.value.saved = true
     }
@@ -886,6 +881,17 @@ const saveNftType = async () => {
     })
   }
 
+}
+
+const clearSavedNfts = async () => {
+  const keys = (await localForage.nftTypesStore.keys()).filter((key) => key.startsWith(state.value.token.tokenId))
+  for (const k of keys) {
+    try {
+      await localForage.nftTypesStore.removeItem(k)
+    } catch (error) {
+      console.log(error)
+    }
+  }
 }
 
 const publishRegistry = async () => {
@@ -909,8 +915,6 @@ const publishRegistry = async () => {
   })
 
   const authhead = await (new ChainGraph()).fetchAuthheadTxid(minter.value!.token!.tokenId!)
-  console.log('AUTHHEAD', authhead)
-  console.log('MINTER', minter.value?.txid)
   let proceed = false
   if (authhead != minter.value?.txid) {
     d.update({
@@ -954,6 +958,7 @@ const publishRegistry = async () => {
       const tx = await authchainIdentity.value.publish({ url: storageArtifact.uris.https, contentHash: storageArtifact.contentHash })
 
       if (tx) {
+        clearSavedNfts()
         state.value.publishTx = tx
         $ebus?.emit('transaction', {
           txid: tx,
@@ -977,7 +982,6 @@ const publishRegistry = async () => {
             minter.value!.utxoSpent = true
           })
           d.hide()
-
         })
       }
     }
@@ -994,8 +998,6 @@ const publishRegistry = async () => {
 
 const mintAgain = async () => {
   let proceed = false
-  console.log(supportAssetUpload)
-  console.log(supportAssetUpload.includes(state.value.options.mintOption) && !nftType.value.saved)
   if (supportAssetUpload.includes(state.value.options.mintOption) && !nftType.value.saved) {
     proceed = await new Promise((res, rej) => {
       $q.dialog({
@@ -1124,52 +1126,36 @@ watch(() => state.value.step, (step) => {
 
 onMounted(async () => {
 
+  window.localForage = localForage.nftTypesStore
 
   nextTick(() => {
     ui.routeBack = `nft-reserves`
   })
   state.value.token.tokenId = minter.value!.token!.tokenId
 
-  // const savedState = await localForage.pageLocalForage.getItem(route.path)
-  // console.log('SAVED STATE', savedState)
-  // if (savedState) {
-  //   state.value = JSON.parse(savedState as string)
-  // }
 
-  // console.log('ROUTE PATH', route.path)
-  // const pageState = await localForage.pageStore.getItem(route.path)
-  // console.log('SAVED', pageState)
-  // if (pageState) {
-  //   state.value = JSON.parse(pageState as string)
-  //   console.log('STATE.VALUE', state.value)
-  //   initCommitment()
-  //   return
-  // }
   initCommitment()
   state.value.options.recipient = user.walletTokenAddress
   state.value.token.tokenId = route.query!.tokenId! as string
   window.onbeforeunload = (e) => {
-    console.log(e)
     return true
   }
 
   //check for Navigation Timing API support
-  if (window.performance) {
-    console.info("window.performance works fine on this browser");
-  }
-  console.info(performance.navigation.type);
-  if (performance.navigation.type == performance.navigation.TYPE_RELOAD) {
-    console.info("This page is reloaded");
-  } else {
-    console.info("This page is not reloaded");
-  }
+  // if (window.performance) {
+  //   console.info("window.performance works fine on this browser");
+  // }
+  // console.info(performance.navigation.type);
+  // if (performance.navigation.type == performance.navigation.TYPE_RELOAD) {
+  //   console.info("This page is reloaded");
+  // } else {
+  //   console.info("This page is not reloaded");
+  // }
 
-  const collectionType = await new BcmrIndexer().getNftCollectionType(route.query!.tokenId! as string)
-  console.log('COLLECTION TYPE', collectionType)
+  // const collectionType = await new BcmrIndexer().getNftCollectionType(route.query!.tokenId! as string)
 })
 
 onBeforeRouteLeave(async (to, from, next) => {
-  console.log('state.value before route leave', state.value)
   next(true)
   // const yes: boolean = await new Promise((res, rej) => {
   //   $q.dialog({
