@@ -162,15 +162,19 @@
                   :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Decimals" filled dense></q-input>
               </div>
             </q-expansion-item>
-            <q-expansion-item v-model="expansionItemFour" label="Nfts" icon="collections" class="q-px-md q-pt-sm q-my-sm">
+            <q-expansion-item v-model="expansionItemFour" label="Nfts"
+              :icon="nftTypesSelectedForPublication.length > 0 ? 'priority_high' : 'collections'"
+              class="q-px-md q-pt-sm q-my-sm" :class="nftTypesSelectedForPublication.length > 0 ? 'text-warning' : ''"
+              style="overflow-x:scroll">
 
               <q-tabs v-model="nftTypesShown" class="text-teal">
-                <q-tab name="published" icon="published" label="Published" />
-                <q-tab name="unpublished" icon="unpublished" label="Unpublished" />
-                <q-tab name="minted" icon="minted" label="Minted" />
+                <q-tab name="published" label="Published" />
+                <q-tab name="unpublished" label="Unpublished" />
+                <q-tab name="minted" label="Minted" />
               </q-tabs>
               <q-table v-model:pagination="nftTypesPagination" @request="onTableRequest" flat bordered
-                :rows="nftTypes.results" :columns="[
+                :rows="nftTypes.results" v-model:selected="nftTypesSelected"
+                :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'" :columns="[
                   {
                     name: 'icon', label: 'Icon',
                     field: r => '',
@@ -195,9 +199,18 @@
                     align: 'center',
                     headerStyle: 'padding: 1.5em',
                   },
-                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="name"
+                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id"
                 :visible-columns="nftTypesTableVisibleCols">
-
+                <template v-slot:top>
+                  <div v-if="nftTypesSelected.length > 0 && nftTypesShown == 'unpublished'"
+                    class="q-gutter-sm row items-center q-mt-sm">
+                    <span class="text-grey-4">Selection?</span>
+                    <q-btn text-color="negative" @click.stop="deleteSelectedUnpublishedNfts">Delete </q-btn>
+                    <q-btn text-color="primary" @click.stop="commitSelectedUnpublishedNfts">Publish</q-btn>
+                    <q-btn v-if="nftTypesSelectedForPublication.length > 0" @click.stop="undoCommitOfUnpublishedNfts"
+                      text-color="warning">Undo Publish</q-btn>
+                  </div>
+                </template>
                 <template v-slot:body-cell-icon="value">
                   <q-td class="text-center">
                     <q-avatar v-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.icon">
@@ -218,8 +231,11 @@
                 <template v-slot:body-cell-name="value">
                   <q-td class="text-center">
                     <span v-if="nftTypesShown == 'published'">{{ value.row[value.row._meta.commitment].name }}</span>
-                    <span v-else-if="nftTypesShown == 'unpublished'">{{ value.row[value.row._meta.commitment].name
-                    }}</span>
+                    <span v-else-if="nftTypesShown == 'unpublished'">
+                      <q-icon v-if="value.row.forPublish" name="priority_high" color="warning"></q-icon>
+                      {{ value.row[value.row._meta.commitment].name }}
+
+                    </span>
                     <span v-else>
                       <span v-if="value.row[value.row.commitment]?.name">
                         {{ value.row[value.row.commitment].name }}
@@ -239,6 +255,9 @@
                     <span>{{ value.row.capability }}</span>
                   </q-td>
                 </template>
+                <!-- <template v-slot:body-selection="scope">
+                  <q-checkbox v-model="scope.selected" />
+                </template> -->
               </q-table>
               <q-inner-loading :showing="nftTypesIsLoading">
                 <q-spinner-grid size="30px" />
@@ -307,11 +326,11 @@ const nftTypes = ref<PaginatedData>({
 })
 const nftTypesIsLoading = ref<boolean>()
 const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
-// local cache, used when nftTypesShown changes
-const nftTypesCache = ref<PaginatedData>()
-const unpublishedNftTypesCache = ref<PaginatedData>()
+const nftTypesSelected = ref<any[]>([])
+const nftTypesSelectedForPublication = ref<any[]>([])
+
 const nftTypesTableVisibleCols = computed(() => {
-  if (nftTypesShown.value == 'minted') {
+  if (nftTypesShown.value == 'minted' && $q.screen.gt.xs) {
     return ['icon', 'name', 'commitment', 'capability']
   }
   return ['icon', 'name']
@@ -327,6 +346,35 @@ const nftTypesPagination = ref({
 const nftTypesRowsPerPage = computed(() => {
   return [12, 24, 36]
 })
+
+const metadataModified = computed(() => {
+  return nftTypesSelectedForPublication.value?.length > 0 // || add condish
+})
+
+
+const deleteSelectedUnpublishedNfts = async () => {
+  $q.dialog({
+    message: 'Are you sure you want to delete the selected unpublished NFT metadata?',
+    ok: 'Yes',
+    cancel: 'No',
+  }).onOk(async () => {
+    for (const [i, nftType] of nftTypesSelected.value.entries()) {
+      await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+      nftTypesSelected.value.splice(i)
+
+    }
+    populateNftsTable()
+  })
+}
+
+const commitSelectedUnpublishedNfts = () => {
+  nftTypesSelectedForPublication.value = [...nftTypesSelected.value.map((i) => i.forPublish = true)]
+}
+
+const undoCommitOfUnpublishedNfts = () => {
+  nftTypesSelected.value.forEach((i: any) => i.forPublish = false)
+  nftTypesSelectedForPublication.value = []
+}
 
 const saveNewIconInIPFS = async () => {
   if (newTokenIconFile.value) {
@@ -387,6 +435,9 @@ const loadNftTypes = async () => {
   const fntResp = await (new BcmrIndexer()).fetchNftTypes(tokenStore.token.identitySnapshot.token.category, query)
   // $q.loading.hide()
   if (fntResp) {
+    fntResp.results.forEach((item: any, i: number) => {
+      item.id = i
+    })
     nftTypes.value = fntResp
   }
 }
@@ -394,19 +445,20 @@ const loadNftTypes = async () => {
 const loadUnpublishedNftTypes = async () => {
   const results: any = []
   // $q.loading.show()
-  for (const k of (await localForage.nftTypesStore.keys())) {
-    if (k.startsWith(tokenStore?.token?.token?.tokenId)) {
+  for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
+    if (key.startsWith(tokenStore?.token?.token?.tokenId)) {
 
       let item: {
         [key: string]: NftType,
+      } & { _meta: { commitment: string }, id: number | string } | null
 
-      } & { _meta: { commitment: string } } | null
-
-        = await localForage.nftTypesStore.getItem(k)
+        = await localForage.nftTypesStore.getItem(key)
       if (item && typeof (item) == 'string') {
         item = JSON.parse(item)
+        item!.id = key // Just so we have a row-key in q-table
       }
       item!._meta = { commitment: Object.keys(item!)[0] }
+
       results.push(item)
     }
   }
