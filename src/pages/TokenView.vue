@@ -163,6 +163,7 @@
               </div>
             </q-expansion-item>
             <q-expansion-item v-model="expansionItemFour" label="Nfts" icon="collections" class="q-px-md q-pt-sm q-my-sm">
+
               <q-tabs v-model="nftTypesShown" class="text-teal">
                 <q-tab name="published" icon="published" label="Published" />
                 <q-tab name="unpublished" icon="unpublished" label="Unpublished" />
@@ -239,6 +240,9 @@
                   </q-td>
                 </template>
               </q-table>
+              <q-inner-loading :showing="nftTypesIsLoading">
+                <q-spinner-grid size="30px" />
+              </q-inner-loading>
             </q-expansion-item>
           </q-banner>
         </div>
@@ -301,6 +305,7 @@ const nftTypes = ref<PaginatedData>({
   previous: null,
   results: [],
 })
+const nftTypesIsLoading = ref<boolean>()
 const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
 // local cache, used when nftTypesShown changes
 const nftTypesCache = ref<PaginatedData>()
@@ -378,9 +383,9 @@ const loadNftTypes = async () => {
     limit: nftTypesPagination.value.rowsPerPage,
     offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage
   }
-  $q.loading.show()
+  // $q.loading.show()
   const fntResp = await (new BcmrIndexer()).fetchNftTypes(tokenStore.token.identitySnapshot.token.category, query)
-  $q.loading.hide()
+  // $q.loading.hide()
   if (fntResp) {
     nftTypes.value = fntResp
   }
@@ -388,7 +393,7 @@ const loadNftTypes = async () => {
 
 const loadUnpublishedNftTypes = async () => {
   const results: any = []
-  $q.loading.show()
+  // $q.loading.show()
   for (const k of (await localForage.nftTypesStore.keys())) {
     if (k.startsWith(tokenStore?.token?.token?.tokenId)) {
 
@@ -414,7 +419,7 @@ const loadUnpublishedNftTypes = async () => {
     results
   }
 
-  $q.loading.hide()
+  // $q.loading.hide()
 
   // await localForage.nftTypesStore.getItem(`${tokenStore.token.tokenId}-${rawNftCommitment.value}`)
   // await localForage.nftTypesStore.getItem(`${state.value.token.tokenId}-${rawNftCommitment.value}`)
@@ -435,7 +440,7 @@ const loadMintedNftTypes = async () => {
     offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
     include_metadata: true
   }
-  $q.loading.show()
+  // $q.loading.show()
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
   if (fntResp && fntResp.results) {
 
@@ -455,22 +460,26 @@ const loadMintedNftTypes = async () => {
       return { ...rest, ...{ [item.commitment as string]: {} } }
     })
     nftTypes.value = fntResp
-    $q.loading.hide()
+    // $q.loading.hide()
   }
 }
 
 const populateNftsTable = async () => {
+
   nftTypes.value.results = []
-  if (nftTypesShown.value == 'published') {
-    return await loadNftTypes()
-  }
   if (nftTypesShown.value == 'unpublished') {
     return await loadUnpublishedNftTypes()
   }
-  if (nftTypesShown.value == 'minted') {
-    return await loadMintedNftTypes()
+  nftTypesIsLoading.value = true
+  if (nftTypesShown.value == 'published') {
+    await loadNftTypes()
   }
+  else if (nftTypesShown.value == 'minted') {
+    await loadMintedNftTypes()
+  }
+  nftTypesIsLoading.value = false
 }
+
 
 const onTableRequest = async (props: any) => {
   nftTypesPagination.value = props.pagination
