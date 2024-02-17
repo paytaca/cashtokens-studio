@@ -1,4 +1,4 @@
-import { NFTCapability, TokenI, UtxoI } from "mainnet-js"
+import { IdentitySnapshot, NFTCapability, TokenI, UtxoI } from "mainnet-js"
 import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema"
 
 export type NftCollectionType = 'SequentialNftCollection' | 'ParsableNftCollection' //
@@ -32,7 +32,8 @@ export type FungibleTokenBalance = {
   balance: bigint,
   owner: string,
   tokenUris?: URIs,
-  tokenCategory?: TokenCategory
+  tokenCategory?: TokenCategory,
+  identitySnapshot?: IdentitySnapshot
 }
 
 export type NonFungibleTokenBalance = {
