@@ -5,52 +5,108 @@
       <q-toolbar class="q-py-sm">
         <q-btn flat dense round icon="menu" aria-label="Menu" size="lg" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')" src="images/cts_transparent.png"
+          <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')"
+            :src="$q.screen.xs ? 'images/cts_icon.png' : 'images/cts_transparent.png'"
             style="max-height: 3em;object-fit: fill;max-width:8em"></q-img>
-          <code v-if="getAppEnv() !== 'production'" class="text-caption">[TEST MODE]</code>
+          <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
-        <div v-if="user.walletAddress">
-          <q-btn-group flat class="text-right">
-            <q-btn-dropdown auto-close rounded icon="manage_accounts" size="lg">
+        <div v-if="user.walletAddress" class="q-mx-sm">
+          <q-btn-group class="text-right">
+            <q-btn-dropdown auto-close rounded size="lg"
+              style="color: rgb(20,20,20);padding: 10px; border-radius: 10px;background-color:#282829d4; border: 2px solid #484854d4">
+              <template v-slot:label>
+                <q-icon name="account_balance_wallet">
+                </q-icon>
+              </template>
               <q-list padding style="width: 300px">
-
-                <!-- <q-separator inset />  -->
+                <q-item clickable to="/account/balance/fungibletokens">
+                  <q-item-section avatar>
+                    <q-avatar text-color="white" icon="money">
+                      <!-- <q-img src="images/bitcoin-cash-circle.svg"></q-img> -->
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Coins</q-item-label>
+                    <!-- <q-item-label caption>{{ shortenAddress(user.walletAddress) }}</q-item-label> -->
+                  </q-item-section>
+                </q-item>
+                <q-item clickable to="/account/balance/collectibles">
+                  <q-item-section avatar>
+                    <q-avatar text-color="white" icon="collections">
+                      <!-- <q-img src="images/bitcoin-cash-circle.svg"></q-img> -->
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Collectibles</q-item-label>
+                    <!-- <q-item-label caption>{{ shortenAddress(user.walletAddress) }}</q-item-label> -->
+                  </q-item-section>
+                </q-item>
+                <q-item clickable :to="{ name: 'recent-transactions' }">
+                  <q-avatar class="q-mr-xs" icon="receipt">
+                  </q-avatar>
+                  <q-item-section>
+                    <q-item-label>Recent Transactions</q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator inset class="q-my-md" />
                 <q-item-label header>Addresses</q-item-label>
                 <q-item clickable
                   @click="() => { copyText(user.walletAddress); $q.notify({ message: 'Wallet Address Copied', timeout: 500 }) }">
                   <q-item-section avatar>
-                    <q-avatar color="teal" text-color="white">
+                    <q-avatar color="bch" text-color="white">
                       <q-img src="images/bitcoin-cash-circle.svg"></q-img>
                     </q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>BCH Address</q-item-label>
+                    <q-item-label>{{ user.walletBchBalance }}</q-item-label>
                     <q-item-label caption>{{ shortenAddress(user.walletAddress) }}</q-item-label>
+
                   </q-item-section>
                 </q-item>
-
                 <q-item clickable
                   @click="() => { copyText(user.walletTokenAddress); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
-                  <q-item-section avatar>
-                    <q-avatar icon="token" color="teal" text-color="white" />
-                  </q-item-section>
+                  <q-avatar class="q-mr-xs">
+                    <q-img src="images/cts_icon.png"></q-img>
+                  </q-avatar>
                   <q-item-section>
-                    <q-item-label>Token Address</q-item-label>
+                    <q-item-label>TOKEN</q-item-label>
                     <q-item-label caption>{{ shortenAddress(user.walletTokenAddress) }}</q-item-label>
                   </q-item-section>
-                  <!-- <q-item-section side>
-                    <q-icon name="content_copy" color="amber" />
+                </q-item>
+                <q-separator inset class="q-my-md" />
+                <q-item>
+                  <paytaca-connect v-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
+                  <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
+                  <!-- <q-btn
+                    @click.stop="user.walletType == 'paytaca' ? () => paytacaDisconnect() : () => walletConnectDisconnect()"
+                    class="full-width" text-color="negative" size="lg">
+                    <span v-if="user.walletAddress" class="q-ma-sm">
+                      <q-avatar v-if="user.walletType == 'paytaca'" rounded size="md">
+                        <q-img src="images/paytaca_icon.png"></q-img>
+                      </q-avatar>
+                      <q-avatar v-if="user.walletType == 'walletconnect'" rounded size="md">
+                        <q-img src="images/paytaca_icon.png"></q-img>
+                      </q-avatar>
+                    </span>
+                    <span>Disconnect</span>
+                  </q-btn> -->
+                  <!-- <q-item-section v-if="user.walletAddress">
+                    <q-btn @click="user.walletType == 'paytaca' ? paytacaDisconnect : walletConnectDisconnect"
+                      text-color="negative">
+                      Disconnect
+                    </q-btn>
                   </q-item-section> -->
                 </q-item>
+
               </q-list>
             </q-btn-dropdown>
           </q-btn-group>
         </div>
-        <light-switch />
-        <span v-if="user.walletAddress" class="q-mx-md">
+        <!-- <light-switch /> -->
+        <!-- <span v-if="user.walletAddress" class="q-mx-md">
           <paytaca-connect v-if="user.walletType == 'paytaca'" variant="icon" />
           <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="icon" />
-        </span>
+        </span> -->
       </q-toolbar>
 
 
@@ -78,13 +134,15 @@
       :thumb-style="{ width: '0px' }">
       <q-page-container class="q-mb-lg q-px-sm">
         <q-toolbar v-if="ui.routeBack" class="q-my-lg">
-          <q-btn round color="#434242" icon="west" style="background-color: #434242;" @click.stop="router.back()" />
+          <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" />
           <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title>
         </q-toolbar>
         <router-view />
+        <q-ajax-bar />
       </q-page-container>
     </q-scroll-area>
     <MessageDialog v-model="messageDialog" />
+
   </q-layout>
 </template>
 
@@ -104,7 +162,11 @@ import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useDialogs } from 'src/composables';
 import { useInit } from 'src/composables/useInit';
 import { shortenAddress, copyText } from 'src/app/utils'
+import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
+import { useWalletConnect } from 'src/composables/useWalletConnect';
 
+const { paytacaDisconnect } = usePaytacaConnect()
+const { walletConnectDisconnect } = useWalletConnect()
 const leftDrawerOpen = ref(false)
 const user = useUser()
 const ui = useUI()
@@ -138,4 +200,7 @@ onMounted(() => {
     router.push('/')
   }
 })
+
+
 </script>
+

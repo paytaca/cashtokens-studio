@@ -177,7 +177,6 @@ export class BcmrIndexer {
    */
     async fetchRegistry(tokenId:string): Promise<undefined|any> {
       try {
-        console.log('FETCHING REGISTRY')
         this.processing = 'Fetching token registry'
         const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/`)  
         if (r.status == 200) {
