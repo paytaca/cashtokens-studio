@@ -25,9 +25,10 @@ const hrefs = {
   // createNFT: '/issuer/tokens/create/nft',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
-  manageMetadata: '/issuer/manage/metadata',
+  manageRegistries: '/issuer/manage/registries',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
+  manageAuthGuards: '/issuer/manage/authguards',
   accountFungibles: '/account/balance/fungibletokens',
   accountCollectibles: '/account/balance/collectibles',
   recentTransactions: '/account/recent-transactions',
@@ -85,7 +86,12 @@ const menu = computed<any[]>(() => {
         },
         {
           label: 'Metadata',
-          href: hrefs.manageMetadata,
+          href: hrefs.manageRegistries,
+          icon: 'token',
+        },
+        {
+          label: 'AuthGuards',
+          href: hrefs.manageAuthGuards,
           icon: 'token',
         },
         {
@@ -94,49 +100,6 @@ const menu = computed<any[]>(() => {
           icon: 'token',
         }
 
-      ]
-    },
-    {
-      label: 'Wallet',
-      href: '#Wallet',
-      icon: 'account_balance_wallet',
-      disabled: Boolean(user.walletAddress) === false,
-      children: [
-        {
-          label: shortenAddress(user.wallet?.getDepositAddress()),
-          icon: 'account_balance_wallet',
-          href: '#Cashaddr',
-          children: [
-            {
-              href: '#',
-              label: user.walletBchBalance,
-              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
-            }
-          ]
-        },
-
-        {
-          label: shortenAddress(user.wallet?.getTokenDepositAddress()),
-          href: '#Tokenaddr',
-          icon: 'token',
-          children: [
-            {
-              label: 'Fungibles (FTs)',
-              href: hrefs.accountFungibles,
-              icon: 'token'
-            },
-            {
-              label: 'Collectibles (NFTs)',
-              href: hrefs.accountCollectibles,
-              icon: 'token'
-            },
-          ]
-        },
-        {
-          label: 'Recent Transactions',
-          href: hrefs.recentTransactions,
-          icon: 'receipt',
-        }
       ]
     }
   ]

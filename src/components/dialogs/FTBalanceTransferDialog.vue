@@ -4,7 +4,7 @@
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
-          Send {{ tokenBalance?.tokenCategory?.symbol ||
+          Send {{ tokenBalance?.identitySnapshot?.token?.symbol ||
             'Tokens' }}</q-toolbar-title>
         <TokenCategory v-if="tokenBalance.tokenId" :token-id="tokenBalance.tokenId" />
       </q-toolbar>
@@ -12,8 +12,8 @@
         <q-form class="q-gutter-sm">
           <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance.tokenId" label="Token ID/Category" filled dense
             disable></q-input>
-          <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance?.tokenCategory?.decimals" label="Decimals"
-            filled dense disable></q-input>
+          <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance?.identitySnapshot?.token?.decimals"
+            label="Decimals" filled dense disable></q-input>
           <q-input :model-value="newBalanceWithDecimal"
             :label="Number(amountToSendRaw) > 0 ? 'Remaining balance' : 'Current balance'" filled dense disable>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
@@ -24,11 +24,11 @@
           </q-input>
           <q-input v-model="form.amount" label="Amount to send" placeholder="0" filled dense
             :disable="Boolean(processingMessage?.processing)"
-            :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]">
+            :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]" autofocus>
             <template v-slot:append>
               <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
                 dense
-                @click="form.amount = ftAmtFormatter.toDecimal(tokenBalance.balance.toString(), props.tokenBalance.tokenCategory?.decimals)">Send
+                @click="form.amount = ftAmtFormatter.toDecimal(tokenBalance.balance.toString(), props.tokenBalance.identitySnapshot?.token?.decimals)">Send
                 all</q-btn>
             </template>
             <template v-if="tokenBalance?.tokenUris?.icon" v-slot:prepend>
@@ -37,7 +37,7 @@
               </q-avatar>
             </template>
           </q-input>
-          <div v-if="!tokenBalance.tokenCategory?.decimals && form.amount.includes('.')" class="text-italic">
+          <div v-if="!tokenBalance.identitySnapshot?.token?.decimals && form.amount.includes('.')" class="text-italic">
             <q-icon name="warning" color="warning" size="xs" /> Token has 0 or no `decimals` metadata. Value after decimal
             point
             will be
@@ -63,7 +63,7 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <BusyButton @click="() => send()" label="Send Tokens" :busyLabel="processingMessage?.processing" color="primary"
-          :disable="Number(newBalanceWithDecimal) < 0 || Boolean(processingMessage?.processing)" />
+          :disable="Number(newBalanceWithDecimal) < 0 || !form.amount || !form.to || Boolean(processingMessage?.processing)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -97,21 +97,21 @@ const { $ebus } = useEventBus()
 const processingMessage = ref<ProcessingMessage>()
 
 const currentBalanceWithDecimal = computed(() => {
-  return ftAmtFormatter.toDecimal(props.tokenBalance.balance.toString(), props.tokenBalance.tokenCategory?.decimals)
+  return ftAmtFormatter.toDecimal(props.tokenBalance.balance.toString(), props.tokenBalance.identitySnapshot?.token?.decimals)
 })
 
 const newBalanceWithDecimal = computed(() => {
   if (!form.value.amount) return currentBalanceWithDecimal.value
-  const currentReserves = ftAmtFormatter.toRaw(currentBalanceWithDecimal.value, props.tokenBalance.tokenCategory?.decimals)
-  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.tokenBalance.tokenCategory?.decimals)
+  const currentReserves = ftAmtFormatter.toRaw(currentBalanceWithDecimal.value, props.tokenBalance.identitySnapshot?.token?.decimals)
+  const issuedAmount = ftAmtFormatter.toRaw(form.value.amount || '0', props.tokenBalance.identitySnapshot?.token?.decimals)
   const newReserves = BigInt(currentReserves) - BigInt(issuedAmount)
-  return ftAmtFormatter.toDecimal(newReserves.toString(), props.tokenBalance.tokenCategory?.decimals)
+  return ftAmtFormatter.toDecimal(newReserves.toString(), props.tokenBalance.identitySnapshot?.token?.decimals)
 })
 
 const amountToSendRaw = computed(() => {
   if (!form.value.amount) return '0'
-  if (props.tokenBalance.tokenCategory?.decimals) {
-    return ftAmtFormatter.toRaw(form.value.amount, props.tokenBalance.tokenCategory?.decimals)
+  if (props.tokenBalance.identitySnapshot?.token?.decimals) {
+    return ftAmtFormatter.toRaw(form.value.amount, props.tokenBalance.identitySnapshot?.token?.decimals)
   }
   return form.value.amount
 })
@@ -125,7 +125,7 @@ const form = ref<{ to: string, amount: string }>({
 const tokenAmountHonorsDecimalPlaces = (v: string) => {
   if (v.indexOf('.') !== -1) {
     // be sure that the input has n decimal places only
-    return v.split('.')[1].length <= Number(props.tokenBalance.tokenCategory?.decimals || 0) || 'Invalid decimal value'
+    return v.split('.')[1].length <= Number(props.tokenBalance.identitySnapshot?.token?.decimals || 0) || 'Invalid decimal value'
   }
   return true
 }
@@ -134,7 +134,7 @@ const tokenAmountIsLessThanSupply = (v: string) => {
   return (
     (
       Number(newBalanceWithDecimal.value) >= 0 &&
-      BigInt(ftAmtFormatter.toRaw(newBalanceWithDecimal.value, props.tokenBalance.tokenCategory?.decimals)) >= BigInt('0')
+      BigInt(ftAmtFormatter.toRaw(newBalanceWithDecimal.value, props.tokenBalance.identitySnapshot?.token?.decimals)) >= BigInt('0')
     ) ||
     'Amount exceeds available supply'
   )
@@ -153,17 +153,17 @@ const send = async () => {
     if (tx) {
       $q.notify({
         type: 'positive',
-        message: `${props.tokenBalance?.tokenCategory?.symbol || 'Tokens'} sent!Tx=${shortenTx(tx)}`
+        message: `${props.tokenBalance?.identitySnapshot?.token?.symbol || 'Tokens'} sent!Tx=${shortenTx(tx)}`
       })
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'CashToken.transferFT',
         timestamp: new Date().getTime(),
-        successMsg: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
+        successMsg: `Sent ${form.value.amount} ${props.tokenBalance.identitySnapshot?.token?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`
       })
 
       ui.setStatusMessage({
-        statusMessage: `Sent ${form.value.amount} ${props.tokenBalance.tokenCategory?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`,
+        statusMessage: `Sent ${form.value.amount} ${props.tokenBalance.identitySnapshot?.token?.symbol || 'FT'} to ${shortenAddress(form.value.to)}`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
