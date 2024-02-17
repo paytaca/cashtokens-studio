@@ -48,7 +48,7 @@ const routes: RouteRecordRaw[] = [
     path: '/account',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      { path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
+      { name: 'recent-transactions', path: 'recent-transactions', component: () => import('pages/account/TransactionLogs.vue') },
     ],
   },
   // Always leave this as last one,
