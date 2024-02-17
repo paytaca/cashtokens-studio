@@ -1,16 +1,6 @@
 <template>
   <q-btn @click.stop="() => copy(tokenId)" size="sm" flat dense no-caps :class="$q.dark.isActive ? '' : 'bg-grey-4'"
     :icon-right="copied && iconRight ? 'done_all' : iconRight || undefined" style="white-space: nowrap;" color="warning">
-    <!-- <span v-if="tokenId">
-      <q-icon v-if="copied && !iconRight" size="sm" name="done_all"
-        :color="$q.dark.isActive ? 'grey-1' : 'grey-10'"></q-icon>
-      <span>{{ tokenId.replace(tokenId.substring(5, 60), '...') }}</span>
-      <q-tooltip>Copy Token ID</q-tooltip>
-    </span>
-    <span v-else :class="$q.dark.isActive ? '' : 'bg-grey-8'">
-      {{ '...' }}
-      <q-tooltip>N/A</q-tooltip>
-    </span> -->
     <q-chip v-if="tokenId" :class="$q.dark.isActive ? '' : 'bg-grey-4'" dense size="md">
       <q-icon v-if="copied && !iconRight" size="xs" name="done_all"
         :color="$q.dark.isActive ? 'warning' : 'grey-10'"></q-icon>
