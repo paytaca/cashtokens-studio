@@ -11,6 +11,17 @@
       <q-badge floating :color="user.walletAddress && user.walletType == 'walletconnect' ? 'green' : 'red'"
         rounded></q-badge>
     </q-btn>
+    <q-btn v-else-if="variant === 'button'" @click.stop="connectDisconnect" class="full-width" text-color="negative"
+      size="lg">
+      <span v-if="user.walletAddress" class="q-ma-sm">
+        <q-badge floating :color="user.walletAddress && user.walletType == 'walletconnect' ? 'green' : 'red'" rounded>
+        </q-badge>
+        <q-avatar v-if="user.walletType == 'walletconnect'" rounded size="md">
+          <q-img src="images/walletconnect_icon.png"></q-img>
+        </q-avatar>
+      </span>
+      <span>Disconnect</span>
+    </q-btn>
 
     <q-avatar v-else rounded style="width: 250px; height: 100px">
       <q-img src="images/walletconnect.png"></q-img>
@@ -24,7 +35,7 @@ import { onMounted } from 'vue';
 import { useUser } from 'src/stores/user';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
 
-defineProps<{ variant?: 'icon' | 'icon-text' }>()
+defineProps<{ variant?: 'icon' | 'icon-text' | 'button' }>()
 
 const user = useUser()
 const walletConnect = useWalletConnect()

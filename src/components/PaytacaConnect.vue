@@ -10,6 +10,21 @@
       </div>
       <q-badge floating :color="user.walletAddress && user.walletType == 'paytaca' ? 'green' : 'red'" rounded></q-badge>
     </q-btn>
+    <q-btn v-else-if="variant === 'button'" @click.stop="paytacaConnectDisconnect" class="full-width"
+      text-color="negative" size="lg">
+      <span v-if="user.walletAddress" class="q-ma-sm">
+        <q-badge floating :color="user.walletAddress && user.walletType == 'paytaca' ? 'green' : 'red'" rounded></q-badge>
+        <q-avatar rounded size="md">
+
+          <q-img src="images/paytaca_icon.png"></q-img>
+
+        </q-avatar>
+        <q-avatar v-if="user.walletType == 'walletconnect'" rounded size="md">
+          <q-img src="images/paytaca_icon.png"></q-img>
+        </q-avatar>
+      </span>
+      <span>Disconnect</span>
+    </q-btn>
     <q-avatar v-else rounded style="width: 250px; height: 100px">
       <q-img v-if="$q.dark.isActive" src="images/paytaca_dark.png"></q-img>
       <q-img v-else src="images/paytaca_light.png"></q-img>
@@ -36,7 +51,7 @@ const paytacaConnect = usePaytacaConnect()
 const paytacaIsInstalled = ref<boolean>(true)
 
 
-defineProps<{ variant?: 'icon' | 'icon-text' }>()
+defineProps<{ variant?: 'icon' | 'icon-text' | 'button' }>()
 
 const paytacaConnectDisconnect = async () => {
   if (!window.paytaca) return
