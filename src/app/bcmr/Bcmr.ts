@@ -231,6 +231,62 @@ export class Bcmr implements Registry {
     }
   }
 
+  getAuthbase(): string[]{
+    return Object.keys(this.identities||{})
+  }
+
+  getIdentityHistory(authbase:string):string[]{
+    if (this.identities) {
+      return Object.keys(this.identities[authbase] || {}).sort((date1: string, date2: string) => {
+        if (date1 > date2) return -1;
+        if (date1 < date2) return 1;
+        return 0;
+      })
+    }
+    return []
+  }
+
+  getIdentitySnapshot(authbase:string, identity_history:string){
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      return this.identities[authbase][identity_history]
+    }
+    return null
+  }
+  
+  addIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        console.log('BEFORE', this.identities[authbase][identity_history].uris)
+        this.identities[authbase][identity_history].uris = {
+          ... this.identities[authbase][identity_history].uris,
+          ...uri
+        }
+        console.log('AFTER', this.identities[authbase][identity_history].uris)
+      } 
+    }
+  }
+
+  setIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        this.identities[authbase][identity_history].uris = {
+          ... this.identities[authbase][identity_history].uris,
+          ...uri
+        }
+      } 
+    }
+  }
+
+  removeIdentitySnapshotUri(authbase:string, identity_history:string, uriName: string) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        console.log('URI NAME', uriName)
+        console.log('REMOVING', this.identities![authbase]![identity_history].uris)
+        delete this.identities![authbase]![identity_history].uris![uriName]
+      } 
+    }
+  }
+  
   /**
    * IdentitySnapshot URI
    */
@@ -324,6 +380,10 @@ export class Bcmr implements Registry {
       tokenStandard: "AuthGuard",
       authNft: authKeyTokenId
     }
+  }
+
+  get contentHash () {
+    return binToHex(sha256.hash(utf8ToBin(this.getContent())))
   }
 
   /**
