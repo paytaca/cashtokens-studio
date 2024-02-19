@@ -9,7 +9,7 @@
           <q-avatar v-if="!ui.statusMessageSpinner" size="5em" class="col-12">
             <q-icon size="2em" :name="icon.name" :color="icon.color"></q-icon>
           </q-avatar>
-          <q-spinner v-if="ui.statusMessageSpinner" size="5em" color="info"></q-spinner>
+          <q-spinner v-if="ui.statusMessageSpinner" size="5em" color="warning"></q-spinner>
           <div class="col-12 text-center q-px-lg text-wrap q-py-sm q-py-sm"
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             {{ ui.statusMessage }}

@@ -79,13 +79,13 @@ const menu = computed<any[]>(() => {
           href: hrefs.manageNFTReserves,
           icon: 'token',
         },
+        // {
+        //   label: 'Token Categories',
+        //   href: hrefs.manageAuthchains,
+        //   icon: 'token',
+        // },
         {
-          label: 'Token Categories',
-          href: hrefs.manageAuthchains,
-          icon: 'token',
-        },
-        {
-          label: 'Metadata',
+          label: 'Metadata Registries',
           href: hrefs.manageRegistries,
           icon: 'token',
         },

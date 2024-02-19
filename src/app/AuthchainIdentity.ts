@@ -280,7 +280,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete this._processing
       throw new Error('Insufficient balance to fund the txn')
     }
-    console.log('PROCESSING')
     const [authchainIdentityOutput, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
     const contract = this.authKey!.authGuard!.contract!
@@ -334,7 +333,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete this._processing
       throw error
     }
-    console.log('DECODED', decoded)
     this._processing = 'Waiting for signature'
     let signingResult
     try {
