@@ -11,7 +11,9 @@
             to manage the FT
             reserves, NFT Reserves and Metadata. You can release this UTXO from the AuthGuard if you don't want CashTokens
             Studio
-            to manage this identity-output.
+            to manage this UTXOs. See <a class="text-secondary" target="_blank"
+              href="https://github.com/mr-zwets/MBC-Token-Standard">Authguard
+            </a>spec.
           </p>
         </q-expansion-item>
         <div>
@@ -112,10 +114,10 @@
                   <q-menu>
                     <q-list>
                       <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, value.row)">
-                        Unguard Authchain
+                        Unguard Utxo
                       </q-item>
                       <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
-                        Burn Token
+                        Burn Utxo
                       </q-item>
                       <!-- <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item> -->
                     </q-list>
