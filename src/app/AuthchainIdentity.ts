@@ -1,4 +1,4 @@
-import { IdentitySnapshot, Registry, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
+import { IdentitySnapshot, NFTCapability, Registry, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
@@ -794,5 +794,56 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     delete  AuthchainIdentity._processing
     AuthchainIdentity.utilPopulateTokenCategory(identities)
     return identities
+  }
+
+
+  /**
+   * Invoke after spending this utxo. When watching wallet address
+   */
+  async updateUtxo(){
+    this.ensureOwnerWallet()
+    this._processing = 'Updating authhead utxo'
+    try {
+      if (this.authKey) {
+        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
+          u.vout == this.utxo.vout &&
+          u.token?.tokenId == this.utxo.token?.tokenId &&
+          u.token?.capability == NFTCapability.minting
+        ))
+        if (updatedMinterUtxo) {
+          this.utxo = updatedMinterUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this._processing = ''
+    }
+  }
+
+  /**
+   * Invoke after spending the AuthKey, e.g. after minting. 
+   */
+  async updateAuthKeyUtxo(){
+    try {
+      this.ensureOwnerWallet()
+      this._processing = 'Updating authKey utxo'
+      if (this.authKey) {
+        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+          u.vout == this.authKey?.utxo.vout &&
+          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+          u.token?.capability == this.authKey?.utxo.token?.capability
+        ))
+        if (updatedAuthKeyUtxo) {
+          this.authKey.utxo = updatedAuthKeyUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this._processing = ''
+    }
+    
   }
 }
