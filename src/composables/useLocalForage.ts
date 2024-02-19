@@ -17,5 +17,11 @@ export function useLocalForage() {
     driver: [localforage.INDEXEDDB, localforage.LOCALSTORAGE, localforage.WEBSQL] // Use multiple drivers for fallback
   });
 
-  return { nftTypesStore, pageLocalForage };
+  const registryTempStore = localforage.createInstance({
+    name: 'cts-registry',
+    storeName: 'registry', 
+    driver: [localforage.INDEXEDDB, localforage.LOCALSTORAGE, localforage.WEBSQL] // Use multiple drivers for fallback
+  });
+
+  return { nftTypesStore, registryTempStore, pageLocalForage };
 }
