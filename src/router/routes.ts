@@ -33,7 +33,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'authguards', path: 'authguards', component: () => import('pages/issuer/manage/AuthGuards.vue') },
 
-      { path: 'token/:identifier', component: () => import('pages/TokenView.vue'), meta: { pageTitle: 'Token Details'}},
+      { path: 'token/:identifier', component: () => import('pages/TokenView.vue')},
     ],
   },
   {
