@@ -45,35 +45,32 @@
         </div>
         <div>
           <div class="row flex justify-center">
-            <div class="col-xs-12 text-center q-gutter-sm">
-              <div class="row justify-center q-px-sm q-py-sm border" style="border-radius: 1em;">
-                <div v-if="newTokenIconPreview" class="col-12">
-                  <span class="text-grey" style="font-family: monospace;">Preview</span>
-                </div>
-                <div class="col-12 relative-position">
-                  <q-file v-model="newTokenIconFile" accept=".jpg,.png, image/*" @rejected="() => console.log('rejected')"
-                    style="visibility: hidden;" class="relative-position">
-                    <q-avatar class="col-12 q-mb-sm" size="5em" style="visibility: visible !important; cursor: pointer;"
-                      square>
-                      <q-img v-if="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon"
-                        :src="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon" alt=""
-                        style="width:150px" />
-                      <q-icon v-else name="broken_image" color="grey-8" size="4em"></q-icon>
-                    </q-avatar>
-                    <q-tooltip>Click to change icon</q-tooltip>
-                  </q-file>
-                  <q-inner-loading :showing="newTokenIconUploading">
-                    <q-spinner-box size="50px" color="primary" />
-                    uploading...
-                  </q-inner-loading>
-                </div>
-                <TokenSymbol v-if="tokenStore.token?.tokenCategory?.symbol"
-                  :symbol="tokenStore.token?.tokenCategory?.symbol" />
-              </div>
-            </div>
-            <div class="col-xs-12 text-center">
+            <!-- <div class="col-xs-12 text-center">
               <TokenSymbol v-if="tokenStore.token?.identitySnapshot?.token?.symbol"
                 :symbol="tokenStore.token?.identitySnapshot?.token?.symbol" />
+            </div> -->
+            <div v-if="newTokenIconPreview" class="col-12 q-mb-sm text-center">
+              <span class="text-grey" style="font-family: monospace;">Preview</span>
+            </div>
+            <div class="col-xs-12 text-center q-gutter-sm">
+              <div class="row justify-center q-px-sm q-py-sm border" style="border-radius: 1em;">
+                <div class="col-12 relative-position text-center row justify-center">
+                  <q-file v-model="newTokenIconFile" accept=".jpg,.png, image/*" @rejected="() => console.log('rejected')"
+                    style="visibility: hidden;max-height:120px" class="relative-position">
+                    <q-avatar class="col-12 q-mb-sm" size="5em"
+                      style=" max-height:100px; visibility: visible !important; cursor: pointer;" square>
+                      <q-img v-if="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon"
+                        :src="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon" alt=""
+                        style="width:150px" fit="cover" />
+                      <q-icon v-else name="broken_image" color="grey-8" size="4em"></q-icon>
+                      <q-inner-loading :showing="newTokenIconUploading"
+                        style="background-color: transparent;max-height:150px;">
+                        <q-spinner-box color="primary" />
+                      </q-inner-loading>
+                    </q-avatar>
+                  </q-file>
+                </div>
+              </div>
             </div>
           </div>
           <q-icon v-if="status === 'burned'" name="local_fire_department" color="negative" size="lg">
@@ -492,7 +489,7 @@ const fetchRegistryContentsFromUrl = async (urls: string[]) => {
 const fetchPublishedRegistry = async () => {
   const d = $q.dialog({
     class: 'col-auto',
-    message: 'Checking last registry publication',
+    message: 'Checking last published registry',
     progress: true,
     ok: false
   })
