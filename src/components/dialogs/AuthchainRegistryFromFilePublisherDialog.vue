@@ -23,7 +23,8 @@
         <q-uploader @uploaded="onFileUploaded" field-name="registryFile"
           :label="uploaded ? 'BCMR file uploaded' : 'Select BCMR(registry) File'"
           :url="`api/tokens/registry-file/storage?tokenId=${authchainIdentity?.token?.tokenId}`" auto-upload flat dense
-          size="sm" style="width:100%;max-width: 100%;" @uploading="() => uploading = true" :multiple="false" />
+          size="sm" style="width:100%;max-width: 100%;" @uploading="() => uploading = true" :multiple="false"
+          color="dark" />
         <div class="q-mt-sm" style="max-width: 100%;overflow-x: auto;">
           <q-markup-table v-if="uploaded && uploadArtifact" flat dense>
             <thead>
