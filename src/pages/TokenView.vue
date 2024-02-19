@@ -36,24 +36,36 @@
           </div>
         </div>
       </div>
-      <div class="col-xs-12 col-md-10">
-        <div v-if="bcmrIndexer.processing" class="row justify-center">
-          <q-spinner-grid size="sm" class="q-my-xl" />
-          <span class="col-12 text-center">
-            <i>{{ bcmrIndexer.processing }}</i>
-          </span>
+      <div class="col-xs-12 col-md-10 justify-center">
+        <div class="row justify-center text-center">
+          <q-file ref="newTokenIconFilePicker" v-model="newTokenIconFile" accept=".jpg,.png, image/*"
+            @rejected="() => console.log('rejected')" style="visibility: hidden; width:0px">
+          </q-file>
+          <q-card class="self-center cursor-pointer shadow-2"
+            style="height:15em; width: 15em;max-width:fit-content;visibility: visible!important;"
+            @click="(evt: any) => newTokenIconFilePicker.pickFiles(evt)" bordered rounded>
+            <q-img v-if="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon"
+              :src="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon" width="15em" height="15em">
+            </q-img>
+            <q-icon v-else name="broken_image" color="grey-8" size="4em"></q-icon>
+            <q-inner-loading :showing="newTokenIconUploading" style="background-color: transparent;">
+              <q-spinner color="primary" size="lg" />
+            </q-inner-loading>
+          </q-card>
         </div>
+
         <div>
           <div class="row flex justify-center">
             <!-- <div class="col-xs-12 text-center">
               <TokenSymbol v-if="tokenStore.token?.identitySnapshot?.token?.symbol"
                 :symbol="tokenStore.token?.identitySnapshot?.token?.symbol" />
             </div> -->
-            <div v-if="newTokenIconPreview" class="col-12 q-mb-sm text-center">
+            <!-- <div v-if="newTokenIconPreview" class="col-12 q-mb-sm text-center">
               <span class="text-grey" style="font-family: monospace;">Preview</span>
-            </div>
-            <div class="col-xs-12 text-center q-gutter-sm">
+            </div> -->
+            <!-- <div class="col-xs-12 text-center q-gutter-sm">
               <div class="row justify-center q-px-sm q-py-sm border" style="border-radius: 1em;">
+
                 <div class="col-12 relative-position text-center row justify-center">
                   <q-file v-model="newTokenIconFile" accept=".jpg,.png, image/*" @rejected="() => console.log('rejected')"
                     style="visibility: hidden;max-height:120px" class="relative-position">
@@ -71,7 +83,7 @@
                   </q-file>
                 </div>
               </div>
-            </div>
+            </div> -->
           </div>
           <q-icon v-if="status === 'burned'" name="local_fire_department" color="negative" size="lg">
             <q-tooltip>This token is burned</q-tooltip>
@@ -131,7 +143,7 @@
             icon="link">
             <div class="q-mx-md q-gutter-sm q-my-md">
               <q-input
-                v-for=" [k], i  in  Object.entries(bcmr?.getIdentitySnapshot(authbase as string, identityHistoryTimestamp as string)?.uris || {}) "
+                v-for="[k], i  in  Object.entries(bcmr?.getIdentitySnapshot(authbase as string, identityHistoryTimestamp as string)?.uris || {}) "
                 :key="i" input-class="registry-field"
                 @update:model-value="(v: any) => bcmr?.setIdentitySnapshotUri(authbase as string, identityHistoryTimestamp as string, { [k]: v })"
                 :model-value="bcmr?.getIdentitySnapshot(authbase as string, identityHistoryTimestamp as string)?.uris?.[k]"
@@ -139,6 +151,14 @@
                 <template v-slot:after>
                   <q-btn text-color="negative" icon="delete"
                     @click="bcmr?.removeIdentitySnapshotUri(authbase as string, identityHistoryTimestamp as string, k)"></q-btn>
+                </template>
+                <template v-slot:prepend>
+                  <q-avatar v-if="k == 'icon'"
+                    @click="bcmr?.removeIdentitySnapshotUri(authbase as string, identityHistoryTimestamp as string, k)">
+                    <q-img v-if="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon"
+                      :src="newTokenIconPreview || tokenStore.token?.identitySnapshot?.uris?.icon" />
+                    <q-icon v-else name="broken_image" color="grey-8" size="4em"></q-icon>
+                  </q-avatar>
                 </template>
               </q-input>
               <div class="text-right">
@@ -339,6 +359,7 @@ const bcmrIsModified = computed(() => {
 })
 const { dialog, dialogData, openDialog, onHide } = useDialogs()
 const status = ref<'burned' | 'active' | 'unguarded'>('active')
+const newTokenIconFilePicker = ref()
 const newTokenIconFile = ref()
 const newTokenIconPreview = ref()
 const newTokenIconUploading = ref<boolean>(false)
@@ -429,6 +450,7 @@ const saveNewIconInIPFS = async () => {
     try {
       const formData = new FormData();
       formData.append('icon', newTokenIconFile.value);
+      console.log(newTokenIconFile.value)
       newTokenIconUploading.value = true
       const resp = await fetch(`api/tokens/icon/upload?tokenId=${tokenStore.token?.token?.tokenId}`, {
         method: 'POST', body: formData
@@ -438,7 +460,6 @@ const saveNewIconInIPFS = async () => {
         // bcmr.value?.addIconUri(respJson.iconUris?.https)
         bcmr.value?.addIdentitySnapshotUri(authbase.value as string, identityHistoryTimestamp.value as string, { icon: respJson.iconUris?.https })
       }
-      console.log('NEW TOKEN ICON ARTIFACT', respJson)
       newTokenIconUploadArtifact.value = respJson
 
     } catch (error) {
@@ -775,38 +796,71 @@ const uploadAndPublishChanges = async () => {
       contentHash: uploadArtifact.value.contentHash,
       unattended: true
     }
-  }).onOk(async (publicationTx) => {
-    if (publicationTx) {
-      d = $q.dialog({
-        message: 'Updating, please wait...',
-        progress: true,
-        ok: false
-      })
-      await delay(2000)
-      d.update({
-        message: 'Updating utxo, please wait...'
-      })
-      await tokenStore.token.updateUtxo()
-      d.update({
-        message: 'Updating authkey, please wait...'
-      })
-      await tokenStore.token.updateAuthKeyUtxo()
-      d.update({
-        message: 'Loading updated registry, please wait...'
-      })
-      await delay(1000)
-      await initBcmr()
-      if (nftTypesSelectedForPublication.value.length > 0) {
-        for (const [i, nftType] of nftTypesSelectedForPublication.value.entries()) {
-          await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
-          nftTypesSelectedForPublication.value.splice(i)
-        }
-      }
-      d.hide()
-    }
+  }).onOk((publicationTx) => {
+    onPublicationOk(publicationTx)
+    // if (publicationTx) {
+    //   d = $q.dialog({
+    //     message: 'Updating, please wait...',
+    //     progress: true,
+    //     ok: false
+    //   })
+    //   await delay(2000)
+    //   d.update({
+    //     message: 'Updating utxo, please wait...'
+    //   })
+    //   await tokenStore.token.updateUtxo()
+    //   d.update({
+    //     message: 'Updating authkey, please wait...'
+    //   })
+    //   await tokenStore.token.updateAuthKeyUtxo()
+    //   d.update({
+    //     message: 'Loading updated registry, please wait...'
+    //   })
+    //   await delay(1000)
+    //   await initBcmr()
+    //   if (nftTypesSelectedForPublication.value.length > 0) {
+    //     for (const [i, nftType] of nftTypesSelectedForPublication.value.entries()) {
+    //       await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+    //       nftTypesSelectedForPublication.value.splice(i)
+    //     }
+    //   }
+    //   d.hide()
+    // }
   }).onDismiss(() => {
     d?.hide()
   })
+}
+
+
+const onPublicationOk = async (publicationTx: string) => {
+  if (publicationTx) {
+    const d = $q.dialog({
+      message: 'Updating, please wait...',
+      progress: true,
+      ok: false
+    })
+    await delay(2000)
+    d.update({
+      message: 'Updating utxo, please wait...'
+    })
+    await tokenStore.token.updateUtxo()
+    d.update({
+      message: 'Updating authkey, please wait...'
+    })
+    await tokenStore.token.updateAuthKeyUtxo()
+    d.update({
+      message: 'Loading updated registry, please wait...'
+    })
+    await delay(1000)
+    await initBcmr()
+    if (nftTypesSelectedForPublication.value.length > 0) {
+      for (const [i, nftType] of nftTypesSelectedForPublication.value.entries()) {
+        await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+        nftTypesSelectedForPublication.value.splice(i)
+      }
+    }
+    d.hide()
+  }
 }
 
 watch(() => bcmr.value?.isModified, (modified) => {

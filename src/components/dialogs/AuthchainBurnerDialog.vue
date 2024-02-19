@@ -18,7 +18,7 @@
           burn this token identity's AuthHead, this means you'll no longer be able to publish
           an update to the registry.
           <q-btn href="https://github.com/bitjson/chip-bcmr#burned-identities" target="_blank" dense flat no-caps
-            color="secondary" icon="info" size="sm" />
+            color="grey-8" icon="info" size="sm" />
         </span>
       </div>
       <q-card-section>
