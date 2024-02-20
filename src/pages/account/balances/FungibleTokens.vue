@@ -3,8 +3,8 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
-          My Fungible Tokens
-          <q-badge color="blue-5" text-color="black" align="top" rounded>
+          <q-icon name="money" class="q-mx-sm"></q-icon>My Fungible Tokens
+          <q-badge color="warning" text-color="black" align="top" rounded>
             {{ ftBalances?.count || 0 }}
           </q-badge>
         </h5>
@@ -64,9 +64,9 @@
             </template>
             <template v-slot:body-cell-balance="value">
               <q-td>
-                <div class="row justify-evenly">
-                  <div class="col text-positive text-right"
-                    style="font-variant-numeric: tabular-nums; letter-spacing: 2px;">
+                <div class="row justify-evenly flex wrap">
+                  <div class="text-positive text-right" :class="$q.screen.lt.sm ? 'col-auto' : 'col'"
+                    style="font-variant-numeric: tabular-nums; font-size: 1.5em; letter-spacing: 2px;">
                     {{ ftAmountFormatter.toDecimal(value.row.balance.toString(),
                       value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                     }} </div>

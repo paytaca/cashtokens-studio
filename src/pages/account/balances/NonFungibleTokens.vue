@@ -3,8 +3,8 @@
         <div class="row justify-center">
             <div class="col-xs-12 col-md-10">
                 <h5 class="text-center">
-                    My Collectibles(NFTs)
-                    <q-badge color="blue-5" text-color="black" align="top" rounded>
+                    <q-icon name="perm_media" class="q-mx-sm"></q-icon>My Collectibles (NFTs)
+                    <q-badge color="warning" text-color="black" align="top" rounded>
                         {{ nftCollections?.count || 0 }}
                     </q-badge>
                 </h5>
@@ -32,8 +32,9 @@
                             </div>
                         </template>
                         <template v-slot:item="i">
-                            <q-card class="my-card q-ma-sm text-center col-grow" style="border-radius: 15px;">
-                                <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px"
+                            <q-card class="my-card q-ma-sm text-center col-grow"
+                                style="border-radius: 15px; max-width:200px">
+                                <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
                                     :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
                                     alt="na">
