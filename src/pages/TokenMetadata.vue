@@ -8,8 +8,7 @@
               @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
               <q-menu>
                 <q-list>
-                  <q-item clickable v-close-popup
-                    @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
+                  <q-item clickable v-close-popup @click.stop="openRegistryPublisherDialog">
                     Publish Registry From URL
                   </q-item>
                   <q-item clickable v-close-popup
@@ -25,8 +24,7 @@
               @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
               <q-tooltip>Publish new metadata registry from file</q-tooltip>
             </q-btn>
-            <q-btn icon="cloud_upload" flat round size="lg"
-              @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
+            <q-btn icon="cloud_upload" flat round size="lg" @click.stop="openRegistryPublisherDialog">
               <q-tooltip>Publish new metadata registry from URL</q-tooltip>
             </q-btn>
             <q-btn @click.stop="downloadPublishedRegistry" size="lg" icon="cloud_download" flat round>
@@ -310,11 +308,12 @@
                 <template v-slot:body-cell-actions="value">
                   <q-td class="text-center">
                     <div v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0">
-                      <q-btn label="Add Metadata" text-color="primary" disable>
+                      <q-btn label="Add Metadata" text-color="primary"
+                        :to="{ name: 'nft-metadata', query: { authhead: tokenStore.token.txid, commitment: value.row._meta?.commitment || value.row.commitment, capability: value.row.capability, amount: value.row.amount } }"
+                        disable>
                       </q-btn>
                       <div class="text-grey-8">under development</div>
                     </div>
-
                   </q-td>
                 </template>
               </q-table>
@@ -439,6 +438,18 @@ const nftTypesRowsPerPage = computed(() => {
   return [12, 24, 36]
 })
 
+const openRegistryPublisherDialog = () => {
+  $q.dialog({
+    component: RegistryPublishDialog,
+    componentProps: {
+      authhead: tokenStore.token
+    }
+  }).onOk((tx) => {
+    console.log(tx)
+  })
+}
+
+
 const deleteSelectedUnpublishedNfts = async () => {
   $q.dialog({
     message: 'Are you sure you want to delete the selected unpublished NFT metadata?',
@@ -539,7 +550,7 @@ const fetchPublishedRegistry = async () => {
   })
 
   const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
-
+  console.log('PUBINFO', pubInfo)
   d.update({
     message: 'Fetching registry from published URL, please wait...',
   })
@@ -954,7 +965,12 @@ onBeforeMount(async () => {
 })
 
 onBeforeUnmount(async () => {
-  await localForage.registryTempStore.removeItem(`registry-for-${tokenStore.token.txid}`)
+  try {
+    await localForage.registryTempStore.removeItem(`registry-for-${tokenStore.token.txid}`)
+  } catch (error) {
+    console.log('Error removing registry cash from localstorage')
+  }
+
 })
 
 onMounted(async () => {
