@@ -15,7 +15,13 @@
             <q-btn-dropdown auto-close rounded size="lg"
               style="color: rgb(20,20,20);padding: 10px; border-radius: 10px;background-color:#282829d4; border: 2px solid #484854d4">
               <template v-slot:label>
-                <q-icon name="account_balance_wallet">
+                <q-avatar v-if="user.walletType == 'paytaca'" rounded size="md">
+                  <q-img src="images/paytaca_icon.png"></q-img>
+                </q-avatar>
+                <q-avatar v-else-if="user.walletType == 'walletconnect'" rounded size="md">
+                  <q-img src="images/walletconnect_icon.png"></q-img>
+                </q-avatar>
+                <q-icon v-else name="account_balance_wallet">
                 </q-icon>
               </template>
               <q-list padding style="width: 300px">
