@@ -140,7 +140,7 @@ export class BcmrIndexer {
 
     try {
       this.processing = 'Fetching token registry'
-      let url = `${process.env.BCMR_API}cashtokens/${tokenId}/`
+      let url = `${process.env.BCMR_API}cashtokens/${tokenId}/nfts/`
         if (query) {
           url += '?' + querify(query)
         }
