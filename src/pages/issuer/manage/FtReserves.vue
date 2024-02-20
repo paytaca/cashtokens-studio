@@ -9,83 +9,64 @@
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
             :columns="[
               {
-                name: 'icon', label: 'Icon',
-                field: r => r.identitySnapshot?.uris?.icon || '<not found>',
-                align: 'center',
-                headerStyle: $q.screen.lt.sm ? 'padding: 5px;' : 'padding: 1.5em',
-                classes: (r => !r.identitySnapshot?.token ? 'text-grey-8' : '')
-              },
-              {
-                name: 'symbol', label: 'Symbol',
-                field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
-                align: 'center',
-                classes: (r => !r.identitySnapshot?.token?.symbol ? 'text-grey-8' : '')
-              },
-              {
-                name: 'tokenid', label: 'Category',
-                field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
-                align: 'center',
-                classes: (r => !r.identitySnapshot ? 'text-grey-8' : '')
-              },
-              {
-                name: 'decimals', label: 'Decimals',
-                field: r => {
-                  if (!r.identitySnapshot || !r.identitySnapshot?.token) {
-                    return '<metadata not found>'
-                  }
-                  if (r.identitySnapshot?.token?.decimals == undefined) {
-                    return '<unknown>'
-                  }
-                  return r.identitySnapshot?.token?.decimals
-                },
-                align: 'center',
-                classes: (r => !r.identitySnapshot?.token?.decimals ? 'text-grey-8' : '')
-              },
-              {
                 name: 'balance', label: 'Balance',
                 field: r => r.token?.amount || 0,
-                align: 'center',
+                align: 'left',
+                headerClasses: 'text-h5 text-bold'
               },
               {
-                name: 'actions', label: 'Actions',
+                name: 'actions', label: '',
                 field: r => '',
                 align: 'center',
               }
             ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
             :dense="$q.screen.lt.sm">
-
-            <template v-slot:body-cell-icon="value">
-              <q-td class="text-center">
-                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                  <q-img :src="value.row.identitySnapshot.uris.icon" />
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
-              </q-td>
-            </template>
-            <template v-slot:body-cell-symbol="value">
-              <q-td class="text-center">
-                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
-                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
-                </span>
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
-              </q-td>
-            </template>
-            <template v-slot:body-cell-tokenid="value">
-              <q-td class="text-center">
-                <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
-                  :tokenId="value.row.identitySnapshot.token.category" />
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
-              </q-td>
-            </template>
             <template v-slot:body-cell-balance="value">
-              <q-td class="text-center">
-                <span>{{ formatReservedSupply(value.row) }}</span>
+              <q-td>
+                <div class="row justify-left items-center flex wrap q-gutter-sm">
+                  <div class="col-auto">
+                    <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                      <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    </q-avatar>
+                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                  </div>
+                  <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
+                    <div style="font-variant-numeric: tabular-nums;" class="text-positive">
+                      {{
+                        ftAmountFormatter.toDecimal(value.row.token?.amount.toString(),
+                          value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }}
+                    </div>
+                    <div class="text-bold">
+                      ({{ value.row.identitySnapshot?.token?.symbol }})
+                    </div>
+                  </div>
+
+                  <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                    <div v-if="value.row.identitySnapshot?.token">
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
+                        <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                      </div>
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Decimals: <span
+                          :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
+                            value.row.identitySnapshot?.token?.decimals }}</span>
+                      </div>
+                    </div>
+                    <div v-else class="text-grey-8">
+                      {{ '<metadata not found>' }}
+                    </div>
+
+                  </div>
+                </div>
+
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" dense
-                  no-caps @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
+                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" no-caps
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
                 </q-btn>
               </q-td>
             </template>
@@ -112,7 +93,9 @@ import { useRouter } from 'vue-router';
 import { useMinter } from 'src/stores/minter';
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { useDialogs } from 'src/composables'
-import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
+import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
+import { shortenTokenId, copyText } from 'src/app/utils'
+import CopyText from 'src/components/CopyText.vue';
 
 const $q = useQuasar()
 const router = useRouter()
@@ -150,17 +133,17 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'balance', 'decimals', 'actions']
 })
 
-const formatReservedSupply = computed(() => {
-  return (authchainIdentity: AuthchainIdentity) => {
+// const formatReservedSupply = computed(() => {
+//   return (authchainIdentity: AuthchainIdentity) => {
 
-    if (authchainIdentity.token!.amount && authchainIdentity.identitySnapshot?.token?.decimals) {
-      return ftAmtFormatter.toDecimal(
-        authchainIdentity.token!.amount.toString(), authchainIdentity.identitySnapshot?.token?.decimals
-      )
-    }
-    return authchainIdentity.token?.amount
-  }
-})
+//     if (authchainIdentity.token!.amount && authchainIdentity.identitySnapshot?.token?.decimals) {
+//       return ftAmtFormatter.toDecimal(
+//         authchainIdentity.token!.amount.toString(), authchainIdentity.identitySnapshot?.token?.decimals
+//       )
+//     }
+//     return authchainIdentity.token?.amount
+//   }
+// })
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
