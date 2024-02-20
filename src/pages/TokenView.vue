@@ -181,7 +181,7 @@
             :icon="nftTypesSelectedForPublication.length > 0 ? 'priority_high' : 'collections'"
             class="q-px-md q-pt-sm q-my-sm" :class="nftTypesSelectedForPublication.length > 0 ? 'text-warning' : ''"
             style="overflow-x:scroll">
-            <q-tabs v-model="nftTypesShown" class="text-teal">
+            <q-tabs v-model="nftTypesShown" active-color="warning">
               <q-tab name="published" label="Published" />
               <q-tab name="unpublished" label="Unpublished" />
               <q-tab name="minted" label="Minted" />
@@ -217,9 +217,14 @@
             </q-tab-panels>
             <div></div>
             <div style="overflow-x: scroll">
+              <div class="text-right">
+                <q-checkbox v-if="nftTypesShown == 'minted'" v-model="showMintersInMintedNfts" class="self-right">
+                  Show Minters
+                </q-checkbox>
+              </div>
               <q-table v-model:pagination="nftTypesPagination" @request="onTableRequest" flat :rows="nftTypes.results"
                 v-model:selected="nftTypesSelected" :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'"
-                table-style="{background-color: unset}" :columns="[
+                table-style="{background-color: unset !important}" :columns="[
                   {
                     name: 'icon', label: 'Icon',
                     field: r => '',
@@ -252,7 +257,7 @@
                     headerStyle: 'padding: 1.5em',
                   },
                 ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id"
-                :visible-columns="nftTypesTableVisibleCols">
+                :visible-columns="nftTypesTableVisibleCols" bordered>
                 <template v-slot:body-cell-icon="value">
                   <q-td class="text-center">
                     <q-avatar v-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.icon" rounded>
@@ -392,7 +397,6 @@ const nftTypesIsLoading = ref<boolean>()
 const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
 const nftTypesSelected = ref<any[]>([])
 const nftTypesSelectedForPublication = ref<any[]>([])
-
 const nftTypesTableVisibleCols = computed(() => {
   if ($q.screen.xs) {
     return ['icon', 'name']
@@ -403,6 +407,7 @@ const nftTypesTableVisibleCols = computed(() => {
   return ['icon', 'name', 'description']
 
 })
+const showMintersInMintedNfts = ref<boolean>(false)
 
 const nftTypesPagination = ref({
   sortBy: 'desc',
@@ -723,7 +728,11 @@ const loadMintedNftTypes = async () => {
     paginated: true,
     limit: nftTypesPagination.value.rowsPerPage,
     offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
-    include_metadata: true
+    include_metadata: true,
+    capability: ['none', 'mutable']
+  }
+  if (showMintersInMintedNfts.value) {
+    query.capability.push('minting')
   }
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
   if (fntResp && fntResp.results) {
@@ -885,6 +894,10 @@ watch(() => newTokenIconFile.value, async (b) => {
 })
 
 watch(() => nftTypesShown.value, async () => {
+  await populateNftsTable()
+})
+
+watch(() => showMintersInMintedNfts.value, async () => {
   await populateNftsTable()
 })
 
