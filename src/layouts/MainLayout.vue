@@ -58,7 +58,10 @@
                     </q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>{{ user.walletBchBalance }}</q-item-label>
+                    <q-item-label class="text-positive"
+                      style="font-variant-numeric: tabular-nums; font-size: 1.1em; letter-spacing: 2px;">
+                      {{ user.walletBchBalance }}
+                    </q-item-label>
                     <q-item-label caption>{{ shortenAddress(user.walletAddress) }}</q-item-label>
 
                   </q-item-section>
@@ -164,7 +167,7 @@ import { useInit } from 'src/composables/useInit';
 import { shortenAddress, copyText } from 'src/app/utils'
 import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
-
+import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
 const { paytacaDisconnect } = usePaytacaConnect()
 const { walletConnectDisconnect } = useWalletConnect()
 const leftDrawerOpen = ref(false)

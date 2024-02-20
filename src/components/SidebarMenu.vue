@@ -1,7 +1,18 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:expanded="expanded" v-model:selected="selected"
-      default-expand-all ref="qtree" />
+      default-expand-all ref="qtree">
+      <template v-slot:default-header="prop">
+        <div v-if="prop.node.label == 'Authguards' || prop.node.label == 'Authguard Keys'" class="row items-center">
+          <q-icon :name="prop.node.icon || 'share'" color="orange" size="28px" class="q-mr-sm" />
+          <div>{{ prop.node.label }}</div>
+        </div>
+        <div v-else class="row items-center">
+          <q-icon :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
+          <div>{{ prop.node.label }}</div>
+        </div>
+      </template>
+    </q-tree>
   </div>
 </template>
 
@@ -45,12 +56,12 @@ const menu = computed<any[]>(() => {
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },
-    {
-      label: 'Create NFT Collection',
-      href: hrefs.createNftCollection,
-      icon: 'add',
-      disabled: Boolean(user.walletAddress) === false,
-    },
+    // {
+    //   label: 'Create NFT Collection',
+    //   href: hrefs.createNftCollection,
+    //   icon: 'add',
+    //   disabled: Boolean(user.walletAddress) === false,
+    // },
     {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
@@ -72,12 +83,12 @@ const menu = computed<any[]>(() => {
         {
           label: 'FT Reserves',
           href: hrefs.manageFTReserves,
-          icon: 'token',
+          icon: 'money',
         },
         {
           label: 'NFT Reserves',
           href: hrefs.manageNFTReserves,
-          icon: 'token',
+          icon: 'art_track',
         },
         // {
         //   label: 'Token Categories',
@@ -85,19 +96,19 @@ const menu = computed<any[]>(() => {
         //   icon: 'token',
         // },
         {
-          label: 'Metadata Registries',
+          label: 'Metadata',
           href: hrefs.manageRegistries,
-          icon: 'token',
+          icon: 'data_object',
         },
         {
-          label: 'AuthGuards',
+          label: 'Authguards',
           href: hrefs.manageAuthGuards,
-          icon: 'token',
+          icon: 'lock',
         },
         {
-          label: 'AuthKeys',
+          label: 'Authguard Keys',
           href: hrefs.manageAuthKeys,
-          icon: 'token',
+          icon: 'key',
         }
 
       ]
