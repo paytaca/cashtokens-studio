@@ -3,7 +3,6 @@
     <div class="row justify-center" :class="$q.screen.gt.xs ? 'q-mx-sm' : ''">
       <div class="col-xs-12 col-md-10">
         <div class="text-right q-gutter-xs items-end">
-
           <div v-if="$q.screen.xs">
             <q-btn id="authchain-action-buttons" icon="menu" size="md" round flat dense
               @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
@@ -22,15 +21,15 @@
             </q-btn>
           </div>
           <div v-else>
-            <q-btn icon="upload_file" flat round size="md"
+            <q-btn icon="upload_file" flat round size="lg"
               @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
               <q-tooltip>Publish new metadata registry from file</q-tooltip>
             </q-btn>
-            <q-btn icon="cloud_upload" flat round size="md"
+            <q-btn icon="cloud_upload" flat round size="lg"
               @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, tokenStore.token as AuthchainIdentity)">
               <q-tooltip>Publish new metadata registry from URL</q-tooltip>
             </q-btn>
-            <q-btn @click.stop="downloadPublishedRegistry" size="md" icon="cloud_download" flat round>
+            <q-btn @click.stop="downloadPublishedRegistry" size="lg" icon="cloud_download" flat round>
               <q-tooltip>Download currently published registry</q-tooltip>
             </q-btn>
           </div>
@@ -98,7 +97,6 @@
             :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-unguarded="onUnguard" />
           <AuthchainBurnerDialog v-if="dialog" :model-value="dialog === AuthchainBurnerDialog.__name"
             :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide" @identity-burned="onBurn" />
-
           <q-expansion-item label="Registry" class="q-px-md q-pt-sm q-my-sm" icon="menu_book">
             <div class="q-mx-md q-gutter-sm q-my-md">
               <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setSchema(v)"
@@ -186,19 +184,23 @@
               <q-tab name="unpublished" label="Unpublished" />
               <q-tab name="minted" label="Minted" />
             </q-tabs>
-            <q-tab-panels v-model="nftTypesShown">
+            <q-tab-panels v-model="nftTypesShown" style="background: unset">
               <q-tab-panel name="published" label="Published">
-                <q-icon name="info" class="text-grey-5"></q-icon>
-                <p class="text-grey-5">These contains the list of the NFTs defined on the currently published metadata
-                  registry.</p>
+                <div class="text-grey-5 row items-center">
+                  <q-icon name="info" class="text-grey-5 q-mr-sm"></q-icon>
+                  <span>These contains the list of the NFTs defined on the
+                    currently published token metadata.</span>
+                </div>
               </q-tab-panel>
               <q-tab-panel name="unpublished" label="Unpublished">
-                <q-icon name="info" class="text-grey-5"></q-icon>
-                <p class="text-grey-5">These contains the list of temporarily saved unpublished NFTs. Select an item and
-                  click <b class="text-primary"> 'Add Selected Item' </b> to add
-                  the NFT metadata to the registry, the added item will be included when you publish the revision. Click
-                  <b class="text-negative">'Delete Selected Item'</b> to remove selected item from the local storage.
-                </p>
+                <div class="text-grey-5 row items-center">
+                  <q-icon name="info" class="text-grey-5 q-mr-sm"></q-icon>
+                  <span>These contains the list of temporarily saved unpublished NFTs. Select an item and
+                    click <span class="text-primary"> 'Add Selected Item' </span> to add
+                    the NFT metadata to the registry, the added item will be included when you publish the revision. Click
+                    <span class="text-negative">'Delete Selected Item'</span> to remove selected item from the local
+                    storage.</span>
+                </div>
                 <div v-if="nftTypesSelected.length > 0" class="q-gutter-sm row items-center q-mt-sm">
                   <span class="text-grey-4"></span>
                   <q-btn text-color="negative" @click.stop="deleteSelectedUnpublishedNfts" no-caps>Delete Selected Item
@@ -210,96 +212,109 @@
                 </div>
               </q-tab-panel>
               <q-tab-panel name="minted" label="Minted">
-                <q-icon name="info" class="text-grey-5"></q-icon>
-                <p class="text-grey-5">These contains the list of the minted tokens/existing tokens of this token
-                  category.</p>
+                <div class="text-grey-5 row items-center">
+
+                  <span><q-icon name="info" class="text-grey-5 q-mr-sm inline"></q-icon>These contains the list of the
+                    minted
+                    tokens/existing tokens of this token
+                    category.</span>
+                  <div class="col-12 text-right">
+                    <q-checkbox v-if="nftTypesShown == 'minted'" v-model="showMintersInMintedNfts" class="self-right">
+                      Show Minters
+                    </q-checkbox>
+                  </div>
+                </div>
               </q-tab-panel>
             </q-tab-panels>
-            <div></div>
             <div style="overflow-x: scroll">
-              <div class="text-right">
-                <q-checkbox v-if="nftTypesShown == 'minted'" v-model="showMintersInMintedNfts" class="self-right">
-                  Show Minters
-                </q-checkbox>
-              </div>
               <q-table v-model:pagination="nftTypesPagination" @request="onTableRequest" flat :rows="nftTypes.results"
                 v-model:selected="nftTypesSelected" :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'"
-                table-style="{background-color: unset !important}" :columns="[
+                style="background:unset" :columns="[
                   {
-                    name: 'icon', label: 'Icon',
+                    name: 'nfttype', label: 'Nft Type',
+                    field: r => '',
+                    align: 'left',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'actions', label: '',
                     field: r => '',
                     align: 'center',
                     headerStyle: 'padding: 1.5em',
                   },
-                  {
-                    name: 'name', label: 'Name',
-                    field: r => '',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                  {
-                    name: 'description', label: 'Description',
-                    field: r => r[r._meta?.commitment || r.commitment].description || '<blank>',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                    classes: r => r[r._meta?.commitment || r.commitment].description ? 'ellipsis' : 'text-grey-8'
-                  },
-                  {
-                    name: 'commitment', label: 'Commitment',
-                    field: r => '',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                  {
-                    name: 'capability', label: 'Capability',
-                    field: r => '',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id"
-                :visible-columns="nftTypesTableVisibleCols" bordered>
-                <template v-slot:body-cell-icon="value">
-                  <q-td class="text-center">
-                    <q-avatar v-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.icon" rounded>
-                      <q-img
-                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.icon)" />
-                    </q-avatar>
-                    <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.image"
-                      rounded>
-                      <q-img
-                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.image)" />
-                    </q-avatar>
-                    <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.asset"
-                      rounded>
-                      <q-img
-                        :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.asset)" />
-                    </q-avatar>
-                    <q-icon v-else name="broken_image" size="xl" color="grey-8" round></q-icon>
-                  </q-td>
+                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id" :visible-columns="['nfttype', 'actions']"
+                bordered>
+                <template v-slot:body-cell-nfttype="value">
+                  <td>
+                    <div class="row justify-left items-center flex wrap q-gutter-sm">
+                      <div class="col-auto">
+                        <q-avatar v-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.icon"
+                          rounded>
+                          <q-img
+                            :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.icon)" />
+                        </q-avatar>
+                        <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.image"
+                          rounded>
+                          <q-img
+                            :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.image)" />
+                        </q-avatar>
+                        <q-avatar v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.asset"
+                          rounded>
+                          <q-img
+                            :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.asset)" />
+                        </q-avatar>
+                        <q-icon v-else name="broken_image" size="xl" color="grey-8" round></q-icon>
+                      </div>
+                      <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
+                        <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
+                          {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
+                            value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
+                            `#${formatCommitment(value.row._meta?.commitment || value.row.commitment, 'vm-number',
+                              'decimal')}` :
+                            value.row._meta?.commitment || value.row.commitment }}
+                        </div>
+                        <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                          {{ `(${value.row[value.row._meta?.commitment || value.row.commitment]?.name})` }}
+                        </div>
+                      </div>
+                      <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                        <div class="text-grey-6">
+                          Description: {{
+                            value.row[value.row._meta?.commitment || value.row.commitment].description
+                            || '<no description>' }}
+                        </div>
+                      </div>
+                      <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                        <div class="text-grey-8">
+                          Commitment: {{
+                            value.row._meta?.commitment || value.row.commitment
+                          }}
+                        </div>
+                      </div>
+                      <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                        <div class="text-grey-8">
+                          Capability: {{
+                            value.row.capability
+                          }}
+                        </div>
+                      </div>
+                      <div v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0"
+                        class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                        <div class="text-grey-8">
+                          {{ `<no metadata>` }}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
                 </template>
-                <template v-slot:body-cell-name="value">
+                <template v-slot:body-cell-actions="value">
                   <q-td class="text-center">
-                    <span v-if="nftTypesShown == 'published'">{{ value.row[value.row._meta.commitment].name }}</span>
-                    <span v-else-if="nftTypesShown == 'unpublished'">
-                      <q-icon v-if="value.row.forPublish" name="priority_high" color="warning"></q-icon>
-                      {{ value.row[value.row._meta.commitment].name }}
-                    </span>
-                    <span v-else>
-                      <span v-if="value.row[value.row.commitment]?.name">
-                        {{ value.row[value.row.commitment].name }}
-                      </span>
-                      <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
-                    </span>
-                  </q-td>
-                </template>
-                <template v-slot:body-cell-commitment="value">
-                  <q-td class="text-center">
-                    <span>{{ value.row._meta?.commitment || value.row.commitment }}</span>
-                  </q-td>
-                </template>
-                <template v-if="nftTypesShown == 'minted'" v-slot:body-cell-capability="value">
-                  <q-td class="text-center">
-                    <span>{{ value.row.capability }}</span>
+                    <div v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0">
+                      <q-btn label="Add Metadata" text-color="primary" disable>
+                      </q-btn>
+                      <div class="text-grey-8">under development</div>
+                    </div>
+
                   </q-td>
                 </template>
               </q-table>
@@ -311,19 +326,23 @@
         </div>
       </div>
     </div>
-    <q-footer v-if="bcmrIsModified" reveal position="bottom"
-      class="q-gutter-sm text-right q-pb-xl q-px-lg bg-transparent">
-      <div>
-        <q-icon name="warning" size="xs" color="warning"></q-icon>You have unpublished changes to the registry.
+    <q-footer v-if="bcmrIsModified" reveal position="bottom" class="q-gutter-sm text-right q-pb-md q-px-lg"
+      style="background-color: rgb(20,20,20, 0.71);">
+      <div class="q-gutter-sm row items-center text-right">
+        <q-icon name="warning" size="xs" color="warning"></q-icon><span>Metadata modified.</span>
       </div>
+      <q-btn @click.stop="reset" size="md" icon="undo" text-color="negative">
+        Undo
+      </q-btn>
+      <q-btn @click.stop="downloadRevisedRegistry" icon="download" size="md" text-color="primary">
+        <q-tooltip>Download suggested revision</q-tooltip>
+        Download
+      </q-btn>
       <q-btn @click.stop="uploadAndPublishChanges" size="md" color="primary">
         <q-tooltip>Publish new revision</q-tooltip>
-        Publish Changes?
+        Publish Changes
       </q-btn>
-      <q-btn @click.stop="downloadRevisedRegistry" size="md" color="primary">
-        <q-tooltip>Download suggested revision</q-tooltip>
-        Download?
-      </q-btn>
+
     </q-footer>
   </q-page>
 </template>
@@ -342,12 +361,11 @@ import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/Aut
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
-import { ipfsToGatewayUrl } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
 import { NftType, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import RegistryPublishDialog from 'src/components/dialogs/RegistryPublishDialog.vue';
-
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
@@ -398,13 +416,13 @@ const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
 const nftTypesSelected = ref<any[]>([])
 const nftTypesSelectedForPublication = ref<any[]>([])
 const nftTypesTableVisibleCols = computed(() => {
-  if ($q.screen.xs) {
-    return ['icon', 'name']
-  }
-  if (nftTypesShown.value == 'minted' && $q.screen.gt.xs) {
-    return ['icon', 'name', 'description', 'commitment', 'capability']
-  }
-  return ['icon', 'name', 'description']
+  // if ($q.screen.xs) {
+  //   return ['icon', 'name']
+  // }
+  // if (nftTypesShown.value == 'minted' && $q.screen.gt.xs) {
+  //   return ['icon', 'name', 'description', 'commitment', 'capability']
+  // }
+  return ['icon', 'actions']
 
 })
 const showMintersInMintedNfts = ref<boolean>(false)
@@ -519,7 +537,9 @@ const fetchPublishedRegistry = async () => {
     progress: true,
     ok: false
   })
+
   const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
+
   d.update({
     message: 'Fetching registry from published URL, please wait...',
   })
@@ -661,6 +681,11 @@ const onUnguard = () => {
 
 const onBurn = () => {
   status.value = 'burned'
+}
+
+const reset = async () => {
+  nftTypesSelectedForPublication.value = []
+  await initBcmr()
 }
 
 const loadNftTypes = async () => {
