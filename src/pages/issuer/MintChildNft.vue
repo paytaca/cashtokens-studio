@@ -1,7 +1,7 @@
 <template>
   <q-page>
     <div class="row justify-center q-gutter-md">
-      <div class="col-xs-12 col-sm-10 col-lg-9 bg-dark q-pa-lg">
+      <div class="col-xs-12 col-sm-10 col-lg-9  q-pa-lg">
         <div class="row q-gutter-md">
           <div class="col-xs-12">
             <q-avatar v-if="minter.value?.identitySnapshot?.uris?.icon" square size="5em">
@@ -9,26 +9,32 @@
             </q-avatar>
           </div>
           <div class="col-xs-12">
-            <div v-if="minter.value?.identitySnapshot?.token?.symbol" class="row">
-              <div class="col-xs-5 col-sm-4">Symbol</div>
-              <div class="col-xs-7 col-sm-auto"><strong>{{ minter.value.identitySnapshot.token.symbol }}</strong></div>
-            </div>
             <div class="row">
-              <div class="col-xs-5 col-sm-4">Token ID</div>
-              <div class="col-xs-7 col-sm-auto">{{ $q.screen.lt.md ? shortenTx(state.token.tokenId || '') :
-                state.token.tokenId }}</div>
+              <div class="col-xs-5 col-sm-4 text-caption">Token ID</div>
+              <div class="col-xs-7 col-sm-auto">
+                {{ minter.value.identitySnapshot?.token?.category ?
+                  shortenTokenId(minter.value.identitySnapshot?.token?.category) : '' }}
+              </div>
             </div>
+            <div v-if="minter.value?.identitySnapshot?.token?.symbol" class="row">
+              <div class="col-xs-5 col-sm-4 text-caption">Symbol</div>
+              <div class="col-xs-7 col-sm-auto text-caption text-primary" style="letter-spacing: 2px;"><strong>{{
+                minter.value.identitySnapshot.token.symbol
+              }}</strong></div>
+            </div>
+
             <div class="row">
               <div class="col-xs-5 col-sm-4">Nft Collection Type</div>
-              <div class="col-xs-7 col-sm-auto">{{ minter.value?.nftCollectionType }}</div>
+              <div class="col-xs-7 col-sm-auto text-caption">{{ minter.value?.nftCollectionType }}</div>
             </div>
             <div v-if="minter.value?.nftCollectionType == 'ParsableNftCollection'" class="row">
-              <div class="col-xs-5 col-sm-4">Parsing Bytecode</div>
-              <div class="col-xs-7 col-sm-auto">{{ minter.value.identitySnapshot.token.nfts.parse.bytecode }}</div>
+              <div class="col-xs-5 col-sm-4 text-caption">Parsing Bytecode</div>
+              <div class="col-xs-7 col-sm-auto text-caption">{{ minter.value.identitySnapshot.token.nfts.parse.bytecode }}
+              </div>
             </div>
             <div class="row">
-              <div class="col-xs-5 col-sm-4">Minter's Commitment</div>
-              <div class="col-xs-7 col-sm-auto ">
+              <div class="col-xs-5 col-sm-4 text-caption">Minter's Commitment</div>
+              <div class="col-xs-7 col-sm-auto text-caption">
                 {{
                   state.mintersCommitment?.length == 0 ? '--' : formatCommitment(state.mintersCommitment, 'vm-number',
                     'decimal').toString()
@@ -48,7 +54,7 @@
       </div>
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <q-stepper v-model="state.step" active-color="warning" done-icon="done_all" done-color="primary" vertical animated
-          flat>
+          flat class="bg-transparent">
           <q-step :name="1" :title="!state.mintTx ? 'Mint the token' : '🎉 NFT Minted!'" icon="token"
             :done="state.step > 1">
             <q-chip v-if="state.mintTx" square>
@@ -297,6 +303,8 @@
             done-icon="done_all">
 
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
+              <q-btn name="stepper-nav" flat @click.stop="state.step = 3" color="primary" label="Back" class="q-ml-sm"
+                size="lg" />
               <q-btn name="stepper-nav" flat @click.stop="router.back()" color="primary" label="Exit" class="q-ml-sm"
                 size="lg" />
               <q-btn name="stepper-nav" color="primary" size="lg" @click.stop="mintAgain" label="Mint Again"
@@ -310,23 +318,24 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick, onBeforeUnmount, unref } from 'vue';
-import { NFTCapability, NftType, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js';
-import { useQuasar } from 'quasar';
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
+import { NFTCapability, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js'
+import { useQuasar } from 'quasar'
+import { AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app'
 import { useUser } from 'src/stores/user'
-import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types';
-import { shortenTokenId, shortenTx, shortenAddress, openTxInExplorer, formatCommitment, copyText, ipfsToGatewayUrl } from 'src/app/utils';
-import { useEventBus } from 'src/composables';
-import { useUI } from 'src/stores/ui';
-import { RegistryNftType } from 'src/app';
-import { onBeforeRouteLeave, onBeforeRouteUpdate, useRoute, useRouter } from 'vue-router';
-import { bigIntToVmNumber, sha1 } from '@bitauth/libauth';
+import { BcmrStorageArtifact } from 'src/app/types'
+import { shortenTokenId, shortenTx, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/app/utils'
+import { useEventBus } from 'src/composables'
+import { useUI } from 'src/stores/ui'
+import { RegistryNftType } from 'src/app'
+import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { bigIntToVmNumber, sha1 } from '@bitauth/libauth'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
-import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
-import { useLocalForage } from 'src/composables/useLocalForage';
-import { usePage } from 'src/stores/page';
-import { useMinter } from 'src/stores/minter';
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { useLocalForage } from 'src/composables/useLocalForage'
+import { usePage } from 'src/stores/page'
+import { useMinter } from 'src/stores/minter'
+import TokenCategory from 'src/components/TokenCategory.vue'
 
 const MINT_ONE_NFT = 'Mint 1 NFT'
 const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
@@ -896,10 +905,6 @@ const clearSavedNfts = async () => {
 
 const publishRegistry = async () => {
 
-  // if (state.value.options.publishOption == 'later') {
-  //   return state.value.step = 4
-  // }
-  // check if this is an authchain authhead
   if (minter.value?.utxoSpent) {
     await minter.value.updateUtxo()
     await minter.value.updateAuthKeyUtxo()
