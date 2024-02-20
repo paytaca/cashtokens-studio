@@ -4,7 +4,10 @@ const routes: RouteRecordRaw[] = [
   { 
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
-    children: [{ path: '', component: () => import('pages/IndexPage.vue') }],
+    children: [
+      { path: '', component: () => import('pages/IndexPage.vue') },
+      { name: 'nft-metadata', path: 'nft-metadata', component: () => import('pages/NftMetadata.vue') },
+    ],
   },
   {
     path: '/issuer',
@@ -27,7 +30,6 @@ const routes: RouteRecordRaw[] = [
       { name: 'registries', path: 'registries', component: () => import('pages/issuer/manage/Registries.vue') },
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'authguards', path: 'authguards', component: () => import('pages/issuer/manage/AuthGuards.vue') },
-
       { path: 'token/:identifier', component: () => import('pages/TokenMetadata.vue')},
     ],
   },

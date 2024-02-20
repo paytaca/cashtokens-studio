@@ -68,11 +68,11 @@
                   <q-menu>
                     <q-list>
                       <q-item clickable v-close-popup
-                        @click.stop="openDialog(AuthchainRegistryPublisherDialog.__name, value.row)">
+                        @click.stop="openPublisherDialog('url', value.row.identitySnapshot?.token?.category, value.row)">
                         Publish Registry From URL
                       </q-item>
                       <q-item clickable v-close-popup
-                        @click.stop="openDialog(AuthchainRegistryFromFilePublisherDialog.__name, value.row)">
+                        @click.stop="openPublisherDialog('file', value.row.identitySnapshot?.token?.category, value.row)">
                         Publish Registry From File
                       </q-item>
                     </q-list>
@@ -96,7 +96,7 @@
 import { onMounted, ref, computed, inject, onBeforeUnmount, onBeforeMount, defineComponent } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, ChainGraph, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import { Wallet } from 'mainnet-js';
@@ -179,6 +179,45 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
     }
 
   }
+}
+
+const openPublisherDialog = async (type: 'url' | 'file', tokenId: string, authchainIdentity: AuthchainIdentity) => {
+
+  let proceed = false
+  const d = $q.dialog({
+    message: 'Checking if this UTXO has authority to publish metadata for this particular token id...',
+    progress: true,
+    class: 'q-pa-lg',
+    ok: false
+  })
+
+  const authhead = await (new ChainGraph()).fetchAuthheadTxid(tokenId)
+  console.log('AUTHHEAD', authchainIdentity.txid)
+
+  if (authhead != authchainIdentity.txid) {
+    d.update({
+      dark: true,
+      message: 'Unauthorized, this UTXO isn\'t the current authhead for this particular token id.',
+      persistent: true,
+      ok: true,
+      focus: 'ok',
+      progress: false
+    }).onDismiss(() => {
+      proceed = false
+    })
+  } else {
+    proceed = true
+  }
+  d.hide()
+
+  if (!proceed) return
+
+  if (type == 'file') {
+    openDialog(AuthchainRegistryFromFilePublisherDialog.__name, authchainIdentity)
+  } else {
+    openDialog(AuthchainRegistryPublisherDialog.__name, authchainIdentity)
+  }
+
 }
 
 onBeforeMount(async () => {
