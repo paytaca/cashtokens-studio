@@ -84,8 +84,8 @@
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
+                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" dense
+                  no-caps @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
                 </q-btn>
               </q-td>
             </template>
