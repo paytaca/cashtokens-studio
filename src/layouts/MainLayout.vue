@@ -7,7 +7,7 @@
         <q-toolbar-title>
           <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')"
             :src="$q.screen.xs ? 'images/cts_icon.png' : 'images/cts_transparent.png'"
-            style="max-height: 3em;object-fit: fill;max-width:8em"></q-img>
+            style="max-height: 3em;object-fit: fill;max-width:8em" class="cursor-pointer"></q-img>
           <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         <div v-if="user.walletAddress" class="q-mx-sm">

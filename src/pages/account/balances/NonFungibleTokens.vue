@@ -49,7 +49,7 @@
                                         </div>
                                     </div>
                                 </q-img>
-                                <q-icon v-else name="token" size="170px" color="grey"></q-icon>
+                                <q-icon v-else name="perm_media" size="170px" color="grey"></q-icon>
                                 <div class="q-px-sm text-left">
                                     <code class="text-caption">{{ `<${i.row.token.commitment}>` }}</code>
                                     <div v-if="i.row.nftTypeMetadata?.name" class="ellipsis">
