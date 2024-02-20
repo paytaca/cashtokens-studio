@@ -37,7 +37,7 @@
                           value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
                       }}
                     </div>
-                    <div class="text-bold">
+                    <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                       ({{ value.row.identitySnapshot?.token?.symbol }})
                     </div>
                   </div>
