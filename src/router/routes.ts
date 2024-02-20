@@ -14,12 +14,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'create-token', path: 'tokens/create', component: () => import('pages/issuer/CreateToken.vue') },
       { name: 'create-nft-collection', path: 'tokens/create/nft-collection', component: () => import('pages/issuer/CreateNftCollection.vue') },
       { name: 'import-auth-utxo', path: 'tokens/import-auth-utxo', component: () => import('pages/issuer/ImportAuthUtxo.vue') },
-      { name: 'mint-child-nft', path: 'tokens/mint-child-nft', component: () => import('pages/issuer/MintChildNft.vue'), meta: { pageTitle: 'Mint NFT'},
-        beforeEnter: (route) => {
-          // check and load
-        }
-
-      },
+      { name: 'mint-child-nft', path: 'tokens/mint-child-nft', component: () => import('pages/issuer/MintChildNft.vue')},
     ],
   },
   {
@@ -33,7 +28,7 @@ const routes: RouteRecordRaw[] = [
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'authguards', path: 'authguards', component: () => import('pages/issuer/manage/AuthGuards.vue') },
 
-      { path: 'token/:identifier', component: () => import('pages/TokenView.vue')},
+      { path: 'token/:identifier', component: () => import('pages/TokenMetadata.vue')},
     ],
   },
   {
