@@ -12,41 +12,22 @@
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ftBalances.results"
             :columns="[
               {
-                name: 'icon', label: 'Icon',
-                field: r => r.identitySnapshot?.uris?.icon || '<not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'tokenid', label: 'Category',
-                field: 'tokenid',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'decimals', label: 'Decimals',
-                field: r => !r.identitySnapshot?.token ? '<metadata not found>' : r.identitySnapshot?.token?.decimals || 0,
-                align: 'center',
-                headerStyle: 'padding: 1.5em',
-                style: 'font-size: 1em;',
-                classes: r => r.identitySnapshot?.token?.decimals ? 'ellipsis text-warning' : 'ellipsis'
-              },
-              {
                 name: 'balance', label: 'Balance',
                 field: 'balance',
-                align: 'center',
+                align: 'left',
                 headerStyle: 'padding: 1.5em',
-                style: 'font-size: 1em;font-weight: bold',
-                classes: 'ellipsis'
+                style: 'font-size: 1em;font-weight: bolder',
+                classes: 'ellipsis',
+                headerClasses: 'text-h5'
               },
               {
-                name: 'actions', label: 'Send',
+                name: 'actions', label: '',
                 field: r => '',
-                align: 'center',
+                align: 'left',
                 headerStyle: 'padding: 1.5em'
 
               }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="['balance', 'actions']">
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -64,23 +45,52 @@
             </template>
             <template v-slot:body-cell-balance="value">
               <q-td>
-                <div class="row justify-evenly flex wrap">
-                  <div class="text-positive text-right" :class="$q.screen.lt.sm ? 'col-auto' : 'col'"
-                    style="font-variant-numeric: tabular-nums; font-size: 1.5em; letter-spacing: 2px;">
-                    {{ ftAmountFormatter.toDecimal(value.row.balance.toString(),
-                      value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                    }} </div>
+                <div class="row justify-left items-center flex wrap q-gutter-sm">
+                  <div class="col-auto">
+                    <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                      <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    </q-avatar>
+                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                  </div>
+                  <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
+                    <div style="font-variant-numeric: tabular-nums;" class="text-positive">
+                      {{
+                        ftAmountFormatter.toDecimal(value.row.balance.toString(),
+                          value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }}
+                    </div>
+                    <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                      ({{ value.row.identitySnapshot?.token?.symbol }})
+                    </div>
+                  </div>
 
-                  <div class="col text-bold text-left q-pl-sm" style="letter-spacing: 2px;">({{
-                    value.row.identitySnapshot?.token?.symbol }})</div>
+                  <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                    <div v-if="value.row.identitySnapshot?.token">
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
+                        <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                      </div>
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Decimals: <span
+                          :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
+                            value.row.identitySnapshot?.token?.decimals }}</span>
+                      </div>
+                    </div>
+                    <div v-else class="text-grey-8">
+                      {{ '<metadata not found>' }}
+                    </div>
+
+                  </div>
                 </div>
+
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn text-color="primary" icon="send" dense no-caps
+                <q-btn text-color="primary" icon="send" no-caps
                   @click="openDialog(FTBalanceTransferDialog.__name, value.row)"
-                  :disable="value.row.balance > Number.MAX_SAFE_INTEGER" size="md"></q-btn>
+                  :disable="value.row.balance > Number.MAX_SAFE_INTEGER" size="md"
+                  :label="$q.screen.gt.xs ? 'Send' : ''"></q-btn>
               </q-td>
             </template>
           </q-table>
@@ -92,30 +102,22 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
+import { ref, computed, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, BcmrIndexer, CashToken, Watchtower } from 'src/app'
-import { FungibleTokenBalance, PaginatedData, TransactionSigner } from 'src/app/types';
+import { BcmrIndexer, Watchtower } from 'src/app'
+import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
 import { FetchUtxoQueryParams } from 'src/app/Watchtower'
 import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
-import { IdentitySnapshot, URIs, UtxoI, Wallet } from 'mainnet-js';
-import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
-import { EventBus, useQuasar } from 'quasar';
+import { IdentitySnapshot, UtxoI, Wallet } from 'mainnet-js';
+import { shortenTokenId } from 'src/app/utils';
+import { useQuasar } from 'quasar';
 import TokenCategory from 'src/components/TokenCategory.vue'
-import { Console } from 'console';
 import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
 defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
 const user = useUser()
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-
-const visibleColumns = computed(() => {
-  if ($q.screen.lt.sm) {
-    return ['icon', 'balance', 'actions']
-  }
-  return ['icon', 'tokenid', 'decimals', 'balance', 'actions']
-})
 
 const ftBalances = ref<PaginatedData>({
   count: 0,
