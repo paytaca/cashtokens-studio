@@ -1,5 +1,4 @@
-import { IdentitySnapshot, NFTCapability, TokenI, UtxoI } from "mainnet-js"
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema"
+import { IdentitySnapshot, NFTCapability, UtxoI, TokenCategory, URIs} from "mainnet-js"
 
 export type NftCollectionType = 'SequentialNftCollection' | 'ParsableNftCollection' //
 

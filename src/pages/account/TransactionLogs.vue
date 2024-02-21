@@ -31,9 +31,9 @@
                   <q-btn :href="explore(t.txid)" target="_blank" flat dense color="secondary" size="sm">
                     <template v-slot:default>
                       <code>
-                                                  {{ shortenTx(t.txid) }}
-                                                  <q-tooltip>View in explorer</q-tooltip>
-                                                </code>
+                                                    {{ shortenTx(t.txid) }}
+                                                    <q-tooltip>View in explorer</q-tooltip>
+                                                  </code>
                     </template>
                   </q-btn>
                 </td>
@@ -52,7 +52,6 @@
 import ClientDB from 'src/app/clientonly/ClientDB';
 import { CashTokenTransaction } from 'src/app/types';
 import { computed, onMounted, ref } from 'vue';
-import TransactionId from 'src/components/TransactionId.vue'
 import { shortenTx } from 'src/app/utils';
 
 const transactions = ref<CashTokenTransaction[]>()

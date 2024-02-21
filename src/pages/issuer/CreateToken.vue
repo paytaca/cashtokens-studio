@@ -46,12 +46,11 @@
 import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { UtxoI, Wallet } from 'mainnet-js';
-import { uid, useQuasar } from 'quasar';
+import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { GenesisInput, AuthKey, DEFAULT_TOKEN_VALUE } from 'src/app'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
-import { useStatusBar } from 'src/composables/useStatusBar'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { useWalletConnect } from 'src/composables/useWalletConnect';

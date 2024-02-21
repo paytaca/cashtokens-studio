@@ -161,8 +161,8 @@
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { AuthchainIdentity, Bcmr } from 'src/app';
-import { NftType, Registry, URIs } from 'src/app/bcmr/bcmr-v2.schema';
+import { AuthchainIdentity, Bcmr } from 'src/app'
+import { NftType, URIs } from 'mainnet-js'
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'

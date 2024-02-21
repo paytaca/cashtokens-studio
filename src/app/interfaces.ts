@@ -1,4 +1,4 @@
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { TokenCategory, URIs } from "mainnet-js";
 
 export declare interface PartialBcmr {
     tokenCategory?: TokenCategory,

@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
-import { DialogChainObject } from 'quasar';
-import { AuthchainIdentity, CashToken } from 'src/app';
-import { TokenCategory, URIs } from 'src/app/bcmr/bcmr-v2.schema';
+import { DialogChainObject } from 'quasar'
+import { AuthchainIdentity, CashToken } from 'src/app'
+import { TokenCategory, URIs } from 'mainnet-js'
 
 type TokenIdCache = {
   [tokenId:string]: string|number|undefined
