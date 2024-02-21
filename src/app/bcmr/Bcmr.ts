@@ -1,8 +1,115 @@
-import { ChainHistory, Extensions, IdentityHistory, IdentitySnapshot, NftCategory, NftType, OffChainRegistryIdentity, ParsableNftCollection, Registry, SequentialNftCollection, Tag, TokenCategory, URIs } from "./bcmr-v2.schema";
+
+import { 
+  binToHex, sha256, utf8ToBin, 
+  ChainHistory, Extensions, IdentityHistory, 
+  IdentitySnapshot, NftCategory, NftType,
+  OffChainRegistryIdentity, Registry, 
+  Tag, TokenCategory, URIs } from "mainnet-js";
 import { AuthchainIdentity } from "../";
-import { binToHex, hexToBin, sha256, utf8ToBin } from "mainnet-js";
 import { BcmrStorageArtifact } from "../types";
-import { Token } from "nft.storage";
+
+// ! Copied, because it's not exported by mainnet-js
+/**
+ * Interpretation information for a collection of sequential NFTs, a collection
+ * in which each NFT includes only a sequential identifier within its on-chain
+ * commitment. Note that {@link SequentialNftCollection}s differ from
+ * {@link ParsableNftCollection}s in that sequential collections lack a
+ * parsing `bytecode` with which to inspect each NFT commitment: the type of
+ * each NFT is indexed by the full contents its commitment (interpreted as a
+ * positive VM integer in user interfaces).
+ */
+export type SequentialNftCollection = {
+  /**
+   * A mapping of each NFT commitment (typically, a positive integer encoded as
+   * a VM number) to metadata for that NFT type in this category.
+   */
+  types: {
+    /**
+     * Interpretation information for each type of NFT within the token
+     * category, indexed by commitment hex. For sequential NFTs, the on-chain
+     * commitment of each NFT is interpreted as a VM number to reference its
+     * particular NFT type in user interfaces. Issuing a sequential NFT with a
+     * negative or invalid VM number is discouraged, but clients may render the
+     * commitment of such NFTs in hex-encoded form, prefixed with `X`.
+     */
+    [commitmentHex: string]: NftType;
+  };
+};
+
+/**
+ * Interpretation information for a collection of parsable NFTs, a collection
+ * in which each NFT may include additional metadata fields beyond a sequential
+ * identifier within its on-chain commitment. Note that
+ * {@link ParsableNftCollection}s differ from {@link SequentialNftCollection}s
+ * in that parsable collections require a parsing `bytecode` with which to
+ * inspect each NFT commitment: the type of each NFT is indexed by the
+ * hex-encoded contents the bottom item on the altstack following the evaluation
+ * of the parsing bytecode.
+ */
+export type ParsableNftCollection = {
+  /**
+   * A segment of hex-encoded Bitcoin Cash VM bytecode that parses UTXOs
+   * holding NFTs of this category, identifies the NFT's type within the
+   * category, and returns a list of the NFT's field values via the
+   * altstack. If undefined, this NFT Category includes only sequential NFTs,
+   * with only an identifier and no NFT fields encoded in each NFT's
+   * on-chain commitment.
+   *
+   * The parse `bytecode` is evaluated by instantiating and partially
+   * verifying a standardized NFT parsing transaction:
+   * - version: `2`
+   * - inputs:
+   *   - 0: Spends the UTXO containing the NFT with an empty
+   *   unlocking bytecode and sequence number of `0`.
+   *   - 1: Spends index `0` of the empty hash outpoint, with locking
+   *   bytecode set to `parse.bytecode`, unlocking bytecode `OP_1`
+   *   (`0x51`) and sequence number `0`.
+   * - outputs:
+   *   - 0: A locking bytecode of OP_RETURN (`0x6a`) and value of `0`.
+   * - locktime: `0`
+   *
+   * After input 1 of this NFT parsing transaction is evaluated, if the
+   * resulting stack is not valid (a single "truthy" element remaining on
+   * the stack) – or if the altstack is empty – parsing has failed and
+   * clients should represent the NFT as unable to be parsed (e.g. simply
+   * display the full `commitment` as a hex-encoded value in the user
+   * interface).
+   *
+   * On successful parsing evaluations, the bottom item on the altstack
+   * indicates the type of the NFT according to the matching definition in
+   * `types`. If no match is found, clients should represent the NFT as
+   * unable to be parsed.
+   *
+   * For example: `00d2517f7c6b` (OP_0 OP_UTXOTOKENCOMMITMENT OP_1 OP_SPLIT
+   * OP_SWAP OP_TOALTSTACK OP_TOALTSTACK) splits the commitment after 1 byte,
+   * pushing the first byte to the altstack as an NFT type identifier and the
+   * remaining segment of the commitment as the first NFT field value.
+   *
+   * If undefined (in a {@link SequentialNftCollection}), this field could be
+   * considered to have a default value of `00d26b` (OP_0 OP_UTXOTOKENCOMMITMENT
+   * OP_TOALTSTACK), which takes the full contents of the commitment as a fixed
+   * type index. As such, each index of the NFT category's `types` maps a
+   * precise commitment value to the metadata for NFTs with that particular
+   * commitment. E.g. an NFT with an empty commitment (VM number 0) maps to
+   * `types['']`, a commitment of `01` (hex) maps to `types['01']`, etc. This
+   * pattern is used for collections of sequential NFTs.
+   */
+  bytecode: string;
+  /**
+   * A mapping of hex-encoded values to definitions of possible NFT types
+   * in this category.
+   */
+  types: {
+    /**
+     * A definitions for each type of NFT within the token category. Parsable
+     * NFT types are indexed by the hex-encoded value of the bottom altstack
+     * item following evaluation of `NftCategory.parse.bytecode`. The remaining
+     * altstack items are mapped to NFT fields according to the `fields`
+     * property of the matching NFT type.
+     */
+    [bottomAltstackHex: string]: NftType;
+  };
+};
 
 export class Bcmr implements Registry {
 
@@ -231,6 +338,61 @@ export class Bcmr implements Registry {
     }
   }
 
+  getAuthbase(): string[]{
+    return Object.keys(this.identities||{})
+  }
+
+  getIdentityHistory(authbase:string):string[]{
+    if (this.identities) {
+      return Object.keys(this.identities[authbase] || {}).sort((date1: string, date2: string) => {
+        if (date1 > date2) return -1;
+        if (date1 < date2) return 1;
+        return 0;
+      })
+    }
+    return []
+  }
+
+  getIdentitySnapshot(authbase:string, identity_history:string){
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      return this.identities[authbase][identity_history]
+    }
+    return null
+  }
+  
+  addIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        this.identities[authbase][identity_history].uris = {
+          ...this.identities[authbase][identity_history].uris,
+          ...uri
+        }
+        console.log('AFTER', this.identities[authbase][identity_history].uris)
+      } 
+    }
+  }
+
+  setIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        this.identities[authbase][identity_history].uris = {
+          ... this.identities[authbase][identity_history].uris,
+          ...uri
+        }
+      } 
+    }
+  }
+
+  removeIdentitySnapshotUri(authbase:string, identity_history:string, uriName: string) {
+    if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
+      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+        console.log('URI NAME', uriName)
+        console.log('REMOVING', this.identities![authbase]![identity_history].uris)
+        delete this.identities![authbase]![identity_history].uris![uriName]
+      } 
+    }
+  }
+  
   /**
    * IdentitySnapshot URI
    */
@@ -271,7 +433,7 @@ export class Bcmr implements Registry {
         this.getToken()!.nfts = {
           parse: {
             types: {}
-          } as SequentialNftCollection
+          } as ParsableNftCollection
         } 
       } 
       this.getToken()!.nfts!.parse.types[commitmentHex] = nft
@@ -326,6 +488,10 @@ export class Bcmr implements Registry {
     }
   }
 
+  get contentHash () {
+    return binToHex(sha256.hash(utf8ToBin(this.getContent())))
+  }
+
   /**
    * Hash of the registry
    */
@@ -344,10 +510,14 @@ export class Bcmr implements Registry {
         method: 'POST', body: this.getContent(),
         headers: { 'Content-Type': 'application/json' }
       })
+      if (resp.status >= 400) {
+        throw new Error('Error, storing registry in IPFS, please try again later.')
+      }
       const respJson = await resp.json()
       return respJson.artifact
     } catch (error) {
       console.log(error)
+      throw error 
     } finally {
       delete this._processing
     }

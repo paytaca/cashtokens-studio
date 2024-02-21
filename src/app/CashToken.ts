@@ -1,21 +1,19 @@
-import { AuthChain, BCMR, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE, Watchtower } from '.'
+import { AuthChain, BCMR, IdentitySnapshot, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
+import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from '.'
 import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
-import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { binToHex, binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
+import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { NftType, TokenCategory, URIs } from "mainnet-js";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 import { ProcessingMessage } from "."
-import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 
 /**
- * TODO: Transfer token genesis functionality to GenesisInput, 
+ * TODO: Transfer token genesis functionality to GenesisInput,
  * it makes more sense there.
  */
 export class CashToken implements UtxoI, PartialBcmr {
@@ -30,9 +28,9 @@ export class CashToken implements UtxoI, PartialBcmr {
   authKey?: AuthKey
   registry?: { uri: string|string[], contentHash: string }
   /**
-   * TokenCategory is a portion of the BCMR schema, we attached it here 
+   * TokenCategory is a portion of the BCMR schema, we attached it here
    * since this serves as the token's profile and maybe frequently accessed
-   * CAUTION: Do not include the `nfts` field 
+   * CAUTION: Do not include the `nfts` field
    * it might have a lot of items, e.g. BITCATS might
    * have 10k items.
    */
@@ -50,9 +48,14 @@ export class CashToken implements UtxoI, PartialBcmr {
   includeAuthKeyGenesis: boolean
   defaultNftCollectionType: NftCollectionType
   transactionSigner?: TransactionSigner
+  utxoSpent?: boolean
   private _processing?: string
   private static _processing?: string
-  
+  // Metadata
+  identitySnapshot?: IdentitySnapshot
+  nftType?: { [key:string]: NftType, _meta: any }
+
+
   constructor(
     u?: {
       txid: string;
@@ -107,6 +110,12 @@ export class CashToken implements UtxoI, PartialBcmr {
     this.height = u.height
     this.coinbase = u.coinbase
     this.token = u.token
+    this.utxoSpent = false
+  }
+
+  get nftTypeMetadata(): NftType |undefined {
+    const commitment = this.nftType?._meta?.commitment
+    return commitment ? this.nftType![commitment]: undefined
   }
 
   get processing():string|undefined {
@@ -123,6 +132,13 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   static set processing(msg: string|undefined) {
     CashToken._processing = msg
+  }
+
+  get nftCollectionType():NftCollectionType {
+    if (!this.identitySnapshot?.token?.nfts?.parse?.bytecode || this.identitySnapshot?.token?.nfts?.parse?.bytecode == '00d26b') {
+      return 'SequentialNftCollection'
+    }
+    return 'ParsableNftCollection'
   }
 
   get genesisCost(): number {
@@ -238,9 +254,9 @@ export class CashToken implements UtxoI, PartialBcmr {
     this.ensureTxid()
     this.ensureOwnerWallet()
     this._processing = 'Processing'
-    opt = { 
-      useAuthGuard: this.useAuthGuard, 
-      includeAuthKeyGenesis: this.includeAuthKeyGenesis, 
+    opt = {
+      useAuthGuard: this.useAuthGuard,
+      includeAuthKeyGenesis: this.includeAuthKeyGenesis,
       nftCollectionType: this.defaultNftCollectionType,
       ...opt
     }
@@ -258,10 +274,10 @@ export class CashToken implements UtxoI, PartialBcmr {
 
     if (commitment && opt.commitmentFormat === 'decimal') {
       commitment = convertBigIntToHexLE(BigInt(commitment))
-    } 
-    
+    }
+
     if (commitment && opt.commitmentFormat === 'hex') {
-      if (opt.nftCollectionType === 'SequentialNftCollection') { 
+      if (opt.nftCollectionType === 'SequentialNftCollection') {
         // if (commitment === CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT) {
         //   commitment = 'feed'
         // } else {
@@ -271,7 +287,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         // }
         commitment = parseInt(commitment, 16).toString()
         commitment = convertBigIntToHexLE(BigInt(commitment))
-      } 
+      }
     } /*else commitment is raw hex provided by user*/
     console.log('AMOUNT', opt.amount)
     requests.push(this.prepareGenesisAuthchainIdentityReq({
@@ -299,7 +315,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     if (typeof decoded === 'string') {
       throw new Error('Error decoding transaction')
     }
-    
+
     try {
       signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Create Token')
     } catch (error:any) {
@@ -332,15 +348,15 @@ export class CashToken implements UtxoI, PartialBcmr {
     //       this.token?.tokenId option made available so that authchain can still
     //       be built after genesis
     const authChain = await BCMR.buildAuthChain({ transactionHash: this.token?.tokenId || this.utxo.txid, network: this.ownerWallet!.network })
-    delete this._processing 
+    delete this._processing
     return authChain
-    
-  } 
+
+  }
 
   static async send(arg:{tokenId: string, amount: bigint, to: string, capabality?:NFTCapability, commitment?:string, ownerWallet: Wallet, processingMessage?: ProcessingMessage, transactionSigner?: TransactionSigner}):Promise<string|undefined> {
     CashToken._processing = 'Processing'
     arg?.processingMessage?.setProcessing('Processing')
-    
+
     const requests = [
       new TokenSendRequest({
         cashaddr: arg.to,
@@ -365,11 +381,11 @@ export class CashToken implements UtxoI, PartialBcmr {
     )
 
     CashToken._processing = 'Waiting for signature'
-    arg?.processingMessage?.setProcessing('Waiting for signature')  
+    arg?.processingMessage?.setProcessing('Waiting for signature')
     let signResult
 
     try {
-      
+
       this._processing = 'Waiting for signature'
       signResult = await arg.transactionSigner?.signTransaction(decodeTransaction(encodedTransaction), sourceOutputs, false, 'Send Tokens')
     } catch (error) {
@@ -380,7 +396,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
 
     CashToken._processing = `Sending tokens`
-    arg?.processingMessage?.setProcessing(`Sending tokens`)  
+    arg?.processingMessage?.setProcessing(`Sending tokens`)
     try {
       return await submitTransaction(signResult, arg.ownerWallet)
     } catch (error) {
@@ -389,18 +405,18 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw error
     } finally {
       delete CashToken._processing
-      arg?.processingMessage?.deleteProcessing()  
+      arg?.processingMessage?.deleteProcessing()
     }
 
   }
 
   /**
-   * @param {boolean} arg.excludeFromSequentialNftCollection - If true, the commitment of the SequentialNftCollection's minter won't change, the last sequence number is retained. 
+   * @param {boolean} arg.excludeFromSequentialNftCollection - If true, the commitment of the SequentialNftCollection's minter won't change, the last sequence number is retained.
    *  This is so the issuer can create another minter, or mutable NFT of the same category with an option to not add it as part of the collection. If the value is undefined or false
    *  the child NFT will be part of the collection and so the minter's commitment will increment.
    */
   async mintChild(arg:{ capability: NFTCapability, commitment: string, commitmentFormat: 'decimal'|'hex', nftCollectionType?: NftCollectionType, recipient: string, excludeFromSequentialNftCollection?: boolean}): Promise<string|undefined>{
-    
+
     if (this.token?.capability !== NFTCapability.minting) {
       throw new Error('No capability to mint')
     }
@@ -435,22 +451,22 @@ export class CashToken implements UtxoI, PartialBcmr {
     let commitment = arg.commitment
     if (commitment && arg.commitmentFormat === 'decimal') {
       commitment = convertBigIntToHexLE(BigInt(commitment))
-    } 
-    
+    }
+
     if (commitment && arg.commitmentFormat === 'hex') {
-      if (arg.nftCollectionType === 'SequentialNftCollection') { 
+      if (arg.nftCollectionType === 'SequentialNftCollection') {
         commitment = parseInt(commitment, 16).toString()
         commitment = convertBigIntToHexLE(BigInt(commitment))
-      } 
+      }
     } /*else commitment is raw hex provided by user*/
-    
+
     let transaction
     let decoded
     // track the commitment of last minted child NFT
     // by storing the commitment in parent usually CashToken with minting capability
     // TODO: test using mutable token as parent
     if (arg.excludeFromSequentialNftCollection !== true) {
-      authchainIdentityOutput.token!.nft!.commitment = commitment 
+      authchainIdentityOutput.token!.nft!.commitment = commitment
     }
     try {
       transaction =
@@ -565,7 +581,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
     signingResult.signedTransaction
     this._processing = 'Minting'
-    let tx 
+    let tx
     try {
       // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
@@ -582,7 +598,363 @@ export class CashToken implements UtxoI, PartialBcmr {
       delete this._processing
     }
 
-    
+
+  }
+
+  /**
+   * @param {boolean} arg.excludeFromSequentialNftCollection - If true, the commitment of the SequentialNftCollection's minter won't change, the last sequence number is retained.
+   *  This is so the issuer can create another minter, or mutable NFT of the same category with an option to not add it as part of the collection. If the value is undefined or false
+   *  the child NFT will be part of the collection and so the minter's commitment will increment.
+   */
+  async mintChildren(arg:{ capability: NFTCapability, commitment: string, commitmentFormat: 'decimal'|'hex', nftCollectionType?: NftCollectionType, recipient: string, excludeFromSequentialNftCollection?: boolean, quantity: number}): Promise<string|undefined>{
+
+    if (this.token?.capability !== NFTCapability.minting) {
+      throw new Error('No capability to mint')
+    }
+
+    if (!arg.recipient) {
+      throw new Error('Missing recipient')
+    }
+
+    if (!arg.nftCollectionType) {
+      arg.nftCollectionType = this.defaultNftCollectionType
+    }
+
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3 + arg.quantity})
+    const mintCost = minerFee + (DEFAULT_TOKEN_VALUE * arg.quantity)
+    // TODO: use watchtower
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+    const [authchainIdentityOutput, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authKey!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+
+    let commitment = arg.commitment
+    if (commitment && arg.commitmentFormat === 'decimal') {
+      commitment = convertBigIntToHexLE(BigInt(commitment))
+    }
+
+    if (commitment && arg.commitmentFormat === 'hex') {
+      if (arg.nftCollectionType === 'SequentialNftCollection') {
+        commitment = parseInt(commitment, 16).toString()
+        commitment = convertBigIntToHexLE(BigInt(commitment))
+      }
+    } /*else commitment is raw hex provided by user*/
+
+    let transaction
+    let decoded
+    // track the commitment of last minted child NFT
+    // by storing the commitment in parent usually CashToken with minting capability
+    // TODO: test using mutable token as parent
+    if (arg.excludeFromSequentialNftCollection !== true) {
+      authchainIdentityOutput.token!.nft!.commitment = commitment
+    }
+
+    const mintOutputs = new Array(Number(arg.quantity || 1)).fill({
+          to: arg.recipient, // token address
+          amount: BigInt(DEFAULT_TOKEN_VALUE),
+          token: {
+            amount: BigInt(0),
+            category: authchainIdentityOutput.token!.category,
+            nft: {
+              commitment: commitment,
+              capability: arg.capability
+            }
+          }
+      })
+
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(true)
+          .from(authchainIdentityOutput) // contract
+          .fromP2PKH([authKeyInput], sig) // AuthNFT/minting baton
+          .fromP2PKH([funderInput], sig) //  Funder
+          .to([{
+            // return authchain identity output to contract
+            to: contractAddress,
+            amount: authchainIdentityOutput.satoshis,
+            token: authchainIdentityOutput.token
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authKey!.satoshis),
+            token: authKeyInput.token
+          }])
+          .to(mintOutputs)
+          .to(funderInput.satoshis - BigInt(mintCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(mintCost)
+          }]:[])
+        .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+      if (typeof decoded === 'string') {
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      const sourceOutputs = [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(authchainIdentityOutput.satoshis),
+          token: authchainIdentityOutput.token && {
+            ...authchainIdentityOutput.token,
+            category: hexToBin(authchainIdentityOutput.token!.category),
+            nft: authchainIdentityOutput.token.nft && {
+              ...authchainIdentityOutput.token.nft,
+              commitment: hexToBin(authchainIdentityOutput.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authKeyInput.satoshis),
+          token: authKeyInput.token && {
+            ...authKeyInput.token,
+            category: hexToBin(authKeyInput.token!.category),
+            nft: authKeyInput.token.nft && {
+              ...authKeyInput.token.nft,
+              commitment: hexToBin(authKeyInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+
+    if (!signingResult) {
+      delete this._processing
+      return
+    }
+
+    signingResult.signedTransaction
+    this._processing = 'Minting'
+    let tx
+    try {
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
+      if (tx) {
+        this._processing = 'Minted'
+        setTimeout(()=> {
+          delete this._processing
+        }, 2000)
+      }
+      return tx
+    } catch (error: any) {
+      throw new Error(error.message)
+    } finally {
+      delete this._processing
+    }
+
+
+  }
+
+  /**
+   * Note: TokenI.commitment is used as is, no modification or formatting being done. Make sure to pass
+   * the VM number if it's a SequentialNftCollection
+   * @param {boolean} arg.newMinterCommitment - If present the minter's commitment will be updated using this value
+   */
+  async mintChildrenExt(arg: {tokens: [TokenI], recipient: string, newMinterCommitment?: string}){
+
+    if (!arg.tokens) return
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3 + arg.tokens.length})
+    const mintCost = minerFee + (DEFAULT_TOKEN_VALUE * arg.tokens.length)
+    // TODO: use watchtower
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+    const [minter, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authKey!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+
+    let transaction
+    let decoded
+    // track the commitment of last minted child NFT
+    // by storing the commitment in parent usually CashToken with minting capability
+    // TODO: test using mutable token as parent
+    if (arg.newMinterCommitment) {
+      minter.token!.nft!.commitment = arg.newMinterCommitment || minter.token!.nft!.commitment
+    }
+    const mintOutputs:any = arg.tokens.map((token:TokenI) => {
+      return {
+        to: arg.recipient, // token address
+        amount: BigInt(DEFAULT_TOKEN_VALUE),
+        token: {
+          amount: BigInt(0),
+          category: minter.token!.category,
+          nft: {
+            commitment: token.commitment,
+            capability: token.capability
+          }
+        }
+      }
+    })
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(true)
+          .from(minter) // contract
+          .fromP2PKH([authKeyInput], sig) // AuthNFT/minting baton
+          .fromP2PKH([funderInput], sig) //  Funder
+          .to([{
+            // return authchain identity output to contract
+            to: contractAddress,
+            amount: minter.satoshis,
+            token: minter.token
+          }])
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authKey!.satoshis),
+            token: authKeyInput.token
+          }])
+          .to(mintOutputs)
+          .to(funderInput.satoshis - BigInt(mintCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(mintCost)
+          }]:[])
+        .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+      if (typeof decoded === 'string') {
+        this._processing = ''
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      this._processing = ''
+      throw error
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+      const sourceOutputs = [
+        {
+          ...decoded.inputs[0],
+          lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+          valueSatoshis: BigInt(minter.satoshis),
+          token: minter.token && {
+            ...minter.token,
+            category: hexToBin(minter.token!.category),
+            nft: minter.token.nft && {
+              ...minter.token.nft,
+              commitment: hexToBin(minter.token.nft.commitment),
+            },
+          },
+          contract: {
+            abiFunction: (transaction as any).abiFunction,
+            redeemScript: scriptToBytecode(bytecode),
+            artifact: artifact,
+          }
+        },
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authKeyInput.satoshis),
+          token: authKeyInput.token && {
+            ...authKeyInput.token,
+            category: hexToBin(authKeyInput.token!.category),
+            nft: authKeyInput.token.nft && {
+              ...authKeyInput.token.nft,
+              commitment: hexToBin(authKeyInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ]
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Mint Child NFT')
+    } catch (error) {
+      console.log(error)
+      this._processing = ''
+      throw error
+    }
+
+    if (!signingResult) {
+      this._processing = ''
+      return
+    }
+
+    signingResult.signedTransaction
+    this._processing = 'Minting'
+    let tx
+    try {
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
+      if (tx) {
+        this._processing = 'Minted'
+        setTimeout(()=> {
+          this._processing = ''
+        }, 2000)
+      }
+      this.utxoSpent = true
+      return tx
+    } catch (error: any) {
+      throw error
+    } finally {
+      this._processing = ''
+    }
   }
 
   async resolveTokenCategory(quite?:boolean){
@@ -591,7 +963,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       if (quite !== true) {
         this._processing = 'Checking token registry'
       }
-      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)  
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`)
       const rj = await r.json()
       if (!rj.error) {
         this.tokenCategory = rj
@@ -604,15 +976,15 @@ export class CashToken implements UtxoI, PartialBcmr {
       delete this._processing
     }
   }
-  
+
   async resolveTokenUris(quite?:boolean){
     if (!this.token?.tokenId) return
     try {
       if (quite !== true) {
         this._processing = 'Checking token registry'
       }
-      
-      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)  
+
+      const r = await fetch(`${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`)
       const rj = await r.json()
       if (!rj.error) {
         this.tokenUris = rj
@@ -624,6 +996,37 @@ export class CashToken implements UtxoI, PartialBcmr {
     }
   }
 
+  async resolveIdentitySnapshot(quite?:boolean) {
+    if (!this.token?.tokenId) return
+    try {
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
+      const r = await (new BcmrIndexer()).fetchIdentitySnapshot(this.token!.tokenId)  
+      this.identitySnapshot = r
+
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
+
+  async resolveNftType(quite?:boolean) {
+    if (!this.token?.tokenId || !this.token?.capability) return
+
+    try {
+      if (quite !== true) {
+        this._processing = 'Downloading nft metadata'
+      }
+      const r = await (new BcmrIndexer()).getNftType(this.token!.tokenId, this.token!.commitment!)  
+      this.nftType = r
+
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
+  
   static async scanWalletForTokens(tokenType: 'ft'|'nft'|'all', ownerWallet: Wallet): Promise<UtxoI[]> {
     if(tokenType === 'ft') {
       return (await ownerWallet.getAddressUtxos()).filter((u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability) || []
@@ -653,7 +1056,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         commitment: this.token?.commitment || ''
       })
     ]
-    
+
     let signResult
     try {
       const { encodedTransaction, sourceOutputs } = await this.ownerWallet!.encodeTransaction(
@@ -683,6 +1086,56 @@ export class CashToken implements UtxoI, PartialBcmr {
     } finally {
       delete this._processing
     }
-
   }
+
+  /**
+   * Invoke after spending this utxo. When watching wallet address
+   */
+  async updateUtxo(){
+    this.ensureOwnerWallet()
+    this.processing = 'Updating minter'
+    try {
+      if (this.authKey) {
+        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
+          u.vout == this.utxo.vout &&
+          u.token?.tokenId == this.utxo.token?.tokenId &&
+          u.token?.capability == NFTCapability.minting
+        ))
+        if (updatedMinterUtxo) {
+          this.utxo = updatedMinterUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this.processing = ''
+    }
+  }
+
+  /**
+   * Invoke after spending the AuthKey, e.g. after minting. 
+   */
+  async updateAuthKeyUtxo(){
+    try {
+      this.ensureOwnerWallet()
+      this.processing = 'Updating AuthKey'
+      if (this.authKey) {
+        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+          u.vout == this.authKey?.utxo.vout &&
+          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+          u.token?.capability == this.authKey?.utxo.token?.capability
+        ))
+        if (updatedAuthKeyUtxo) {
+          this.authKey.utxo = updatedAuthKeyUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this.processing = ''
+    }
+    
+  }
+
 }

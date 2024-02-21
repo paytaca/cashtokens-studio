@@ -1,6 +1,5 @@
 <template>
-  <q-dialog ref="messageDialog" v-close-popup @before-hide="onBeforeHide" transition-show="slide-up"
-    transition-hide="fade">
+  <q-dialog ref="messageDialog" @before-hide="onBeforeHide" transition-show="slide-up" transition-hide="fade">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold text-center">{{ ui.statusMessageType }}</q-toolbar-title>
@@ -10,7 +9,7 @@
           <q-avatar v-if="!ui.statusMessageSpinner" size="5em" class="col-12">
             <q-icon size="2em" :name="icon.name" :color="icon.color"></q-icon>
           </q-avatar>
-          <q-spinner v-if="ui.statusMessageSpinner" size="5em" color="info"></q-spinner>
+          <q-spinner v-if="ui.statusMessageSpinner" size="5em" color="warning"></q-spinner>
           <div class="col-12 text-center q-px-lg text-wrap q-py-sm q-py-sm"
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             {{ ui.statusMessage }}
@@ -26,7 +25,7 @@
         </div>
       </q-card-section>
       <q-card-actions v-if="!ui.statusMessageSpinner" class="row justify-center">
-        <q-btn color="primary" size="lg" v-close-popup>Ok</q-btn>
+        <q-btn size="lg" v-close-popup text-color="primary">Ok</q-btn>
       </q-card-actions>
     </q-card>
   </q-dialog>

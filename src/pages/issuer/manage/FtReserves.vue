@@ -1,259 +1,203 @@
 <template>
-  <q-page class="q-ma-lg">
-    <div class="row justify-center q-mx-sm">
+  <q-page :class="$q.screen.gt.xs ? 'q-ma-sm' : 'q-ma-xs'">
+    <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
         <h5 class="text-center">
-          Fungible Token Reserves
-          <q-badge class="q-px-sm q-py-xs text-bold" color="negative" text-color="white" align="top" rounded>
-            {{ paginatedFtAuthchainIdentities?.count || 0 }}
-          </q-badge>
+          FT Reserve Supplies
         </h5>
-        <q-expansion-item label="More Info">
-          <p>
-            These are the FT identities (utxos) that are locked in the <a href="https://github.com/mr-zwets/AuthGuard"
-              target="_blank" flat dense no-caps style="text-indent:0" class="text-secondary">AuthGuard</a>
-            contract,
-            of which you own the AuthKey. Any FT you create in CashTokens Studio will be listed here. The amount held by
-            each of the FT identity is considered as reserve supply. You can issue or release any amount from the reserve
-            supply
-            here.
-          </p>
-        </q-expansion-item>
-        <div class="q-pa-lg flex flex-center">
-          <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
-            :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
-        </div>
-        <q-markup-table>
-          <thead>
-            <tr v-if="watchtower.processing && authchainIdentities">
-              <th colspan="6">
-                <q-spinner-grid size="xs"></q-spinner-grid> Loading
-              </th>
-            </tr>
-            <tr>
-              <th>#</th>
-              <th>Brand</th>
-              <th>Symbol</th>
-              <th>Token Id</th>
-              <th>Reserved Supplies</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <TableBodySkeleton v-if="watchtower.processing && !authchainIdentities" :col-count="6" :row-count="3"
-            :caption="'Scanning wallet for FT reserves'" />
-          <tbody v-else class="text-center">
-            <tr v-for="identity, i in authchainIdentities" :key="'ai-rec-' + i">
-              <td>{{ i + pagination.offset + 1 }}</td>
-              <td>
-                <q-avatar v-if="identity.tokenUris?.icon">
-                  <q-img :src="String(identity.tokenUris.icon)" alt="na" loading="lazy" spinner-size="xs" />
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-9" class="token-default-avatar" />
-              </td>
-              <td>
-                <q-spinner
-                  v-if="identity.processing === 'Checking token registry' && !ui.tokenCategoryCache[identity.token!.tokenId]?.symbol"></q-spinner>
-                <span v-else>
-                  <q-chip v-if="ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol"
-                    color="primary" class="q-p-sm" square outline>
-                    {{ ui.tokenCategoryCache[identity.token!.tokenId]?.symbol || identity.tokenCategory?.symbol }}
-                  </q-chip>
-                  <span v-else>---</span>
-                </span>
-              </td>
-              <td>
-                <TokenCategory :tokenId="identity.token?.tokenId" />
-              </td>
-              <td>{{ formatReservedSupply(identity) }}</td>
-              <td>
-                <q-btn icon="send_time_extension" size="md" label="Issue Tokens" color="primary" dense no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, identity, { tokenIdentityIndex: i })">
+        <div>
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
+            :columns="[
+              {
+                name: 'balance', label: 'Balance',
+                field: r => r.token?.amount || 0,
+                align: 'left',
+                headerClasses: 'text-h5 text-bold'
+              },
+              {
+                name: 'actions', label: '',
+                field: r => '',
+                align: 'center',
+              }
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+            :dense="$q.screen.lt.sm">
+            <template v-slot:body-cell-balance="value">
+              <q-td>
+                <div class="row justify-left items-center flex wrap q-gutter-sm">
+                  <div class="col-auto">
+                    <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                      <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    </q-avatar>
+                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                  </div>
+                  <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
+                    <div style="font-variant-numeric: tabular-nums;" class="text-positive">
+                      {{
+                        ftAmountFormatter.toDecimal(value.row.token?.amount.toString(),
+                          value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }}
+                    </div>
+                    <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                      ({{ value.row.identitySnapshot?.token?.symbol }})
+                    </div>
+                  </div>
+
+                  <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                    <div v-if="value.row.identitySnapshot?.token">
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
+                        <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                      </div>
+                      <div class="text-weight-thin text-caption text-grey-8">
+                        Decimals: <span
+                          :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
+                            value.row.identitySnapshot?.token?.decimals }}</span>
+                      </div>
+                    </div>
+                    <div v-else class="text-grey-8">
+                      {{ '<metadata not found>' }}
+                    </div>
+
+                  </div>
+                </div>
+
+              </q-td>
+            </template>
+            <template v-slot:body-cell-actions="value">
+              <q-td class="text-center">
+                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" no-caps
+                  @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
                 </q-btn>
-              </td>
-            </tr>
-            <tr v-if="authchainIdentities?.length === 0 && !watchtower.processing">
-              <td colspan="6">
-                No data
-              </td>
-            </tr>
-          </tbody>
-        </q-markup-table>
-        <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
-          :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
-          @tokens-issued="(data) => onTokensIssuance(data)" />
+              </q-td>
+            </template>
+          </q-table>
+          <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
+            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
+            @tokens-issued="(data) => onTokensIssuance(data)" />
+        </div>
       </div>
     </div>
   </q-page>
 </template>
 <script setup lang="ts">
-import { Wallet, delay } from 'mainnet-js';
-import { EventBus } from 'quasar';
-import { computed, inject, onBeforeMount, onBeforeUnmount, onMounted, ref, watch } from 'vue';
-import { useUser } from 'src/stores/user';
-import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, TOKEN_CATEGORY_CACHE_MAX_KEYS, TOKEN_URIS_CACHE_MAX_KEYS, Watchtower } from 'src/app'
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
+import { useUser } from 'src/stores/user'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app'
+import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { UtxoI, Wallet, NFTCapability } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
-import TableBodySkeleton from 'src/components/TableBodySkeleton.vue'
+import TokenSymbol from 'src/components/TokenSymbol.vue'
+import { EventBus, useQuasar } from 'quasar';
+import { useTokenStore } from 'src/stores/token';
+import { useRouter } from 'vue-router';
+import { useMinter } from 'src/stores/minter';
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
-import { PaginatedData } from 'src/app/types';
-import { getWalletClass } from 'src/app/utils';
-import { useUI } from 'src/stores/ui';
-import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
+import { useDialogs } from 'src/composables'
+import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
+import { shortenTokenId, copyText } from 'src/app/utils'
+import CopyText from 'src/components/CopyText.vue';
 
-
+const $q = useQuasar()
+const router = useRouter()
 const user = useUser()
-const ui = useUI()
-const authchainIdentities = ref<AuthchainIdentity[]>()
-const paginatedFtAuthchainIdentities = ref<PaginatedData>({
+const minter = useMinter()
+const tokenStore = useTokenStore()
+const eventBus = inject<EventBus>('eventBus')
+const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
+const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
-  limit: 10,
+  limit: 0,
   offset: 0,
-  next: '',
-  previous: '',
+  next: null,
+  previous: null,
   results: []
 })
-const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-const pagination = ref<{ numberOfPages: number, currentPage: number, maxRowsPerPage: number, rowCount: number, offset: number }>({
-  numberOfPages: 0,
-  currentPage: 0,
-  maxRowsPerPage: 10,
-  rowCount: 0,
-  offset: 0,
-})
-const watchtower = ref<Watchtower>(new Watchtower())
-const eventBus = inject<EventBus>('eventBus')
-const formatReservedSupply = computed(() => {
-  return (authchainIdentity: AuthchainIdentity) => {
 
-    if (authchainIdentity.token!.amount && authchainIdentity.tokenCategory?.decimals) {
-      return ftAmtFormatter.toDecimal(
-        authchainIdentity.token!.amount.toString(), authchainIdentity.tokenCategory?.decimals
-      )
-    }
-    return authchainIdentity.token?.amount
-  }
+const pagination = ref({
+  sortBy: 'desc',
+  descending: false,
+  page: 1,
+  rowsPerPage: 12,
+  rowsNumber: 12
 })
 
-const populateAuthchainIdentities = (paginated: PaginatedData) => {
-  authchainIdentities.value = []
-  const results = paginated?.results || []
-  for (let i = 0; i < results.length; i++) {
-    const authKeyUtxoClone = Object.assign({}, results[i].authKey)
-    const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
-    const {
-      txid,
-      vout,
-      satoshis,
-      height,
-      coinbase,
-      token
-    } = results[i]
-    const authchainIdentity = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
-    authchainIdentities.value.push(authchainIdentity)
+const rowsPerPageOptions = computed(() => {
+  return [12, 24, 36]
+})
+
+
+const visibleColumns = computed(() => {
+  if ($q.screen.lt.sm) {
+    return ['symbol', 'balance', 'actions']
   }
+  return ['icon', 'symbol', 'tokenid', 'balance', 'decimals', 'actions']
+})
 
-  authchainIdentities.value.forEach(async (a: AuthchainIdentity) => {
-    if (a.token && !ui.tokenUrisCache[a.token.tokenId]) {
-      await a.resolveTokenUris()
-      if (a.tokenUris && Object.keys(ui.tokenUrisCache).length < TOKEN_URIS_CACHE_MAX_KEYS) {
-        ui.tokenUrisCache[a.token.tokenId] = a.tokenUris
-      }
-    } else {
-      a.tokenUris = ui.tokenUrisCache[a.token!.tokenId]
+// const formatReservedSupply = computed(() => {
+//   return (authchainIdentity: AuthchainIdentity) => {
+
+//     if (authchainIdentity.token!.amount && authchainIdentity.identitySnapshot?.token?.decimals) {
+//       return ftAmtFormatter.toDecimal(
+//         authchainIdentity.token!.amount.toString(), authchainIdentity.identitySnapshot?.token?.decimals
+//       )
+//     }
+//     return authchainIdentity.token?.amount
+//   }
+// })
+
+const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
+  if (wallet) {
+    $q.loading.show()
+    const query = {
+      limit: pagination.value.rowsPerPage,
+      offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
+      token_amount__gte: 1
+    }
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    $q.loading.hide()
+    if (resp?.count > 0) {
+      ownedAuthHeads.value = resp
+      pagination.value.rowsNumber = resp.count
+      ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
+        const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
+        const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+        const {
+          txid,
+          vout,
+          satoshis,
+          height,
+          coinbase,
+          token
+        } = cashtoken
+        ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+      })
+
     }
 
-    if (a.token && !ui.tokenCategoryCache[a.token.tokenId]) {
-      await a.resolveTokenCategory()
-      if (a.tokenCategory && Object.keys(ui.tokenCategoryCache).length < TOKEN_CATEGORY_CACHE_MAX_KEYS) {
-        ui.tokenCategoryCache[a.token.tokenId] = a.tokenCategory
-      }
-    } else {
-      a.tokenCategory = ui.tokenCategoryCache[a.token!.tokenId]
-    }
-  })
+  }
 }
 
 
-watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
-  if (user.wallet) {
-    pagination.value.offset = (pageNumber - 1) * pagination.value.maxRowsPerPage
-    paginatedFtAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
-      user.wallet.getTokenDepositAddress(),
-      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
-    )
-
-    populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-    user.paginatedFtAuthchainIdentities = paginatedFtAuthchainIdentities.value
-  }
-})
-
-const initPagination = () => {
-  if (paginatedFtAuthchainIdentities.value && paginatedFtAuthchainIdentities.value?.count > 0) {
-    pagination.value.currentPage = Math.ceil((paginatedFtAuthchainIdentities.value.offset + 1) / paginatedFtAuthchainIdentities.value.limit)
-    pagination.value.maxRowsPerPage = paginatedFtAuthchainIdentities.value.limit
-    pagination.value.rowCount = paginatedFtAuthchainIdentities.value.count
-    pagination.value.numberOfPages = Math.ceil(paginatedFtAuthchainIdentities.value.count / paginatedFtAuthchainIdentities.value.limit)
-    pagination.value.offset = paginatedFtAuthchainIdentities.value.offset
-  }
+const onTokensIssuance = async (issued: { tokenId: string, to: string, amount: string }) => {
+  hideDialog()
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
 
-const refreshData = async (immediate?: boolean) => {
-  if (!immediate) {
-    await delay(2500)
-  }
+onBeforeMount(async () => {
   if (user.wallet) {
-    paginatedFtAuthchainIdentities.value = await watchtower.value.fetchAuthchainIdentities(
-      user.wallet.getTokenDepositAddress(),
-      { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset, token_amount__gte: 1 }
-    )
-    user.paginatedFtAuthchainIdentities = paginatedFtAuthchainIdentities.value
-    populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-    initPagination()
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
+
+})
+
+const onTableRequest = async (props: any) => {
+  pagination.value = props.pagination
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
-
-watch(() => user.walletAddress, async (v) => {
-  if (v) {
-    // keep so page survives reload
-    user.wallet = await getWalletClass().watchOnly(v)
-    refreshData()
-    eventBus?.on(ADDRESS_WATCHER_TRIGGERED, async () => {
-      refreshData()
-    })
-  } else {
-    eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
-  }
-
-})
-
-
-onMounted(async () => {
-  if (user.wallet) {
-    /**
-     * Load from store by default then refresh
-     */
-    if (user.paginatedFtAuthchainIdentities?.results) {
-      paginatedFtAuthchainIdentities.value = user.paginatedFtAuthchainIdentities
-      populateAuthchainIdentities(paginatedFtAuthchainIdentities.value)
-    }
-    // refreshData()
-  }
-  eventBus?.on(ADDRESS_WATCHER_TRIGGERED, () => {
-    refreshData()
-  })
-})
-
-onBeforeMount(() => {
-  refreshData(true)
-})
 
 onBeforeUnmount(() => {
   eventBus?.off(ADDRESS_WATCHER_TRIGGERED)
 })
-
-const onTokensIssuance = async (issued: { tokenId: string, to: string, amount: string }) => {
-  hideDialog()
-  refreshData()
-}
 
 </script>

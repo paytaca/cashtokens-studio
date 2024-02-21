@@ -1,6 +1,20 @@
 <template>
-  <q-page class="row items-center justify-evenly">
-    <div class="col">
+  <q-page class="row justify-evenly" :class="!user.walletAddress ? 'items-center' : ''">
+    <div v-if="user.walletAddress" class="col-12 q-gutter-sm q-my-sm self-start text-right">
+      <q-btn text-color="text-grey-8" size="lg" no-caps :to="{ name: 'my-fts' }">
+        <div>
+          <q-icon name="money" color="warning" />
+          <div>My FTs</div>
+        </div>
+      </q-btn>
+      <q-btn text-color="text-grey-8" size="lg" no-caps :to="{ name: 'my-nfts' }">
+        <div>
+          <div><q-icon name="art_track" color="warning" /></div>
+          <div>My NFTs</div>
+        </div>
+      </q-btn>
+    </div>
+    <div class="col-12">
       <div class="row items-center justify-evenly text-h5">
         <q-img src="images/cts_transparent.png" :style="bannerSize" />
       </div>

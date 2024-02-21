@@ -8,7 +8,7 @@
       <span v-if="authchainIdentity.tokenCategory?.symbol" class="q-mx-sm text-bold">{{
         authchainIdentity.tokenCategory?.symbol }} </span>
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold">Publish Registry</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">Publish Registry From URL</q-toolbar-title>
         <TokenCategory :token-id="authchainIdentity?.token?.tokenId" />
       </q-toolbar>
       <q-card-section>
@@ -16,8 +16,8 @@
           <q-form class="q-gutter-sm">
             <q-input :filled="true" :model-value="authchainIdentity?.token?.tokenId" type="url" label="Token ID" dense
               square standout disable></q-input>
-            <q-input :filled="true" v-model="form.url" type="url" label="Registry URL *" dense square standout
-              :disable="Boolean(authchainIdentity?.processing)" clearable></q-input>
+            <q-input :filled="true" v-model="form.url" @change="onUrlChange" type="url" label="Registry URL *" dense
+              square standout :disable="Boolean(authchainIdentity?.processing)" clearable></q-input>
             <q-input :filled="true" v-model="form.contentHash" :loading="form.isLoadingRegistry" type="url"
               label="Content hash *" dense square :disable="Boolean(authchainIdentity?.processing)">
               <template v-slot:loading>
@@ -51,6 +51,7 @@ import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
 import { shortenTokenId } from 'src/app/utils';
 import { useUI } from 'src/stores/ui';
+import { watch } from 'fs';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -64,7 +65,7 @@ const form = ref<{ url: string, contentHash: string, isLoadingRegistry?: boolean
   contentHash: ''
 })
 
-onMounted(() => {
+onMounted(async () => {
   if (props.url) {
     form.value.url = props.url
   }
@@ -72,8 +73,15 @@ onMounted(() => {
     form.value.contentHash = props.contentHash
   }
 })
+
+const onUrlChange = async () => {
+  loadRegistryHashFromUrl()
+}
+
+
 const publish = async () => {
   try {
+    // TODO: authenticate authchainIdentity check if it's the authhead, show Authentication Failure dialog if not.
     const tx = await props.authchainIdentity.publish({ url: form.value.url, contentHash: form.value.contentHash })
     if (tx) {
       // $q.notify({ type: 'positive', message: 'Success!Tx=' + shortenTx(tx) })

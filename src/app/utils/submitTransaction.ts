@@ -7,9 +7,13 @@ import { Watchtower } from "../Watchtower"
 export default async (signingResult:any, ownerWallet: Wallet): Promise<string|undefined> => {
   if (signingResult?.signedTransaction) {
     // return ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
-    const broadcastResp = await (new Watchtower()).broadcastTx(signingResult.signedTransaction)
-      if (broadcastResp.success) {
-        return broadcastResp.txid
-      }
+    const w = new Watchtower()
+    const broadcastResp = await w.broadcastTx(signingResult.signedTransaction)
+    if (broadcastResp && broadcastResp.success) {
+      return broadcastResp.txid
+    }
+    if (w.error) {
+      throw w.error
+    }
   }
 }

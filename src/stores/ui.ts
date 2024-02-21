@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
-import { AuthchainIdentity, CashToken } from 'src/app';
-import { TokenCategory, URIs } from 'src/app/bcmr/bcmr-v2.schema';
+import { DialogChainObject } from 'quasar'
+import { AuthchainIdentity, CashToken } from 'src/app'
+import { TokenCategory, URIs } from 'mainnet-js'
 
 type TokenIdCache = {
   [tokenId:string]: string|number|undefined
@@ -21,7 +22,7 @@ type UIState = {
   statusMessageSpinner: boolean,
   // Just so we can properly position this in the MessageDialog
   statusMessageTxid: string,
-  statusMessageContext: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft', 
+  statusMessageContext: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft',
   statusMessageSubjectTokenCategory: string,
   statusMessageSubjectTokenSymbol: string,
   statusMessageSentFTAmount: string,
@@ -36,7 +37,11 @@ type UIState = {
   tokenSymbolCache: TokenIdCache,
   tokenDecimalsCache: TokenIdCache,
   tokenCategoryCache: TokenCategoryCache,
-  tokenUrisCache: TokenUrisCache
+  tokenUrisCache: TokenUrisCache,
+  minterInView?: CashToken,
+  routeBack: string|boolean // The previous route, can be used by page to route back
+  pageTitle?: string
+  dialog?: DialogChainObject
 }
 
 
@@ -57,7 +62,8 @@ export const useUI = defineStore('ui', {
     tokenSymbolCache: {},
     tokenDecimalsCache: {},
     tokenCategoryCache: {},
-    tokenUrisCache: {}
+    tokenUrisCache: {},
+    routeBack: ''
   }),
   actions: {
     clearStatusMessage() {
@@ -71,11 +77,11 @@ export const useUI = defineStore('ui', {
       this.statusMessageRecipient = ''
     },
     setStatusMessage(m: {
-        statusMessage:string, 
-        statusMessageType?: 'info'|'error'|'success'|'warning', 
-        statusMessageSpinner?:boolean, 
+        statusMessage:string,
+        statusMessageType?: 'info'|'error'|'success'|'warning',
+        statusMessageSpinner?:boolean,
         statusMessageTxid?:string,
-        statusMessageContext?: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft', 
+        statusMessageContext?: ''|'genesis'|'issue-ft'|'send-ft'|'transfer-nft',
         statusMessageSubjectTokenCategory?: string,
         statusMessageSubjectTokenSymbol?: string,
         statusMessageSentFTAmount?: string,

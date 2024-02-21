@@ -1,5 +1,4 @@
-import { NFTCapability, TokenI, UtxoI } from "mainnet-js"
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema"
+import { IdentitySnapshot, NFTCapability, UtxoI, TokenCategory, URIs} from "mainnet-js"
 
 export type NftCollectionType = 'SequentialNftCollection' | 'ParsableNftCollection' //
 
@@ -32,7 +31,8 @@ export type FungibleTokenBalance = {
   balance: bigint,
   owner: string,
   tokenUris?: URIs,
-  tokenCategory?: TokenCategory
+  tokenCategory?: TokenCategory,
+  identitySnapshot?: IdentitySnapshot
 }
 
 export type NonFungibleTokenBalance = {
@@ -69,15 +69,15 @@ export declare interface PaginatedData {
   results: any[]
 }
 
-export type CashTokenTransactionType = 
+export type CashTokenTransactionType =
   'AuthKey.transfer'|
   'AuthKey.createGenesis' |
   'AuthchainIdentity.unguard' |
   'AuthchainIdentity.publishRegistry' |
-  'AuthchainIdentity.releaseTokensFromReserveSupply' | 
+  'AuthchainIdentity.releaseTokensFromReserveSupply' |
   'Cashtoken.mintChild' |
   'Cashtoken.createGenesis' |
-  'GenesisInput.generate' 
+  'GenesisInput.generate'
 
 
 export declare interface CashTokenTransaction {
@@ -102,8 +102,11 @@ export type NftProjectDrop = {
 }
 
 export type SignTransaction = (decodedTransaction:any, sourceOutputs:any, broadcast?:boolean, prompt?: string) => Promise<any>
+export type SignMessage = (message:any, broadcast?:boolean, prompt?: string) => Promise<any>
 
 export interface TransactionSigner {
   type: 'paytaca' | 'walletconnect',
-  signTransaction: SignTransaction
+  // address?: string,
+  signTransaction: SignTransaction,
+  signMessage: SignMessage
 }

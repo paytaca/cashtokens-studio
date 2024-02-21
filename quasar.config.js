@@ -16,7 +16,7 @@ const { configure } = require('quasar/wrappers');
 
 if (process.env.NODE_ENV=='development' || process.env.NODE_ENV=='development-build') {
   require('dotenv').config({path: './.env.dev'})
-} 
+}
 if (process.env.NODE_ENV=='production') {
   require('dotenv').config({path: './.env.prod'})
 }
@@ -24,7 +24,7 @@ if (process.env.NODE_ENV=='production') {
 console.log('PROCESS ENV', process.env)
 
 module.exports = configure(function (ctx) {
-  
+
   console.log('Server IsServer', ctx.isServer)
 
   const envs = {
@@ -32,6 +32,7 @@ module.exports = configure(function (ctx) {
     BCMR_API: process.env.APP_ENV === 'development'? 'https://bcmr-chipnet.paytaca.com/api/' : 'https://bcmr.paytaca.com/api/',
     WATCHTOWER_API: process.env.APP_ENV === 'development'? 'https://chipnet.watchtower.cash/api/' : 'https://watchtower.cash/api/',
     CTS_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : 'https://',
+    CTS_REGISTRY_API: process.env.APP_ENV === 'development'? 'http://localhost:4000/api/' : 'https://',
     TX_EXPLORER_BASE_URL: process.env.APP_ENV === 'development'? 'https://chipnet.imaginary.cash/' : 'https://explorer.bitcoinunlimited.info/',
     WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     WALLET_CONNECT_VERIFIED_URL: process.env.URL || 'http://localhost:8000'
@@ -48,6 +49,8 @@ module.exports = configure(function (ctx) {
     envs.NFT_STORAGE_API_KEY_8 = process.env.NFT_STORAGE_API_KEY_8
     envs.NFT_STORAGE_API_KEY_9 = process.env.NFT_STORAGE_API_KEY_9
     envs.NFT_STORAGE_API_KEY_10 = process.env.NFT_STORAGE_API_KEY_10
+    envs.CTS_API_KEY_CUSTOM_HEADER = process.env.CTS_API_KEY_CUSTOM_HEADER
+    envs.CTS_API_KEYS = process.env.CTS_API_KEYS
   }
 
   return {
@@ -180,7 +183,7 @@ module.exports = configure(function (ctx) {
     // https://v2.quasar.dev/quasar-cli-webpack/quasar-config-js#Property%3A-framework
     framework: {
       config: {
-        dark: 'auto',
+        dark: true,
         notify: {}
       },
 
@@ -196,7 +199,9 @@ module.exports = configure(function (ctx) {
 
       // Quasar plugins
       plugins: [
-        'Notify'
+        'Notify',
+        'Dialog',
+        'Loading'
       ],
     },
 

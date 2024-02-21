@@ -88,6 +88,43 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     
   })
 
+  app.post('/api/tokens/nft/asset-upload', upload.single('file'), async (req:any, res:any) => {
+    
+    let ext = req.file.originalname?.split('.')
+    ext = ext[ext.length - 1]
+    
+    try {
+      const metadata = await nftStorageClient().store({
+        name: 'CTStudio',
+        description: 'NFT asset',
+        image: new File(
+          [req.file.buffer],
+          `${req.query.tokenId}-${req.query.commitment}.${ext}`,
+          { type: req.file.mimetype }
+        )
+      })
+      const [metadataCid, metadataFilename] = metadata.url.replace('ipfs://','').split('/')
+
+      const metadataContents = await fetch(`https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`)
+      const {/*name, description,*/image } = await metadataContents.json()
+      const [imageCid, imageFilename] = image.replace('ipfs://','').split('/')
+      res.status(200).send({
+        nftStorageMetadata: metadata,
+        uris: {
+          ipfs: image,
+          https: `https://${imageCid}.ipfs.nftstorage.link/${imageFilename}`
+        },
+        originalFilename: req.file.originalname,
+        h: req.query.h
+      });
+      
+    } catch (error) {
+      console.log(error)
+      res.status(400).send(error)
+    }
+    
+  })
+
   /**
    * Stores the Registry(BCMR) json payload in nft.storage
    */

@@ -2,8 +2,9 @@
   <q-page class="q-ma-lg">
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12">
-        <h5 class="text-center text-bold">Recent CS Studio Transactions <q-icon name="receipt"></q-icon></h5>
-        <p class="text-center">List of recent CS Studio transactions you made on this device. Note: Currently this logs
+        <h5 class="text-center text-bold">Recent CashTokens Studio Transactions <q-icon name="receipt"></q-icon></h5>
+        <p class="text-center">List of recent CashTokens Studio transactions you made on this device. Note: Currently this
+          logs
           are only
           saved locally in the browser.</p>
         <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">
@@ -30,9 +31,9 @@
                   <q-btn :href="explore(t.txid)" target="_blank" flat dense color="secondary" size="sm">
                     <template v-slot:default>
                       <code>
-                                                {{ shortenTx(t.txid) }}
-                                                <q-tooltip>View in explorer</q-tooltip>
-                                              </code>
+                                                    {{ shortenTx(t.txid) }}
+                                                    <q-tooltip>View in explorer</q-tooltip>
+                                                  </code>
                     </template>
                   </q-btn>
                 </td>
@@ -51,7 +52,6 @@
 import ClientDB from 'src/app/clientonly/ClientDB';
 import { CashTokenTransaction } from 'src/app/types';
 import { computed, onMounted, ref } from 'vue';
-import TransactionId from 'src/components/TransactionId.vue'
 import { shortenTx } from 'src/app/utils';
 
 const transactions = ref<CashTokenTransaction[]>()
