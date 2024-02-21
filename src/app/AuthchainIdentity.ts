@@ -1,15 +1,13 @@
-import { TokenI, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, DEFAULT_TOKEN_VALUE } from ".";
+import { IdentitySnapshot, NFTCapability, TokenCategory, URIs, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
+import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
 import { SignatureTemplate} from "cashscript";
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
-import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
-import { TransactionSigner } from "./types";
+import { NftCollectionType, TransactionSigner } from "./types";
 import { submitTransaction } from "./utils";
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
@@ -21,7 +19,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   coinbase?: boolean | undefined;
   token?: TokenI | undefined;
   authKey?: AuthKey
-  ownerWallet?: Wallet
+  ownerWallet?: Wallet | TestNetWallet
   useAuthGuard?: true   // default
   /**
    * TokenCategory is a portion of the BCMR schema, we attached it here 
@@ -32,6 +30,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
    */
   tokenCategory?: TokenCategory
   tokenUris?: URIs
+  identitySnapshot?: IdentitySnapshot
 
   private _processing?: string
   private static _processing?: string
@@ -46,7 +45,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       coinbase?: boolean | undefined;
       token?: TokenI | undefined;
       authKey: AuthKey
-      ownerWallet?: Wallet
+      ownerWallet?: Wallet | TestNetWallet
     },
     transactionSigner?: TransactionSigner
   ){
@@ -88,6 +87,20 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this.token = u.token
   }
 
+  // get identitySnapshot (): IdentitySnapshot|undefined {
+  //   if (this.registry?.identities) {
+  //     let authbase:string|string[] = Object.keys(this.registry!.identities || {})
+  //     if (authbase) {
+  //       authbase = authbase[0]
+  //       let identity_history:string|string[] = Object.keys(this.registry!.identities[authbase] || {})
+  //       if (identity_history) {
+  //         identity_history = identity_history[0]
+  //         return this.registry.identities[authbase][identity_history]
+  //       }
+  //     }
+  //   }
+  // }
+
   get processing(): string|undefined {
     return this._processing
   }
@@ -98,6 +111,13 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   get burningCost(): number {
     return calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2PKH: 2})
+  }
+
+  get nftCollectionType():NftCollectionType {
+    if (!this.identitySnapshot?.token?.nfts?.parse?.bytecode || this.identitySnapshot?.token?.nfts?.parse?.bytecode == '00d26b') {
+      return 'SequentialNftCollection'
+    }
+    return 'ParsableNftCollection'
   }
 
   ensureOwnerWallet() {
@@ -307,6 +327,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         throw new Error('Failed to decode transaction')
       }
     } catch (error) {
+      console.log(error)
       delete this._processing
       throw error
     }
@@ -362,7 +383,9 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       ]
 
       signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Publish registry update')
+      
     } catch (error) {
+      console.log(error)
       delete this._processing
       throw new Error('Error signing transaction')
     }
@@ -715,6 +738,21 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete this._processing
     }
   }
+
+  async resolveIdentitySnapshot(quite?:boolean) {
+    if (!this.token?.tokenId) return
+    try {
+      if (quite !== true) {
+        this._processing = 'Checking token registry'
+      }
+      const r = await (new BcmrIndexer()).getIdentitySnapshot(this.token!.tokenId)  
+      this.identitySnapshot = r
+
+    } catch (error:any) {
+    } finally {
+      delete this._processing
+    }
+  }
   
   /**
    * Populate the tokenCategory from Paytaca's bcmr indexer
@@ -752,5 +790,56 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     delete  AuthchainIdentity._processing
     AuthchainIdentity.utilPopulateTokenCategory(identities)
     return identities
+  }
+
+
+  /**
+   * Invoke after spending this utxo. When watching wallet address
+   */
+  async updateUtxo(){
+    this.ensureOwnerWallet()
+    this._processing = 'Updating authhead utxo'
+    try {
+      if (this.authKey) {
+        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
+          u.vout == this.utxo.vout &&
+          u.token?.tokenId == this.utxo.token?.tokenId &&
+          u.token?.capability == NFTCapability.minting
+        ))
+        if (updatedMinterUtxo) {
+          this.utxo = updatedMinterUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this._processing = ''
+    }
+  }
+
+  /**
+   * Invoke after spending the AuthKey, e.g. after minting. 
+   */
+  async updateAuthKeyUtxo(){
+    try {
+      this.ensureOwnerWallet()
+      this._processing = 'Updating authKey utxo'
+      if (this.authKey) {
+        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+          u.vout == this.authKey?.utxo.vout &&
+          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+          u.token?.capability == this.authKey?.utxo.token?.capability
+        ))
+        if (updatedAuthKeyUtxo) {
+          this.authKey.utxo = updatedAuthKeyUtxo[0]
+        }
+      }
+    } catch (error) {
+      throw error
+    } finally {
+      this._processing = ''
+    }
+    
   }
 }

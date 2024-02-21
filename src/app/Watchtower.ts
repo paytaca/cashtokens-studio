@@ -178,7 +178,6 @@ export class Watchtower {
      * @param {string} tx Raw transaction hash
      */
     async broadcastTx(tx: string): Promise<any> {
-      let b
       try {
         const r = await fetch(`${this.apiBaseUri}broadcast/`, {
           method: 'POST', 
@@ -189,13 +188,16 @@ export class Watchtower {
             transaction: tx
           })
         })
-        b = await r.json()
+        if (r.status >= 400) {
+          this.error = 'Problem occured while contacting server. Please try again later.'  
+          throw this.error
+        } 
+        return await r.json()
       } catch (error) {
-        this.error = error
+        throw error
       } finally {
         delete this.processing
       }
-      return b
     } 
   
     

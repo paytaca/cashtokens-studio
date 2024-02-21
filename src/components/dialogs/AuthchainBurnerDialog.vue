@@ -18,15 +18,15 @@
           burn this token identity's AuthHead, this means you'll no longer be able to publish
           an update to the registry.
           <q-btn href="https://github.com/bitjson/chip-bcmr#burned-identities" target="_blank" dense flat no-caps
-            color="secondary" icon="info" size="sm" />
+            color="grey-8" icon="info" size="sm" />
         </span>
       </div>
       <q-card-section>
         <q-form class="row q-gutter-sm">
           <q-input class="col-12" :model-value="authchainIdentity.token?.tokenId" disable label="Token ID/Category"
             filled></q-input>
-          <q-input class="col-12" :model-value="authchainIdentity.token?.amount" disable label="Fungible Reserves"
-            filled></q-input>
+          <q-input class="col-12" :model-value="authchainIdentity.token?.amount?.toString()" disable
+            label="Fungible Reserves" filled></q-input>
           <q-input class="col-12" :model-value="authchainIdentity.token?.capability" disable label="NFT Capability"
             filled></q-input>
         </q-form>
@@ -61,7 +61,6 @@ const burn = async () => {
   try {
     const tx = await props.authchainIdentity.burn()
     if (tx) {
-      $q.notify({ type: 'positive', message: `${props.authchainIdentity.tokenCategory?.symbol || 'Token'} Burned!Tx=` + shortenTx(tx) })
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.burn',

@@ -1,22 +1,43 @@
-import { inject, onMounted, ref, watch } from "vue"
+import { inject, onMounted, ref, unref, watch } from "vue"
 import { getWalletClass } from "src/app/utils"
 import { useUser } from "src/stores/user";
 import { ADDRESS_WATCHER_TRIGGERED, DEFAULT_TOKEN_VALUE, Watchtower } from 'src/app';
 import { UtxoI, delay } from 'mainnet-js';
 import { useRouter } from 'vue-router';
 import { EventBus } from 'quasar';
+import { useUI } from "src/stores/ui";
+import { usePage } from "src/stores/page";
+import { useLocalForage } from "./useLocalForage";
+import { stringify } from "@bitauth/libauth";
 
 export const useInit = () => {
   const user = useUser()
+  const ui = useUI()
+  const localForage = useLocalForage()
+  const page = usePage()
   const watchtower = ref<Watchtower>()
   const router = useRouter()
   const eventBus = inject<EventBus>('eventBus')
   const unwatchAddress = ref()
   
   onMounted(()=>{
+
+    ui.routeBack = ''
+    
     watchtower.value = new Watchtower()
+
     window.onbeforeunload = () => {
       localStorage.setItem('user.walletType', user.walletType || '')
+    }
+
+    // page.$subscribe(async (mutation:any, state)=>{
+    //   console.log('MUTATION', mutation)
+    //   console.log('STATE', state)
+    //   await localForage.pageLocalForage.setItem(state.path, stringify(state.state))
+    // })
+
+    if (!user.walletAddress) {
+      router.push('/')
     }
   })
 

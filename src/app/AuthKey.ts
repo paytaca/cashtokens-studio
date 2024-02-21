@@ -20,6 +20,7 @@ export class AuthKey implements UtxoI {
   private static _processing?: string
   unlockableTokens?: UtxoI[]
   unlockableTokensCount?: number
+  utxoSpent?: boolean
   static readonly DEFAULT_COMMITMENT = '00'
   constructor(
     u?: {
@@ -67,6 +68,7 @@ export class AuthKey implements UtxoI {
     this.height = u.height
     this.coinbase = u.coinbase
     this.token = u.token
+    this.utxoSpent = false
   }
 
   get authGuard(): AuthGuard {

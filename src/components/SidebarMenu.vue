@@ -1,7 +1,18 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:expanded="expanded" v-model:selected="selected"
-      default-expand-all ref="qtree" />
+      default-expand-all ref="qtree">
+      <template v-slot:default-header="prop">
+        <div v-if="prop.node.label == 'Authguards' || prop.node.label == 'Authguard Keys'" class="row items-center">
+          <q-icon :name="prop.node.icon || 'share'" color="orange" size="28px" class="q-mr-sm" />
+          <div>{{ prop.node.label }}</div>
+        </div>
+        <div v-else class="row items-center">
+          <q-icon :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
+          <div>{{ prop.node.label }}</div>
+        </div>
+      </template>
+    </q-tree>
   </div>
 </template>
 
@@ -10,7 +21,6 @@
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUser } from 'src/stores/user'
-import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
 const qtree = ref()
@@ -21,16 +31,17 @@ const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
-  // createFT: '/issuer/tokens/create/ft',
-  // createNFT: '/issuer/tokens/create/nft',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
+  manageRegistries: '/issuer/manage/registries',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
+  manageAuthGuards: '/issuer/manage/authguards',
   accountFungibles: '/account/balance/fungibletokens',
   accountCollectibles: '/account/balance/collectibles',
   recentTransactions: '/account/recent-transactions',
   createNewToken: '/issuer/tokens/create',
+  createNftCollection: '/issuer/tokens/create/nft-collection',
   importAuthUtxo: '/issuer/tokens/import-auth-utxo',
 }
 
@@ -42,6 +53,12 @@ const menu = computed<any[]>(() => {
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },
+    // {
+    //   label: 'Create NFT Collection',
+    //   href: hrefs.createNftCollection,
+    //   icon: 'add',
+    //   disabled: Boolean(user.walletAddress) === false,
+    // },
     {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
@@ -63,67 +80,29 @@ const menu = computed<any[]>(() => {
         {
           label: 'FT Reserves',
           href: hrefs.manageFTReserves,
-          icon: 'token',
+          icon: 'money',
         },
         {
           label: 'NFT Reserves',
           href: hrefs.manageNFTReserves,
-          icon: 'token',
+          icon: 'art_track',
         },
         {
-          label: 'Token Categories',
-          href: hrefs.manageAuthchains,
-          icon: 'token',
+          label: 'Metadata',
+          href: hrefs.manageRegistries,
+          icon: 'data_object',
         },
         {
-          label: 'AuthKeys',
+          label: 'Authguards',
+          href: hrefs.manageAuthGuards,
+          icon: 'lock',
+        },
+        {
+          label: 'Authguard Keys',
           href: hrefs.manageAuthKeys,
-          icon: 'token',
+          icon: 'key',
         }
 
-      ]
-    },
-    {
-      label: 'Wallet',
-      href: '#Wallet',
-      icon: 'account_balance_wallet',
-      disabled: Boolean(user.walletAddress) === false,
-      children: [
-        {
-          label: shortenAddress(user.wallet?.getDepositAddress()),
-          icon: 'account_balance_wallet',
-          href: '#Cashaddr',
-          children: [
-            {
-              href: '#',
-              label: user.walletBchBalance,
-              avatar: 'https://chipnet.imaginary.cash/img/logo/bch.svg',
-            }
-          ]
-        },
-
-        {
-          label: shortenAddress(user.wallet?.getTokenDepositAddress()),
-          href: '#Tokenaddr',
-          icon: 'token',
-          children: [
-            {
-              label: 'Fungibles (FTs)',
-              href: hrefs.accountFungibles,
-              icon: 'token'
-            },
-            {
-              label: 'Collectibles (NFTs)',
-              href: hrefs.accountCollectibles,
-              icon: 'token'
-            },
-          ]
-        },
-        {
-          label: 'Recent Transactions',
-          href: hrefs.recentTransactions,
-          icon: 'receipt',
-        }
       ]
     }
   ]

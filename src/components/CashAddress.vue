@@ -1,29 +1,28 @@
 <template>
-  <q-btn @click.stop="() => copy(cashaddr)" size="sm" flat dense no-caps
-    :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" color="warning"
-    :icon-right="copied && iconRight ? 'done_all' : iconRight || undefined">
+  <q-btn @click.stop="() => copy(cashaddr)" size="sm" flat dense no-caps :class="$q.dark.isActive ? '' : 'bg-grey-4'"
+    color="warning" :icon-right="copied && iconRight ? 'done_all' : iconRight || undefined">
     <template v-if="cashaddr">
-      <q-chip v-if="type === 'cash'" :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" dense size="sm">
+      <q-chip v-if="type === 'cash'" :class="$q.dark.isActive ? '' : 'bg-grey-4'" dense size="md">
         <q-icon v-if="copied" name="done_all"></q-icon>
         <q-avatar v-else>
           <img src="https://chipnet.imaginary.cash/img/logo/bch.svg">
         </q-avatar>
         <div class="ellipsis">
-          <code>{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</code>
+          <span class="text-caption">{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</span>
           <q-tooltip>{{ toolTip || 'Copy Cash Address' }}</q-tooltip>
         </div>
       </q-chip>
       <q-chip v-else-if="type === 'token'" :icon="copied ? 'done_all' : 'token'"
-        :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" dense size="sm">
+        :class="$q.dark.isActive ? '' : 'bg-grey-4'" dense size="md">
         <div class="ellipsis">
-          <code>{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</code>
+          <span>{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</span>
           <q-tooltip>{{ toolTip || 'Copy Token Address' }}</q-tooltip>
         </div>
       </q-chip>
-      <q-chip v-else :class="$q.dark.isActive ? 'bg-grey-9' : 'bg-grey-4'" dense size="sm">
+      <q-chip v-else :class="$q.dark.isActive ? '' : 'bg-grey-4'" dense size="md">
         <q-icon v-if="copied && !iconRight" name="done_all"></q-icon>
         <div class="ellipsis">
-          <code>{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</code>
+          <span>{{ cashaddr.replace(cashaddr.substring(15, 43), '...') }}</span>
           <q-tooltip>{{ toolTip || 'Copy Token Address' }}</q-tooltip>
         </div>
       </q-chip>

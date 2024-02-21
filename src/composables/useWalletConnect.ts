@@ -18,7 +18,7 @@ export const useWalletConnect = () => {
   const walletConnectSessions = ref()
   const user = useUser()
 
-  
+
   onMounted(async () => {
 
     const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
@@ -34,7 +34,7 @@ export const useWalletConnect = () => {
         explorerExcludedWalletIds: 'ALL',
       })
       const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
-      
+
       walletConnectRequiredNamespaces.value = {
         bch: {
           chains: [connectedChain],
@@ -109,22 +109,22 @@ export const useWalletConnect = () => {
     })
 
     user.walletConnectSession = walletConnectSession.value
-    user.walletConnectSigner = walletConnectSignerClient.value  
+    user.walletConnectSigner = walletConnectSignerClient.value
 
   })
-  
+
 
   const walletConnectConnect = async () => {
     try {
       const { uri, approval } = await walletConnectSignerClient.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
       const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
-      
+
       await walletConnectModal.value.openModal({ uri });
       // Await session approval from the wallet.
       walletConnectSession.value = await approval();
       walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
       walletConnectModal.value.closeModal();
-      
+
       let address
       if (walletConnectSession.value) {
         if (walletConnectSession.value?.namespaces?.bch?.accounts) {
@@ -138,11 +138,11 @@ export const useWalletConnect = () => {
         const watchtower = new Watchtower()
         let counter = 0
         while (counter < 3){
-          watchtower.subscribe(address)  
+          watchtower.subscribe(address)
           counter++
         }
       }
-  
+
     } catch (error) { console.log(error); }
   }
 
@@ -156,7 +156,7 @@ export const useWalletConnect = () => {
           walletConnectWallet.value = undefined
           walletConnectSignerClient.value = undefined
           walletConnectModal.value = undefined
-          walletConnectRequiredNamespaces.value = undefined 
+          walletConnectRequiredNamespaces.value = undefined
           walletConnectSession.value = undefined
           walletConnectSessions.value = undefined
           user.wallet = undefined
@@ -185,7 +185,7 @@ export const useWalletConnect = () => {
       broadcast: Boolean(broadcast),
       userPrompt: prompt || 'CTS Requests your signature'
     }
-  
+
     const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
     console.log(chainId)
     let result
@@ -201,12 +201,38 @@ export const useWalletConnect = () => {
       return result;
     } catch (error) {
       throw error
-    } 
+    }
   }
-  
+
+  const walletConnectSignMessage =  async (message:any, broadcast?: boolean, prompt?:string):Promise<any> =>  {
+    const options = {
+      message: message,
+      broadcast: Boolean(broadcast),
+      userPrompt: prompt || 'CTS Requests your signature'
+    }
+
+    const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
+    console.log(chainId)
+    let result
+    try {
+      result = await walletConnectSignerClient.value.request({
+        chainId: chainId,
+        topic: walletConnectSession.value.topic,
+        request: {
+          method: "bch_signMessage",
+          params: JSON.parse(stringify(options)),
+        },
+      });
+      return result;
+    } catch (error) {
+      throw error
+    }
+  }
+
   const walletConnectTransactionSigner:TransactionSigner = {
     type: 'walletconnect',
-    signTransaction: walletConnectSignTransaction
+    signTransaction: walletConnectSignTransaction,
+    signMessage: walletConnectSignMessage
   }
 
   return {

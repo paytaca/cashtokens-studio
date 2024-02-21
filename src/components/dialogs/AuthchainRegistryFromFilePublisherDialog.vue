@@ -2,28 +2,35 @@
   <q-dialog v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
       <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
-      <q-avatar class="q-mx-sm" v-if="authchainIdentity.tokenUris?.icon">
-        <img :src="authchainIdentity.tokenUris?.icon" alt="">
-      </q-avatar>
-      <span v-if="authchainIdentity.tokenCategory?.symbol" class="q-mx-sm text-bold">{{
-        authchainIdentity.tokenCategory?.symbol }} </span>
-      <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold q-mb-md" style="text-wrap:wrap">Upload and Publish
-          Registry</q-toolbar-title>
-        <TokenCategory :token-id="authchainIdentity?.token?.tokenId" />
+      <q-toolbar class="flex-reverse">
+        <q-toolbar-title class="col-12 text-h5 text-bold q-mb-md" style="text-wrap:wrap">Upload and Publish
+          Registry
+        </q-toolbar-title>
       </q-toolbar>
-      <div class="q-mx-md text-justify">
-        <q-icon name="info" color="secondary" size="md"></q-icon>
+
+      <div class="rounded bordered">
+        <q-avatar class="q-ma-sm" v-if="authchainIdentity.identitySnapshot?.uris?.icon">
+          <img :src="authchainIdentity.identitySnapshot?.uris?.icon" alt="">
+        </q-avatar>
+        <span v-if="authchainIdentity.identitySnapshot?.token?.symbol" class="q-ma-sm text-bold">{{
+          authchainIdentity.identitySnapshot?.token?.symbol }} </span>
+
+        <!-- <TokenCategory :token-id="authchainIdentity.identitySnapshot?.token?.category" /> -->
+      </div>
+
+      <div class="q-ma-md text-justify">
+        <q-icon name="info" color="secondary" size="sm"></q-icon>
         <span>
-          This dialog allows you to store a registry from file to IPFS and then publish it's URI and content hash
+          Upload your token's registry (BCMR) file to IPFS and publish it's URI and content hash
           on-chain.
         </span>
       </div>
       <q-card-section>
         <q-uploader @uploaded="onFileUploaded" field-name="registryFile"
-          :label="uploaded ? 'BCMR file uploaded' : 'Select BCMR(registry) File'"
-          :url="`api/tokens/registry-file/storage?tokenId=${authchainIdentity?.token?.tokenId}`" auto-upload flat dense
-          size="sm" style="width:100%;max-width: 100%;" @uploading="() => uploading = true" :multiple="false" />
+          :label="uploaded ? 'BCMR file uploaded' : 'Click + to select file'"
+          :url="`api/tokens/registry-file/storage?tokenId=${authchainIdentity.identitySnapshot?.token?.category}`"
+          auto-upload flat dense size="sm" style="width:100%;max-width: 100%;" @uploading="() => uploading = true"
+          :multiple="false" color="dark" />
         <div class="q-mt-sm" style="max-width: 100%;overflow-x: auto;">
           <q-markup-table v-if="uploaded && uploadArtifact" flat dense>
             <thead>
@@ -123,11 +130,11 @@ const publish = async () => {
         txid: tx,
         txType: 'AuthchainIdentity.publish',
         timestamp: new Date().getTime(),
-        successMsg: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
+        successMsg: `Published ${props.authchainIdentity.identitySnapshot?.token?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`
       })
       emit('registryPublished', { tokenId: props.authchainIdentity!.token!.tokenId })
       ui.setStatusMessage({
-        statusMessage: `Published ${props.authchainIdentity.tokenCategory?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
+        statusMessage: `Published ${props.authchainIdentity.identitySnapshot?.token?.symbol || shortenTokenId(props.authchainIdentity.token!.tokenId)}'s registry`,
         statusMessageType: 'success',
         statusMessageTxid: tx
       })
