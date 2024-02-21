@@ -1,4 +1,4 @@
-import { IdentitySnapshot, NFTCapability, Registry, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
+import { IdentitySnapshot, NFTCapability, TokenCategory, URIs, TestNetWallet, TokenI, UtxoI, Wallet } from "mainnet-js";
 import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
@@ -6,9 +6,7 @@ import { SignatureTemplate} from "cashscript";
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
-import { TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
 import { PartialBcmr } from "./interfaces";
-import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 import { NftCollectionType, TransactionSigner } from "./types";
 import { submitTransaction } from "./utils";
 

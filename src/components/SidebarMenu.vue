@@ -21,7 +21,6 @@
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useUser } from 'src/stores/user'
-import shortenAddress from 'src/app/utils/shortenAddress';
 
 defineOptions({ name: 'SidebarMenu' })
 const qtree = ref()
@@ -32,8 +31,6 @@ const selected = ref<string | null>(null)
 const expanded = ref<any[]>([])
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
-  // createFT: '/issuer/tokens/create/ft',
-  // createNFT: '/issuer/tokens/create/nft',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
   manageRegistries: '/issuer/manage/registries',
@@ -90,11 +87,6 @@ const menu = computed<any[]>(() => {
           href: hrefs.manageNFTReserves,
           icon: 'art_track',
         },
-        // {
-        //   label: 'Token Categories',
-        //   href: hrefs.manageAuthchains,
-        //   icon: 'token',
-        // },
         {
           label: 'Metadata',
           href: hrefs.manageRegistries,

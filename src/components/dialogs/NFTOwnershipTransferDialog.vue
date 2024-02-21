@@ -55,7 +55,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUpdated } from 'vue';
+import { ref, onUpdated } from 'vue';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
 import { AuthGuard, AuthKey, CashToken } from 'src/app';
@@ -63,12 +63,10 @@ import TokenCategory from 'src/components/TokenCategory.vue'
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
 import { shortenAddress, shortenTokenId, shortenTx } from 'src/app/utils';
-import { NftType } from 'src/app/bcmr/bcmr-v2.schema';
 import { useUI } from 'src/stores/ui'
-import { UtxoI, Wallet, delay } from 'mainnet-js';
+import { UtxoI, Wallet, delay, NftType } from 'mainnet-js';
 import { useDialogs } from 'src/composables'
 import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
-import convertBigIntToHexLE from 'src/app/utils/convertBigIntToHexLE';
 import AuthGuardTokenListDialog from './AuthGuardTokenListDialog.vue';
 const props = defineProps<{
   decimals?: string,

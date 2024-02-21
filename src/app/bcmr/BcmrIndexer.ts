@@ -1,7 +1,6 @@
-import { FetchUtxoQueryParams } from "../Watchtower"
+import { Registry, TokenCategory, URIs } from "mainnet-js"
 import querify from "../utils/querify"
 import { Bcmr } from "./Bcmr"
-import { Registry, TokenCategory, URIs } from "./bcmr-v2.schema"
 
 
 export class BcmrIndexer {

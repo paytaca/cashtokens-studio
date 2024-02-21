@@ -189,9 +189,9 @@
   </q-form>
 </template>
 <script setup lang="ts">
-import { NFTCapability, UtxoI, Wallet, delay } from 'mainnet-js'
+import { NFTCapability, UtxoI, Wallet, NftType, URIs } from 'mainnet-js'
 import { useQuasar } from 'quasar'
-import { watch, onMounted, ref, computed, Ref, onUpdated } from 'vue'
+import { watch, onMounted, ref, computed, Ref } from 'vue'
 import { useUser } from 'src/stores/user'
 import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
 import BusyButton from 'src/components/BusyButton.vue'
@@ -202,8 +202,7 @@ import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs, useEventBus } from 'src/composables'
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
-import { NftType, URIs } from 'src/app/bcmr/bcmr-v2.schema'
-import { numberToTokeshi, shortenTx } from 'src/app/utils'
+import { shortenTx } from 'src/app/utils'
 import { useUI } from 'src/stores/ui'
 
 const props = defineProps<{

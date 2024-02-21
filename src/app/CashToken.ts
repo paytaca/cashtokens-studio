@@ -1,18 +1,16 @@
 import { AuthChain, BCMR, IdentitySnapshot, NFTCapability, OpReturnData, SendRequest, TokenI, TokenSendRequest, UtxoI, Wallet } from "mainnet-js";
-import { AuthKey, BcmrIndexer, CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT, DEFAULT_TOKEN_VALUE, Watchtower } from '.'
+import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from '.'
 import { GenesisOptions, NftCollectionType, TransactionSigner } from "./types";
 import calcMinerFee from "./utils/calcMinerFee";
-import requestPaytacaSignature from "./utils/requestPaytacaSignature";
 import submitTransaction from "./utils/submitTransaction";
-import { binToHex, binToNumberUint16LE, cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
+import { cashAddressToLockingBytecode, decodeTransaction, hexToBin, utf8ToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import { SignatureTemplate } from "cashscript";
 import toCashScript from "./utils/toCashScript";
-import { NftType, TokenCategory, URIs } from "./bcmr/bcmr-v2.schema";
+import { NftType, TokenCategory, URIs } from "mainnet-js";
 import { PartialBcmr } from "./interfaces";
 import convertBigIntToHexLE from "./utils/convertBigIntToHexLE";
 import { ProcessingMessage } from "."
-import requestWalletConnectSignature from "./utils/requestWalletConnectSignature";
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput,

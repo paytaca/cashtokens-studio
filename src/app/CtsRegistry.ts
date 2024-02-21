@@ -1,7 +1,5 @@
-import { Extensions, Network, NftType, TokenI, URIs, Wallet } from "mainnet-js"
-import { IdentityHistory } from "./bcmr/bcmr-v2.schema"
+import { Extensions, Network, NftType, TokenI, URIs } from "mainnet-js"
 import { TransactionSigner } from "./types"
-import { stringify } from "@bitauth/libauth"
 
 export type NFTProjectPublishingOptions = {
   tokenId: string,
