@@ -105,6 +105,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     return this._processing
   }
 
+  set processing(txt: string|undefined){
+    this._processing = txt
+  }
+
   static get processing():string|undefined {
     return AuthchainIdentity._processing
   }
@@ -745,7 +749,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       if (quite !== true) {
         this._processing = 'Checking token registry'
       }
-      const r = await (new BcmrIndexer()).getIdentitySnapshot(this.token!.tokenId)  
+      const r = await (new BcmrIndexer()).fetchIdentitySnapshot(this.token!.tokenId)  
       this.identitySnapshot = r
 
     } catch (error:any) {

@@ -7,7 +7,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :columns="[
+            :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
@@ -57,38 +57,56 @@
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
-                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                  <q-img :src="value.row.identitySnapshot.uris.icon" />
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="circle" bordered></q-skeleton>
+                </div>
+                <div v-else>
+                  <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-symbol="value">
               <q-td class="text-center">
-                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
-                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
-                </span>
-
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
+                    <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
+                  </span>
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-tokenid="value">
               <q-td class="text-center">
-                <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
-                  :tokenId="value.row.identitySnapshot.token.category" />
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
+                    :tokenId="value.row.identitySnapshot.token.category" />
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
-                  size="md" dense color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
-                </q-btn>
-                <span v-else class="text-grey-8">
-                  N/A
-                </span>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
+                </div>
+                <div v-else>
+                  <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
+                    size="md" dense color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
+                  </q-btn>
+                  <span v-else class="text-grey-8">
+                    N/A
+                  </span>
+                </div>
               </q-td>
             </template>
+            <!-- <template v-slot:loading>
+              <q-inner-loading :showing="populatingTable"></q-inner-loading>
+            </template> -->
           </q-table>
         </div>
       </div>
@@ -115,6 +133,7 @@ const router = useRouter()
 const user = useUser()
 const minter = useMinter()
 const eventBus = inject<EventBus>('eventBus')
+const populatingTable = ref<boolean>()
 
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
@@ -156,7 +175,8 @@ const openMintChildNftPage = (identity: AuthchainIdentity) => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    $q.loading.show()
+    // $q.loading.show()
+    populatingTable.value = true
     const query = {
       limit: pagination.value.rowsPerPage,
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
@@ -164,7 +184,8 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       token_is_nft: true
     }
     const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
-    $q.loading.hide()
+    populatingTable.value = false
+    // $q.loading.hide()
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
       pagination.value.rowsNumber = resp.count

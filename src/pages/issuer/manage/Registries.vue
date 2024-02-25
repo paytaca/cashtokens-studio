@@ -7,7 +7,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
-            :rows="ownedAuthHeads.results" :columns="[
+            loading-label="Loading, please wait..." :rows="ownedAuthHeads.results" :loading="populatingTable" :columns="[
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
@@ -39,47 +39,66 @@
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
-                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                  <q-img :src="value.row.identitySnapshot.uris.icon" />
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="circle" bordered></q-skeleton>
+                </div>
+                <div v-else>
+                  <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-symbol="value">
               <q-td class="text-center">
-                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
-                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
-                </span>
-
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
+                    <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
+                  </span>
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-tokenid="value">
               <q-td class="text-center">
-                <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
-                  :tokenId="value.row.identitySnapshot.token.category" />
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
+                    :tokenId="value.row.identitySnapshot.token.category" />
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
-                  @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
-                  <q-menu>
-                    <q-list>
-                      <q-item clickable v-close-popup
-                        @click.stop="openPublisherDialog('url', value.row.identitySnapshot?.token?.category, value.row)">
-                        Publish Registry From URL
-                      </q-item>
-                      <q-item clickable v-close-popup
-                        @click.stop="openPublisherDialog('file', value.row.identitySnapshot?.token?.category, value.row)">
-                        Publish Registry From File
-                      </q-item>
-                    </q-list>
-                  </q-menu>
-                </q-btn>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
+                </div>
+
+                <div v-else>
+                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
+                    @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
+                    <q-menu>
+                      <q-list>
+                        <q-item clickable v-close-popup
+                          @click.stop="openPublisherDialog('url', value.row.identitySnapshot?.token?.category, value.row)">
+                          Publish Registry From URL
+                        </q-item>
+                        <q-item clickable v-close-popup
+                          @click.stop="openPublisherDialog('file', value.row.identitySnapshot?.token?.category, value.row)">
+                          Publish Registry From File
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </div>
               </q-td>
             </template>
+            <!-- <template v-slot:loading>
+              <q-inner-loading :showing="populatingTable"></q-inner-loading>
+            </template> -->
           </q-table>
           <AuthchainRegistryPublisherDialog v-if="dialog"
             :model-value="dialog === AuthchainRegistryPublisherDialog.__name"
@@ -93,7 +112,7 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, computed, inject, onBeforeUnmount, onBeforeMount, defineComponent } from 'vue';
+import { onMounted, ref, computed, inject, onBeforeUnmount, onBeforeMount, defineComponent, watch } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, ChainGraph, Watchtower } from 'src/app'
@@ -117,6 +136,7 @@ const user = useUser()
 const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
+const populatingTable = ref<boolean>()
 
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
@@ -154,10 +174,10 @@ const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    $q.loading.show()
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
+    populatingTable.value = true
     const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
-    $q.loading.hide()
+    populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
       pagination.value.rowsNumber = resp.count
@@ -173,6 +193,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           token
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+
         await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
       })
 
@@ -224,7 +245,6 @@ onBeforeMount(async () => {
   if (user.wallet) {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
-
 })
 
 const onTableRequest = async (props: any) => {
