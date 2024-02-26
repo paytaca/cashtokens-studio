@@ -1,7 +1,7 @@
 <template>
   <q-page>
     <q-layout view="lHh Lpr lFf" container style="height: 100vh">
-      <q-footer v-if="bcmrNewRevision && !progress" class="q-pa-lg text-right"
+      <!-- <q-footer v-if="bcmrNewRevision && !progress" class="q-pa-lg text-right"
         style="background-color: rgb(20,20,20, 0.71);" reveal>
         <div class="text-right q-gutter-sm">
           <div class="q-gutter-sm row items-center text-right flex">
@@ -14,26 +14,44 @@
           <q-btn v-if="!progress" @click.stop="reset" size="md" icon="undo" text-color="negative">
             Reset
           </q-btn>
-          <q-btn @click.stop="downloadRevisedRegistry" icon="download" size="md" text-color="primary"
-            :disabled="!!progress">
+          <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" icon="download"
+            size="md" text-color="primary" :disabled="!!progress">
             <q-tooltip>Download registry</q-tooltip>
             <q-spinner v-if="!!progress"></q-spinner>Download
           </q-btn>
-          <q-btn @click.stop="promptOptionsAndPublish" size="md" color="primary" :disabled="!!progress">
+          <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md" color="primary"
+            :disabled="!!progress">
             <q-tooltip>Publish changes</q-tooltip>
             <q-spinner v-if="!!progress && !progress.toString().includes('Download')"></q-spinner>Publish Changes
           </q-btn>
         </div>
-      </q-footer>
+      </q-footer> -->
       <q-page-container>
-        <q-page padding>
-          <div class="col-12 text-right q-mr-lg">
-            <q-btn v-if="!bcmrNewRevision" @click.stop="newRevision" size="md" icon="edit_note" text-color="primary">
-              Revise/Edit
+        <q-page padding class="q-mb-lg">
+          <div class="col-12 text-right q-mr-lg q-gutter-md">
+
+            <q-btn v-if="!bcmrNewRevision" @click.stop="newRevision" size="md" icon="edit" text-color="primary">
+              <q-tooltip>Click to edit</q-tooltip>
             </q-btn>
-            <q-btn v-else @click.stop="reset" size="md" icon="undo" text-color="negative">
+            <div v-else class="q-gutter-md">
+              <q-btn v-if="!progress" @click.stop="reset" size="md" icon="undo" text-color="negative">
+                <q-tooltip>Reset</q-tooltip>
+              </q-btn>
+              <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" icon="download"
+                size="md" text-color="primary" :disabled="!!progress">
+                <q-tooltip>Download registry</q-tooltip>
+                <q-spinner v-if="!!progress"></q-spinner>
+              </q-btn>
+              <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md" color="primary"
+                :disabled="!!progress" icon="cloud_upload">
+                <q-tooltip>Publish changes</q-tooltip>
+                <q-spinner v-if="!!progress && !progress.toString().includes('Download')"></q-spinner>
+              </q-btn>
+
+            </div>
+            <!-- <q-btn v-else @click.stop="reset" size="md" icon="undo" text-color="negative">
               Reset
-            </q-btn>
+            </q-btn> -->
           </div>
           <q-form id="bcmr-form" ref="bcmrForm" disabled>
             <div class="col-sm-2" :class="$q.screen.xs ? 'flex justify-center q-mb-sm' : ''">
@@ -43,8 +61,8 @@
                     v-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
                     :src="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
                     class="rounded-borders cursor-pointer" @click.stop="iconFileRef.pickFiles()"
-                    style="width:250px;height:250px"></q-img>
-                  <q-icon v-else name="broken_image" size="250px" color="grey-8" class="cursor-pointer"
+                    style="width:200px;height:200px"></q-img>
+                  <q-icon v-else name="broken_image" size="200px" color="grey-8" class="cursor-pointer"
                     @click.stop="iconFileRef.pickFiles()"></q-icon>
                   <div>
                     <btn class="text-underline cursor-pointer" @click.stop="iconFileRef.pickFiles()" flat>Select Token
@@ -229,7 +247,6 @@
                   </q-tab-panel>
                   <q-tab-panel name="unpublished" label="Unpublished">
                     <div class="text-grey-5 row items-center">
-                      <q-icon name="info" class="text-grey-5 q-mr-sm"></q-icon>
                       <span>These contains the list of temporarily saved unpublished NFTs. Select an item and
                         click <span class="text-primary"> 'Add Selected Item' </span> to add
                         the NFT metadata to the registry, the added item will be included when you publish the revision.
@@ -237,12 +254,14 @@
                         <span class="text-negative">'Delete Selected Item'</span> to remove selected item from the local
                         storage.</span>
                     </div>
-                    <div v-if="nftTypesSelected.length > 0" class="q-gutter-sm row items-center q-mt-sm">
+                    <div v-if="nftTypesSelected.length > 0 && bcmrNewRevision"
+                      class="q-gutter-sm row items-center q-mt-sm">
                       <span class="text-grey-4"></span>
-                      <q-btn text-color="negative" @click.stop="deleteSelectedUnpublishedNfts" no-caps>Delete Selected
+                      <q-btn text-color="negative" @click.stop="openDeleteUnpublishNftsDialog" no-caps>Delete Selected
                         Item
                       </q-btn>
-                      <q-btn text-color="primary" @click.stop="commitSelectedUnpublishedNfts" no-caps>Add Selected
+                      <q-btn text-color="primary" class="cursor-pointer" @click.stop="commitSelectedUnpublishedNfts"
+                        no-caps>Add Selected
                         Item</q-btn>
                       <q-btn v-if="nftTypesSelectedForPublication.length > 0" @click.stop="undoCommitOfUnpublishedNfts"
                         text-color="warning">Undo Add</q-btn>
@@ -360,9 +379,9 @@
                       </q-td>
                     </template>
                   </q-table>
-                  <q-inner-loading :showing="nftTypesIsLoading">
+                  <!-- <q-inner-loading :showing="nftTypesIsLoading" >
                     <q-spinner-grid size="30px" />
-                  </q-inner-loading>
+                  </q-inner-loading> -->
                 </div>
               </q-expansion-item>
             </div>
@@ -371,13 +390,30 @@
             <q-spinner size="xl" color="warning" class="q-mb-lg"></q-spinner>
             <span class="bg-black q-px-sm" style="border-radius:10px">{{ progress }}</span>
           </q-inner-loading> -->
-          <q-page-sticky v-if="!bcmrNewRevision" position="bottom-right" :offset="[18, 18]">
+          <q-page-sticky v-if="!bcmrNewRevision" position="bottom-right" :offset="[30, 18]">
             <q-btn @click="newRevision" fab icon="edit" color="primary" />
+          </q-page-sticky>
+          <q-page-sticky v-else position="bottom-right" :offset="[30, 25]" class="q-gutter-md">
+            <div class="q-gutter-md">
+              <q-btn v-if="!progress" @click.stop="reset" fab size="md" icon="undo" text-color="negative">
+                <q-tooltip>Reset</q-tooltip>
+              </q-btn>
+              <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" icon="download"
+                size="md" text-color="primary" :disabled="!!progress" fab>
+                <q-tooltip>Download registry</q-tooltip>
+                <q-spinner v-if="!!progress"></q-spinner>
+              </q-btn>
+              <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md" color="primary"
+                :disabled="!!progress" icon="cloud_upload" fab>
+                <q-tooltip>Publish changes</q-tooltip>
+                <q-spinner v-if="!!progress && !progress.toString().includes('Download')"></q-spinner>
+              </q-btn>
+            </div>
           </q-page-sticky>
         </q-page>
       </q-page-container>
     </q-layout>
-    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
+    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b" class="bg-transparent">
       <q-spinner size="xl" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-px-sm" style="border-radius:10px">{{ progress }}</span>
     </q-inner-loading>
@@ -408,6 +444,7 @@ import { stringify } from 'querystring';
 import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
+import { Console } from 'console';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -511,21 +548,26 @@ const newRevision = () => {
 }
 
 type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create' }
+type RevisionOptionCallback = (arg1: RevisionOption) => any
 
-const promptOptionsAndPublish = async () => {
+const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabel?: string) => {
   $q.dialog({
     component: PublishRevisionOption,
     componentProps: {
       version: bcmr.value.versionString,
       latestRevision: bcmr.value.latestRevision,
-      newRevision: bcmrNewRevision.value?.toString() || new Date().toString()
+      newRevision: bcmrNewRevision.value?.toString() || new Date().toString(),
+      okLabel: okLabel
     }
   }).onOk((options: RevisionOption) => {
-    publish(options)
-    let innerLoadingElement = document.getElementById('inner-loading');
-    innerLoadingElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // publish(options)
+    callback(options)
+    // let innerLoadingElement = document.getElementById('inner-loading');
+    // innerLoadingElement?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   })
 }
+
+
 
 const publish = async (revisionOptions: RevisionOption) => {
   let { newVersion, revisionOption } = revisionOptions
@@ -565,6 +607,25 @@ const publish = async (revisionOptions: RevisionOption) => {
       [bcmrNewRevisionISOString]: singleRevision
     }
   }
+
+  // add nfts
+  if (nftTypesSelectedForPublication.value.length > 0) {
+    console.log('FOR PUBLICATINO', nftTypesSelectedForPublication.value)
+    // const newNftTypes = nftTypesSelectedForPublication.value.map((nftType) => ({[nftType._meta.commitment]: nftType[nftType._meta.commitment]}))
+    if (!bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.nfts) {
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts = {
+        parse: {
+          bytecode: '',
+          types: {}
+        }
+      }
+    }
+    for (const nftType of nftTypesSelectedForPublication.value) {
+      console.log('ADDING', nftType)
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
+
+    }
+  }
   console.log('ABOUT TO PUBLISH', bcmr.value)
   bcmr.value.latestRevision = bcmrNewRevisionISOString
 
@@ -576,6 +637,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   console.log('Token symbol', tokenSymbol)
   console.log('UTXO BEFORE UPDATE', tokenStore.token.utxo)
   console.log('key UTXO BEFORE UPDATE', tokenStore.token.authKey?.utxo)
+
   let tx = ''
   try {
     const artifact = await bcmr.value.storeRegistry()
@@ -619,6 +681,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       console.log('UTXO AFTER UPDATE', tokenStore.token.utxo)
       console.log('key UTXO AFTER UPDATE', tokenStore.token.authKey?.utxo)
       publicationTx.value = tx
+      deleteSelectedUnpublishedNfts()
     } catch (error: any) {
       $q.dialog({
         message: error?.toString(),
@@ -629,40 +692,27 @@ const publish = async (revisionOptions: RevisionOption) => {
     } finally {
       progress.value = false
     }
-
   }
-
-  console.log('ABOUT TO PUBLISH THIS', bcmr.value)
-
-}
-
-const openRegistryPublisherDialog = () => {
-  $q.dialog({
-    component: RegistryPublishDialog,
-    componentProps: {
-      authhead: tokenStore.token
-    }
-  }).onOk((tx) => {
-    console.log(tx)
-  })
 }
 
 
-const deleteSelectedUnpublishedNfts = async () => {
+const openDeleteUnpublishNftsDialog = () => {
   $q.dialog({
     message: 'Are you sure you want to delete the selected unpublished NFT metadata?',
     ok: 'Yes',
     cancel: 'No',
   }).onOk(async () => {
-    console.log('ENTRIES', await localForage.nftTypesStore.keys())
-
-    for (const [i, nftType] of nftTypesSelected.value.entries()) {
-      await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
-      console.log('REMOVED', nftType.id)
-      nftTypesSelected.value.splice(i)
-    }
-    populateNftsTable()
+    deleteSelectedUnpublishedNfts()
   })
+}
+
+const deleteSelectedUnpublishedNfts = async () => {
+  for (const [i, nftType] of nftTypesSelected.value.entries()) {
+    await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+    console.log('REMOVED', nftType.id)
+    nftTypesSelected.value.splice(i)
+  }
+  populateNftsTable()
 }
 
 const commitSelectedUnpublishedNfts = () => {
@@ -670,6 +720,7 @@ const commitSelectedUnpublishedNfts = () => {
     nftType.forPublish = true
     return nftType
   })
+  console.log('SELECTED', nftTypesSelectedForPublication.value)
 }
 
 const undoCommitOfUnpublishedNfts = () => {
@@ -734,9 +785,31 @@ const downloadRegistryFile = (registry: any) => {
   window.URL.revokeObjectURL(url);
 }
 
-const downloadRevisedRegistry = async () => {
+const downloadRevisedRegistry = async (revisionOptions: RevisionOption) => {
   progress.value = 'Downloading'
-  await delay(1000)
+  const { revisionOption } = revisionOptions
+  const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
+  if (revisionOption == 'update') {
+    const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
+    bcmr.value.identities![bcmrSelectedAuthbase.value!] = {
+      [bcmrNewRevisionISOString]: singleRevision
+    }
+  }
+
+  // add nfts
+  if (nftTypesSelectedForPublication.value.length > 0) {
+    if (!bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.nfts) {
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts = {
+        parse: {
+          bytecode: '',
+          types: {}
+        }
+      }
+    }
+    for (const nftType of nftTypesSelectedForPublication.value) {
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
+    }
+  }
   downloadRegistryFile(bcmr.value.getContent())
   progress.value = false
 }
@@ -899,7 +972,7 @@ watch(() => tokenStore?.token?.processing, async (v) => {
 
 onBeforeMount(async () => {
   try {
-    progress.value = 'Loading registry'
+    progress.value = 'Loading registry, please wait...'
     const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
     const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category, true)
     console.log('PUBINFO', pubInfo)
@@ -945,3 +1018,10 @@ onMounted(async () => {
 
 
 </script>
+
+<style scoped>
+.disabled,
+[disabled] {
+  opacity: 0.8 !important;
+}
+</style>
