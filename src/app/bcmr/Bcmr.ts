@@ -362,24 +362,35 @@ export class Bcmr implements Registry {
   
   addIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
     if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
-      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
-        this.identities[authbase][identity_history].uris = {
-          ...this.identities[authbase][identity_history].uris,
-          ...uri
-        }
-        console.log('AFTER', this.identities[authbase][identity_history].uris)
-      } 
+      // if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+      //   this.identities[authbase][identity_history].uris = {
+      //     ...this.identities[authbase][identity_history].uris,
+      //     ...uri
+      //   }
+      //   console.log('AFTER', this.identities[authbase][identity_history].uris)
+      // } 
+      this.identities[authbase][identity_history].uris = {
+        ...this.identities[authbase][identity_history].uris,
+        ...uri
+      }
     }
   }
 
+  /**
+   * @deprecated Check usage before deleting, use addIdentitySnapshotUri
+   */
   setIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
     if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
-      if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
-        this.identities[authbase][identity_history].uris = {
-          ... this.identities[authbase][identity_history].uris,
-          ...uri
-        }
-      } 
+      // if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
+      //   this.identities[authbase][identity_history].uris = {
+      //     ... this.identities[authbase][identity_history].uris,
+      //     ...uri
+      //   }
+      // } 
+      this.identities[authbase][identity_history].uris = {
+        ...this.identities[authbase][identity_history].uris,
+        ...uri
+      }
     }
   }
 
