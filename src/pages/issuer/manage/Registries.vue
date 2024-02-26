@@ -127,12 +127,14 @@ import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/Aut
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
+import { useAuthhead } from 'src/stores/authhead';
 
 defineComponent({ name: 'RegistryList' })
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
 const user = useUser()
+const authhead = useAuthhead()
 const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
@@ -168,7 +170,8 @@ const visibleColumns = computed(() => {
 
 
 const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
-  tokenStore.token = authHead
+  tokenStore.token = authHead // deprecate this
+  // authhead.value = authhead
   router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
 }
 

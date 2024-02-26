@@ -31,6 +31,8 @@ export class ChainGraph {
       return authhead.hash.replace('\\x', '');
     } catch (error) {
       console.log(error)
+      throw error
+      
     }
     return ''
   }

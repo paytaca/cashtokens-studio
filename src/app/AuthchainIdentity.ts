@@ -805,14 +805,15 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this._processing = 'Updating authhead utxo'
     try {
       if (this.authKey) {
-        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
-        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
-          u.vout == this.utxo.vout &&
+        let updatedUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+        console.log('LOCKED IDENTITIES')
+        updatedUtxo = updatedUtxo?.filter(u => (
+          u.vout == 0 &&
           u.token?.tokenId == this.utxo.token?.tokenId &&
-          u.token?.capability == NFTCapability.minting
+          u.token?.capability == this.utxo.token?.capability
         ))
-        if (updatedMinterUtxo) {
-          this.utxo = updatedMinterUtxo[0]
+        if (updatedUtxo) {
+          this.utxo = updatedUtxo[0]
         }
       }
     } catch (error) {
