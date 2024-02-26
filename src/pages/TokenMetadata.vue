@@ -8,18 +8,18 @@
               <q-tooltip>Click to edit</q-tooltip>
             </q-btn>
             <div v-else class="q-gutter-md">
-              <q-btn v-if="!progress || newTokenIconUploading" @click.stop="reset" size="md" icon="undo"
+              <q-btn v-if="!progress && !newTokenIconUploading" @click.stop="reset" size="md" icon="undo"
                 text-color="negative">
                 <q-tooltip>Reset</q-tooltip>
               </q-btn>
               <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
-                text-color="primary" :disabled="!!progress">
+                text-color="primary" :disabled="!!progress || newTokenIconUploading">
                 <q-tooltip>Download registry</q-tooltip>
                 <q-spinner v-if="!!progress || newTokenIconUploading"></q-spinner>
                 <q-icon v-else name="download"></q-icon>
               </q-btn>
               <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md" color="primary"
-                :disabled="!!progress">
+                :disabled="!!progress || newTokenIconUploading">
                 <q-tooltip>Publish changes</q-tooltip>
                 <q-spinner
                   v-if="(!!progress || newTokenIconUploading) && !progress?.toString().includes('Download')"></q-spinner>
@@ -31,19 +31,20 @@
             <div class="col-sm-2" :class="$q.screen.xs ? 'flex justify-center q-mb-sm' : ''">
               <div class="row justify-center items-center">
                 <div class="col-12 text-center">
-                  <q-skeleton v-if="!!progress" type="rect" style="margin:auto; width:200px;height:200px"></q-skeleton>
+                  <q-skeleton v-if="!!progress" style="margin: auto;width:200px;height:200px"
+                    animation="pulse-y"></q-skeleton>
                   <q-img
-                    v-else-if="!progress && bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
+                    v-else-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
                     :src="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
                     class="rounded-borders cursor-pointer" @click.stop="iconFileRef.pickFiles()"
                     style="width:200px;height:200px"></q-img>
                   <q-icon v-else name="broken_image" size="200px" color="grey-8" class="cursor-pointer"
                     @click.stop="iconFileRef.pickFiles()"></q-icon>
                   <div>
-                    <btn class="text-underline cursor-pointer" @click.stop="iconFileRef.pickFiles()" flat>Select Token
+                    <q-btn class="text-underline cursor-pointer" @click.stop="iconFileRef.pickFiles()" flat>Select Token
                       Icon
                       <q-icon name="attach_file"></q-icon>
-                    </btn>
+                    </q-btn>
                   </div>
                   <label v-if="newTokenIconUploading" class="text-warning">
                     Uploading<q-spinner-dots color="warning" class="q-mr-sm"></q-spinner-dots>
@@ -664,6 +665,7 @@ const saveNewIconInIPFS = async () => {
       })
       const respJson = await resp.json()
       if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && respJson.iconUris?.https) {
+        console.log('ADDING URIS')
         bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: respJson.iconUris?.https })
       }
 
