@@ -78,7 +78,11 @@
                 </div>
 
                 <div v-else>
-                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
+                  <q-btn id="authchain-action-buttons" text-color="grey-6" icon="auto_stories" size="md" round flat dense
+                    @click.stop="(e) => { e.preventDefault(); onRowClicked(e, value.row) }">
+                    <q-tooltip>View</q-tooltip>
+                  </q-btn>
+                  <!-- <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
                     @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
                     <q-menu>
                       <q-list>
@@ -90,9 +94,12 @@
                           @click.stop="openPublisherDialog('file', value.row.identitySnapshot?.token?.category, value.row)">
                           Publish Registry From File
                         </q-item>
+                        <q-item clickable @click.stop="(e) => onRowClicked(e, value.row)">
+                          <q-icon name="auto_stories"></q-icon>
+                        </q-item>
                       </q-list>
                     </q-menu>
-                  </q-btn>
+                  </q-btn> -->
                 </div>
               </q-td>
             </template>
