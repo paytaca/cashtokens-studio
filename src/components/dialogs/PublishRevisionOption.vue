@@ -69,7 +69,7 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn color="primary" size="lg" label="Confirm Publish"
+        <q-btn color="primary" size="lg" :label="okLabel || 'ok'"
           @click.stop="() => onDialogOK({ revisionOption, newVersion })" />
       </q-card-actions>
 
@@ -82,7 +82,7 @@ import { useDialogPluginComponent } from 'quasar'
 import { onMounted, ref } from 'vue'
 
 const revisionOption = ref<'update' | 'add'>('update')
-const props = defineProps<{ version: string, latestRevision: string, newRevision: string }>()
+const props = defineProps<{ version: string, latestRevision: string, newRevision: string, okLabel: string }>()
 const newVersion = ref<string>()
 defineEmits([
   ...useDialogPluginComponent.emits,
