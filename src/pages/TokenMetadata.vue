@@ -1,19 +1,15 @@
 <template>
   <q-page>
     <q-layout view="lHh Lpr lFf" container style="height: 100vh">
-      <!-- <q-header reveal style="background-color: unset;margin-bottom: unset;">
-        <div class="row justify-center">
-          <div class="col-xs-12 col-sm-10 col-lg-9">
-            <div class="row justify-center">
-              <div class="text-h4 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Token Genesis</div>
-            </div>
-          </div>
-        </div>
-      </q-header> -->
-      <q-footer v-if="bcmrNewRevision" class="q-pa-lg text-right" style="background-color: rgb(20,20,20, 0.71);" reveal>
+      <q-footer v-if="bcmrNewRevision && !progress" class="q-pa-lg text-right"
+        style="background-color: rgb(20,20,20, 0.71);" reveal>
         <div class="text-right q-gutter-sm">
-          <div class="q-gutter-sm row items-center text-right">
-            <q-icon name="warning" size="xs" color="warning"></q-icon><span>Registry modified, added new revision.</span>
+          <div class="q-gutter-sm row items-center text-right flex">
+            <q-icon name="warning" size="xs" color="warning"></q-icon>
+            <span class="text-justify">{{ progress || `Registry modified, added new revision history. Just continue
+              editing, your changes will
+              be
+              applied to this new revision.` }}</span>
           </div>
           <q-btn v-if="!progress" @click.stop="reset" size="md" icon="undo" text-color="negative">
             Reset
@@ -27,7 +23,6 @@
             <q-tooltip>Publish changes</q-tooltip>
             <q-spinner v-if="!!progress && !progress.toString().includes('Download')"></q-spinner>Publish Changes
           </q-btn>
-
         </div>
       </q-footer>
       <q-page-container>
@@ -70,6 +65,10 @@
               </div>
             </div>
             <div class="col-xs-12 col-sm-10">
+              <div v-if="publicationTx" class="q-px-lg">
+                🎉 Registry published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
+                  color="secondary" label="View Tx in Explorer" />
+              </div>
               <q-expansion-item v-model="expansionItemOne" label="Registry" class="q-px-md q-pt-sm q-my-sm"
                 icon="menu_book">
                 <div class="q-mx-md q-gutter-sm q-my-sm">
@@ -83,15 +82,6 @@
                       :model-value="bcmr.versionString" outlined>
                     </q-input>
                   </div>
-                  <!-- <div v-if="bcmrNewVersion" class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                <label >New Version <q-icon name="priority_high" color="warning"></q-icon></label>
-                <q-input class="registry-field" v-model="bcmr.latestRevision" label="Latest Revision" outlined 
-                  disable>
-                  <template v-slot:prepend>
-                    <q-icon name="priority_high" color="warning"></q-icon>
-                  </template>
-                </q-input>
-              </div> -->
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
                     <label>Latest Revision</label>
                     <q-input class="registry-field" v-model="bcmr.latestRevision" outlined disable>
@@ -132,14 +122,6 @@
                     <q-select v-model="bcmrSelectedIdentityHistory" :options="bcmrIdentityHistories" outlined>
                     </q-select>
                   </div>
-                  <!-- <div v-if="bcmrNewRevision" class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                <label>New Identity History</label>
-                <q-input :model-value="bcmrNewRevision.toString()" disable outlined>
-                  <template v-slot:prepend>
-                    <q-icon name="priority_high" color="warning"></q-icon>
-                  </template>
-                </q-input>
-              </div> -->
                 </div>
                 <div v-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory" class="q-mx-md q-gutter-sm q-my-sm">
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
@@ -385,14 +367,20 @@
               </q-expansion-item>
             </div>
           </q-form>
-          <q-inner-loading :showing="!!progress" id="inner-loading">
-            <q-spinner size="lg"></q-spinner>
-            <span>{{ progress }}, please wait...</span>
-          </q-inner-loading>
-
+          <!-- <q-inner-loading :showing="!!progress" id="inner-loading" class="bg-transparent">
+            <q-spinner size="xl" color="warning" class="q-mb-lg"></q-spinner>
+            <span class="bg-black q-px-sm" style="border-radius:10px">{{ progress }}</span>
+          </q-inner-loading> -->
+          <q-page-sticky v-if="!bcmrNewRevision" position="bottom-right" :offset="[18, 18]">
+            <q-btn @click="newRevision" fab icon="edit" color="primary" />
+          </q-page-sticky>
         </q-page>
       </q-page-container>
     </q-layout>
+    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
+      <q-spinner size="xl" color="warning" class="q-mb-lg"></q-spinner>
+      <span class="bg-black q-px-sm" style="border-radius:10px">{{ progress }}</span>
+    </q-inner-loading>
   </q-page>
 </template>
 
@@ -400,8 +388,7 @@
 import { onMounted, ref, reactive, watch, onBeforeMount, computed, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui'
-import TokenSymbol from 'src/components/TokenSymbol.vue';
-import { AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
+import { Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
 import { useDialogs } from 'src/composables/useDialogs';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'
@@ -417,8 +404,8 @@ import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import RegistryPublishDialog from 'src/components/dialogs/RegistryPublishDialog.vue';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
-import shortenTx from 'src/app/utils/shortenTx'
 import { stringify } from 'querystring';
+import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 
@@ -429,6 +416,7 @@ const authhead = useAuthhead()
 const localForage = useLocalForage()
 const tokenStore = useTokenStore()
 const { $ebus } = useEventBus()
+const publicationTx = ref<string>()
 const bcmr = ref<Bcmr>(new Bcmr({
   $schema: '',
   version: { major: 1, minor: 0, patch: 0 },
@@ -511,6 +499,7 @@ const nftTypesRowsPerPage = computed(() => {
 const progress = ref<boolean | string>()
 
 const newRevision = () => {
+  publicationTx.value = ''
   bcmrNewRevision.value = new Date()
   console.log('new revision timestamp', bcmrNewRevision.value.toISOString())
   bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value.toISOString()]
@@ -542,8 +531,8 @@ const publish = async (revisionOptions: RevisionOption) => {
   let { newVersion, revisionOption } = revisionOptions
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
   bcmr.value.versionString = newVersion
-  bcmr.value.authchainIdentity = tokenStore.token
-  progress.value = 'Authenticating authhead'
+  // bcmr.value.authchainIdentity = tokenStore.token
+  progress.value = 'Authenticating authhead, please wait...'
   try {
     const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
     progress.value = false
@@ -568,24 +557,30 @@ const publish = async (revisionOptions: RevisionOption) => {
       class: 'q-pa-lg'
     })
   }
+  const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
   console.log('REVISION OPTION', revisionOption)
   if (revisionOption == 'update') {
-    const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()])
+    const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
     bcmr.value.identities![bcmrSelectedAuthbase.value!] = {
-      [bcmrNewRevision.value!.toISOString()]: singleRevision
+      [bcmrNewRevisionISOString]: singleRevision
     }
   }
   console.log('ABOUT TO PUBLISH', bcmr.value)
-  bcmr.value.latestRevision = bcmrNewRevision.value!.toISOString()
+  bcmr.value.latestRevision = bcmrNewRevisionISOString
 
   // const newBcmr = new Bcmr({ ...bcmr.value, latestRevision: bcmrNewRevision.value!.toISOString() })
   // bcmr.value.latestRevision = bcmrNewRevision.value!.toISOString()
-  progress.value = 'Uploading registry to IPFS'
+  progress.value = 'Uploading registry to IPFS, please wait...'
+  console.log('BEFORE SUCCESS', bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
+  const tokenSymbol = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.symbol
+  console.log('Token symbol', tokenSymbol)
+  console.log('UTXO BEFORE UPDATE', tokenStore.token.utxo)
+  console.log('key UTXO BEFORE UPDATE', tokenStore.token.authKey?.utxo)
   let tx = ''
   try {
     const artifact = await bcmr.value.storeRegistry()
     if (artifact?.uris.https) {
-      progress.value = 'Publishing'
+      progress.value = 'Publishing, please wait...'
       tx = await tokenStore.token.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
     }
   } catch (error: any) {
@@ -600,9 +595,9 @@ const publish = async (revisionOptions: RevisionOption) => {
   }
 
   if (tx) {
-    progress.value = 'Waiting for confirmation'
+    progress.value = 'Registry published, waiting for confirmation...'
     try {
-      const confirmation = await tokenStore.token.ownerWallet.waitForTransaction({ txHash: tx })
+      await tokenStore.token.ownerWallet.waitForTransaction({ txHash: tx })
       await tokenStore.token.updateUtxo()
       await tokenStore.token.updateAuthKeyUtxo()
       $q.dialog({
@@ -613,12 +608,17 @@ const publish = async (revisionOptions: RevisionOption) => {
           txid: tx
         }
       })
+      console.log('AFTER SUCCESS', bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
       $ebus?.emit('transaction', {
         txid: tx,
-        txType: 'CashToken.createGenesis',
+        txType: 'AuthchainIdentity.publish',
         timestamp: new Date().getTime(),
-        successMsg: `Published ${bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewVersion.value!].token?.symbol}'s registry'`
+        successMsg: `Published ${tokenSymbol}'s registry'`
       })
+      bcmrNewRevision.value = undefined
+      console.log('UTXO AFTER UPDATE', tokenStore.token.utxo)
+      console.log('key UTXO AFTER UPDATE', tokenStore.token.authKey?.utxo)
+      publicationTx.value = tx
     } catch (error: any) {
       $q.dialog({
         message: error?.toString(),
@@ -889,7 +889,7 @@ watch(() => showMintersInMintedNfts.value, async () => {
   await populateNftsTable()
 })
 
-watch(() => tokenStore.token.processing, async (v) => {
+watch(() => tokenStore?.token?.processing, async (v) => {
   if (v) {
     progress.value = v
   } else {
