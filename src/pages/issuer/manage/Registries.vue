@@ -182,11 +182,11 @@ const onRowClicked = (event: any, authHead: AuthchainIdentity) => {
   router.push(`/issuer/manage/token/${authHead.identitySnapshot?.token?.category || authHead.utxo?.token?.tokenId}`)
 }
 
-const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
-  if (wallet) {
+const populateAuthheads = async () => {
+  if (user.wallet) {
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
     populatingTable.value = true
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(user.wallet!.getTokenDepositAddress(), query)
     populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
@@ -202,7 +202,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           coinbase,
           token
         } = cashtoken
-        ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+        ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
 
         await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
       })
@@ -253,13 +253,13 @@ const openPublisherDialog = async (type: 'url' | 'file', tokenId: string, authch
 
 onBeforeMount(async () => {
   if (user.wallet) {
-    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+    await populateAuthheads()
   }
 })
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  await populateAuthheads()
 }
 
 onMounted(() => {

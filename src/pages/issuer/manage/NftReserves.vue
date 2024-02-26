@@ -96,7 +96,7 @@
                 </div>
                 <div v-else>
                   <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
-                    size="md" dense color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
+                    size="md" dense text-color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
                   </q-btn>
                   <span v-else class="text-grey-8">
                     N/A
