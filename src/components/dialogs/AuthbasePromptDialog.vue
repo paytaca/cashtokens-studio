@@ -29,8 +29,8 @@
       </q-card-section>
 
       <q-card-actions class="row justify-end">
-        <q-btn @click.stop="onDialogHide()">Cancel</q-btn>
-        <q-btn @click.stop="onDialogOK(authbase)">Ok</q-btn>
+        <q-btn @click.stop="onDialogHide()" text-color="negative">Cancel</q-btn>
+        <q-btn @click.stop="onDialogOK(authbase)" text-color="primary">Ok</q-btn>
       </q-card-actions>
 
     </q-card>
