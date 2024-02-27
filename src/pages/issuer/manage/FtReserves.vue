@@ -7,7 +7,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :columns="[
+            :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
               {
                 name: 'balance', label: 'Balance',
                 field: r => r.token?.amount || 0,
@@ -25,51 +25,67 @@
               <q-td>
                 <div class="row justify-left items-center flex wrap q-gutter-sm">
                   <div class="col-auto">
-                    <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                      <q-img :src="value.row.identitySnapshot.uris.icon" />
-                    </q-avatar>
-                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                    <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
+                    <div v-else>
+                      <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                        <q-img :src="value.row.identitySnapshot.uris.icon" />
+                      </q-avatar>
+                      <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                    </div>
                   </div>
                   <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
-                    <div style="font-variant-numeric: tabular-nums;" class="text-positive">
-                      {{
-                        ftAmountFormatter.toDecimal(value.row.token?.amount.toString(),
-                          value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                      }}
-                    </div>
-                    <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
-                      ({{ value.row.identitySnapshot?.token?.symbol }})
+                    <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+
+                    <div v-else>
+                      <div style="font-variant-numeric: tabular-nums;" class="text-positive">
+                        {{
+                          ftAmountFormatter.toDecimal(value.row.token?.amount.toString(),
+                            value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                        }}
+                      </div>
+                      <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                        ({{ value.row.identitySnapshot?.token?.symbol }})
+                      </div>
                     </div>
                   </div>
 
                   <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
-                    <div v-if="value.row.identitySnapshot?.token">
-                      <div class="text-weight-thin text-caption text-grey-8">
-                        Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
-                        <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                    <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                    <div v-else>
+                      <div v-if="value.row.identitySnapshot?.token">
+                        <div class="text-weight-thin text-caption text-grey-8">
+                          Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
+                          <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                        </div>
+                        <div class="text-weight-thin text-caption text-grey-8">
+                          Decimals: <span
+                            :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
+                              value.row.identitySnapshot?.token?.decimals }}</span>
+                        </div>
                       </div>
-                      <div class="text-weight-thin text-caption text-grey-8">
-                        Decimals: <span
-                          :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-                            value.row.identitySnapshot?.token?.decimals }}</span>
+                      <div v-else class="text-grey-8">
+                        {{ '<metadata not found>' }}
                       </div>
                     </div>
-                    <div v-else class="text-grey-8">
-                      {{ '<metadata not found>' }}
-                    </div>
-
                   </div>
                 </div>
-
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" no-caps
-                  @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
-                </q-btn>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
+                </div>
+                <div v-else>
+                  <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" no-caps
+                    @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
+                  </q-btn>
+                </div>
               </q-td>
             </template>
+            <!-- <template v-slot:loading>
+              <q-inner-loading :showing="populatingTable"></q-inner-loading>
+            </template> -->
           </q-table>
           <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
             :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
@@ -104,6 +120,7 @@ const minter = useMinter()
 const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
+const populatingTable = ref<boolean>(false)
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
   limit: 0,
@@ -147,14 +164,14 @@ const visibleColumns = computed(() => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    $q.loading.show()
+    populatingTable.value = true
     const query = {
       limit: pagination.value.rowsPerPage,
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
       token_amount__gte: 1
     }
     const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
-    $q.loading.hide()
+    populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
       pagination.value.rowsNumber = resp.count
@@ -170,6 +187,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           token
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+
         await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
       })
 
@@ -184,11 +202,14 @@ const onTokensIssuance = async (issued: { tokenId: string, to: string, amount: s
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
 
-onBeforeMount(async () => {
-  if (user.wallet) {
-    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
-  }
+// onBeforeMount(async () => {
+//   if (user.wallet) {
+//     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+//   }
+// })
 
+onMounted(async () => {
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 })
 
 const onTableRequest = async (props: any) => {

@@ -54,6 +54,7 @@ export const usePaytacaConnect = () => {
         paytacaWalletAddress.value = formatAddress(address)
         paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
         paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
+        user.transactionSigner = paytacaTransactionSigner
       }
 
     }

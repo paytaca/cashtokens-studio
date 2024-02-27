@@ -10,7 +10,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ftBalances.results"
-            :columns="[
+            :loading="populatingTable" :columns="[
               {
                 name: 'balance', label: 'Balance',
                 field: 'balance',
@@ -29,57 +29,76 @@
               }
             ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="['balance', 'actions']">
 
-            <template v-slot:body-cell-icon="value">
+            <!-- <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
-                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                  <q-img :src="value.row.identitySnapshot.uris.icon" />
-                </q-avatar>
-                <q-icon v-else name="money" size="xl" color="grey-8"></q-icon>
+                <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
+                <div v-else>
+                  <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                  </q-avatar>
+                  <q-icon v-else name="money" size="xl" color="grey-8"></q-icon>
+                </div>
               </q-td>
             </template>
 
             <template v-slot:body-cell-tokenid="value">
               <q-td class="text-center">
-                <TokenCategory :tokenId="value.row.tokenId" />
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <TokenCategory :tokenId="value.row.tokenId" />
+                </div>
               </q-td>
-            </template>
+            </template> -->
             <template v-slot:body-cell-balance="value">
               <q-td>
+
                 <div class="row justify-left items-center flex wrap q-gutter-sm">
                   <div class="col-auto">
-                    <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                      <q-img :src="value.row.identitySnapshot.uris.icon" />
-                    </q-avatar>
-                    <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                    <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
+                    <div v-else>
+                      <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                        <q-img :src="value.row.identitySnapshot.uris.icon" />
+                      </q-avatar>
+                      <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                    </div>
                   </div>
                   <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
-                    <div style="font-variant-numeric: tabular-nums;" class="text-positive">
-                      {{
-                        ftAmountFormatter.toDecimal(value.row.balance.toString(),
-                          value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                      }}
-                    </div>
-                    <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
-                      ({{ value.row.identitySnapshot?.token?.symbol }})
-                    </div>
+                    <template v-if="!!value.row.processing">
+                      <q-skeleton bordered square></q-skeleton>
+                    </template>
+                    <template v-else>
+                      <div style="font-variant-numeric: tabular-nums;" class="text-positive">
+                        {{
+                          ftAmountFormatter.toDecimal(value.row.balance.toString(),
+                            value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                        }}
+                      </div>
+                      <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                        ({{ value.row.identitySnapshot?.token?.symbol }})
+                      </div>
+                    </template>
                   </div>
 
                   <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
-                    <div v-if="value.row.identitySnapshot?.token">
-                      <div class="text-weight-thin text-caption text-grey-8">
-                        Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
-                        <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                    <template v-if="!!value.row.processing">
+                      <q-skeleton bordered square></q-skeleton>
+                    </template>
+                    <template v-else>
+                      <div v-if="value.row.identitySnapshot?.token">
+                        <div class="text-weight-thin text-caption text-grey-8">
+                          Category: {{ shortenTokenId(value.row.identitySnapshot?.token?.category) }}
+                          <CopyText :text="value.row.identitySnapshot?.token?.category" />
+                        </div>
+                        <div class="text-weight-thin text-caption text-grey-8">
+                          Decimals: <span
+                            :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
+                              value.row.identitySnapshot?.token?.decimals }}</span>
+                        </div>
                       </div>
-                      <div class="text-weight-thin text-caption text-grey-8">
-                        Decimals: <span
-                          :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-                            value.row.identitySnapshot?.token?.decimals }}</span>
+                      <div v-else class="text-grey-8">
+                        {{ '<metadata not found>' }}
                       </div>
-                    </div>
-                    <div v-else class="text-grey-8">
-                      {{ '<metadata not found>' }}
-                    </div>
-
+                    </template>
                   </div>
                 </div>
 
@@ -87,11 +106,19 @@
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn text-color="primary" icon="send" no-caps
-                  @click="openDialog(FTBalanceTransferDialog.__name, value.row)"
-                  :disable="value.row.balance > Number.MAX_SAFE_INTEGER" size="md"
-                  :label="$q.screen.gt.xs ? 'Send' : ''"></q-btn>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
+                </div>
+                <template v-else>
+                  <q-btn text-color="primary" icon="send" no-caps
+                    @click="openDialog(FTBalanceTransferDialog.__name, value.row)"
+                    :disable="value.row.balance > Number.MAX_SAFE_INTEGER" size="md"
+                    :label="$q.screen.gt.xs ? 'Send' : ''"></q-btn>
+                </template>
               </q-td>
+            </template>
+            <template v-slot:loading>
+              <q-inner-loading :showing="populatingTable"></q-inner-loading>
             </template>
           </q-table>
         </div>
@@ -118,7 +145,7 @@ defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
 const user = useUser()
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-
+const populatingTable = ref<boolean>()
 const ftBalances = ref<PaginatedData>({
   count: 0,
   limit: 0,
@@ -182,14 +209,15 @@ class FungibleTokenBalanceImpl implements FungibleTokenBalance {
 
 const populateftBalances = async (wallet: Wallet) => {
   if (wallet) {
+    populatingTable.value = true
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
-    $q.loading.show()
+    // $q.loading.show()
     const resp = await (new Watchtower()).fetchFtBalance(
       wallet.getTokenDepositAddress(),
       query
     )
-    $q.loading.hide()
-
+    // $q.loading.hide()
+    populatingTable.value = false
     if (resp?.count > 0) {
       ftBalances.value = resp
       pagination.value.rowsNumber = resp.count

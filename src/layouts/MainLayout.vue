@@ -91,8 +91,9 @@
       </q-toolbar>
     </q-header>
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay v-close-popup>
-      <div class="text-right q-ma-sm">
-        <q-btn flat size="lg" round icon="close" aria-label="Menu" @click="toggleLeftDrawer" class="justify-right" />
+      <div class="text-right q-ma-lg">
+        <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
+          class="justify-right" dense flat />
       </div>
 
       <q-scroll-area style="position:relative; height: 100vh; max-width: 100vw;" :bar-style="{ width: '0px' }">

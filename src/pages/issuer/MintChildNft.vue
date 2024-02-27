@@ -73,7 +73,7 @@
                   <div class="ellipsis">{{ hints[state.options.mintOption] }}</div>
                 </template>
               </q-select>
-              <q-input v-if="state.options.mintOption != MINT_ONE_UNIQUE_NFT" v-model="state.options.quantity"
+              <q-input v-if="state.options.mintOption != MINT_ONE_NFT" v-model="state.options.quantity"
                 :style="`width:${$q.screen.lt.sm ? '' : 'fit-content'}`"
                 :onchange="(v: any) => state.options.quantity = !v.target.value || v.target.value <= '0' ? 1 : Number(v.target.value)"
                 :outlined="!state.mintTx" :disable="!!state.mintTx" :readonly="!!state.mintTx" clearable type="number"
@@ -198,7 +198,7 @@
 
               </q-expansion-item>
               <q-stepper-navigation class="text-right q-my-lg q-px-lg">
-                <q-btn v-if="state.mintTx && state.options.mintOption == MINT_ONE_UNIQUE_NFT" name="stepper-nav" flat
+                <q-btn v-if="state.mintTx && state.options.mintOption == MINT_ONE_NFT" name="stepper-nav" flat
                   @click.stop="handleStepperNav" color="primary" label="Continue" class="q-ml-sm" size="lg" />
                 <q-btn v-if="!state.mintTx" type="submit" color="primary" label="Mint NFT" class="q-ml-sm self-right"
                   size="lg" />
@@ -210,7 +210,7 @@
 
           </q-step>
           <q-step :name="2" title="Provide NFT asset"
-            :caption="state.options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="attach_file"
+            :caption="state.options.mintOption == MINT_ONE_NFT ? 'Optional' : 'Unsupported'" icon="attach_file"
             done-icon="done_all" class="q-gutter-md">
 
             <q-chip v-if="nftType.saved" square>
@@ -272,7 +272,7 @@
             </q-form>
           </q-step>
           <q-step :name="3" title="Token Registry"
-            :caption="state.options.mintOption == MINT_ONE_UNIQUE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
+            :caption="state.options.mintOption == MINT_ONE_NFT ? 'Optional' : 'Unsupported'" icon="data_object"
             done-icon="done_all" class="q-gutter-md">
             <q-chip v-if="state.publishTx" square>
               <q-avatar color="success" text-color="positive" icon="done_all" size="lg"></q-avatar>
@@ -299,7 +299,7 @@
                 class="q-ml-sm" size="lg" />
             </q-stepper-navigation>
           </q-step>
-          <q-step v-if="state.options.mintOption == MINT_ONE_UNIQUE_NFT" :name="4" title="Wrap up" icon="exit_to_app"
+          <q-step v-if="state.options.mintOption == MINT_ONE_NFT" :name="4" title="Wrap up" icon="exit_to_app"
             done-icon="done_all">
 
             <q-stepper-navigation class="text-right q-my-lg q-px-lg">
@@ -337,29 +337,26 @@ import { usePage } from 'src/stores/page'
 import { useMinter } from 'src/stores/minter'
 
 const MINT_ONE_NFT = 'Mint 1 NFT'
-const MINT_ONE_UNIQUE_NFT = 'Mint 1 unique NFT'
-const MINT_ONE_NON_UNIQUE_NFT = 'Mint 1 nonunique NFT'
-const MINT_MULTIPLE_UNIQUE_NFTS = 'Mint multiple unique NFTs'
+const MINT_MULTIPLE_NFTS = 'Mint multiple NFTs'
 const MINT_SUPPLY_FOR_A_COMMITMENT = 'Mint supply for a particular NFT commitment' // Shouldn't update minter
 const CREATE_MUTABLE_NFT = 'Create a mutable NFT'
 const CREATE_ANOTHER_MINTER = 'Create another minter for this category'
 
 const supportAssetUpload = [
-  MINT_ONE_UNIQUE_NFT
+  MINT_ONE_NFT
 ]
 
 const hints: any = {
-  [MINT_ONE_NFT]: `Will mint 1 NFT`,
-  [MINT_ONE_UNIQUE_NFT]: `Will mint 1 unique NFT. The minter's commitment will be updated if it's a Sequential NFT Collection.`,
-  [MINT_MULTIPLE_UNIQUE_NFTS]: `Will mint multiple NFTs.`,
+  [MINT_ONE_NFT]: `Will mint 1 NFT. The minter's commitment will be updated if it's a Sequential NFT Collection.`,
+  [MINT_MULTIPLE_NFTS]: `Will mint multiple sequential NFTs.`,
   [MINT_SUPPLY_FOR_A_COMMITMENT]: `Will mint one or more NFTs having the same commitment.`,
   [CREATE_MUTABLE_NFT]: `Will mint one or more mutable NFT(s) having no or the same commitment.`,
   [CREATE_ANOTHER_MINTER]: `Will mint one or more minting NFT(s) having no or the same commitment.`
 }
 
 const sequentialOpts = [
-  { value: MINT_ONE_UNIQUE_NFT, label: MINT_ONE_UNIQUE_NFT },
-  { value: MINT_MULTIPLE_UNIQUE_NFTS, label: MINT_MULTIPLE_UNIQUE_NFTS },
+  { value: MINT_ONE_NFT, label: MINT_ONE_NFT },
+  { value: MINT_MULTIPLE_NFTS, label: MINT_MULTIPLE_NFTS },
   { value: MINT_SUPPLY_FOR_A_COMMITMENT, label: MINT_SUPPLY_FOR_A_COMMITMENT },
   { value: CREATE_MUTABLE_NFT, label: CREATE_MUTABLE_NFT },
   { value: CREATE_ANOTHER_MINTER, label: CREATE_ANOTHER_MINTER }
@@ -477,7 +474,7 @@ const state = ref<{
     nftAssetFileType: 'image/png',
     NftAssetUploadUris: null,
     quantity: 1,
-    mintOption: MINT_ONE_UNIQUE_NFT,
+    mintOption: MINT_ONE_NFT,
     commitmentLast: '',
     publishOption: 'later',
     useAssetImageAsIcon: false,
@@ -717,7 +714,7 @@ watch(() => state.value, (v) => {
 watch(() => commitmentLast.value, (v) => {
   if (minter.value.nftCollectionType == 'SequentialNftCollection') {
     nextTick(() => {
-      if ([MINT_ONE_UNIQUE_NFT, MINT_MULTIPLE_UNIQUE_NFTS].includes(state.value.options.mintOption)) {
+      if ([MINT_ONE_NFT, MINT_MULTIPLE_NFTS].includes(state.value.options.mintOption)) {
         state.value.newMintersCommitment = commitmentLast.value
       } else {
         state.value.newMintersCommitment = formatCommitment(minter.value.token.commitment, 'vm-number', state.value.options.commitmentFormat)
@@ -729,7 +726,7 @@ watch(() => commitmentLast.value, (v) => {
 watch(() => state.value.options.mintOption, (v) => {
   if (minter.value.nftCollectionType == 'SequentialNftCollection') {
     nextTick(() => {
-      if ([MINT_ONE_UNIQUE_NFT, MINT_MULTIPLE_UNIQUE_NFTS].includes(v)) {
+      if ([MINT_ONE_NFT, MINT_MULTIPLE_NFTS].includes(v)) {
         state.value.newMintersCommitment = commitmentLast.value
       } else {
         state.value.newMintersCommitment = formatCommitment(minter.value.token.commitment, 'vm-number', state.value.options.commitmentFormat)
@@ -777,7 +774,7 @@ const mint = async () => {
   }
 
   if (state.value.options.quantity > 1) {
-    if (state.value.options.mintOption === MINT_MULTIPLE_UNIQUE_NFTS) {
+    if (state.value.options.mintOption === MINT_MULTIPLE_NFTS) {
       let firstCommitment = formatCommitment(state.value.token.commitment as string, state.value.options.commitmentFormat, 'decimal')
       for (let i = 0; i < state.value.options.quantity; i++) {
         tokens.push({
@@ -1090,7 +1087,7 @@ watch(() => state.value.token?.capability, (c) => {
 
 watch(() => state.value.options.mintOption, (o) => {
   state.value.token.capability = NFTCapability.none
-  if (o === MINT_ONE_UNIQUE_NFT || o === MINT_MULTIPLE_UNIQUE_NFTS) {
+  if (o === MINT_ONE_NFT || o === MINT_MULTIPLE_NFTS) {
     if (!state.value.token.commitment) {
       initCommitment()
     }

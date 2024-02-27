@@ -10,7 +10,7 @@
                 </h5>
                 <div>
                     <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid
-                        title="My Collections" :rows="nftCollections.results" :columns="[
+                        :loading="populatingTable" title="My Collections" :rows="nftCollections.results" :columns="[
                             {
                                 name: 'name', label: 'Name',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
@@ -21,7 +21,7 @@
                             }
                         ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header>
                         <template v-slot:top>
-                            <div class="col-12 text-right q-my-sm">
+                            <div v-if="!populatingTable" class="col-12 text-right q-my-sm">
                                 <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys"
                                     class="text-grey-6" dense>
                                     <q-tooltip>
@@ -32,7 +32,19 @@
                             </div>
                         </template>
                         <template v-slot:item="i">
-                            <q-card class="my-card q-ma-sm text-center col-grow"
+                            <q-skeleton v-if="i.row.processing" class="my-card q-pb-xs q-ma-sm text-center col-grow"
+                                style="border-radius: 15px; max-width:200px">
+                                <div class="flex justify-center">
+                                    <q-skeleton height="170px" width="170px" type="rect" square></q-skeleton>
+                                </div>
+                                <div class="q-px-sm q-mt-xs text-left">
+                                    <q-skeleton bordered square></q-skeleton>
+                                </div>
+                                <div class="flex justify-end q-mt-xs q-mr-sm">
+                                    <q-skeleton type="QBtn" bordered square width="3em"></q-skeleton>
+                                </div>
+                            </q-skeleton>
+                            <q-card v-else class="my-card q-ma-sm text-center col-grow"
                                 style="border-radius: 15px; max-width:200px">
                                 <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
@@ -58,7 +70,6 @@
                                     <div v-else-if="i.row.token?.commitment" class="ellipsis">
                                         <code class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
                                     </div>
-
                                 </div>
                                 <q-card-actions align="right">
                                     <q-btn dense no-caps icon="send" size="lg" text-color="primary"
@@ -130,6 +141,8 @@ const isTokenTransferred = computed(() => {
     }
 })
 
+const populatingTable = ref<boolean>()
+
 const openNFTTransferDialog = (nft: CashToken) => {
     nft.ownerWallet = user.wallet as Wallet // embedding wallet
     nft.processing = ''
@@ -155,17 +168,16 @@ watch(() => excludePossibleAuthKeys.value, async (v) => {
 
 const populateNftCollections = async (wallet: Wallet, transactionSigner: TransactionSigner, excludePossibleAuthKeys?: boolean) => {
     if (wallet) {
+        populatingTable.value = true
         const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
         if (excludePossibleAuthKeys) {
             query.commitment_ne = '00'
         }
-        $q.loading.show()
         const resp = await (new Watchtower()).fetchNfts(
             wallet.getTokenDepositAddress(),
             query
         )
-        $q.loading.hide()
-
+        populatingTable.value = false
         if (resp?.count > 0) {
             nftCollections.value = resp
             pagination.value.rowsNumber = resp.count

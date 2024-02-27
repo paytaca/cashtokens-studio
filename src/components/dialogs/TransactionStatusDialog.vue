@@ -20,7 +20,7 @@
         </div>
       </q-card-section>
       <q-card-actions align="center">
-        <q-btn color="primary" size="lg" flat label="OK" @click="ok" />
+        <q-btn text-color="primary" size="lg" label="OK" @click="ok" />
       </q-card-actions>
     </q-card>
   </q-dialog>

@@ -128,7 +128,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
   /**
    * Stores the Registry(BCMR) json payload in nft.storage
    */
-  app.post('/api/tokens/registry/storage', bodyParser.json(), async (req:any, res:any) => {
+  app.post('/api/tokens/registry/storage', bodyParser.json({limit: '10mb'}), async (req:any, res:any) => {
 
     const headers = {
       'Authorization': `Bearer ${nftStorageApiKey()}`,
