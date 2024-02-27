@@ -31,8 +31,8 @@
             <div class="col-sm-2" :class="$q.screen.xs ? 'flex justify-center q-mb-sm' : ''">
               <div class="row justify-center items-center">
                 <div class="col-12 text-center">
-                  <q-skeleton v-if="!!progress" style="margin: auto;width:200px;height:200px"
-                    animation="pulse-y"></q-skeleton>
+                  <q-skeleton v-if="!!progress && !bcmrSelectedAuthbase && !bcmrSelectedIdentityHistory"
+                    style="margin: auto;width:200px;height:200px" animation="pulse-y"></q-skeleton>
                   <q-img
                     v-else-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
                     :src="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
@@ -365,8 +365,8 @@
           </q-page-sticky>
           <q-page-sticky v-else position="bottom-right" :offset="[30, 25]" class="q-gutter-md">
             <div class="q-gutter-md">
-              <q-btn v-if="!progress || newTokenIconUploading" @click.stop="reset" fab size="md" icon="undo"
-                text-color="negative">
+              <q-btn @click.stop="reset" fab size="md" icon="undo" text-color="negative"
+                v-if="!progress || newTokenIconUploading">
                 <q-tooltip>Reset</q-tooltip>
               </q-btn>
               <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
@@ -411,11 +411,14 @@ import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.
 import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
+import { userInfo } from 'os';
+import { useUser } from 'src/stores/user';
 
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
 const authhead = useAuthhead()
+const user = useUser()
 const localForage = useLocalForage()
 const tokenStore = useTokenStore()
 const { $ebus } = useEventBus()
@@ -514,6 +517,7 @@ const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabe
 
 
 const publish = async (revisionOptions: RevisionOption) => {
+  tokenStore.token.transactionSigner = user.transactionSigner
   let { newVersion, revisionOption } = revisionOptions
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
   bcmr.value.versionString = newVersion
