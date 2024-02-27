@@ -8,8 +8,8 @@
               <q-tooltip>Click to edit</q-tooltip>
             </q-btn>
             <div v-else class="q-gutter-md">
-              <q-btn v-if="!progress && !newTokenIconUploading" @click.stop="reset" size="md" icon="undo"
-                text-color="negative">
+              <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" size="md"
+                icon="undo" text-color="negative">
                 <q-tooltip>Reset</q-tooltip>
               </q-btn>
               <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
@@ -25,6 +25,18 @@
                   v-if="(!!progress || newTokenIconUploading) && !progress?.toString().includes('Download')"></q-spinner>
                 <q-icon v-else name="cloud_upload"></q-icon>
               </q-btn>
+            </div>
+          </div>
+          <div v-if="bcmrNotFound">
+            <div class="q-px-lg q-my-sm row justify-center items-center">
+              <div class="col-12 flex items-center justify-center">
+                <q-icon name="priority_high" color="warning"></q-icon>
+                <div>No Metadata Found</div>
+              </div>
+              <div class="text-center">We've initialize a basic metadata registry for you. You may fill up the form here
+                below and publish
+                when you're done.
+              </div>
             </div>
           </div>
           <q-form id="bcmr-form" ref="bcmrForm" disabled>
@@ -59,11 +71,13 @@
 
               </div>
             </div>
+
             <div class="col-xs-12 col-sm-10">
               <div v-if="publicationTx" class="q-px-lg text-center">
                 🎉 Registry published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
                   color="secondary" label="View Tx in Explorer" />
               </div>
+
               <q-expansion-item v-model="expansionItemOne" label="Registry" class="q-px-md q-pt-sm q-my-sm"
                 icon="menu_book">
                 <div class="q-mx-md q-gutter-sm q-my-sm">
@@ -72,9 +86,9 @@
                     <q-input class="registry-field" v-model="bcmr!.$schema" outlined disable></q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                    <label>Version</label>
+                    <label>Version *</label>
                     <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setVersion(v)"
-                      :model-value="bcmr.versionString" outlined>
+                      :model-value="bcmr.versionString" :rules="[(v) => v.length > 0 || 'Required']" outlined>
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
@@ -102,9 +116,10 @@
                 icon="menu_book">
                 <div class="q-mx-md q-gutter-sm q-my-sm">
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                    <label>Authbase</label>
+                    <label>Authbase *</label>
                     <q-select v-model="bcmrSelectedAuthbase" class="ellipsis"
-                      :options="Object.keys(bcmr.identities || {})" outlined autogrow>
+                      :options="Object.keys(bcmr.identities || {})" :rules="[(v) => v.length > 0 || 'Required']" outlined
+                      autogrow>
                     </q-select>
                   </div>
                 </div>
@@ -120,10 +135,10 @@
                 </div>
                 <div v-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory" class="q-mx-md q-gutter-sm q-my-sm">
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                    <label>Name</label>
+                    <label>Name *</label>
                     <q-input class="registry-field"
                       v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].name"
-                      outlined stack-label autofocus>
+                      outlined stack-label autofocus :rules="[(v) => v.length > 0 || 'Required']">
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
@@ -135,10 +150,10 @@
                   </div>
                   <div class="text-h6">Token <q-icon name="token"></q-icon></div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                    <label>Symbol</label>
+                    <label>Symbol *</label>
                     <q-input class="registry-field"
                       v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token!.symbol"
-                      outlined autogrow stack-label>
+                      outlined autogrow stack-label :rules="[(v) => v.length > 0 || 'Required']">
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
@@ -149,7 +164,7 @@
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
-                    <label>Decimals</label>
+                    <label>Decimals (For Fungible Tokens)</label>
                     <q-input class="registry-field"
                       v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token!.decimals"
                       outlined autogrow>
@@ -365,11 +380,12 @@
           </q-page-sticky>
           <q-page-sticky v-else position="bottom-right" :offset="[30, 25]" class="q-gutter-md">
             <div class="q-gutter-md">
-              <q-btn @click.stop="reset" fab size="md" icon="undo" text-color="negative"
-                v-if="!progress || newTokenIconUploading">
+              <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" fab size="md"
+                icon="undo" text-color="negative">
                 <q-tooltip>Reset</q-tooltip>
               </q-btn>
-              <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
+              <q-btn v-if="bcmrNotFound == false"
+                @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
                 text-color="primary" :disabled="!!progress || newTokenIconUploading" fab>
                 <q-tooltip>Download registry</q-tooltip>
                 <q-spinner v-if="!!progress || newTokenIconUploading"></q-spinner>
@@ -389,7 +405,7 @@
     </q-layout>
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b" class="bg-transparent">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
-      <span class="bg-black q-px-sm text-warning" style="border-radius:10px">{{ progress }}</span>
+      <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress }}</span>
     </q-inner-loading>
   </q-page>
 </template>
@@ -404,10 +420,11 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
 import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
-import { NftType } from 'mainnet-js';
+import { NftType, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
+import AuthbasePromptDialog from 'src/components/dialogs/AuthbasePromptDialog.vue';
 import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
@@ -432,6 +449,7 @@ const bcmr = ref<Bcmr>(new Bcmr({
 }))
 
 const bcmrForm = ref()
+const bcmrNotFound = ref<boolean>(false)
 const bcmrSelectedAuthbase = ref<string>()
 const bcmrIdentityHistories = ref<Date[]>()
 const bcmrSelectedIdentityHistory = ref<Date>()
@@ -488,19 +506,68 @@ const nftTypesRowsPerPage = computed(() => {
 const progress = ref<boolean | string>()
 
 const newRevision = () => {
-  publicationTx.value = ''
-  bcmrNewRevision.value = new Date()
-  bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value.toISOString()]
-    = JSON.parse(JSON.stringify(Object.assign({ name: '' }, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrSelectedIdentityHistory.value!.toISOString()])))
-  bcmrIdentityHistories.value?.push(bcmrNewRevision.value)
-  bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
-  document.getElementById('bcmr-form')?.removeAttribute('disabled')
+  if (bcmrSelectedAuthbase.value) {
+    publicationTx.value = ''
+    bcmrNewRevision.value = new Date()
+    // If no metadata, initialize empty bcmr
+    if (!bcmrSelectedIdentityHistory.value && !bcmrIdentityHistories.value) {
+      bcmrSelectedIdentityHistory.value = new Date()
+      bcmrIdentityHistories.value = [bcmrSelectedIdentityHistory.value]
+      bcmrNewRevision.value = bcmrSelectedIdentityHistory.value
+      bcmr.value.identities = {
+        [bcmrSelectedAuthbase.value]: {
+          [bcmrNewRevision.value.toISOString()]: {
+            name: '',
+            description: '',
+            token: {
+              symbol: '',
+              category: bcmrSelectedAuthbase.value,
+              decimals: undefined
+            },
+            uris: {
+              web: '',
+              icon: ''
+            }
+          }
+        }
+      }
+      document.getElementById('bcmr-form')?.removeAttribute('disabled')
+      return
+    }
+    // If there's existing metadata
+    bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value.toISOString()]
+      = JSON.parse(JSON.stringify(Object.assign({ name: '' }, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrSelectedIdentityHistory.value!.toISOString()])))
+    bcmrIdentityHistories.value?.push(bcmrNewRevision.value)
+    bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
+    document.getElementById('bcmr-form')?.removeAttribute('disabled')
+  }
+
 }
 
 type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create' }
 type RevisionOptionCallback = (arg1: RevisionOption) => any
 
 const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabel?: string) => {
+
+  const isValid = await bcmrForm.value.validate()
+
+  if (!isValid) {
+    expansionItemOne.value = true
+    expansionItemTwo.value = true
+    $q.dialog({
+      title: 'Form validation failed!',
+      message: 'Please check required * fields.',
+      class: 'q-pa-md'
+    })
+  }
+
+  if (!isValid) return
+
+  if (bcmrNotFound.value) {
+    // No need to prompt it there's no metadata found, i.e. we're creating a new one
+    return callback({ revisionOption: 'create', newVersion: '1.0.0', newRevision: bcmrNewRevision.value?.toISOString() || new Date().toISOString() })
+
+  }
   $q.dialog({
     component: PublishRevisionOption,
     componentProps: {
@@ -569,7 +636,7 @@ const publish = async (revisionOptions: RevisionOption) => {
     }
   }
   bcmr.value.latestRevision = bcmrNewRevisionISOString
-
+  bcmr.value.appendAuthGuardTokenStandardExtension(tokenStore.token?.authKey?.token?.tokenId)
   progress.value = 'Uploading registry to IPFS, please wait...'
   const tokenSymbol = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.symbol
 
@@ -613,6 +680,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       })
       bcmrNewRevision.value = undefined
       publicationTx.value = tx
+      bcmrNotFound.value = false
       deleteSelectedUnpublishedNfts()
     } catch (error: any) {
       $q.dialog({
@@ -626,7 +694,6 @@ const publish = async (revisionOptions: RevisionOption) => {
     }
   }
 }
-
 
 const openDeleteUnpublishNftsDialog = () => {
   $q.dialog({
@@ -738,6 +805,8 @@ const downloadRevisedRegistry = async (revisionOptions: RevisionOption) => {
       bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
     }
   }
+
+  bcmr.value.appendAuthGuardTokenStandardExtension(tokenStore.token?.authKey?.token?.tokenId)
   downloadRegistryFile(bcmr.value.getContent())
   progress.value = false
 }
@@ -896,25 +965,98 @@ watch(() => tokenStore?.token?.processing, async (v) => {
   }
 })
 
+/**
+ * @param {object} r The parsed BCMR json
+ */
+const initBcmr = (r: any) => {
+  if (r) {
+    bcmr.value = new Bcmr({ ...r })
+    bcmr.value.versionString = `${r.version?.major || 0}.${r.version?.minor || 0}.${r.version?.patch || 0}`
+    bcmrSelectedAuthbase.value = Object.keys(r.identities || {})[0]
+
+    if (bcmrSelectedAuthbase.value) {
+      bcmrIdentityHistories.value = Object.keys(r.identities[bcmrSelectedAuthbase.value] || {})
+        .filter((v) => !Number.isNaN(new Date(v).getDate()))
+        .map(v => new Date(v))
+        .sort((a: any, b: any) => b - a)
+      bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
+      expansionItemTwo.value = true
+    }
+    loadNftTypes()
+  }
+
+
+}
+
 onBeforeMount(async () => {
   try {
+    if (!tokenStore.token?.token?.tokenId) return
     progress.value = 'Loading registry, please wait...'
-    const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
-    const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category, true)
-    if (r) {
-      bcmr.value = new Bcmr({ ...r })
-      bcmr.value.versionString = `${r.version?.major || 0}.${r.version?.minor || 0}.${r.version?.patch || 0}`
-      bcmrSelectedAuthbase.value = Object.keys(r.identities || {})[0]
+    // const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
 
-      if (bcmrSelectedAuthbase.value) {
-        bcmrIdentityHistories.value = Object.keys(r.identities[bcmrSelectedAuthbase.value] || {})
-          .filter((v) => !Number.isNaN(new Date(v).getDate()))
-          .map(v => new Date(v))
-          .sort((a: any, b: any) => b - a)
-        bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
-        expansionItemTwo.value = true
+    const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+    console.log('R', r)
+    if (r) {
+      // bcmr.value = new Bcmr({ ...r })
+      // bcmr.value.versionString = `${r.version?.major || 0}.${r.version?.minor || 0}.${r.version?.patch || 0}`
+      // bcmrSelectedAuthbase.value = Object.keys(r.identities || {})[0]
+
+      // if (bcmrSelectedAuthbase.value) {
+      //   bcmrIdentityHistories.value = Object.keys(r.identities[bcmrSelectedAuthbase.value] || {})
+      //     .filter((v) => !Number.isNaN(new Date(v).getDate()))
+      //     .map(v => new Date(v))
+      //     .sort((a: any, b: any) => b - a)
+      //   bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
+      //   expansionItemTwo.value = true
+      // }
+      // loadNftTypes()
+      initBcmr(r)
+    } else {
+      progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
+      await delay(1000)
+      if (tokenStore.token.token?.tokenId) {
+        progress.value = `Trying other methods please wait...`
+        await delay(1000)
+        progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
+        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token.token.tokenId)
+        // {
+        //     "tokenId": "5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463",
+        //     "txHash": "7fd88f702cb2d5a5db3bf55cd202238617054bc721256620f6cb302a718b86ea",
+        //     "contentHash": "49c659c026424a26c392760a7e717227bca3ccaa7b46b0420feb853a5150bc10",
+        //     "uris": [
+        //         "nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
+        //     ],
+        //     "httpsUrl": "https://nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
+        // }
+        console.log(pubInfo)
+        console.log('init bcmr')
+        if (pubInfo && pubInfo[0]) {
+          if (pubInfo[0].httpsUrl) {
+            try {
+              const r = await fetch(pubInfo[0].httpsUrl)
+              if (r.status == 200) {
+                const rj = await r.json()
+                if (rj) {
+                  initBcmr(rj)
+                }
+
+              }
+            } catch (error) {
+              $q.dialog({
+                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+              })
+            }
+          }
+        } else {
+          bcmrNotFound.value = true
+
+        }
+
+        if (!bcmrSelectedAuthbase.value) {
+          bcmrSelectedAuthbase.value = tokenStore.token.token.tokenId
+          newRevision()
+        }
       }
-      loadNftTypes()
     }
   } catch (error) {
     progress.value = false
@@ -934,6 +1076,74 @@ onBeforeUnmount(async () => {
 
 onMounted(async () => {
   ui.routeBack = `registries`
+  if (!tokenStore.token.token?.tokenId) {
+    $q.dialog({
+      message: 'Sorry! Publishing metadata using non-token authhead UTXO is not yet supported. '
+    }).onDismiss(() => {
+      router.back()
+    })
+
+    // TODO: Support, non-token authhead
+
+    // $q.dialog({
+    //   component: AuthbasePromptDialog
+    // }).onOk(async (authbase) => {
+    //   try {
+    //     console.log('authbase', authbase)
+    //     // TODO: USE WATCHTOWER AS PRIMARY SOURCE
+    //     progress.value = 'Authenticating authhead, please wait...'
+    //     const cg = new ChainGraph()
+    //     const authhead = await cg.fetchAuthheadTxid(authbase)
+    //     let authheadAuthOk = false
+    //     if (tokenStore.token.txid == authhead) {
+    //       authheadAuthOk = true
+    //     } else {
+    //       $q.dialog({
+    //         title: 'Authhead Authentication Failed!',
+    //         message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+    //         class: 'q-pa-md text-justify'
+    //       }).onDismiss(() => {
+    //         router.back()
+    //       })
+    //     }
+
+    //     if (!authheadAuthOk) return
+
+    //     progress.value = 'Retrieving last published registry, please wait...'
+    //     const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
+    //     if (pubInfo && pubInfo[0]) {
+    //       if (pubInfo[0].httpsUrl) {
+    //         try {
+    //           // TODO: use pubInfo URIs
+    //           const r = await fetch(pubInfo[0].httpsUrl)
+    //           if (r.status == 200) {
+    //             const rj = await r.json()
+    //             if (rj) {
+    //               initBcmr(rj)
+    //             }
+
+    //           }
+    //         } catch (error) {
+    //           $q.dialog({
+    //             message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+    //           })
+    //         }
+    //       }
+    //     } else {
+    //       bcmrNotFound.value = true
+    //       bcmrSelectedAuthbase.value = authbase
+    //       newRevision()
+    //     }
+
+    //   } catch (error) {
+    //     console.log(error)
+    //   } finally {
+    //     progress.value = false
+    //   }
+    // }).onCancel(() => {
+    //   router.back()
+    // })
+  }
 
 })
 
