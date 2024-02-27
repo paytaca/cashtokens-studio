@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { UtxoI, Wallet } from 'mainnet-js';
 import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { CashToken } from 'src/app';
 
 export type UserState = {
   connectedPaytacaAddress?: string,
@@ -23,6 +24,7 @@ export type UserState = {
   walletConnectSession:any,
   walletType: 'paytaca' | 'walletconnect' | undefined
   transactionSigner: TransactionSigner | undefined,
+  tokens: CashToken[]
 }
 
 export const useUser = defineStore('user', {
@@ -36,7 +38,8 @@ export const useUser = defineStore('user', {
     walletConnectSigner: undefined,
     walletConnectSession: undefined,
     walletType: 'paytaca',
-    transactionSigner: undefined
+    transactionSigner: undefined,
+    tokens: []
   }),
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){

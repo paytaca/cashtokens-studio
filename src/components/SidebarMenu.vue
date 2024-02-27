@@ -28,7 +28,7 @@ const route = useRoute()
 const router = useRouter()
 const user = useUser()
 const selected = ref<string | null>(null)
-const expanded = ref<any[]>([])
+const expanded = ref<any[]>(['#Manage'])
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
   manageFTReserves: '/issuer/manage/ft-reserves',

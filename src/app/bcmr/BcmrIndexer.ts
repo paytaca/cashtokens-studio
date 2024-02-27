@@ -174,10 +174,10 @@ export class BcmrIndexer {
   /**
    * @returns {undefined|'SequentialNftCollection'|'ParsableNftCollection'} The nft collection type if token is an nft.
    */
-    async fetchRegistry(tokenId:string): Promise<undefined|any> {
+    async fetchRegistry(tokenId:string, include_identities?: boolean): Promise<undefined|any> {
       try {
         this.processing = 'Fetching token registry'
-        const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/`)  
+        const r = await fetch(`${process.env.BCMR_API}registry/${tokenId}/?include_identities=${!!include_identities}`)  
         if (r.status == 200) {
           const rj = await r.json()
           return rj

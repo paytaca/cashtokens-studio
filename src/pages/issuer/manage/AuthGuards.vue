@@ -18,7 +18,7 @@
         </q-expansion-item>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :columns="[
+            loading-label="Loading, please wait..." :loading="populatingTable" :columns="[
 
               {
                 name: 'icon', label: 'Icon',
@@ -65,27 +65,34 @@
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
-                <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                  <q-img :src="value.row.identitySnapshot.uris.icon" />
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
+                <div v-else>
+                  <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
+                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-symbol="value">
               <q-td class="text-center">
-                <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
-                  <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
-                </span>
-
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
+                    <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
+                  </span>
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-tokenid="value">
               <q-td class="text-center">
-                <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
-                  :tokenId="value.row.identitySnapshot.token.category" />
-                <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
-
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
+                    :tokenId="value.row.identitySnapshot.token.category" />
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                </div>
               </q-td>
             </template>
             <!-- <template v-slot:body-cell-utxotx="value">
@@ -96,35 +103,50 @@
             </template> -->
             <template v-slot:body-cell-authguard="value">
               <q-td class="text-center">
-                <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
-                  :cashaddr="value.row.authKey.authGuard.contract.getTokenDepositAddress()"
-                  tool-tip="Copy Contract Address" icon-right="lock" />
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <CashAddress v-if="value.row.authKey?.authGuard?.contract?.getTokenDepositAddress()"
+                    :cashaddr="value.row.authKey.authGuard.contract.getTokenDepositAddress()"
+                    tool-tip="Copy Contract Address" icon-right="lock" />
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-authkey="value">
               <q-td class="text-center">
-                <TokenCategory v-if="value.row.authKey?.token?.tokenId" :tokenId="value.row.authKey.token.tokenId"
-                  icon-right="key" />
+                <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                <div v-else>
+                  <TokenCategory v-if="value.row.authKey?.token?.tokenId" :tokenId="value.row.authKey.token.tokenId"
+                    icon-right="key" />
+                </div>
               </q-td>
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
-                  @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
-                  <q-menu>
-                    <q-list>
-                      <q-item clickable v-close-popup @click.stop="openDialog(UnguardAuthchainDialog.__name, value.row)">
-                        Unguard Utxo
-                      </q-item>
-                      <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
-                        Burn Utxo
-                      </q-item>
-                      <!-- <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item> -->
-                    </q-list>
-                  </q-menu>
-                </q-btn>
+                <div v-if="!!value.row.processing" class="flex justify-center">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
+                </div>
+                <div v-else>
+                  <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
+                    @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
+                    <q-menu>
+                      <q-list>
+                        <q-item clickable v-close-popup
+                          @click.stop="openDialog(UnguardAuthchainDialog.__name, value.row)">
+                          Unguard Utxo
+                        </q-item>
+                        <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
+                          Burn Utxo
+                        </q-item>
+                        <!-- <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item> -->
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </div>
               </q-td>
             </template>
+            <!-- <template v-slot:loading>
+              <q-inner-loading :showing="populatingTable"></q-inner-loading>
+            </template> -->
           </q-table>
           <UnguardAuthchainDialog v-if="dialog" :model-value="dialog === UnguardAuthchainDialog.__name"
             :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
@@ -166,7 +188,7 @@ const user = useUser()
 const tokenStore = useTokenStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
-
+const populatingTable = ref<boolean>()
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
   limit: 0,
@@ -197,10 +219,10 @@ const visibleColumns = computed(() => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    $q.loading.show()
+    populatingTable.value = true
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
     const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
-    $q.loading.hide()
+    populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
       pagination.value.rowsNumber = resp.count
