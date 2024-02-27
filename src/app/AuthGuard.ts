@@ -38,7 +38,8 @@ export class AuthGuard {
   async getLockedTokenIdentities(): Promise<UtxoI[]> {
     this.ensureContract()
     const w = await (getWalletClass()).watchOnly(this._contract!.getTokenDepositAddress())
-    return  (await w.getAddressUtxos()).filter((u:UtxoI)=> Boolean(u.token?.tokenId))// If support non-token Authchain IdentityOutput in the future remove the filter
+    return (await w.getAddressUtxos())
+    // return  (await w.getAddressUtxos()).filter((u:UtxoI)=> Boolean(u.token?.tokenId))// If support non-token Authchain IdentityOutput in the future remove the filter
   }
 
   /**

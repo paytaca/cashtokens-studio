@@ -2,7 +2,7 @@ import { IdentitySnapshot, NFTCapability, TokenCategory, URIs, TestNetWallet, To
 import { AuthKey, BcmrIndexer, DEFAULT_TOKEN_VALUE } from ".";
 import calcMinerFee from "./utils/calcMinerFee";
 import toCashScript from "./utils/toCashScript";
-import { SignatureTemplate} from "cashscript";
+import { Recipient, SignatureTemplate} from "cashscript";
 import { cashAddressToLockingBytecode, decodeTransaction, hexToBin } from "@bitauth/libauth";
 import { Artifact, scriptToBytecode } from "@cashscript/utils";
 import shortenTokenId from "./utils/shortenTokenId";
@@ -270,11 +270,218 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   }
 
   /**
-   * Use this identity to publish registry
+   * TODO, merge code with publish() once fully tested
+   */
+  async publishWithNonTokenAuthhead(opt:{url: string, contentHash: string}){
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const issuanceCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 2})
+    const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost).map(toCashScript)[0]
+    if (!funderInput) {
+      delete this._processing
+      throw new Error('Insufficient balance to fund the txn')
+    }
+    const [authhead, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(toCashScript)
+    const sig = new SignatureTemplate(Uint8Array.from(Array(32)))
+    const contract = this.authKey!.authGuard!.contract!
+    const contractAddress = contract.getTokenDepositAddress()
+    const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress()
+    const tokenOwner = this.ownerWallet!.getDepositAddress()
+    let transaction
+    let decoded
+    let contentHash = opt?.contentHash
+    if (contentHash && !contentHash.startsWith('0x')) {
+      contentHash = `0x${contentHash}`
+    }
+
+    const authheadRecipient: Recipient = {
+      to: contractAddress,
+      amount: authhead.satoshis,
+    }
+    // Because authhead might be a non-token UTXO
+    if (authhead.token && authhead.token?.category) {
+      console.log('!!authhead.token?.category', authhead.token?.category)
+      console.log(authhead.token)
+      authheadRecipient.token = authhead.token
+    } else {
+      if (authhead.token?.amount && authhead.token?.amount > 0) {
+        // Just making sure we don't accidentally delete token amount 
+        throw Error('Anomaly, authhead is non-token but has token amount!Utxo = ' + JSON.stringify(authhead.token || {}))
+      }
+      delete authhead.token // toCashscript has token attribute even if utxo has no tokenId
+    }
+
+    console.log('AUTHHEAD', authhead)
+    console.log('authheadRecipient', authheadRecipient)
+
+    try {
+      transaction =
+        contract.getContractFunction('unlockWithNft')(true)
+          .from(authhead) // contract
+          .fromP2PKH(authKeyInput, sig) // AuthNFT/minting baton, funder
+          .fromP2PKH(funderInput, sig) // AuthNFT/minting baton, funder
+          // .to([{
+          //   // return authchain identity output to contract
+          //   to: contractAddress,
+          //   amount: authchainIdentityOutput.satoshis,
+          //   token: authchainIdentityOutput.token
+          // }])
+          .to([authheadRecipient]) // Return authhead
+          .to([{
+            // Return minting AuthNFT / minting baton to owner
+            to: batonOwner,
+            amount: BigInt(this.authKey!.satoshis),
+            token: authKeyInput.token
+          }])
+          .withOpReturn([
+            'BCMR',
+            contentHash, // sha256 of the contents from the uri below
+            opt.url.replace('https://', '')
+          ])
+          .to(funderInput.satoshis - BigInt(issuanceCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(issuanceCost)
+          }]:[])
+          .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(issuanceCost))
+
+      decoded = decodeTransaction(hexToBin(await transaction.build()));
+
+      if (typeof decoded === 'string') {
+        delete this._processing
+        throw new Error('Failed to decode transaction')
+      }
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw error
+    }
+    this._processing = 'Waiting for signature'
+    let signingResult
+    try {
+
+      const bytecode = (transaction as any).redeemScript;
+      const artifact = {...contract.artifact} as Partial<Artifact>;
+      delete artifact.source;
+      delete artifact.bytecode;
+
+      decoded.inputs[1].unlockingBytecode = Uint8Array.from([]);
+      decoded.inputs[2].unlockingBytecode = Uint8Array.from([]);
+
+      // To support non token UTXO
+      const authheadSourceOutput:any = {
+        ...decoded.inputs[0],
+        lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+        valueSatoshis: BigInt(authhead.satoshis),
+        // token: authhead.token && {
+        //   ...authhead.token,
+        //   category: hexToBin(authhead.token!.category),
+        //   nft: authhead.token.nft && {
+        //     ...authhead.token.nft,
+        //     commitment: hexToBin(authhead.token.nft.commitment),
+        //   },
+        // },
+        contract: {
+          abiFunction: (transaction as any).abiFunction,
+          redeemScript: scriptToBytecode(bytecode),
+          artifact: artifact,
+        }
+      }
+
+      if (authhead.token?.category) {
+        authheadSourceOutput.token = authhead.token && {
+          ...authhead.token,
+          category: hexToBin(authhead.token!.category),
+          nft: authhead.token.nft && {
+            ...authhead.token.nft,
+            commitment: hexToBin(authhead.token.nft.commitment),
+          },
+        }
+      }
+
+      const sourceOutputs = [
+        // {
+        //   ...decoded.inputs[0],
+        //   lockingBytecode: (cashAddressToLockingBytecode(contractAddress) as any).bytecode,
+        //   valueSatoshis: BigInt(authhead.satoshis),
+        //   token: authhead.token && {
+        //     ...authhead.token,
+        //     category: hexToBin(authhead.token!.category),
+        //     nft: authhead.token.nft && {
+        //       ...authhead.token.nft,
+        //       commitment: hexToBin(authhead.token.nft.commitment),
+        //     },
+        //   },
+        //   contract: {
+        //     abiFunction: (transaction as any).abiFunction,
+        //     redeemScript: scriptToBytecode(bytecode),
+        //     artifact: artifact,
+        //   }
+        // },
+        authheadSourceOutput,
+        {
+          ...decoded.inputs[1],
+          lockingBytecode: (cashAddressToLockingBytecode(batonOwner) as any).bytecode,
+          valueSatoshis: BigInt(authKeyInput.satoshis),
+          token: authKeyInput.token && {
+            ...authKeyInput.token,
+            category: hexToBin(authKeyInput.token!.category),
+            nft: authKeyInput.token.nft && {
+              ...authKeyInput.token.nft,
+              commitment: hexToBin(authKeyInput.token.nft.commitment),
+            },
+          }
+        },
+        {
+          ...decoded.inputs[2],
+          lockingBytecode: (cashAddressToLockingBytecode(tokenOwner) as any).bytecode,
+          valueSatoshis: BigInt(funderInput.satoshis)
+        }
+      ]
+
+      signingResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Publish registry update')
+      
+    } catch (error) {
+      console.log(error)
+      delete this._processing
+      throw new Error('Error signing transaction')
+    }
+
+    if (!signingResult) {
+      delete this._processing
+      return
+    }
+
+    try {
+      // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
+      const tx = await submitTransaction(signingResult, this.ownerWallet as Wallet)
+      if (tx) {
+        this._processing = 'Published'
+        setTimeout(()=> {
+          delete this._processing
+        }, 2000)
+      }
+      return tx
+    } catch (error) {
+      throw error
+    } finally {
+      delete this._processing
+    }
+
+  }
+  
+  /**
+   * Use this Authhead to publish metadata.
    */
   async publish(opt:{url: string, contentHash: string}):Promise<any> {
     this.ensureOwnerWallet()
     this.ensureAuthKey()
+    
+    if (!this.utxo.token?.tokenId) {
+      return await this.publishWithNonTokenAuthhead(opt)
+    }
+
     this._processing = 'Processing'
     const issuanceCost = calcMinerFee({'P2SH-P2WPKH':1}, {P2SH:1, P2PKH: 2})
     const funderInput = (await this.ownerWallet!.getAddressUtxos()).filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost).map(toCashScript)[0]
@@ -799,19 +1006,27 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   /**
    * Invoke after spending this utxo. When watching wallet address
+   * @param {string} unspentTxId The new txid
    */
-  async updateUtxo(){
+  async updateUtxo(unspentTxId?: string){
     this.ensureOwnerWallet()
     this._processing = 'Updating authhead utxo'
     try {
       if (this.authKey) {
         let updatedUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
-        console.log('LOCKED IDENTITIES')
-        updatedUtxo = updatedUtxo?.filter(u => (
-          u.vout == 0 &&
-          u.token?.tokenId == this.utxo.token?.tokenId &&
-          u.token?.capability == this.utxo.token?.capability
-        ))
+
+        if (unspentTxId) {
+          updatedUtxo = updatedUtxo?.filter((u) => (u.vout === 0 && u.txid === unspentTxId))
+        } else {
+          // TODO: @deprecate remove this else statement
+          // we should require unspentTxId
+          // find invokations of this function and pass confirmed unspentTxid
+          updatedUtxo = updatedUtxo?.filter(u => (
+            u.vout == 0 && 
+            u.token?.tokenId == this.utxo.token?.tokenId &&
+            u.token?.capability == this.utxo.token?.capability
+          ))
+        }
         if (updatedUtxo) {
           this.utxo = updatedUtxo[0]
         }
@@ -826,16 +1041,30 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   /**
    * Invoke after spending the AuthKey, e.g. after minting. 
    */
-  async updateAuthKeyUtxo(){
+  async updateAuthKeyUtxo(unspentTxid?:string){
     try {
       this.ensureOwnerWallet()
       this._processing = 'Updating authKey utxo'
       if (this.authKey) {
-        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
-          u.vout == this.authKey?.utxo.vout &&
-          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-          u.token?.capability == this.authKey?.utxo.token?.capability
-        ))
+        let updatedAuthKeyUtxo
+        if (unspentTxid) {
+          updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+            u.txid == unspentTxid &&
+            u.vout == this.authKey?.utxo.vout &&
+            u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+            u.token?.capability == this.authKey?.utxo.token?.capability
+          ))
+        } else {
+          // TODO: @deprecate remove this else statement, we should require unspentTxId
+          // find invokations of this function and pass confirmed unspentTxid
+          // so that 
+           updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+            u.vout == this.authKey?.utxo.vout &&
+            u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+            u.token?.capability == this.authKey?.utxo.token?.capability
+          ))
+        }
+
         if (updatedAuthKeyUtxo) {
           this.authKey.utxo = updatedAuthKeyUtxo[0]
         }
