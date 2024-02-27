@@ -430,6 +430,7 @@ import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { userInfo } from 'os';
 import { useUser } from 'src/stores/user';
+import localforage from 'localforage';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -662,8 +663,8 @@ const publish = async (revisionOptions: RevisionOption) => {
     progress.value = 'Registry published, waiting for confirmation...'
     try {
       await tokenStore.token.ownerWallet.waitForTransaction({ txHash: tx })
-      await tokenStore.token.updateUtxo()
-      await tokenStore.token.updateAuthKeyUtxo()
+      await tokenStore.token.updateUtxo(tx)
+      await tokenStore.token.updateAuthKeyUtxo(tx)
       $q.dialog({
         component: TransactionStatusDialog,
         componentProps: {
@@ -682,6 +683,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       publicationTx.value = tx
       bcmrNotFound.value = false
       deleteSelectedUnpublishedNfts()
+
     } catch (error: any) {
       $q.dialog({
         message: error?.toString(),
@@ -1078,71 +1080,64 @@ onMounted(async () => {
   ui.routeBack = `registries`
   if (!tokenStore.token.token?.tokenId) {
     $q.dialog({
-      message: 'Sorry! Publishing metadata using non-token authhead UTXO is not yet supported. '
-    }).onDismiss(() => {
+      component: AuthbasePromptDialog
+    }).onOk(async (authbase) => {
+      try {
+        console.log('authbase', authbase)
+        // TODO: USE WATCHTOWER AS PRIMARY SOURCE
+        progress.value = 'Authenticating authhead, please wait...'
+        const cg = new ChainGraph()
+        const authhead = await cg.fetchAuthheadTxid(authbase)
+        let authheadAuthOk = false
+        if (tokenStore.token.txid == authhead) {
+          authheadAuthOk = true
+        } else {
+          $q.dialog({
+            title: 'Authhead Authentication Failed!',
+            message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+            class: 'q-pa-md text-justify'
+          }).onDismiss(() => {
+            router.back()
+          })
+        }
+
+        if (!authheadAuthOk) return
+
+        progress.value = 'Retrieving last published registry, please wait...'
+        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
+        if (pubInfo && pubInfo[0]) {
+          if (pubInfo[0].httpsUrl) {
+            try {
+              // TODO: use pubInfo URIs
+              const r = await fetch(pubInfo[0].httpsUrl)
+              if (r.status == 200) {
+                const rj = await r.json()
+                if (rj) {
+                  initBcmr(rj)
+                }
+
+              }
+            } catch (error) {
+              $q.dialog({
+                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+              })
+            }
+          }
+        } else {
+          bcmrNotFound.value = true
+          bcmrSelectedAuthbase.value = authbase
+          newRevision()
+        }
+
+      } catch (error) {
+        console.log(error)
+      } finally {
+        progress.value = false
+        expansionItemTwo.value = true
+      }
+    }).onCancel(() => {
       router.back()
     })
-
-    // TODO: Support, non-token authhead
-
-    // $q.dialog({
-    //   component: AuthbasePromptDialog
-    // }).onOk(async (authbase) => {
-    //   try {
-    //     console.log('authbase', authbase)
-    //     // TODO: USE WATCHTOWER AS PRIMARY SOURCE
-    //     progress.value = 'Authenticating authhead, please wait...'
-    //     const cg = new ChainGraph()
-    //     const authhead = await cg.fetchAuthheadTxid(authbase)
-    //     let authheadAuthOk = false
-    //     if (tokenStore.token.txid == authhead) {
-    //       authheadAuthOk = true
-    //     } else {
-    //       $q.dialog({
-    //         title: 'Authhead Authentication Failed!',
-    //         message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
-    //         class: 'q-pa-md text-justify'
-    //       }).onDismiss(() => {
-    //         router.back()
-    //       })
-    //     }
-
-    //     if (!authheadAuthOk) return
-
-    //     progress.value = 'Retrieving last published registry, please wait...'
-    //     const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
-    //     if (pubInfo && pubInfo[0]) {
-    //       if (pubInfo[0].httpsUrl) {
-    //         try {
-    //           // TODO: use pubInfo URIs
-    //           const r = await fetch(pubInfo[0].httpsUrl)
-    //           if (r.status == 200) {
-    //             const rj = await r.json()
-    //             if (rj) {
-    //               initBcmr(rj)
-    //             }
-
-    //           }
-    //         } catch (error) {
-    //           $q.dialog({
-    //             message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-    //           })
-    //         }
-    //       }
-    //     } else {
-    //       bcmrNotFound.value = true
-    //       bcmrSelectedAuthbase.value = authbase
-    //       newRevision()
-    //     }
-
-    //   } catch (error) {
-    //     console.log(error)
-    //   } finally {
-    //     progress.value = false
-    //   }
-    // }).onCancel(() => {
-    //   router.back()
-    // })
   }
 
 })
