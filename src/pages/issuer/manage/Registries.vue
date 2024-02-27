@@ -57,7 +57,13 @@
                   <span v-if="value.row.identitySnapshot?.token?.symbol" class="text-primary text-bold text-h6">
                     <TokenSymbol :symbol="value.row.identitySnapshot.token.symbol" />
                   </span>
-                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}
+                      <div>
+                        {{ value.row.utxo?.token?.tokenId ? 'UTXO TokenId' : 'UTXO Txid' }}
+                        {{ shortenTx(value.row.utxo?.token?.tokenId || value.row.utxo?.txid) }}
+                        <CopyText :text="value.row.utxo?.token?.tokenId || value.row.utxo?.txid" />
+                      </div>
+                  </span>
                 </div>
               </q-td>
             </template>
@@ -67,7 +73,14 @@
                 <div v-else>
                   <TokenCategory v-if="value.row.identitySnapshot?.token?.category"
                     :tokenId="value.row.identitySnapshot.token.category" />
-                  <span v-else class="text-grey-8">{{ '<metadata not found>' }}</span>
+                  <span v-else class="text-grey-8">
+                    {{ '<metadata not found>' }}
+                      <div>
+                        {{ value.row.utxo?.token?.tokenId ? 'UTXO TokenId' : 'UTXO Txid' }}
+                        {{ shortenTx(value.row.utxo?.token?.tokenId || value.row.utxo?.txid) }}
+                        <CopyText :text="value.row.utxo?.token?.tokenId || value.row.utxo?.txid" />
+                      </div>
+                  </span>
                 </div>
               </q-td>
             </template>
@@ -80,7 +93,7 @@
                 <div v-else>
                   <q-btn id="authchain-action-buttons" text-color="grey-6" icon="auto_stories" size="md" round flat dense
                     @click.stop="(e) => { e.preventDefault(); onRowClicked(e, value.row) }">
-                    <q-tooltip>View</q-tooltip>
+                    <q-tooltip>Open metadata page</q-tooltip>
                   </q-btn>
                   <!-- <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
                     @click.stop="() => {/*Dont remove to avoid trigger of tr click*/ }">
@@ -131,10 +144,12 @@ import TokenSymbol from 'src/components/TokenSymbol.vue'
 import { EventBus, useQuasar } from 'quasar';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import AuthchainRegistryFromFilePublisherDialog from 'src/components/dialogs/AuthchainRegistryFromFilePublisherDialog.vue'
+import CopyText from 'src/components/CopyText.vue';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
 import { useAuthhead } from 'src/stores/authhead';
+import { shortenTx } from 'src/app/utils';
 
 defineComponent({ name: 'RegistryList' })
 const $q = useQuasar()
