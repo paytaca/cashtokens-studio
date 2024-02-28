@@ -21,6 +21,10 @@
                 🎉 NFT(s) minted <q-btn :href="openTxInExplorer(mintTx)" target="_blank" flat dense color="secondary"
                   label="View Tx in Explorer" />
               </div>
+              <div v-if="publicationTx" class="q-px-lg q-pb-lg text-center">
+                🎉 NFTs Metadata published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
+                  color="secondary" label="View Tx in Explorer" />
+              </div>
               <div class="row justify-center q-gutter-lg">
                 <div class="col-sm-2 q-mb-lg">
                   <div>
@@ -44,8 +48,7 @@
                         <div v-if="minter.value.nftCollectionType == 'SequentialNftCollection'"
                           class="q-mb-lg q-gutter-y-sm items-center">
                           <label>Last minted sequence #</label>
-                          <q-input
-                            :model-value="formatCommitment(minter.value.token?.commitment || '0', 'vm-number', 'decimal')"
+                          <q-input :model-value="formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal')"
                             disable readonly bottom-slots
                             :style="$q.screen.lt.sm ? 'margin-bottom: 8rem' : 'margin-bottom: 4rem'" dense>
                             <template v-slot:append>
@@ -236,9 +239,10 @@
                           Save
                         </q-btn>
                       </div>
-                      <!-- <div class="q-mb-lg row q-gutter-y-sm items-center justify-end q-mx-md">
-                        <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="lg" color="primary"> Publish NFT Metadata</q-btn>
-                      </div> -->
+                      <div class="q-mb-lg row q-gutter-y-sm items-center justify-end q-mx-md">
+                        <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="lg"
+                          color="primary"> Publish NFT Metadata</q-btn>
+                      </div>
                     </template>
 
                   </div>
@@ -258,9 +262,9 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import { IdentitySnapshot, NFTCapability, NftType, TestNetWallet, TokenI, UtxoI, Wallet, binToHex } from 'mainnet-js'
+import { IdentitySnapshot, NFTCapability, NftType, TestNetWallet, TokenI, UtxoI, Wallet, binToHex, delay } from 'mainnet-js'
 import { useQuasar } from 'quasar'
-import { AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app'
+import { AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/app'
 import { useUser } from 'src/stores/user'
 import { BcmrStorageArtifact, IconStorageArtifact } from 'src/app/types'
 import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/app/utils'
@@ -277,6 +281,7 @@ import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import { useLocalForage } from 'src/composables/useLocalForage'
 import { usePage } from 'src/stores/page'
 import { useMinter } from 'src/stores/minter'
+import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue'
 
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_TYPE = 'Mint a particular NFT type (commitment/bottomAltStackHex)' // Shouldn't update minter
@@ -360,12 +365,27 @@ const mintOptions = ref<{
   capability: NFTCapability,
   recipient: string
 }>({
-  mintQuantity: 0,
+  mintQuantity: 1,
   nftType: '',
   capability: NFTCapability.none,
   recipient: minter.value.ownerWallet.getTokenDepositAddress()
 })
 
+
+const bcmr = ref<Bcmr>(new Bcmr({
+  $schema: '',
+  version: { major: 1, minor: 0, patch: 0 },
+  latestRevision: new Date().toISOString(),
+  registryIdentity: '',
+  identities: {}
+}))
+
+const publicationTx = ref<string>()
+const bcmrNotFound = ref<boolean>(false)
+const bcmrSelectedAuthbase = ref<string>()
+const bcmrIdentityHistories = ref<Date[]>()
+const bcmrSelectedIdentityHistory = ref<Date>()
+const bcmrNewRevision = ref<Date>()
 
 const openNftTypeDialog = (token: TokenI) => {
   $q.dialog({
@@ -391,6 +411,280 @@ const saveNftsTypes = async () => {
       statusMessage: error,
       statusMessageType: 'error',
     })
+  }
+}
+
+const removeSavedNftsTypes = async () => {
+  for (const type of Object.keys(nftsTypes.value)) {
+    try {
+      if (!nftsTypes.value[type].saved) continue
+      await localForage.nftTypesStore.removeItem(`${minter.value.token.tokenId}-${type}`)
+    } catch (error) {
+      console.log('Error removing NFT Type from local storage')
+    }
+  }
+  // for (const [i, nftType] of nftTypesSelected.value.entries()) {
+  //   await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+  //   nftTypesSelected.value.splice(i)
+  // }
+  // populateNftsTable()
+}
+
+
+const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabel?: string) => {
+  // if (bcmrNotFound.value) {
+  //   // No need to prompt it there's no metadata found, i.e. we're creating a new one
+  //   return callback({ revisionOption: 'create', newVersion: '1.0.0', newRevision: bcmrNewRevision.value?.toISOString() || new Date().toISOString() })
+  // }
+  $q.dialog({
+    component: PublishRevisionOption,
+    componentProps: {
+      version: bcmr.value.versionString,
+      latestRevision: bcmr.value.latestRevision,
+      newRevision: bcmrNewRevision.value?.toString() || new Date().toString(),
+      okLabel: okLabel
+    }
+  }).onOk((options: RevisionOption) => {
+    callback(options)
+  })
+
+}
+
+type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create' }
+type RevisionOptionCallback = (arg1: RevisionOption) => any
+
+
+const locateRegistry = async () => {
+  const r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
+  console.log('R', r)
+  try {
+    if (r) {
+      return r
+    } else {
+      progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
+      await delay(1000)
+      if (minter.value.token?.tokenId) {
+        progress.value = `Trying other methods please wait...`
+        await delay(1000)
+        progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
+        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
+        // {
+        //     "tokenId": "5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463",
+        //     "txHash": "7fd88f702cb2d5a5db3bf55cd202238617054bc721256620f6cb302a718b86ea",
+        //     "contentHash": "49c659c026424a26c392760a7e717227bca3ccaa7b46b0420feb853a5150bc10",
+        //     "uris": [
+        //         "nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
+        //     ],
+        //     "httpsUrl": "https://nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
+        // }
+        console.log(pubInfo)
+        console.log('init bcmr')
+        if (pubInfo && pubInfo[0]) {
+          if (pubInfo[0].httpsUrl) {
+            try {
+              const r = await fetch(pubInfo[0].httpsUrl)
+              if (r.status == 200) {
+                const rj = await r.json()
+                if (rj) {
+                  return rj
+                }
+
+              }
+            } catch (error) {
+              $q.dialog({
+                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+              })
+            }
+          }
+        } else {
+          bcmrNotFound.value = true
+        }
+        // if (!bcmrSelectedAuthbase.value) {
+        //   bcmrSelectedAuthbase.value = minter.value.token.tokenId
+        //   newRevision()
+        // }
+      }
+    }
+  } catch (error) {
+    progress.value = false
+  } finally {
+    progress.value = false
+  }
+}
+/**
+ * @param {object} r The parsed BCMR json
+ */
+const initBcmr = (r: any) => {
+  if (r) {
+    bcmr.value = new Bcmr({ ...r })
+    bcmr.value.versionString = `${r.version?.major || 0}.${r.version?.minor || 0}.${r.version?.patch || 0}`
+    bcmrSelectedAuthbase.value = Object.keys(r.identities || {})[0]
+
+    if (bcmrSelectedAuthbase.value) {
+      bcmrIdentityHistories.value = Object.keys(r.identities[bcmrSelectedAuthbase.value] || {})
+        .filter((v) => !Number.isNaN(new Date(v).getDate()))
+        .map(v => new Date(v))
+        .sort((a: any, b: any) => b - a)
+      bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
+    }
+  }
+}
+
+const newRevision = () => {
+  if (bcmrSelectedAuthbase.value) {
+    bcmrNewRevision.value = new Date()
+    // If no metadata, initialize empty bcmr
+    if (!bcmrSelectedIdentityHistory.value && !bcmrIdentityHistories.value) {
+      bcmrSelectedIdentityHistory.value = new Date()
+      bcmrIdentityHistories.value = [bcmrSelectedIdentityHistory.value]
+      bcmrNewRevision.value = bcmrSelectedIdentityHistory.value
+      bcmr.value.identities = {
+        [bcmrSelectedAuthbase.value]: {
+          [bcmrNewRevision.value.toISOString()]: {
+            name: '',
+            description: '',
+            token: {
+              symbol: '',
+              category: bcmrSelectedAuthbase.value,
+              decimals: undefined
+            },
+            uris: {
+              web: '',
+              icon: ''
+            }
+          }
+        }
+      }
+      return
+    }
+    // If there's existing metadata
+    bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value.toISOString()]
+      = JSON.parse(JSON.stringify(Object.assign({ name: '' }, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrSelectedIdentityHistory.value!.toISOString()])))
+    bcmrIdentityHistories.value?.push(bcmrNewRevision.value)
+    bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
+  }
+}
+
+
+const publish = async (revisionOptions: RevisionOption) => {
+  const r = await locateRegistry()
+  console.log('located ', r)
+  if (r) {
+    bcmrSelectedAuthbase.value = minter.value.token.tokenId
+    initBcmr(r)
+    newRevision()
+  }
+
+  bcmrSelectedAuthbase.value = minter.value.token.tokenId
+  let { newVersion, revisionOption } = revisionOptions
+  bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
+  bcmr.value.versionString = newVersion
+  progress.value = 'Authenticating authhead, please wait...'
+  try {
+    const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
+    progress.value = false
+    if (trackedAuthhead != minter.value.txid) {
+      await new Promise(res => {
+        $q.dialog({
+          message: `This UTXO is not authorized to publish metadata for token ${shortenTokenId(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)}`,
+          ok: true,
+          focus: 'ok',
+          class: 'q-pa-lg'
+        }).onDismiss(() => res(null))
+      })
+      return
+    }
+
+  } catch (error) {
+    $q.dialog({
+      message: `Error authenticating authhead, please try again later...`,
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
+    })
+  }
+
+  const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
+  if (revisionOption == 'update') {
+    const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
+    bcmr.value.identities![bcmrSelectedAuthbase.value!] = {
+      [bcmrNewRevisionISOString]: singleRevision
+    }
+  }
+
+  // add nfts
+  if (Object.keys(nftsTypes.value).length > 0) {
+    if (!bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.nfts) {
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts = {
+        parse: {
+          bytecode: '',
+          types: {}
+        }
+      }
+    }
+    for (const typesKey of Object.keys(nftsTypes.value)) {
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[typesKey] = nftsTypes.value[typesKey]
+    }
+  }
+  bcmr.value.latestRevision = bcmrNewRevisionISOString
+  bcmr.value.appendAuthGuardTokenStandardExtension(minter.value?.authKey?.token?.tokenId)
+  progress.value = 'Uploading registry to IPFS, please wait...'
+  const tokenSymbol = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.symbol
+
+  let tx = ''
+  try {
+    const artifact = await bcmr.value.storeRegistry()
+    if (artifact?.uris.https) {
+      progress.value = 'Publishing, please wait...'
+      const publisher = new AuthchainIdentity({ ...minter.value }, minter.value.transactionSigner)
+      tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+    }
+  } catch (error: any) {
+    $q.dialog({
+      message: error?.toString(),
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
+    })
+  } finally {
+    progress.value = false
+  }
+
+  if (tx) {
+    progress.value = 'Registry published, waiting for confirmation...'
+    try {
+      await minter.value.ownerWallet.waitForTransaction({ txHash: tx })
+      await minter.value.updateUtxo(tx)
+      await minter.value.updateAuthKeyUtxo(tx)
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: `Metadata registry published!`,
+          txid: tx
+        }
+      })
+      $ebus?.emit('transaction', {
+        txid: tx,
+        txType: 'AuthchainIdentity.publish',
+        timestamp: new Date().getTime(),
+        successMsg: `Published ${tokenSymbol}'s registry'`
+      })
+      bcmrNewRevision.value = undefined
+      publicationTx.value = tx
+      bcmrNotFound.value = false
+      removeSavedNftsTypes()
+
+    } catch (error: any) {
+      $q.dialog({
+        message: error?.toString(),
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
+    } finally {
+      progress.value = false
+    }
   }
 }
 
