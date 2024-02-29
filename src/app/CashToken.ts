@@ -133,6 +133,7 @@ export class CashToken implements UtxoI, PartialBcmr {
   static set processing(msg: string|undefined) {
     CashToken._processing = msg
   }
+   
 
   get nftCollectionType():NftCollectionType {
     if (!this.identitySnapshot?.token?.nfts?.parse?.bytecode || this.identitySnapshot?.token?.nfts?.parse?.bytecode == '00d26b') {
@@ -289,7 +290,6 @@ export class CashToken implements UtxoI, PartialBcmr {
         commitment = convertBigIntToHexLE(BigInt(commitment))
       }
     } /*else commitment is raw hex provided by user*/
-    console.log('AMOUNT', opt.amount)
     requests.push(this.prepareGenesisAuthchainIdentityReq({
       recipient: tokenRecipient,
       token: {
@@ -509,7 +509,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
       if (typeof decoded === 'string') {
-        console.log('decoded:', decoded)
         delete this._processing
         throw new Error('Failed to decode transaction')
       }
@@ -1090,42 +1089,65 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   /**
    * Invoke after spending this utxo. When watching wallet address
+   * @param {string} unspentTxId The new txid
    */
-  async updateUtxo(){
+  async updateUtxo(unspentTxId?: string){
     this.ensureOwnerWallet()
-    this.processing = 'Updating minter'
+    this._processing = 'Updating utxo'
     try {
       if (this.authKey) {
-        let updatedMinterUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
-        updatedMinterUtxo = updatedMinterUtxo?.filter(u => (
-          u.vout == this.utxo.vout &&
-          u.token?.tokenId == this.utxo.token?.tokenId &&
-          u.token?.capability == NFTCapability.minting
-        ))
-        if (updatedMinterUtxo) {
-          this.utxo = updatedMinterUtxo[0]
+        let updatedUtxo = await this.authKey?.authGuard.getLockedTokenIdentities()
+
+        if (unspentTxId) {
+          updatedUtxo = updatedUtxo?.filter((u) => (u.vout === 0 && u.txid === unspentTxId))
+        } else {
+          // TODO: @deprecate remove this else statement
+          // we should require unspentTxId
+          // find invokations of this function and pass confirmed unspentTxid
+          updatedUtxo = updatedUtxo?.filter(u => (
+            u.vout == 0 && 
+            u.token?.tokenId == this.utxo.token?.tokenId &&
+            u.token?.capability == this.utxo.token?.capability
+          ))
+        }
+        if (updatedUtxo) {
+          this.utxo = updatedUtxo[0]
         }
       }
     } catch (error) {
       throw error
     } finally {
-      this.processing = ''
+      this._processing = ''
     }
   }
 
   /**
    * Invoke after spending the AuthKey, e.g. after minting. 
    */
-  async updateAuthKeyUtxo(){
+  async updateAuthKeyUtxo(unspentTxid?:string){
     try {
       this.ensureOwnerWallet()
-      this.processing = 'Updating AuthKey'
+      this._processing = 'Updating authKey utxo'
       if (this.authKey) {
-        const updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
-          u.vout == this.authKey?.utxo.vout &&
-          u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-          u.token?.capability == this.authKey?.utxo.token?.capability
-        ))
+        let updatedAuthKeyUtxo
+        if (unspentTxid) {
+          updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+            u.txid == unspentTxid &&
+            u.vout == this.authKey?.utxo.vout &&
+            u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+            u.token?.capability == this.authKey?.utxo.token?.capability
+          ))
+        } else {
+          // TODO: @deprecate remove this else statement, we should require unspentTxId
+          // find invokations of this function and pass confirmed unspentTxid
+          // so that 
+           updatedAuthKeyUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(u=>(
+            u.vout == this.authKey?.utxo.vout &&
+            u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
+            u.token?.capability == this.authKey?.utxo.token?.capability
+          ))
+        }
+
         if (updatedAuthKeyUtxo) {
           this.authKey.utxo = updatedAuthKeyUtxo[0]
         }
@@ -1133,9 +1155,10 @@ export class CashToken implements UtxoI, PartialBcmr {
     } catch (error) {
       throw error
     } finally {
-      this.processing = ''
+      this._processing = ''
     }
     
   }
-
 }
+
+
