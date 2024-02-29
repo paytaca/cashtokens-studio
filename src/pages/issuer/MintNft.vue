@@ -49,41 +49,37 @@
                 <div class="col-xs-12 col-sm-10 col-lg-9">
                   <div v-if="!mintTx" class="row justify-center">
                     <div class="col-xs-12 q-gutter-md">
-
                       <q-form ref="form" class="q-gutter-md" :disabled="disableForm" @submit.prevent="mint">
-                        <div class="q-mb-lg q-gutter-y-sm items-center">
-                          <label>NFT Collection Type</label>
-                          <q-input :model-value="minter.value.nftCollectionType" disable readonly
-                            style="font-size:1.5em; padding-left: unset" borderless>
-                            <template v-slot:append>
-                              <q-icon name="edit_off" color="grey-8"></q-icon>
-                            </template>
-                          </q-input>
-                        </div>
-                        <div v-if="minter.value.nftCollectionType == 'SequentialNftCollection'"
-                          class="q-mb-lg q-gutter-y-sm items-center">
-                          <label>Last minted sequence # (This minter's commitment)</label>
-                          <q-input :model-value="formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal')"
-                            disable readonly bottom-slots style="font-size:1.5em"
-                            :style="$q.screen.lt.sm ? 'margin-bottom: 8rem' : 'margin-bottom: 4rem'" dense>
-                            <template v-slot:append>
-                              <q-icon name="edit_off" color="grey-8"></q-icon>
-                            </template>
-                            <template v-slot:hint>
-                              <div class="flex items-center text-justify">
-                                <q-icon name="warning" color="warning" size="xs"></q-icon>
-                                <span style="line-height: 1.5em;font-size: larger;">
-                                  Currently, CashTokens Studio stores the last minted sequence on the minter's commitment,
-                                  this is used in tracking and suggesting the next sequence to mint. This doesn't
-                                  inherently guarantee the sequential order or uniqueness of the entire NFT collection.
-                                  The
-                                  responsibility for ensuring sequentiality and uniqueness ultimately lies with the
-                                  issuer.
-                                </span>
-                              </div>
-                            </template>
-                          </q-input>
-                        </div>
+                        <q-banner class="bg-grey-10 rounded-borders text-grey-4 q-pa-md"
+                          style="border-radius: 15px; line-height: 1.3em;">
+                          <div class="row q-my-sm">
+                            NFT Collection Type: &nbsp; <span>{{
+                              minter.value.nftCollectionType }}</span> </div>
+                          <div v-if="minter.value.nftCollectionType == 'SequentialNftCollection'">
+                            <div>Last minted sequence#:
+                              <span class="q-mr-sm ">{{ formatCommitment(minter.value.token?.commitment,
+                                'vm-number',
+                                'decimal') }}
+                              </span>
+                              <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="
+                                $q.dialog({
+                                  component: HelpDialog,
+                                  componentProps: {
+                                    message: `
+                                        Currently, CashTokens Studio stores the last minted sequence on the minter's commitment,
+                                        this is used in tracking and suggesting the next sequence to mint. This doesn't
+                                        inherently guarantee the sequential order or uniqueness of the entire NFT collection.
+                                        The
+                                        responsibility for ensuring sequentiality and uniqueness ultimately lies with the
+                                        issuer.
+                                      `
+                                  }
+                                })
+                                ">
+                              </q-icon>
+                            </div>
+                          </div>
+                        </q-banner>
                         <div class="q-mb-lg q-gutter-y-sm items-center">
                           <label>Choose Mint Option</label>
                           <q-select
@@ -353,6 +349,7 @@ import { useUI } from 'src/stores/ui'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue'
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
+import HelpDialog from 'src/components/dialogs/HelpDialog.vue'
 import TokenSymbol from 'src/components/TokenSymbol.vue'
 
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
