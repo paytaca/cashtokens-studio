@@ -40,6 +40,10 @@
                     <span v-else class="text-grey-8">
                       [Unknown Token]
                     </span>
+                    <div class="text-wrap text-italic text-grey-4 q-mt-sm">( Mint to add NFT(s) to the {{
+                      minter.value.identitySnapshot?.token?.symbol
+                    }}
+                      collection )</div>
                   </div>
                 </div>
                 <div class="col-xs-12 col-sm-10 col-lg-9">
@@ -49,8 +53,8 @@
                       <q-form ref="form" class="q-gutter-md" :disabled="disableForm" @submit.prevent="mint">
                         <div class="q-mb-lg q-gutter-y-sm items-center">
                           <label>NFT Collection Type</label>
-                          <q-input :model-value="minter.value.nftCollectionType" disable readonly style="font-size:1.5em"
-                            borderless>
+                          <q-input :model-value="minter.value.nftCollectionType" disable readonly
+                            style="font-size:1.5em; padding-left: unset" borderless>
                             <template v-slot:append>
                               <q-icon name="edit_off" color="grey-8"></q-icon>
                             </template>
@@ -80,12 +84,11 @@
                             </template>
                           </q-input>
                         </div>
-                        <div class="q-mb-lg q-gutter-y-sm items-center"
-                          :style="$q.screen.xs && mintStrategy != MINT_NEXT_SEQUENCE ? 'margin-bottom:2rem;' : 'margin-bottom:1em'">
+                        <div class="q-mb-lg q-gutter-y-sm items-center">
                           <label>Choose Mint Option</label>
                           <q-select
                             :options="minter.value.nftCollectionType == 'SequentialNftCollection' ? sequentialOpts : parsableOpts"
-                            v-model="mintStrategy" class="q-mb-xs" label="I want to" stack-label outlined bottom-slots>
+                            v-model="mintStrategy" class="q-mb-xs" label="I want to" stack-label outlined>
                             <template v-slot:hint>
                               <span
                                 v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value.nftCollectionType == 'SequentialNftCollection'">
@@ -93,6 +96,11 @@
                                 last-minted sequence# value will not be updated.</span>
                             </template>
                           </q-select>
+                          <span class="text-wrap "
+                            v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value.nftCollectionType == 'SequentialNftCollection'">
+                            The minter's commitment value will not change. i.e., for SequentialNftCollection,
+                            last-minted sequence# value will not be updated.
+                          </span>
                         </div>
                         <div class="q-gutter-y-sm items-center row col-xs-6">
                           <div class="q-mb-sm">
@@ -426,6 +434,7 @@ const openNftTypeDialog = (token: TokenI) => {
     component: NftTypeDialog,
     componentProps: {
       token: token,
+      title: minter.value.nftCollectionType == 'SequentialNftCollection' ? `NFT Metadata of ${minter.value.identitySnapshot?.token?.symbol} #${formatCommitment('01', 'vm-number', 'decimal')}` : 'aa',
       defaultNftType: nftsTypes.value[token.commitment!]
     }
   }).onOk(({ type, nftType }) => {
@@ -514,21 +523,20 @@ const mint = async () => {
           component: TransactionStatusDialog,
           componentProps: {
             statusType: 'success',
-            statusText: `Metadata registry published!`,
+            statusText: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFTs minted!`,
             txid: tx
           }
         })
         $ebus?.emit('transaction', {
           txid: tx,
-          txType: 'AuthchainIdentity.publish',
+          txType: 'CashToken.mint',
           timestamp: new Date().getTime(),
-          successMsg: `Published ${minter.value.identitySnapshot?.token?.symbol}'s registry'`
+          successMsg: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFTs minted!`
         })
 
         mintTx.value = tx
         progress.value = 'Loading minted NFTs, please wait...'
         const decoded = await minter.value.ownerWallet.util.decodeTransaction(tx)
-        console.log('DECODED', decoded)
       } catch (error: any) {
         $q.dialog({
           message: error?.toString(),
@@ -553,11 +561,9 @@ const mint = async () => {
 // Registry publication related functions
 
 type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create', registry?: Bcmr }
-type RevisionOptionCallback = (arg1: RevisionOption) => any
 
 const locateRegistry = async () => {
   const r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
-  console.log('R', r)
   try {
     if (r) {
       return r
@@ -747,7 +753,7 @@ const publish = async () => {
         txid: tx,
         txType: 'AuthchainIdentity.publish',
         timestamp: new Date().getTime(),
-        successMsg: `Published ${minter.value.identitSnapshot?.token?.symbol}'s registry'`
+        successMsg: `Published ${minter.value.identitSnapshot?.token?.symbol}'s nfts`
       })
       publicationTx.value = tx
       nftsTypes.value
@@ -830,8 +836,6 @@ watch(() => publisher.value?.processing, (m) => {
 
 onMounted(async () => {
   ui.routeBack = `nft-reserves`
-  minter.value.nftCollectionType = 'ParsableNftCollection' // TODO: REMOVE THIS ONLY USED FOR TESTING
-  console.log('nftcollection type', minter.value.nftCollectionType)
   if (minter.value.nftCollectionType == 'SequentialNftCollection') {
     mintStrategy.value = { value: MINT_NEXT_SEQUENCE, label: MINT_NEXT_SEQUENCE }
     mintOptions.value.nftType = Number(formatCommitment(minter.value.token.commitment || 0, 'vm-number', 'decimal')) + 1
