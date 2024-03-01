@@ -7,7 +7,8 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
-            loading-label="Loading, please wait..." :rows="ownedAuthHeads.results" :loading="populatingTable" :columns="[
+            color="warning" loading-label="Loading, please wait..." :rows="ownedAuthHeads.results"
+            :loading="populatingTable" :columns="[
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
