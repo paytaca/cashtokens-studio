@@ -80,6 +80,18 @@ th {
   font-weight: bold;
 }
 
+label {
+  font-size: medium;
+}
+input, textarea {
+  font-size: small;
+}
+
+.q-textarea .q-field__native {
+  line-height: 1.2em;
+}
+
+
 .token-symbol {
   color: rgb(134, 218, 8);
 }

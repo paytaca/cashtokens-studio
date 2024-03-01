@@ -7,7 +7,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
+            color="warning" :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
               {
                 name: 'balance', label: 'Balance',
                 field: r => r.token?.amount || 0,

@@ -18,7 +18,7 @@
         </q-expansion-item>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            loading-label="Loading, please wait..." :loading="populatingTable" :columns="[
+            color="warning" loading-label="Loading, please wait..." :loading="populatingTable" :columns="[
 
               {
                 name: 'icon', label: 'Icon',

@@ -7,7 +7,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
+            color="warning" :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
               {
                 name: 'icon', label: 'Icon',
                 field: r => r.identitySnapshot?.uris?.icon || '<not found>',
@@ -95,8 +95,11 @@
                   <q-skeleton type="QToggle" bordered square></q-skeleton>
                 </div>
                 <div v-else>
-                  <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
+                  <!-- <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
                     size="md" dense text-color="primary" @click.stop="openMintChildNftPage(value.row)" label="Mint Child">
+                  </q-btn> -->
+                  <q-btn v-if="value.row.token?.capability === NFTCapability.minting" id="authchain-action-buttons"
+                    size="md" dense text-color="primary" @click.stop="openMintNftPage(value.row)" label="Mint Child">
                   </q-btn>
                   <span v-else class="text-grey-8">
                     N/A
@@ -164,6 +167,9 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'commitment', 'capability', 'actions']
 })
 
+/**
+ * @deprecated in favor of openMintNftPage
+ */
 const openMintChildNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
   ct.tokenCategory = identity.tokenCategory
@@ -172,6 +178,14 @@ const openMintChildNftPage = (identity: AuthchainIdentity) => {
   minter.value = ct
   router.push({ name: 'mint-child-nft', query: { tokenId: identity.token!.tokenId } })
 }
+
+const openMintNftPage = (identity: AuthchainIdentity) => {
+  const ct = new CashToken({ ...identity }, user.transactionSigner)
+  ct.identitySnapshot = identity.identitySnapshot
+  minter.value = ct
+  router.push({ name: 'mint-nft', query: { tokenId: identity.token!.tokenId } })
+}
+
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
