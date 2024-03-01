@@ -60,7 +60,7 @@
           </div>
           <div class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-sm items-center">
             <label> Updated Revision</label>
-            <q-input class="registry-field" :model-value="newRevision" outlined dense disable>
+            <q-input class="registry-field" :model-value="new Date(newRevision).toString()" outlined dense disable>
               <template v-slot:prepend>
                 <q-icon name="priority_high" color="warning"></q-icon>
               </template>

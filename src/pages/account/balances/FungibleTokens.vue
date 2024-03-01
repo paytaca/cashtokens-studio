@@ -10,7 +10,7 @@
         </h5>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ftBalances.results"
-            :loading="populatingTable" :columns="[
+            color="warning" :loading="populatingTable" :columns="[
               {
                 name: 'balance', label: 'Balance',
                 field: 'balance',
