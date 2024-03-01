@@ -222,8 +222,9 @@
               </q-expansion-item>
               <q-expansion-item v-model="expansionItemThree" label="Nfts"
                 :icon="nftTypesSelectedForPublication.length > 0 ? 'priority_high' : 'collections'"
-                class="q-px-md q-pt-sm q-my-sm" :class="nftTypesSelectedForPublication.length > 0 ? 'text-warning' : ''"
-                style="overflow-x:scroll">
+                class="q-px-md q-pt-sm q-mt-sm q-mb-lg"
+                :class="nftTypesSelectedForPublication.length > 0 ? 'text-warning' : ''"
+                style="overflow-x:scroll; margin-bottom: 5rem;">
                 <q-tabs v-model="nftTypesShown" active-color="warning">
                   <q-tab name="published" label="Published" />
                   <q-tab name="unpublished" label="Unpublished" />
@@ -277,7 +278,8 @@
                 <div style="overflow-x: scroll">
                   <q-table v-model:pagination="nftTypesPagination" flat :rows="nftTypes.results"
                     v-model:selected="nftTypesSelected" :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'"
-                    style="background:unset" :columns="[
+                    :loading="nftTypesIsLoading" color="warning" @request="onTableRequest"
+                    style="background:unset;margin-bottom: 3rem;" :columns="[
                       {
                         name: 'nfttype', label: 'Nft Type',
                         field: r => '',
@@ -370,7 +372,14 @@
                         </div>
                       </q-td>
                     </template>
+                    <q-inner-loading :showing="nftTypesIsLoading" id="inner-loading" style="background-color:#0000002b"
+                      class="bg-transparent">
+                      <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
+                      <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{
+                        progress }}</span>
+                    </q-inner-loading>
                   </q-table>
+
                 </div>
               </q-expansion-item>
             </div>
@@ -492,12 +501,18 @@ const nftTypesSelected = ref<any[]>([])
 const nftTypesSelectedForPublication = ref<any[]>([])
 const showMintersInMintedNfts = ref<boolean>(false)
 
-const nftTypesPagination = ref({
+const nftTypesPagination = ref<{
+  sortBy: string,
+  descending: boolean,
+  page: number,
+  rowsPerPage: number,
+  rowsNumber?: number
+}>({
   sortBy: 'desc',
   descending: false,
   page: 1,
-  rowsPerPage: 10,
-  //rowsNumber: 10
+  rowsPerPage: 10
+  // rowsNumber: 10
 })
 
 const nftTypesRowsPerPage = computed(() => {
@@ -581,7 +596,6 @@ const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabe
     callback(options)
   })
 }
-
 
 
 const publish = async (revisionOptions: RevisionOption) => {
@@ -836,6 +850,7 @@ const reset = async () => {
 }
 
 const loadNftTypes = async () => {
+  delete nftTypesPagination.value.rowsNumber
   if (bcmr.value && bcmrSelectedAuthbase.value && bcmrSelectedIdentityHistory.value) {
     // // Push to webworker
     nftTypes.value.count = Object.keys(bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.nfts?.parse?.types || {}).length
@@ -849,6 +864,7 @@ const loadNftTypes = async () => {
 }
 
 const loadUnpublishedNftTypes = async () => {
+  delete nftTypesPagination.value.rowsNumber
   const results: any = []
   for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
     if (key.startsWith(tokenStore?.token?.token?.tokenId)) {
@@ -886,10 +902,14 @@ const loadMintedNftTypes = async () => {
     previous: null,
     results: []
   }
+
+  console.log('pagination', nftTypesPagination.value)
+
   const query = {
     paginated: true,
-    limit: nftTypesPagination.value.rowsPerPage,
-    offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
+    // limit: nftTypesPagination.value.rowsPerPage,
+    // offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
+    page: nftTypesPagination.value.page,
     include_metadata: true,
     capability: ['none', 'mutable']
   }
@@ -898,7 +918,8 @@ const loadMintedNftTypes = async () => {
   }
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
   if (fntResp && fntResp.results) {
-
+    console.log('RESPONSE', fntResp)
+    nftTypesPagination.value.rowsNumber = fntResp.count
     type ItemType = {
       capability?: string,
       commitment?: string,
@@ -916,10 +937,11 @@ const loadMintedNftTypes = async () => {
     })
     nftTypes.value = fntResp
   }
+  progress.value = false
 }
 
 const populateNftsTable = async () => {
-
+  nftTypesPagination.value.rowsPerPage
   nftTypes.value.results = []
   if (nftTypesShown.value == 'unpublished') {
     return await loadUnpublishedNftTypes()
@@ -938,7 +960,6 @@ const populateNftsTable = async () => {
 const onTableRequest = async (props: any) => {
   nftTypesPagination.value = props.pagination
   await populateNftsTable()
-
 }
 
 
