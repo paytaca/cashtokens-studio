@@ -10,7 +10,7 @@
             label="View Tx in Explorer" />
         </div>
         <div v-if="publicationTx" class="q-px-lg q-pb-lg text-center">
-          🎉 NFTs Metadata published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
+          🎉 Metadata published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
             color="secondary" label="View Tx in Explorer" />
         </div>
         <div class="row justify-center q-gutter-lg">
@@ -82,8 +82,8 @@
                   </div>
                   <div class="q-gutter-y-sm items-center row col-xs-6">
                     <div class="q-mb-sm">
-                      <label>Number of NFTs to mint</label>
-                      <q-input v-model="mintOptions.mintQuantity" type="number" :min="1" outlined></q-input>
+                      <label>Number of NFT(s) to mint</label>
+                      <q-input v-model="mintOptions.mintQuantity" type="number" :min="1" autofocus outlined></q-input>
                     </div>
                   </div>
                   <template v-if="mintStrategy?.value == MINT_NEXT_SEQUENCE">
@@ -116,7 +116,7 @@
                       <q-input v-model="mintOptions.nftType" placeholder="Enter sequence number" outlined bottom-slots>
                         <template v-slot:hint>
                           <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>This'll affect the
-                          uniqueness of each NFTs in this collection if you'll mint an already minted type.
+                          uniqueness of each NFT(s) in this collection if you'll mint an already minted type.
                         </template>
                       </q-input>
                     </div>
@@ -160,7 +160,7 @@
               <div class="col-xs-12 q-gutter-md">
                 <q-table v-model:pagination="nftsPagination" flat :rows="nfts" style="background:unset" :columns="[
                   {
-                    name: 'nfttype', label: 'Minted NFTs',
+                    name: 'nfttype', label: 'Minted NFT(s)',
                     field: r => '',
                     align: 'left',
                     headerStyle: 'padding: 1.5em',
@@ -176,10 +176,10 @@
                   :visible-columns="['nfttype', 'actions']" bordered>
                   <template v-slot:header>
                     <div class="q-ma-md" col-span="2" style="border-bottom: inherit">
-                      <div class="text-h6">({{ nfts?.length || 0 }}) NFTs Minted</div>
-                      <div>You can now add the metadata of this minted NFTs.</div>
+                      <div class="text-h6">({{ nfts?.length || 0 }}) NFT(s) Minted</div>
+                      <div>You can now add the metadata of this minted NFT(s).</div>
                       <div v-if="mintStrategy.value == MINT_A_TYPE">
-                        You've minted {{ nfts?.length }} NFTs of the same type, so they'll share the same metadata.
+                        You've minted {{ nfts?.length }} NFT(s) of the same type, so they'll share the same metadata.
                       </div>
                     </div>
                   </template>
@@ -320,7 +320,7 @@ const MINT_ANOTHER_MINTER = 'Mint another minter for this category'
 
 const hints: any = {
   [MINT_NEXT_SEQUENCE]: `Will mint 1 NFT. The minter's commitment will be updated if it's a Sequential NFT Collection.`,
-  [MINT_A_TYPE]: `Will mint one or more NFTs having the same commitment.`,
+  [MINT_A_TYPE]: `Will mint one or more NFT(s) having the same commitment.`,
   [MINT_A_MUTABLE_NFT]: `Will mint one or more mutable NFT(s) having no or the same commitment.`,
   [MINT_ANOTHER_MINTER]: `Will mint one or more minting NFT(s) having no or the same commitment.`
 }
@@ -388,12 +388,19 @@ const publicationTx = ref<string>()
 const publisher = ref<AuthchainIdentity>()
 
 const openNftTypeDialog = (token: TokenI) => {
+  const defaultNftType = {
+    name: minter.value.nftCollectionType == 'SequentialNftCollection' ? `${minter.value.identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${minter.value.identitySnapshot?.token?.symbol} - ${token.commitment}`,
+    uris: {
+      icon: '',
+      asset: ''
+    }
+  }
   $q.dialog({
     component: NftTypeDialog,
     componentProps: {
       token: token,
-      title: minter.value.nftCollectionType == 'SequentialNftCollection' ? `NFT Metadata of ${minter.value.identitySnapshot?.token?.symbol} #${formatCommitment('01', 'vm-number', 'decimal')}` : 'aa',
-      defaultNftType: nftsTypes.value[token.commitment!]
+      title: minter.value.nftCollectionType == 'SequentialNftCollection' ? `Metadata of ${minter.value.identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
+      defaultNftType: nftsTypes.value[token.commitment!] || defaultNftType
     }
   }).onOk(({ type, nftType }) => {
     nftsTypes.value[type] = nftType
@@ -481,7 +488,7 @@ const mint = async () => {
           component: TransactionStatusDialog,
           componentProps: {
             statusType: 'success',
-            statusText: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFTs minted!`,
+            statusText: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`,
             txid: tx
           }
         })
@@ -489,11 +496,11 @@ const mint = async () => {
           txid: tx,
           txType: 'CashToken.mint',
           timestamp: new Date().getTime(),
-          successMsg: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFTs minted!`
+          successMsg: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
         })
 
         mintTx.value = tx
-        progress.value = 'Loading minted NFTs, please wait...'
+        progress.value = 'Loading minted NFT(s), please wait...'
         const decoded = await minter.value.ownerWallet.util.decodeTransaction(tx)
       } catch (error: any) {
         $q.dialog({
@@ -703,7 +710,7 @@ const publish = async () => {
         component: TransactionStatusDialog,
         componentProps: {
           statusType: 'success',
-          statusText: `NFTs published!`,
+          statusText: `NFT(s) published!`,
           txid: tx
         }
       })
@@ -755,7 +762,7 @@ const onDone = () => {
         (new Set(nfts.value?.map(n => n.commitment))).size <
         (new Set(Object.keys(nftsTypes.value))).size
       ) {
-        message = `You haven't created NFT metadata of other NFTs. Are you sure you want to continue?`
+        message = `You haven't created NFT metadata of other NFT(s). Are you sure you want to continue?`
       }
     }
   }
