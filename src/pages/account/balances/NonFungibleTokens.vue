@@ -9,7 +9,7 @@
                     </q-badge>
                 </h5>
                 <div>
-                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid
+                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid color="warning"
                         :loading="populatingTable" title="My Collections" :rows="nftCollections.results" :columns="[
                             {
                                 name: 'name', label: 'Name',
