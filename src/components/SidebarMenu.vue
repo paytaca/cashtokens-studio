@@ -33,6 +33,7 @@ const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
+  manageNFTCollection: '/issuer/manage/nft-collection',
   manageRegistries: '/issuer/manage/registries',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
@@ -85,6 +86,11 @@ const menu = computed<any[]>(() => {
         {
           label: 'NFT Reserves',
           href: hrefs.manageNFTReserves,
+          icon: 'art_track',
+        },
+        {
+          label: 'NFT Collections',
+          href: hrefs.manageNFTCollection,
           icon: 'art_track',
         },
         {
