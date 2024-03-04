@@ -1,4 +1,5 @@
 <!-- Quasar dialog -->
+
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide" full-width persistent>
     <q-card class="q-px-sm full-width">
@@ -17,8 +18,8 @@
               <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
                 <label>Name *</label>
                 <q-input class="registry-field" v-model="nftType.name"
-                  placeholder="E.g. `Art - 1`, `ACME Stadium Tickets`" :rules="[v => v.length > 0 || 'Required']" outlined
-                  required autofocus>
+                  placeholder="E.g. `Art - 1`, `ACME Stadium Tickets`" :rules="[v => v?.length > 0 || 'Required']"
+                  outlined required autofocus>
                 </q-input>
               </div>
               <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
@@ -48,6 +49,7 @@
                         </span>
                       </div>
                     </template>
+
                     <template v-slot:hint>
                       <span style="line-height: 1rem;">
                         This is the real-world asset tokenized by this NFT. E.g. a digital artwork, music etc...
@@ -66,6 +68,7 @@
                   </q-file>
                   <q-input v-model="nftType.uris!.icon" outlined autogrow bottom-slots
                     placeholder="Click upload icon to upload or paste URL">
+
                     <template v-slot:prepend>
                       <div @click.stop=" iconFileRef.pickFiles()">
                         <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
@@ -77,6 +80,7 @@
                         </span>
                       </div>
                     </template>
+
                     <template v-slot:hint>
                       <span style="line-height: 1.2rem;">
                         It's recommended to provide an image as icon for this NFT so it'll show up nicely on user
@@ -90,14 +94,15 @@
             </q-form>
           </div>
           <div class="col-xs-12 col-sm-8 col-lg-5">
-            <div class="text-h6 ">Attributes<q-btn flat color="primary" icon="add" size="md" @click="openAttributeDialog"
-                type="button" />
+            <div class="text-h6 ">Attributes<q-btn flat color="primary" icon="add" size="md"
+                @click="openAttributeDialog" type="button" />
             </div>
             <div class="row q-gutter-md flex justify-between  q-mx-auto q-mt-lg  q-pa-lg rounded-borders"
               :class="Object.keys(nftTypeAttributes).length > 0 ? 'bg-grey-10' : ''">
               <div v-for="attrKey, i in Object.keys(nftTypeAttributes)" class="q-gutter-y-sm" :key="i">
                 <label>{{ attrKey }}</label>
                 <q-input v-model="nftTypeAttributes[attrKey]" outlined dense>
+
                   <template v-slot:after>
                     <q-icon name="remove" @click.stop="() => delete nftTypeAttributes[attrKey]" color="negative"
                       class="cursor-pointer">
@@ -232,6 +237,12 @@ watch(() => assetFile.value, async (b) => {
 onMounted(() => {
   if (props.defaultNftType) {
     nftType.value = props.defaultNftType
+    if (!nftType.value.uris) {
+      nftType.value.uris = {
+        icon: '',
+        asset: ''
+      }
+    }
     if (nftType.value.extensions?.attributes) {
       nftTypeAttributes.value = Object.assign({}, nftType.value.extensions?.attributes as any)
     }
