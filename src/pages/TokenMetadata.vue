@@ -13,8 +13,8 @@
                   <q-tooltip>Click to edit</q-tooltip>
                 </q-btn>
                 <div v-else class="q-gutter-md">
-                  <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" size="md"
-                    icon="undo" text-color="negative">
+                  <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset"
+                    size="md" icon="undo" text-color="negative">
                     <q-tooltip>Reset</q-tooltip>
                   </q-btn>
                   <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
@@ -113,8 +113,8 @@
                       </div>
                       <div class="col-xs-12 col-md-8 q-gutter-y-sm items-center">
                         <label>License</label>
-                        <q-input v-model="bcmr.license" placeholder="Example: CC0-1.0" aria-placeholder="Example: CC0-1.0"
-                          outlined stack-label>
+                        <q-input v-model="bcmr.license" placeholder="Example: CC0-1.0"
+                          aria-placeholder="Example: CC0-1.0" outlined stack-label>
                         </q-input>
                       </div>
                       <div class="col-xs-12 col-md-8 q-gutter-y-sm items-center">
@@ -152,8 +152,8 @@
                                 </q-avatar>
                                 <span style="letter-spacing: 5px;">
                                   {{
-                                    bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
-                                  }}
+                  bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
+                }}
                                 </span>
                               </q-chip>
                             </div>
@@ -196,6 +196,7 @@
                         <q-input class="registry-field"
                           v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token!.category"
                           outlined autogrow disable>
+
                           <template v-slot:append>
                             <q-icon name="edit_off"></q-icon>
                           </template>
@@ -208,13 +209,15 @@
                           <label>Token Icon {{ newTokenIconUploading ? 'Uploading' : '' }}<q-spinner-dots
                               v-if="newTokenIconUploading" color="warning" class="q-mr-sm"></q-spinner-dots></label>
                           <div>
-                            <q-file ref="iconFileRef" v-model="newTokenIconFile" @rejected="() => console.log('rejected')"
-                              :disable="newTokenIconUploading" outlined bottom-slots class="hidden">
+                            <q-file ref="iconFileRef" v-model="newTokenIconFile"
+                              @rejected="() => console.log('rejected')" :disable="newTokenIconUploading" outlined
+                              bottom-slots class="hidden">
                             </q-file>
                             <q-input
                               v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris!.icon"
                               label="Paste URL or click icon on the right to upload icon" :disable="!bcmrNewRevision"
                               outlined bottom-slots>
+
                               <template v-slot:prepend>
                                 <div @click.stop=" iconFileRef.pickFiles()">
                                   <q-spinner-box v-if="newTokenIconUploading" color="warning"></q-spinner-box>
@@ -226,12 +229,14 @@
                                   <q-icon v-else name="broken_image" color="grey-8"></q-icon>
                                 </div>
                               </template>
+
                               <template v-slot:append>
                                 <div @click.stop="() => { if (bcmrNewRevision) iconFileRef.pickFiles() }">
                                   <q-spinner-box v-if="newTokenIconUploading" color="warning"></q-spinner-box>
                                   <q-btn v-else icon="upload_file" class="cursor-pointer" text-color="warning" />
                                 </div>
                               </template>
+
                               <template v-slot:hint>
                                 <span style="line-height: 1.2rem;">
                                   It's recommended to provide an image as icon for this NFT so it'll show up nicely on
@@ -271,6 +276,7 @@
                         <div
                           v-for="[k], i  in  Object.entries(bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris || {})"
                           :key="i" class="q-gutter-sm">
+
                           <template v-if="k.toLowerCase() !== 'icon' && k.toLowerCase() !== 'web'">
                             <label style="text-transform: capitalize;">{{ k }}</label>
                             <q-input input-class="registry-field"
@@ -324,11 +330,13 @@
                         <div v-if="nftTypesSelected.length > 0 && bcmrNewRevision"
                           class="q-gutter-sm row items-center q-mt-sm">
                           <span class="text-grey-4"></span>
-                          <q-btn text-color="negative" @click.stop="openDeleteUnpublishNftsDialog" no-caps>Delete Selected
+                          <q-btn text-color="negative" @click.stop="openDeleteUnpublishNftsDialog" no-caps>Delete
+                            Selected
                             Item
                           </q-btn>
                           <q-btn text-color="primary" class="cursor-pointer" @click.stop="commitSelectedUnpublishedNfts"
-                            no-caps>Add Selected
+                            no-caps>Add
+                            Selected
                             Item</q-btn>
                           <q-btn v-if="nftTypesSelectedForPublication.length > 0"
                             @click.stop="undoCommitOfUnpublishedNfts" text-color="warning">Undo Add</q-btn>
@@ -337,7 +345,8 @@
                       <q-tab-panel name="minted" label="Minted">
                         <div class="text-grey-5 row items-center">
 
-                          <span><q-icon name="info" class="text-grey-5 q-mr-sm inline"></q-icon>These contains the list of
+                          <span><q-icon name="info" class="text-grey-5 q-mr-sm inline"></q-icon>These contains the list
+                            of
                             the
                             minted
                             tokens/existing tokens of this token
@@ -355,21 +364,23 @@
                       <q-table v-model:pagination="nftTypesPagination" flat :rows="nftTypes.results"
                         v-model:selected="nftTypesSelected"
                         :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'" :loading="nftTypesIsLoading"
-                        color="warning" @request="onTableRequest" style="background:unset;margin-bottom: 3rem;" :columns="[
-                          {
-                            name: 'nfttype', label: 'Nft Type',
-                            field: r => '',
-                            align: 'left',
-                            headerStyle: 'padding: 1.5em',
-                          },
-                          {
-                            name: 'actions', label: '',
-                            field: r => '',
-                            align: 'center',
-                            headerStyle: 'padding: 1.5em',
-                          },
-                        ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id"
-                        :visible-columns="['nfttype', 'actions']" bordered>
+                        color="warning" @request="onTableRequest" style="background:unset;margin-bottom: 3rem;"
+                        :columns="[
+                  {
+                    name: 'nfttype', label: 'Nft Type',
+                    field: r => '',
+                    align: 'left',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'actions', label: '',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id" :visible-columns="['nfttype', 'actions']"
+                        bordered>
+
                         <template v-slot:body-cell-nfttype="value">
                           <td>
                             <div class="row justify-left items-center flex wrap q-gutter-sm">
@@ -397,10 +408,10 @@
                               <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                                 <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                                   {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
-                                    value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-                                    `#${formatCommitment(value.row._meta?.commitment || value.row.commitment, 'vm-number',
-                                      'decimal')}` :
-                                    value.row._meta?.commitment || value.row.commitment }}
+                  value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
+                  `#${formatCommitment(value.row._meta?.commitment || value.row.commitment, 'vm-number',
+                    'decimal')}` :
+                  value.row._meta?.commitment || value.row.commitment }}
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                                   {{ `(${value.row[value.row._meta?.commitment || value.row.commitment]?.name})` }}
@@ -409,23 +420,23 @@
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-6 ellipsis-2-lines">
                                   Description: {{
-                                    value.row[value.row._meta?.commitment || value.row.commitment].description
-                                    || '<no description>' }}
+                  value.row[value.row._meta?.commitment || value.row.commitment].description
+                  || '<no description>' }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-8">
                                   Commitment: {{
-                                    value.row._meta?.commitment || value.row.commitment
-                                  }}
+                  value.row._meta?.commitment || value.row.commitment
+                }}
                                 </div>
                               </div>
                               <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm"
                                 style="letter-spacing: 2px;">
                                 <div class="text-grey-8">
                                   Capability: {{
-                                    value.row.capability
-                                  }}
+                  value.row.capability
+                }}
                                 </div>
                               </div>
                               <div
@@ -438,13 +449,13 @@
                             </div>
                           </td>
                         </template>
+
                         <template v-slot:body-cell-actions="value">
                           <q-td class="text-center">
-                            <div
-                              v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0">
-                              <q-btn label="Add Metadata" text-color="primary"
-                                :to="{ name: 'nft-metadata', query: { authhead: tokenStore.token.txid, commitment: value.row._meta?.commitment || value.row.commitment, capability: value.row.capability, amount: value.row.amount } }"
-                                disable>
+                            <div>
+                              <q-btn
+                                :label="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0 ? 'Add Metadata' : 'Edit Metadata'"
+                                text-color="primary" @click.stop="() => openNftTypeDialog(value.row)">
                               </q-btn>
                               <div class="text-grey-8">under development</div>
                             </div>
@@ -454,7 +465,7 @@
                           style="background-color:#0000002b" class="bg-transparent">
                           <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
                           <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{
-                            progress }}</span>
+                  progress }}</span>
                         </q-inner-loading>
                       </q-table>
 
@@ -510,17 +521,18 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
 import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
-import { NftType, delay } from 'mainnet-js';
+import { NftType, TokenI, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
 import AuthbasePromptDialog from 'src/components/dialogs/AuthbasePromptDialog.vue';
+import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { userInfo } from 'os';
 import { useUser } from 'src/stores/user';
-import localforage from 'localforage';
+
 
 const $q = useQuasar()
 const ui = useUI()
@@ -637,6 +649,9 @@ const newRevision = () => {
     bcmrIdentityHistories.value?.push(bcmrNewRevision.value)
     bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
     document.getElementById('bcmr-form')?.removeAttribute('disabled')
+    if (!tokenStore.token.token) { // If non-token authhead, attach identity snapshot from loaded registry to the utxo
+      tokenStore.token.identitySnapshot = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value.toISOString()]
+    }
   }
 
 }
@@ -680,6 +695,9 @@ const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabe
 
 
 const publish = async (revisionOptions: RevisionOption) => {
+  console.log('UNPUBLISHED', nftTypesSelectedForPublication.value)
+  // deleteSelectedPublishedNfts()
+  // return
   tokenStore.token.transactionSigner = user.transactionSigner
   let { newVersion, revisionOption } = revisionOptions
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
@@ -726,9 +744,10 @@ const publish = async (revisionOptions: RevisionOption) => {
         }
       }
     }
+    console.log('ADDING NFT FOR PUBLICATION')
     for (const nftType of nftTypesSelectedForPublication.value) {
       bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
-
+      console.log(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment])
     }
   }
   bcmr.value.latestRevision = bcmrNewRevisionISOString
@@ -778,7 +797,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       publicationTx.value = tx
       bcmrNotFound.value = false
       document.getElementById('bcmr-form')?.setAttribute('disabled', '')
-      deleteSelectedUnpublishedNfts()
+      await deleteSelectedPublishedNfts(nftTypesSelectedForPublication.value as [{ [key: string]: NftType } & { id: string }])
 
     } catch (error: any) {
       $q.dialog({
@@ -803,11 +822,29 @@ const openDeleteUnpublishNftsDialog = () => {
   })
 }
 
+/**
+ * Delete selected items in Unpublished table
+ */
 const deleteSelectedUnpublishedNfts = async () => {
   for (const [i, nftType] of nftTypesSelected.value.entries()) {
     await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
     nftTypesSelected.value.splice(i)
   }
+  populateNftsTable()
+}
+
+/**
+ * Delete the selected items in Unpublished table after it was published.
+ * 
+ */
+const deleteSelectedPublishedNfts = async (recentlyPublished: [{ [key: string]: NftType } & { id: string }]) => {
+  console.log('DELETING UNPUBLISHED', recentlyPublished)
+  for (const [i, nftType] of recentlyPublished.entries()) {
+    console.log('DELETING', nftType.id)
+    await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
+    nftTypesSelectedForPublication.value.splice(i)
+  }
+  // nftTypesSelectedForPublication.value = []
   populateNftsTable()
 }
 
@@ -864,6 +901,96 @@ const openAddUriDialog = (uri: any) => {
       }
     }
 
+  })
+}
+
+const openNftTypeDialog = async (token: TokenI & { [type: string]: NftType } & { _meta: { commitment: string, authbase: string, category: string } }) => {
+  // Load from the unpublished list, in case user already added metadata and wants to edit
+  let defaultNftType = nftTypesSelectedForPublication.value.find((v: { [key: string]: NftType }) => !!v[token.commitment!])
+
+  let nftCollectionType = tokenStore?.token?.nftCollectionType // If authhead is token
+  let identitySnapshot = tokenStore?.token?.identitySnapshot   // If authhead is token
+  if (!nftCollectionType) { // to accomodate non-token authhead, we'll check the registry directly
+    nftCollectionType = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrSelectedIdentityHistory.value!.toISOString()!].token?.nfts?.parse?.bytecode ? 'ParsableNftCollection' : 'SequentialNftCollection'
+  }
+  if (!identitySnapshot) { // to accomodate non-token authhead, we'll check the registry directly
+    identitySnapshot = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrSelectedIdentityHistory.value!.toISOString()!]
+  }
+
+  if (!token._meta) {
+    token._meta = {
+      authbase: bcmrSelectedAuthbase.value!,
+      commitment: token.commitment!,
+      category: token.tokenId
+    }
+  }
+
+  console.log('TOKEN', token)
+  console.log('COMMITMENT', token.commitment)
+  console.log('NftType', token[token.commitment!])
+
+  if (!defaultNftType?.name) {
+    // Use the current metadata (from BCMR indexer) if any
+    defaultNftType = token[token.commitment || token._meta.commitment]
+    console.log('DEFAULT NFT TYPE1', defaultNftType)
+  }
+
+
+
+
+  console.log('IDENTITY SNAPSHOT', identitySnapshot)
+  console.log('DEFAULT NFT TYPE2', defaultNftType)
+  // If no metadata suggest default
+  if (!defaultNftType?.name) {
+    defaultNftType = {
+      name: nftCollectionType == 'SequentialNftCollection' ? `${identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${identitySnapshot?.token?.symbol} - ${token.commitment}`,
+      uris: {
+        icon: '',
+        asset: ''
+      }
+    }
+  }
+
+  $q.dialog({
+    component: NftTypeDialog,
+    componentProps: {
+      token: token,
+      title: nftCollectionType == 'SequentialNftCollection' ? `Metadata of ${identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
+      defaultNftType: defaultNftType
+    }
+  }).onOk(async ({ type, nftType }) => {
+    console.log('DIALOG DATA', type, nftType)
+    // console.log('Edited', type, nftType)
+    // // nftsTypes.value[type] = nftType
+    // console.log('nfts types', nftTypesSelectedForPublication.value)
+    // Format, to preview metadata on `Minted` list
+    token[type] = nftType
+    token._meta = {
+      commitment: formatCommitment(type, 'decimal', 'vm-number'),
+      category: identitySnapshot?.token?.category,
+      authbase: identitySnapshot?.token?.category
+    }
+    // const v = nftTypes.value.results.find(nftType => {
+    //   nftType.
+    // })
+    // Make it compatible with the format returned by BCMR indexer
+    console.log('token', token)
+    // nftType._meta = {
+    //   commitment: token.commitment
+    // }
+    // Add to selected unpublished
+    await localForage.nftTypesStore.setItem(`${token.category}-${type}`, { [type]: JSON.parse(JSON.stringify(nftType)) })
+    const deleteme = await localForage.nftTypesStore.getItem(`${token.category}-${type}`)
+    console.log(`saved ${token.category}-${type}`, deleteme)
+    nftTypesSelectedForPublication.value.push({
+      id: `${token.category}-${type}`,
+      [type]: nftType,
+      _meta: {
+        commitment: formatCommitment(type, 'decimal', 'vm-number'),
+        category: identitySnapshot?.token?.category,
+        authbase: identitySnapshot?.token?.category
+      }
+    })
   })
 }
 
@@ -948,9 +1075,10 @@ const loadNftTypes = async () => {
 const loadUnpublishedNftTypes = async () => {
   delete nftTypesPagination.value.rowsNumber
   const results: any = []
-  for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
-    if (key.startsWith(tokenStore?.token?.token?.tokenId)) {
 
+  for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
+    // if (key.startsWith(tokenStore?.token?.token?.tokenId)) {
+    if (key.startsWith(bcmrSelectedAuthbase.value!)) {
       let item: {
         [key: string]: NftType,
       } & { _meta: { commitment: string }, id: number | string } | null
@@ -961,7 +1089,7 @@ const loadUnpublishedNftTypes = async () => {
       }
       item!.id = key // Just so we have a row-key in q-table
       item!._meta = { commitment: Object.keys(item!)[0] }
-
+      console.log('ITEM', item)
       results.push(item)
     }
   }
@@ -973,6 +1101,13 @@ const loadUnpublishedNftTypes = async () => {
     previous: null,
     results
   }
+}
+
+type MintedtokenItemType = {
+  capability?: string,
+  commitment?: string,
+  amount?: number,
+  metadata: { nft?: { [key: string]: NftType } }
 }
 
 const loadMintedNftTypes = async () => {
@@ -998,18 +1133,13 @@ const loadMintedNftTypes = async () => {
   if (showMintersInMintedNfts.value) {
     query.capability.push('minting')
   }
-  const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
+  // const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
+  const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(bcmrSelectedAuthbase.value!, query)
   if (fntResp && fntResp.results) {
     console.log('RESPONSE', fntResp)
     nftTypesPagination.value.rowsNumber = fntResp.count
-    type ItemType = {
-      capability?: string,
-      commitment?: string,
-      amount?: number,
-      metadata: { nft?: { [key: string]: NftType } }
-    }
 
-    fntResp.results = fntResp.results.map((item: ItemType) => {
+    fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
       // Transform
       const { metadata, ...rest } = item
       if (item.metadata?.nft) {
@@ -1093,6 +1223,11 @@ const initBcmr = (r: any) => {
       bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
       expansionItemTwo.value = true
     }
+
+    if (!tokenStore.token.token && bcmrSelectedAuthbase.value && bcmrSelectedIdentityHistory.value) { // If non-token authhead, attach identity snapshot from loaded registry
+      tokenStore.token.identitySnapshot = r.identities[bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()]
+    }
+
     loadNftTypes()
   }
 
