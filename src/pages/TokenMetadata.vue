@@ -46,45 +46,11 @@
                 </div>
               </div>
               <q-form id="bcmr-form" ref="bcmrForm" disabled>
-                <!-- <div class="col-sm-2" :class="$q.screen.xs ? 'flex justify-center q-mb-sm' : ''">
-                  <div class="row justify-center items-center">
-                    <div class="col-12 text-center">
-                      <q-skeleton v-if="!!progress && !bcmrSelectedAuthbase && !bcmrSelectedIdentityHistory"
-                        style="margin: auto;width:200px;height:200px" animation="pulse-y"></q-skeleton>
-                      <q-img
-                        v-else-if="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
-                        :src="bcmrSelectedAuthbase && bcmrSelectedIdentityHistory && bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris?.icon"
-                        class="rounded-borders cursor-pointer" @click.stop="iconFileRef.pickFiles()"
-                        style="width:200px;height:200px"></q-img>
-                      <q-icon v-else name="broken_image" size="200px" color="grey-8" class="cursor-pointer"
-                        @click.stop="iconFileRef.pickFiles()"></q-icon>
-                      <div>
-                        <q-btn class="text-underline cursor-pointer" @click.stop="iconFileRef.pickFiles()" flat>Select
-                          Token
-                          Icon
-                          <q-icon name="attach_file"></q-icon>
-                        </q-btn>
-                      </div>
-                      <label v-if="newTokenIconUploading" class="text-warning">
-                        Uploading<q-spinner-dots color="warning" class="q-mr-sm"></q-spinner-dots>
-                      </label>
-                    </div>
-                    <div style="width:8em" class="col-12 flex justify-center">
-                      <q-file ref="iconFileRef" v-model="newTokenIconFile" accept=".jpg,.png, image/*"
-                        @rejected="() => console.log('rejected')" :disable="newTokenIconUploading || !bcmrNewRevision"
-                        borderless stack-label>
-                      </q-file>
-                    </div>
-
-                  </div>
-                </div> -->
-
                 <div class="col-xs-12 col-sm-10">
                   <div v-if="publicationTx" class="q-px-lg text-center">
                     🎉 Registry published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
                       color="secondary" label="View Tx in Explorer" />
                   </div>
-
                   <q-expansion-item v-model="expansionItemOne" label="Registry" class="q-px-md q-pt-sm q-my-sm"
                     icon="data_object">
                     <div class="q-mx-md q-gutter-md q-my-sm">
@@ -210,8 +176,8 @@
                               v-if="newTokenIconUploading" color="warning" class="q-mr-sm"></q-spinner-dots></label>
                           <div>
                             <q-file ref="iconFileRef" v-model="newTokenIconFile"
-                              @rejected="() => console.log('rejected')" :disable="newTokenIconUploading" outlined
-                              bottom-slots class="hidden">
+                              @rejected="() => $q.dialog({ message: 'File, rejected. Please attach an image.' })"
+                              :disable="newTokenIconUploading" outlined bottom-slots class="hidden">
                             </q-file>
                             <q-input
                               v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris!.icon"
@@ -420,7 +386,7 @@
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-6 ellipsis-2-lines">
                                   Description: {{
-                  value.row[value.row._meta?.commitment || value.row.commitment].description
+                  value.row[value.row._meta?.commitment || value.row.commitment]?.description
                   || '<no description>' }}
                                 </div>
                               </div>
@@ -457,7 +423,6 @@
                                 :label="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0 ? 'Add Metadata' : 'Edit Metadata'"
                                 text-color="primary" @click.stop="() => openNftTypeDialog(value.row)">
                               </q-btn>
-                              <div class="text-grey-8">under development</div>
                             </div>
                           </q-td>
                         </template>
@@ -521,7 +486,7 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
 import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
-import { NftType, TokenI, delay } from 'mainnet-js';
+import { NFTCapability, NftType, TokenI, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
@@ -695,9 +660,6 @@ const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabe
 
 
 const publish = async (revisionOptions: RevisionOption) => {
-  console.log('UNPUBLISHED', nftTypesSelectedForPublication.value)
-  // deleteSelectedPublishedNfts()
-  // return
   tokenStore.token.transactionSigner = user.transactionSigner
   let { newVersion, revisionOption } = revisionOptions
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
@@ -744,10 +706,8 @@ const publish = async (revisionOptions: RevisionOption) => {
         }
       }
     }
-    console.log('ADDING NFT FOR PUBLICATION')
     for (const nftType of nftTypesSelectedForPublication.value) {
       bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
-      console.log(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment])
     }
   }
   bcmr.value.latestRevision = bcmrNewRevisionISOString
@@ -838,9 +798,7 @@ const deleteSelectedUnpublishedNfts = async () => {
  * 
  */
 const deleteSelectedPublishedNfts = async (recentlyPublished: [{ [key: string]: NftType } & { id: string }]) => {
-  console.log('DELETING UNPUBLISHED', recentlyPublished)
   for (const [i, nftType] of recentlyPublished.entries()) {
-    console.log('DELETING', nftType.id)
     await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
     nftTypesSelectedForPublication.value.splice(i)
   }
@@ -871,7 +829,6 @@ const saveNewIconInIPFS = async () => {
       })
       const respJson = await resp.json()
       if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && respJson.iconUris?.https) {
-        console.log('ADDING URIS')
         bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: respJson.iconUris?.https })
       }
 
@@ -904,7 +861,7 @@ const openAddUriDialog = (uri: any) => {
   })
 }
 
-const openNftTypeDialog = async (token: TokenI & { [type: string]: NftType } & { _meta: { commitment: string, authbase: string, category: string } }) => {
+const openNftTypeDialog = async (token: { amount: number, category: string, commitment?: string, capability?: NFTCapability } & { [type: string]: NftType } & { _meta: { commitment: string, authbase: string, category: string } }) => {
   // Load from the unpublished list, in case user already added metadata and wants to edit
   let defaultNftType = nftTypesSelectedForPublication.value.find((v: { [key: string]: NftType }) => !!v[token.commitment!])
 
@@ -921,25 +878,19 @@ const openNftTypeDialog = async (token: TokenI & { [type: string]: NftType } & {
     token._meta = {
       authbase: bcmrSelectedAuthbase.value!,
       commitment: token.commitment!,
-      category: token.tokenId
+      category: token.category
     }
+  } else if (token._meta && !token.tokenId) { // When editing Published NftType
+    // Dummy token for NftTypeDialog
+    token.category = identitySnapshot.token?.category
+    token.commitment = token._meta.commitment
+    token.amount = 0
   }
-
-  console.log('TOKEN', token)
-  console.log('COMMITMENT', token.commitment)
-  console.log('NftType', token[token.commitment!])
 
   if (!defaultNftType?.name) {
     // Use the current metadata (from BCMR indexer) if any
     defaultNftType = token[token.commitment || token._meta.commitment]
-    console.log('DEFAULT NFT TYPE1', defaultNftType)
   }
-
-
-
-
-  console.log('IDENTITY SNAPSHOT', identitySnapshot)
-  console.log('DEFAULT NFT TYPE2', defaultNftType)
   // If no metadata suggest default
   if (!defaultNftType?.name) {
     defaultNftType = {
@@ -959,34 +910,20 @@ const openNftTypeDialog = async (token: TokenI & { [type: string]: NftType } & {
       defaultNftType: defaultNftType
     }
   }).onOk(async ({ type, nftType }) => {
-    console.log('DIALOG DATA', type, nftType)
-    // console.log('Edited', type, nftType)
-    // // nftsTypes.value[type] = nftType
-    // console.log('nfts types', nftTypesSelectedForPublication.value)
     // Format, to preview metadata on `Minted` list
     token[type] = nftType
     token._meta = {
-      commitment: formatCommitment(type, 'decimal', 'vm-number'),
+      commitment: type,
       category: identitySnapshot?.token?.category,
       authbase: identitySnapshot?.token?.category
     }
-    // const v = nftTypes.value.results.find(nftType => {
-    //   nftType.
-    // })
-    // Make it compatible with the format returned by BCMR indexer
-    console.log('token', token)
-    // nftType._meta = {
-    //   commitment: token.commitment
-    // }
-    // Add to selected unpublished
-    await localForage.nftTypesStore.setItem(`${token.category}-${type}`, { [type]: JSON.parse(JSON.stringify(nftType)) })
-    const deleteme = await localForage.nftTypesStore.getItem(`${token.category}-${type}`)
-    console.log(`saved ${token.category}-${type}`, deleteme)
+
+    await localForage.nftTypesStore.setItem(`${token._meta.category}-${type}`, { [type]: JSON.parse(JSON.stringify(nftType)) })
     nftTypesSelectedForPublication.value.push({
-      id: `${token.category}-${type}`,
+      id: `${token._meta.category}-${type}`,
       [type]: nftType,
       _meta: {
-        commitment: formatCommitment(type, 'decimal', 'vm-number'),
+        commitment: type,
         category: identitySnapshot?.token?.category,
         authbase: identitySnapshot?.token?.category
       }
@@ -1031,6 +968,7 @@ const downloadRevisedRegistry = async (revisionOptions: RevisionOption) => {
     }
   }
 
+  bcmr.value.latestRevision = bcmrNewRevisionISOString
   bcmr.value.appendAuthGuardTokenStandardExtension(tokenStore.token?.authKey?.token?.tokenId)
   downloadRegistryFile(bcmr.value.getContent())
   progress.value = false
@@ -1089,7 +1027,6 @@ const loadUnpublishedNftTypes = async () => {
       }
       item!.id = key // Just so we have a row-key in q-table
       item!._meta = { commitment: Object.keys(item!)[0] }
-      console.log('ITEM', item)
       results.push(item)
     }
   }
@@ -1120,12 +1057,8 @@ const loadMintedNftTypes = async () => {
     results: []
   }
 
-  console.log('pagination', nftTypesPagination.value)
-
   const query = {
     paginated: true,
-    // limit: nftTypesPagination.value.rowsPerPage,
-    // offset: (nftTypesPagination.value.page - 1) * nftTypesPagination.value.rowsPerPage,
     page: nftTypesPagination.value.page,
     include_metadata: true,
     capability: ['none', 'mutable']
@@ -1133,10 +1066,8 @@ const loadMintedNftTypes = async () => {
   if (showMintersInMintedNfts.value) {
     query.capability.push('minting')
   }
-  // const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(tokenStore.token.identitySnapshot.token.category, query)
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(bcmrSelectedAuthbase.value!, query)
   if (fntResp && fntResp.results) {
-    console.log('RESPONSE', fntResp)
     nftTypesPagination.value.rowsNumber = fntResp.count
 
     fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
@@ -1238,24 +1169,8 @@ onBeforeMount(async () => {
   try {
     if (!tokenStore.token?.token?.tokenId) return
     progress.value = 'Loading registry, please wait...'
-    // const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token?.identitySnapshot?.token?.category)
-
     const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
-    console.log('R', r)
     if (r) {
-      // bcmr.value = new Bcmr({ ...r })
-      // bcmr.value.versionString = `${r.version?.major || 0}.${r.version?.minor || 0}.${r.version?.patch || 0}`
-      // bcmrSelectedAuthbase.value = Object.keys(r.identities || {})[0]
-
-      // if (bcmrSelectedAuthbase.value) {
-      //   bcmrIdentityHistories.value = Object.keys(r.identities[bcmrSelectedAuthbase.value] || {})
-      //     .filter((v) => !Number.isNaN(new Date(v).getDate()))
-      //     .map(v => new Date(v))
-      //     .sort((a: any, b: any) => b - a)
-      //   bcmrSelectedIdentityHistory.value = bcmrIdentityHistories.value[0]
-      //   expansionItemTwo.value = true
-      // }
-      // loadNftTypes()
       initBcmr(r)
     } else {
       progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
@@ -1265,17 +1180,6 @@ onBeforeMount(async () => {
         await delay(1000)
         progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
         const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token.token.tokenId)
-        // {
-        //     "tokenId": "5ff749ca2d929eb23b56de0b5dbd9023ef2916199c122a8590cff5ada6c6a463",
-        //     "txHash": "7fd88f702cb2d5a5db3bf55cd202238617054bc721256620f6cb302a718b86ea",
-        //     "contentHash": "49c659c026424a26c392760a7e717227bca3ccaa7b46b0420feb853a5150bc10",
-        //     "uris": [
-        //         "nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
-        //     ],
-        //     "httpsUrl": "https://nftstorage.link/ipfs/bafkreicjyzm4ajscjitmhetwbj7hc4rhxsr4zkt3i2yeed7lqu5fcuf4ca"
-        // }
-        console.log(pubInfo)
-        console.log('init bcmr')
         if (pubInfo && pubInfo[0]) {
           if (pubInfo[0].httpsUrl) {
             try {
@@ -1327,7 +1231,6 @@ onMounted(async () => {
       component: AuthbasePromptDialog
     }).onOk(async (authbase) => {
       try {
-
         // TODO: USE WATCHTOWER AS PRIMARY SOURCE
         progress.value = 'Authenticating authhead, please wait...'
         const cg = new ChainGraph()
