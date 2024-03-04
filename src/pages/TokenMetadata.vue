@@ -175,7 +175,7 @@
                           <label>Token Icon {{ newTokenIconUploading ? 'Uploading' : '' }}<q-spinner-dots
                               v-if="newTokenIconUploading" color="warning" class="q-mr-sm"></q-spinner-dots></label>
                           <div>
-                            <q-file ref="iconFileRef" v-model="newTokenIconFile"
+                            <q-file ref="iconFileRef" v-model="newTokenIconFile" accept=".jpg, .png, image/*"
                               @rejected="() => $q.dialog({ message: 'File, rejected. Please attach an image.' })"
                               :disable="newTokenIconUploading" outlined bottom-slots class="hidden">
                             </q-file>
@@ -556,6 +556,7 @@ const nftTypes = ref<PaginatedData>({
 const nftTypesIsLoading = ref<boolean>()
 const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
 const nftTypesSelected = ref<any[]>([])
+const nftTypesSelectedKeys = ref<Set<string>>(new Set()) // commitments
 const nftTypesSelectedForPublication = ref<any[]>([])
 const showMintersInMintedNfts = ref<boolean>(false)
 
@@ -734,7 +735,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   }
 
   if (tx) {
-    progress.value = 'Publication tx sent, waiting for confirmation...'
+    progress.value = 'Transaction sent, awaiting propagation...'
     try {
       await tokenStore.token.ownerWallet.waitForTransaction({ txHash: tx })
       await tokenStore.token.updateUtxo(tx)
@@ -788,8 +789,9 @@ const openDeleteUnpublishNftsDialog = () => {
 const deleteSelectedUnpublishedNfts = async () => {
   for (const [i, nftType] of nftTypesSelected.value.entries()) {
     await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
-    nftTypesSelected.value.splice(i)
   }
+  nftTypesSelected.value = []
+  nftTypesSelectedKeys.value?.clear()
   populateNftsTable()
 }
 
@@ -800,9 +802,9 @@ const deleteSelectedUnpublishedNfts = async () => {
 const deleteSelectedPublishedNfts = async (recentlyPublished: [{ [key: string]: NftType } & { id: string }]) => {
   for (const [i, nftType] of recentlyPublished.entries()) {
     await localForage.nftTypesStore.removeItem(nftType.id) // id is storage key
-    nftTypesSelectedForPublication.value.splice(i)
   }
-  // nftTypesSelectedForPublication.value = []
+  nftTypesSelectedForPublication.value = []
+  nftTypesSelectedKeys.value?.clear()
   populateNftsTable()
 }
 
@@ -919,15 +921,21 @@ const openNftTypeDialog = async (token: { amount: number, category: string, comm
     }
 
     await localForage.nftTypesStore.setItem(`${token._meta.category}-${type}`, { [type]: JSON.parse(JSON.stringify(nftType)) })
-    nftTypesSelectedForPublication.value.push({
+    const savedNftType = {
       id: `${token._meta.category}-${type}`,
-      [type]: nftType,
-      _meta: {
-        commitment: type,
-        category: identitySnapshot?.token?.category,
-        authbase: identitySnapshot?.token?.category
-      }
-    })
+      ...token
+      // [type]: nftType,
+      // _meta: {
+      //   commitment: type,
+      //   category: identitySnapshot?.token?.category,
+      //   authbase: identitySnapshot?.token?.category
+      // }
+    }
+    const s = nftTypesSelectedKeys.value.size
+    if (nftTypesSelectedKeys.value.add(type).size > s) {
+      nftTypesSelectedForPublication.value.push(savedNftType)
+      nftTypesSelected.value.push(savedNftType)
+    }
   })
 }
 
@@ -1015,7 +1023,9 @@ const loadUnpublishedNftTypes = async () => {
   const results: any = []
 
   for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
-    // if (key.startsWith(tokenStore?.token?.token?.tokenId)) {
+    if (key.startsWith('undefined')) {
+      await localForage.nftTypesStore.removeItem(key)
+    }
     if (key.startsWith(bcmrSelectedAuthbase.value!)) {
       let item: {
         [key: string]: NftType,
@@ -1114,7 +1124,6 @@ watch(() => newTokenIconFile.value, async (b) => {
   }
 })
 
-
 watch(() => nftTypesShown.value, async () => {
   await populateNftsTable()
 })
@@ -1167,7 +1176,7 @@ const initBcmr = (r: any) => {
 
 onBeforeMount(async () => {
   try {
-    if (!tokenStore.token?.token?.tokenId) return
+    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) return
     progress.value = 'Loading registry, please wait...'
     const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
     if (r) {
@@ -1219,7 +1228,7 @@ onBeforeUnmount(async () => {
   try {
     await localForage.registryTempStore.removeItem(`registry-for-${tokenStore.token.txid}`)
   } catch (error) {
-    console.log('Error removing registry cash from localstorage')
+    console.log('Error removing registry cash from browser\'s storage')
   }
 
 })
