@@ -64,7 +64,8 @@
                 <label>NFT Icon {{ iconFileUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="iconFileUploading"
                     color="warning" class="q-mr-sm"></q-spinner-dots></label>
                 <div>
-                  <q-file ref="iconFileRef" v-model="iconFile" @rejected="() => console.log('rejected')"
+                  <q-file ref="iconFileRef" v-model="iconFile" accept=".jpg, .png, image/*"
+                    @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
                     :disable="iconFileUploading" outlined bottom-slots class="hidden">
                   </q-file>
                   <q-input v-model="nftType.uris!.icon" outlined autogrow bottom-slots
@@ -115,8 +116,10 @@
           </div>
         </div>
         <div class="row justify-end q-gutter-x-lg q-mb-lg q-mr-lg ">
-          <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg">Cancel</q-btn>
-          <q-btn @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit">Ok</q-btn>
+          <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg"
+            :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
+          <q-btn @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
+            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
         </div>
       </q-card-section>
     </q-card>
