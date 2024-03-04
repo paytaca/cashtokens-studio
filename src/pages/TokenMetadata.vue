@@ -301,7 +301,7 @@
                             Item
                           </q-btn>
                           <q-btn text-color="primary" class="cursor-pointer" @click.stop="commitSelectedUnpublishedNfts"
-                            no-caps>Add
+                            no-caps :disable="!bcmrNewRevision">Add
                             Selected
                             Item</q-btn>
                           <q-btn v-if="nftTypesSelectedForPublication.length > 0"
@@ -310,7 +310,6 @@
                       </q-tab-panel>
                       <q-tab-panel name="minted" label="Minted">
                         <div class="text-grey-5 row items-center">
-
                           <span><q-icon name="info" class="text-grey-5 q-mr-sm inline"></q-icon>These contains the list
                             of
                             the
@@ -421,7 +420,8 @@
                             <div>
                               <q-btn
                                 :label="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0 ? 'Add Metadata' : 'Edit Metadata'"
-                                text-color="primary" @click.stop="() => openNftTypeDialog(value.row)">
+                                text-color="primary" @click.stop="() => openNftTypeDialog(value.row)"
+                                :disable="!bcmrNewRevision">
                               </q-btn>
                             </div>
                           </q-td>
