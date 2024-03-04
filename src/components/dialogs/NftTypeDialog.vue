@@ -33,8 +33,9 @@
                 <label>NFT Asset {{ assetFileUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="assetFileUploading"
                     color="warning" class="q-mr-sm"></q-spinner-dots></label>
                 <div>
-                  <q-file ref="assetFileRef" v-model="assetFile" @rejected="() => console.log('rejected')"
-                    :disable="assetFileUploading" outlined bottom-slots class="hidden">
+                  <q-file ref="assetFileRef" v-model="assetFile"
+                    @rejected="() => $q.dialog({ message: 'File Rejected!' })" :disable="assetFileUploading" outlined
+                    bottom-slots class="hidden">
                   </q-file>
                   <q-input class="registry-field" v-model="nftType.uris!.asset" outlined autogrow bottom-slots
                     placeholder="Click upload icon to upload or paste URL">
@@ -134,7 +135,7 @@ defineEmits([
   ...useDialogPluginComponent.emits,
 ])
 const props = defineProps<{
-  token: TokenI,
+  token: { amount: number, category: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
   title?: string
@@ -165,13 +166,12 @@ const uploadIconToIpfs = async () => {
     try {
       const formData = new FormData();
       formData.append('icon', iconFile.value);
-      console.log(iconFile.value)
       if (iconPreviewUrl.value) {
         URL.revokeObjectURL(iconPreviewUrl.value)
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -194,7 +194,7 @@ const uploadAssetToIpfs = async () => {
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
