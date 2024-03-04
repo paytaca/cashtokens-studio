@@ -734,7 +734,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   }
 
   if (tx) {
-    progress.value = 'Registry published, waiting for confirmation...'
+    progress.value = 'Publication tx sent, waiting for confirmation...'
     try {
       await tokenStore.token.ownerWallet.waitForTransaction({ txHash: tx })
       await tokenStore.token.updateUtxo(tx)
