@@ -27,6 +27,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { name: 'ft-reserves', path: 'ft-reserves', component: () => import('pages/issuer/manage/FtReserves.vue') },
       { name: 'nft-reserves', path: 'nft-reserves', component: () => import('pages/issuer/manage/NftReserves.vue') },
+      { name: 'nft-collection', path: 'nft-collection', component: () => import('pages/issuer/manage/NftCollection.vue') },
       { name: 'registries', path: 'registries', component: () => import('pages/issuer/manage/Registries.vue') },
       { name: 'authkeys', path: 'authkeys', component: () => import('pages/issuer/manage/AuthKeys.vue') },
       { name: 'authguards', path: 'authguards', component: () => import('pages/issuer/manage/AuthGuards.vue') },

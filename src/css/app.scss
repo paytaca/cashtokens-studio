@@ -91,9 +91,17 @@ input, textarea {
   line-height: 1.2em;
 }
 
+.c-space-5 {
+  letter-spacing: 5px;
+}
+
+.token-symbol, .c-unicase {
+  font-variant: unicase;
+}
 
 .token-symbol {
-  color: rgb(134, 218, 8);
+  font-size: 1.2em;
+  font-weight: bolder;
 }
 
 .token-thumbnail {
