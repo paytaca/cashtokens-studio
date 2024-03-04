@@ -30,7 +30,7 @@
                             <q-icon v-else name="broken_image" color="grey-8"></q-icon>
                           </q-avatar>
                           <span style="letter-spacing: 5px;">{{ minter.value.identitySnapshot?.token?.symbol
-                          }}</span>
+                            }}</span>
                         </q-chip>
                       </div>
                     </div>
@@ -44,10 +44,10 @@
                       <div class="col">
                         {{ formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal') }}
                         <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="
-                          $q.dialog({
-                            component: HelpDialog,
-                            componentProps: {
-                              message: `
+        $q.dialog({
+          component: HelpDialog,
+          componentProps: {
+            message: `
                                         Currently, CashTokens Studio stores the last minted sequence on the minter's commitment,
                                         this is used in tracking and suggesting the next sequence to mint. This doesn't
                                         inherently guarantee the sequential order or uniqueness of the entire NFT collection.
@@ -55,9 +55,9 @@
                                         responsibility for ensuring sequentiality and uniqueness ultimately lies with the
                                         issuer.
                                       `
-                            }
-                          })
-                          ">
+          }
+        })
+        ">
                         </q-icon>
                       </div>
                     </div>
@@ -86,24 +86,26 @@
                       <q-input v-model="mintOptions.mintQuantity" type="number" :min="1" autofocus outlined></q-input>
                     </div>
                   </div>
+
                   <template v-if="mintStrategy?.value == MINT_NEXT_SEQUENCE">
                     <div class="q-gutter-y-sm items-center col-6">
                       <label>{{ nftTypeLabel }} </label>
                       <q-input v-model="mintOptions.nftType" outlined bottom-slots disable>
                         <template v-slot:hint>
                           <i>Commitment (VM Number = <code>{{ formatCommitment(String(mintOptions.nftType), 'decimal',
-                            'vm-number') }}</code>)
+        'vm-number') }}</code>)
                           </i>
                         </template>
                       </q-input>
                     </div>
                     <div v-if="mintOptions.mintQuantity > 1" class="q-gutter-y-sm items-center col-6">
                       <label> Sequence # (last) </label>
-                      <q-input :model-value="Number(mintOptions.nftType) + Number(mintOptions.mintQuantity) - 1" outlined
-                        disable readonly bottom-slots>
+                      <q-input :model-value="Number(mintOptions.nftType) + Number(mintOptions.mintQuantity) - 1"
+                        outlined disable readonly bottom-slots>
+
                         <template v-slot:hint>
                           <i>Commitment (VM Number = <code>{{ formatCommitment(String(Number(mintOptions.nftType) + Number(mintOptions.mintQuantity)), 'decimal',
-                            'vm-number') }}</code>)
+        'vm-number') }}</code>)
                           </i>
                         </template>
                       </q-input>
@@ -114,6 +116,7 @@
                       class="q-gutter-y-sm items-center">
                       <label> Sequence #</label>
                       <q-input v-model="mintOptions.nftType" placeholder="Enter sequence number" outlined bottom-slots>
+
                         <template v-slot:hint>
                           <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>This'll affect the
                           uniqueness of each NFT(s) in this collection if you'll mint an already minted type.
@@ -131,6 +134,7 @@
                   <div class="q-mb-lg q-gutter-y-sm items-center">
                     <label>Capability</label>
                     <q-input :model-value="mintOptions.capability" outlined disable readonly>
+
                       <template v-slot:append>
                         <q-icon name="edit_off" color="grey-8"></q-icon>
                       </template>
@@ -140,6 +144,7 @@
                     <label>Recipient</label>
                     <q-input v-model="mintOptions.recipient" clearable :outlined="!mintTx" :disable="!!mintTx"
                       :rules="[(v) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token addresss']">
+
                       <template v-slot:append>
                         <q-btn v-if="!mintOptions.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
                           color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
@@ -159,21 +164,22 @@
             <div v-else class="row justify-center">
               <div class="col-xs-12 q-gutter-md">
                 <q-table v-model:pagination="nftsPagination" flat :rows="nfts" style="background:unset" :columns="[
-                  {
-                    name: 'nfttype', label: 'Minted NFT(s)',
-                    field: r => '',
-                    align: 'left',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                  {
-                    name: 'actions', label: '',
-                    field: r => '',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                ]
-                  " :rows-per-page-options="nftsPaginationRowsPerPageOpts" row-key="id"
-                  :visible-columns="['nfttype', 'actions']" bordered>
+        {
+          name: 'nfttype', label: 'Minted NFT(s)',
+          field: r => '',
+          align: 'left',
+          headerStyle: 'padding: 1.5em',
+        },
+        {
+          name: 'actions', label: '',
+          field: r => '',
+          align: 'center',
+          headerStyle: 'padding: 1.5em',
+        },
+      ]
+        " :rows-per-page-options="nftsPaginationRowsPerPageOpts" row-key="id" :visible-columns="['nfttype', 'actions']"
+                  bordered>
+
                   <template v-slot:header>
                     <div class="q-ma-md" col-span="2" style="border-bottom: inherit">
                       <div class="text-h6">({{ nfts?.length || 0 }}) NFT(s) Minted</div>
@@ -183,6 +189,7 @@
                       </div>
                     </div>
                   </template>
+
                   <template v-slot:body-cell-nfttype="value">
                     <td>
                       <div class="row justify-left items-center flex wrap q-gutter-sm">
@@ -195,10 +202,10 @@
                         <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                           <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                             {{ minter.value.nftCollectionType == 'SequentialNftCollection' ?
-                              `#${formatCommitment(value.row.commitment, 'vm-number',
-                                'decimal')
-                              } ` :
-                              value.row.commitment
+        `#${formatCommitment(value.row.commitment, 'vm-number',
+          'decimal')
+        } ` :
+        value.row.commitment
                             }}
                             <span
                               v-if="nftsTypes[value.row.commitment] && nftsTypes[value.row.commitment].saved && !nftsTypes[value.row.commitment].published"
@@ -221,32 +228,33 @@
                         <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-6 ellipsis-2-lines">
                             Description: {{
-                              nftsTypes[value.row.commitment]?.description
-                              || '<no description>' }}
+        nftsTypes[value.row.commitment]?.description
+        || '<no description>' }}
                           </div>
                         </div>
                         <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-8">
                             Raw Commitment: {{
-                              value.row.commitment
-                            }}
+        value.row.commitment
+      }}
                           </div>
                         </div>
                         <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-8">
                             NFT Capability: {{
-                              value.row.capability
-                            }}
+        value.row.capability
+      }}
                           </div>
                         </div>
                       </div>
                     </td>
                   </template>
+
                   <template v-slot:body-cell-actions="value">
                     <q-td class="text-center">
                       <div>
-                        <q-btn label="Metadata" text-color="primary" @click.stop="openNftTypeDialog(value.row as TokenI)"
-                          dense>
+                        <q-btn label="Metadata" text-color="primary"
+                          @click.stop="openNftTypeDialog(value.row as TokenI)" dense>
                           <!-- <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon> -->
                           <template v-slot:default>
                             <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon>
@@ -488,7 +496,7 @@ const mint = async () => {
           component: TransactionStatusDialog,
           componentProps: {
             statusType: 'success',
-            statusText: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`,
+            statusText: `(${nfts.value?.length}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`,
             txid: tx
           }
         })
@@ -496,7 +504,7 @@ const mint = async () => {
           txid: tx,
           txType: 'CashToken.mint',
           timestamp: new Date().getTime(),
-          successMsg: `(${nfts.value}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
+          successMsg: `(${nfts.value?.length}) ${minter.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
         })
 
         mintTx.value = tx
