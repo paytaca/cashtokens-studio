@@ -1,4 +1,5 @@
 <!-- Quasar dialog -->
+
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide" full-width persistent>
     <q-card class="q-px-sm full-width">
@@ -17,8 +18,8 @@
               <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
                 <label>Name *</label>
                 <q-input class="registry-field" v-model="nftType.name"
-                  placeholder="E.g. `Art - 1`, `ACME Stadium Tickets`" :rules="[v => v.length > 0 || 'Required']" outlined
-                  required autofocus>
+                  placeholder="E.g. `Art - 1`, `ACME Stadium Tickets`" :rules="[v => v?.length > 0 || 'Required']"
+                  outlined required autofocus>
                 </q-input>
               </div>
               <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
@@ -32,8 +33,9 @@
                 <label>NFT Asset {{ assetFileUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="assetFileUploading"
                     color="warning" class="q-mr-sm"></q-spinner-dots></label>
                 <div>
-                  <q-file ref="assetFileRef" v-model="assetFile" @rejected="() => console.log('rejected')"
-                    :disable="assetFileUploading" outlined bottom-slots class="hidden">
+                  <q-file ref="assetFileRef" v-model="assetFile"
+                    @rejected="() => $q.dialog({ message: 'File Rejected!' })" :disable="assetFileUploading" outlined
+                    bottom-slots class="hidden">
                   </q-file>
                   <q-input class="registry-field" v-model="nftType.uris!.asset" outlined autogrow bottom-slots
                     placeholder="Click upload icon to upload or paste URL">
@@ -48,6 +50,7 @@
                         </span>
                       </div>
                     </template>
+
                     <template v-slot:hint>
                       <span style="line-height: 1rem;">
                         This is the real-world asset tokenized by this NFT. E.g. a digital artwork, music etc...
@@ -61,11 +64,13 @@
                 <label>NFT Icon {{ iconFileUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="iconFileUploading"
                     color="warning" class="q-mr-sm"></q-spinner-dots></label>
                 <div>
-                  <q-file ref="iconFileRef" v-model="iconFile" @rejected="() => console.log('rejected')"
+                  <q-file ref="iconFileRef" v-model="iconFile" accept=".jpg, .png, image/*"
+                    @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
                     :disable="iconFileUploading" outlined bottom-slots class="hidden">
                   </q-file>
                   <q-input v-model="nftType.uris!.icon" outlined autogrow bottom-slots
                     placeholder="Click upload icon to upload or paste URL">
+
                     <template v-slot:prepend>
                       <div @click.stop=" iconFileRef.pickFiles()">
                         <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
@@ -77,6 +82,7 @@
                         </span>
                       </div>
                     </template>
+
                     <template v-slot:hint>
                       <span style="line-height: 1.2rem;">
                         It's recommended to provide an image as icon for this NFT so it'll show up nicely on user
@@ -90,14 +96,15 @@
             </q-form>
           </div>
           <div class="col-xs-12 col-sm-8 col-lg-5">
-            <div class="text-h6 ">Attributes<q-btn flat color="primary" icon="add" size="md" @click="openAttributeDialog"
-                type="button" />
+            <div class="text-h6 ">Attributes<q-btn flat color="primary" icon="add" size="md"
+                @click="openAttributeDialog" type="button" />
             </div>
             <div class="row q-gutter-md flex justify-between  q-mx-auto q-mt-lg  q-pa-lg rounded-borders"
               :class="Object.keys(nftTypeAttributes).length > 0 ? 'bg-grey-10' : ''">
               <div v-for="attrKey, i in Object.keys(nftTypeAttributes)" class="q-gutter-y-sm" :key="i">
                 <label>{{ attrKey }}</label>
                 <q-input v-model="nftTypeAttributes[attrKey]" outlined dense>
+
                   <template v-slot:after>
                     <q-icon name="remove" @click.stop="() => delete nftTypeAttributes[attrKey]" color="negative"
                       class="cursor-pointer">
@@ -109,8 +116,10 @@
           </div>
         </div>
         <div class="row justify-end q-gutter-x-lg q-mb-lg q-mr-lg ">
-          <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg">Cancel</q-btn>
-          <q-btn @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit">Ok</q-btn>
+          <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg"
+            :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
+          <q-btn @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
+            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
         </div>
       </q-card-section>
     </q-card>
@@ -129,7 +138,7 @@ defineEmits([
   ...useDialogPluginComponent.emits,
 ])
 const props = defineProps<{
-  token: TokenI,
+  token: { amount: number, category: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
   title?: string
@@ -160,13 +169,12 @@ const uploadIconToIpfs = async () => {
     try {
       const formData = new FormData();
       formData.append('icon', iconFile.value);
-      console.log(iconFile.value)
       if (iconPreviewUrl.value) {
         URL.revokeObjectURL(iconPreviewUrl.value)
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -189,7 +197,7 @@ const uploadAssetToIpfs = async () => {
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -232,6 +240,12 @@ watch(() => assetFile.value, async (b) => {
 onMounted(() => {
   if (props.defaultNftType) {
     nftType.value = props.defaultNftType
+    if (!nftType.value.uris) {
+      nftType.value.uris = {
+        icon: '',
+        asset: ''
+      }
+    }
     if (nftType.value.extensions?.attributes) {
       nftTypeAttributes.value = Object.assign({}, nftType.value.extensions?.attributes as any)
     }
