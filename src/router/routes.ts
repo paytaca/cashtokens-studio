@@ -7,6 +7,7 @@ const routes: RouteRecordRaw[] = [
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
       { name: 'nft-metadata', path: 'nft-metadata', component: () => import('pages/NftMetadata.vue') },
+      { name: 'genesis', path: 'token/genesis', component: () => import('pages/TokenGenesis.vue')}
     ],
   },
   {

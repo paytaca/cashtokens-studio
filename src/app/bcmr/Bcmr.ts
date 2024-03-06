@@ -472,23 +472,47 @@ export class Bcmr implements Registry {
     }
   }
 
+  removeEmptyFields(obj:Bcmr) {
+    return JSON.parse(JSON.stringify(obj, function(key, value) {
+      if (value === null || value === undefined || value === "") {
+        return undefined; // Remove the field
+      } else {
+        return value; // Keep the field
+      }
+    }));
+  }
+
+
   /**
    *
    * The json content
    */
   getContent(){
-    return JSON.stringify({
+    const content: Registry = {
       $schema: this.$schema,
       version: this.version,
       latestRevision: this.latestRevision,
       registryIdentity: this.registryIdentity,
-      identities: this.identities,
-      tags: this.tags,
-      defaultChain: this.defaultChain,
-      chains: this.chains,
-      license: this.license,
-      extensions: this.extensions
-    })
+      identities: this.identities
+    }
+
+    if (this.tags) {
+      content.tags = this.tags
+    }
+    if (this.defaultChain) {
+      content.defaultChain = this.defaultChain
+    }
+    if (this.chains) {
+      content.chains = this.chains
+    }
+    if (this.license) {
+      content.license = this.license
+    }
+    if (this.extensions) {
+      content.extensions = this.extensions
+    }
+
+    return JSON.stringify(content)
   }
 
   appendAuthGuardTokenStandardExtension(authKeyTokenId:string){
