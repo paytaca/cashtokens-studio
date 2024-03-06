@@ -6,6 +6,9 @@
           My NFT Collections
         </div>
         <div>
+          <div class="col-xs-12 text-right">
+            <q-btn icon="add">New Collection</q-btn>
+          </div>
           <q-table v-model:collectionsPagination="collectionsPagination" @request="onTableRequest" flat bordered grid
             color="warning" :loading="populatingCollectionsTable" title="Click a collection" :rows="collections.results"
             :rows-per-page-options="[12, 18, 24]" row-key="name" hide-header align="center">
@@ -50,8 +53,9 @@
             </section>
             <div class="q-px-sm">
               <section id="minted-nfts">
+                <div class="text-right"><q-btn label="Add" icon="add" @click="openAddNftDialog"></q-btn></div>
                 <div class="text-h6 q-my-lg row justify-between">
-                  <span>{{ selectedCollection?.identitySnapshot?.token?.symbol }}'s NFTs in circulation</span>
+
                   <q-btn v-if="Object.keys(nftsTypesForPublication || {}).length > 0" @click="openNftsForPubDialog">
                     Unpublished Metadata <q-badge>{{ Object.keys(nftsTypesForPublication || {}).length }}</q-badge>
                   </q-btn>
@@ -61,7 +65,7 @@
                     :loading="populatingMintedNftsTable" color="warning" @request="onMintedNftsRequest"
                     style="background:unset;margin-bottom: 3rem;" :columns="[
         {
-          name: 'nfttype', label: 'Nft Type',
+          name: 'nfttype', label: 'NFTs in circulation',
           field: r => '',
           align: 'left',
           headerStyle: 'padding: 1.5em',
@@ -161,13 +165,10 @@
                         <div class="text-grey-8">under development</div>
                       </div> -->
                         <div>
-                          <q-btn label="Metadata" text-color="primary"
+                          <q-btn icon="data_object" text-color="primary"
                             @click.stop="openNftTypeDialog(value.row as TokenI)" dense>
                             <!-- <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon> -->
-                            <template v-slot:default>
-                              <q-icon size="xs"
-                                :name="!nftsTypesForPublication && !nftsTypesForPublication[value.row._meta?.commitment || value.row.commitment] ? 'add' : 'edit'"></q-icon>
-                            </template>
+
                           </q-btn>
                         </div>
                       </q-td>
@@ -177,10 +178,9 @@
                 </div>
               </section>
               <section id="owned-nfts">
-                <div class="text-h6">{{ selectedCollection?.identitySnapshot?.token?.symbol }} NFT(s) in your wallet
-                </div>
                 <q-table v-model:pagination="ownedNftsPagination" @request="onOwnedNftsTableRequest" flat bordered grid
-                  color="warning" :loading="populatingOwnedNftsTable" :rows="ownedNfts.results" :columns="[
+                  title="NFT(s) in your wallet" color="warning" :loading="populatingOwnedNftsTable"
+                  :rows="ownedNfts.results" :columns="[
         {
           name: 'name', label: 'Name',
           field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
@@ -268,6 +268,7 @@ import TokenSymbol from 'src/components/TokenSymbol.vue'
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import NftTypesForPublicationDialog from 'src/components/dialogs/NftTypesForPublicationDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import MintNftDialog from 'src/components/dialogs/MintNftDialog.vue'
 import { EventBus, uid, useQuasar } from 'quasar';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
@@ -278,6 +279,7 @@ import { useAuthhead } from 'src/stores/authhead';
 import { shortenTokenId } from 'src/app/utils'
 import NftTypeForPublicationDialog from 'src/components/dialogs/NftTypeForPublicationDialog.vue';
 import { useEventBus } from 'src/composables';
+import { locateRegistry } from 'src/app/modules';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -512,49 +514,6 @@ const onMintedNftsRequest = async (props: any) => {
   await populateMintedNfts()
 }
 
-const locateRegistry = async () => {
-  const r = await (new BcmrIndexer()).fetchRegistry(selectedCollection.value?.identitySnapshot?.token?.category || selectedCollection.value.token?.tokenId, true)
-  try {
-    if (r) {
-      return r
-    } else {
-      progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
-      await delay(1000)
-      if (selectedCollection.value.token?.tokenId) {
-        progress.value = `Trying other methods please wait...`
-        await delay(1000)
-        progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(selectedCollection.value.token.tokenId)
-        console.log(pubInfo)
-        if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl) {
-            try {
-              const r = await fetch(pubInfo[0].httpsUrl)
-              if (r.status == 200) {
-                const rj = await r.json()
-                if (rj) {
-                  return rj
-                }
-
-              }
-            } catch (error) {
-              $q.dialog({
-                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              })
-            }
-          }
-        } else {
-          // bcmrNotFound.value = true
-          // TODO: show dialog
-        }
-      }
-    }
-  } catch (error) {
-    progress.value = false
-  } finally {
-    progress.value = false
-  }
-}
 
 const getLatestIdentitySnapshot = (bcmr: Bcmr, authbase: string): { latestIdentitySnapshot: IdentitySnapshot, latestRevisionTimestamp: string } => {
   if (!bcmr.identities || Object.keys(bcmr.identities[authbase]).length == 0) {
@@ -580,11 +539,196 @@ const removeSavedNftsTypes = async () => {
   }
 }
 
+
+const openNftTypeDialog = (token: TokenI) => {
+  const defaultNftType = {
+    name: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${token.commitment}`,
+    uris: {
+      icon: '',
+      asset: ''
+    }
+  }
+  $q.dialog({
+    component: NftTypeDialog,
+    componentProps: {
+      token: token,
+      title: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `Metadata of ${selectedCollection.value.identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
+      defaultNftType: nftsTypesForPublication.value[token.commitment!] || defaultNftType
+    }
+  }).onOk(async ({ type, nftType }) => {
+    nftsTypesForPublication.value[type] = nftType
+    await localForage.nftTypesStore.setItem(`${selectedCollection.value.token.tokenId}-${type}`, { [type]: JSON.parse(JSON.stringify(nftsTypesForPublication.value[type])) })
+    // console.log('nfts types', nftsTypesForPublication.value)
+
+  })
+}
+
+const openNftsForPubDialog = () => {
+  $q.dialog({
+    component: NftTypesForPublicationDialog,
+    componentProps: {
+      authhead: selectedCollection.value,
+      nftsTypes: Object.keys(nftsTypesForPublication.value || {}).map(nftTypeKey => ({ [nftTypeKey]: nftsTypesForPublication.value[nftTypeKey] }))
+    }
+  }).onOk(async () => {
+    console.log('Publishing this', nftsTypesForPublication.value)
+    await publish()
+  })
+}
+
+const openAddNftDialog = () => {
+
+  console.log(selectedCollection.value.token.commitment)
+  let nftTypeKey = selectedCollection.value.token.commitment
+  if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
+    nftTypeKey = formatCommitment(selectedCollection.value.token.commitment, 'vm-number', 'decimal')
+    nftTypeKey = (Number(nftTypeKey) + 1).toString()
+  }
+
+  $q.dialog({
+    component: MintNftDialog,
+    componentProps: {
+      ok: 'Mint',
+      title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
+      nftTypeKey,
+      category: selectedCollection.value?.identitySnapshot?.token?.category,
+      bytecode: selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode,
+      recipient: user.walletTokenAddress
+    },
+    ok: {
+      push: true
+    }
+
+  }).onOk(async (data) => {
+    await mint(data.recipient, data.category, data.nftTypeKey, Object.assign({}, data.nftType))
+  })
+}
+
+const mint = async (recipient: string, category: string, nftTypeKey: string, nftType: NftType) => {
+  progress.value = 'Processing metadata, please wait...'
+  const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(selectedCollection.value.token.tokenId)
+  if (trackedAuthhead != selectedCollection.value.txid) {
+    await new Promise(res => {
+      $q.dialog({
+        message: `This UTXO is not authorized to publish metadata for token ${shortenTokenId(selectedCollection.value.token.tokenId)}`,
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      }).onDismiss(() => res(null))
+    })
+    return
+  }
+  const r = await locateRegistry(selectedCollection.value.token.tokenId)
+  let proceed = true
+  if (!r) {
+    proceed = await new Promise((resolve) => {
+      $q.dialog({
+        message: 'Unable to locate registry. Please publish this token\'s registry first.',
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      }).onOk(() => {
+        resolve(false)
+      })
+    })
+  }
+
+  if (!proceed) return
+  const bcmr = new Bcmr({ ...r! })
+  bcmr.createNewIdentitySnapshot(selectedCollection.value.identitySnapshot?.token?.category)
+    .addNftTypes({ [nftTypeKey]: nftType })
+  const artifact = await bcmr.storeRegistry(selectedCollection.value.identitySnapshot?.token?.category, bcmr.newRevision)
+  console.log('BCMR', bcmr, nftType)
+  console.log('ARTIFACT', artifact)
+  if (!artifact) {
+    proceed = await new Promise((resolve) => {
+      $q.dialog({
+        message: 'Problem uploading metadata. Mint cancelled. Please try again later!',
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      }).onOk(() => {
+        resolve(false)
+      })
+    })
+    return
+  }
+
+  if (!proceed) return
+
+  progress.value = 'Still Processing, please wait...'
+
+  let commitment = nftTypeKey // Parsable
+  if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
+    // conver to vm-number
+    commitment = formatCommitment(String(Number(nftTypeKey)), 'decimal', 'vm-number')
+  }
+  console.log('newMinterCommitment', commitment)
+
+  let newMinterCommitment = commitment
+  const nfts = [{
+    amount: BigInt(0),
+    tokenId: category,
+    commitment: String(commitment),
+    capability: NFTCapability.none
+  }]
+  try {
+    const ct = new CashToken({ ...selectedCollection.value }, user.transactionSigner)
+    const tx = await ct.mintChildrenExt({
+      tokens: nfts as [TokenI],
+      recipient: recipient,
+      publish: {
+        uris: [artifact.uris.https, artifact.uris.ipfs],
+        contentHash: artifact.contentHash
+      },
+      newMinterCommitment: newMinterCommitment
+    })
+    console.log('tx', tx)
+    if (tx) {
+      progress.value = 'Transaction submitted, awaiting propagation...'
+      try {
+        await ct.ownerWallet!.waitForTransaction({ txHash: tx })
+        await ct.updateUtxo(tx)
+        await ct.updateAuthKeyUtxo(tx)
+        progress.value = `(${nfts.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
+        await delay(1000)
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'CashToken.mint',
+          timestamp: new Date().getTime(),
+          successMsg: `(${nfts?.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
+        })
+
+        progress.value = 'Loading minted NFT(s), please wait...'
+      } catch (error: any) {
+        $q.dialog({
+          message: error?.toString(),
+          ok: true,
+          focus: 'ok',
+          class: 'q-pa-lg'
+        })
+      } finally {
+        progress.value = false
+      }
+    }
+
+  } catch (error: any) {
+    console.log('ERROR', error)
+    // ui.setStatusMessage({
+    //   statusMessage: error,
+    //   statusMessageType: 'error',
+    // })
+  } finally {
+    progress.value = false
+  }
+}
+
 const publish = async () => {
 
   progress.value = 'Authenticating authhead, please wait...'
   try {
-
+    await selectedCollection.value.updateUtxo()
+    await selectedCollection.value.updateAuthKeyUtxo()
     const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(selectedCollection.value.token.tokenId)
     progress.value = false
     if (trackedAuthhead != selectedCollection.value.txid) {
@@ -611,7 +755,7 @@ const publish = async () => {
     })
     return
   }
-  const r = await locateRegistry()
+  const r = await locateRegistry(selectedCollection.value.token.tokenId)
   let proceed = true
   if (!r) {
     proceed = await new Promise((resolve) => {
@@ -625,44 +769,25 @@ const publish = async () => {
       })
     })
   }
-
   if (!proceed) return
+
   progress.value = 'Creating metadata revision...'
-  const bcmr = new Bcmr({ ...r })
-  const newRevisionTimestamp = new Date().toISOString()
-  const authbase = selectedCollection.value.token.tokenId
-  const { latestIdentitySnapshot, latestRevisionTimestamp } = getLatestIdentitySnapshot(r, authbase)
 
-  bcmr.identities![authbase] = {
-    [newRevisionTimestamp]: Object.assign({}, latestIdentitySnapshot)
-  }
+  const bcmr = new Bcmr({ ...r! })
+  bcmr.createNewIdentitySnapshot(selectedCollection.value.identitSnapshot?.token?.category)
+    .addNftTypes(nftsTypesForPublication.value)
 
-  // add nfts
-  if (Object.keys(nftsTypesForPublication.value).length > 0) {
-    if (!bcmr.identities![authbase][newRevisionTimestamp].token?.nfts) {
-      bcmr.identities![authbase][newRevisionTimestamp].token!.nfts = {
-        parse: {
-          bytecode: '',
-          types: {}
-        }
-      }
-    }
-    for (const typesKey of Object.keys(nftsTypesForPublication.value)) {
-      bcmr.identities![authbase][newRevisionTimestamp].token!.nfts!.parse!.types[typesKey] = nftsTypesForPublication.value[typesKey]
-    }
-  }
-  bcmr.latestRevision = newRevisionTimestamp
-  bcmr.registryIdentity = authbase
-  bcmr.appendAuthGuardTokenStandardExtension(authbase)
   progress.value = 'Uploading registry to IPFS, please wait...'
 
   let tx = ''
+
   try {
-    const artifact = await bcmr.storeRegistry()
+    const artifact = await bcmr.storeRegistry(selectedCollection.value.identitSnapshot?.token?.category, bcmr.newRevision)
+
     if (artifact?.uris.https) {
       progress.value = 'Publishing, please wait...'
-      const publisher = new AuthchainIdentity({ ...selectedCollection.value }, selectedCollection.value.transactionSigner)
-      tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+      const authhead = new AuthchainIdentity({ ...selectedCollection.value }, selectedCollection.value.transactionSigner)
+      tx = await authhead.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
     }
   } catch (error: any) {
     $q.dialog({
@@ -711,41 +836,6 @@ const publish = async () => {
   }
 }
 
-const openNftTypeDialog = (token: TokenI) => {
-  const defaultNftType = {
-    name: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${token.commitment}`,
-    uris: {
-      icon: '',
-      asset: ''
-    }
-  }
-  $q.dialog({
-    component: NftTypeDialog,
-    componentProps: {
-      token: token,
-      title: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `Metadata of ${selectedCollection.value.identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
-      defaultNftType: nftsTypesForPublication.value[token.commitment!] || defaultNftType
-    }
-  }).onOk(async ({ type, nftType }) => {
-    nftsTypesForPublication.value[type] = nftType
-    await localForage.nftTypesStore.setItem(`${selectedCollection.value.token.tokenId}-${type}`, { [type]: JSON.parse(JSON.stringify(nftsTypesForPublication.value[type])) })
-    // console.log('nfts types', nftsTypesForPublication.value)
-
-  })
-}
-
-const openNftsForPubDialog = () => {
-  $q.dialog({
-    component: NftTypesForPublicationDialog,
-    componentProps: {
-      authhead: selectedCollection.value,
-      nftsTypes: Object.keys(nftsTypesForPublication.value || {}).map(nftTypeKey => ({ [nftTypeKey]: nftsTypesForPublication.value[nftTypeKey] }))
-    }
-  }).onOk(async () => {
-    console.log('Publishing this', nftsTypesForPublication.value)
-    await publish()
-  })
-}
 
 watch(() => selectedCollection.value, async (v) => {
   document.getElementById('minted-nfts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
@@ -787,4 +877,4 @@ onBeforeUnmount(() => {
 .selected {
   background: linear-gradient(95.6deg, rgb(5, 58, 127) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);
 }
-</style>
+</style>src/app/modules

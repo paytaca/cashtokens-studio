@@ -8,3 +8,17 @@ export const CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT = 'ctsfeed782974771942$%
 export const ADDRESS_WATCHER_TRIGGERED = 1
 export const TOKEN_CATEGORY_CACHE_MAX_KEYS = 1000
 export const TOKEN_URIS_CACHE_MAX_KEYS = 1000
+export const AUTHGUARD_CONTRACT_SCRIPT = `
+pragma cashscript ^0.8.0;
+
+contract AuthGuard(bytes tokenId) {
+  function unlockWithNft(bool keepGuarded) {
+    // Check that the first input holds the minting baton
+    require(tx.inputs[1].tokenCategory == tokenId);
+    require(tx.inputs[1].tokenAmount == 0);
+    if(keepGuarded){
+      // Self preservation of the minting covenant as the first output
+      require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+    }
+  }
+}`
