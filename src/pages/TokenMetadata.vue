@@ -924,12 +924,6 @@ const openNftTypeDialog = async (token: { amount: number, category: string, comm
     const savedNftType = {
       id: `${token._meta.category}-${type}`,
       ...token
-      // [type]: nftType,
-      // _meta: {
-      //   commitment: type,
-      //   category: identitySnapshot?.token?.category,
-      //   authbase: identitySnapshot?.token?.category
-      // }
     }
     const s = nftTypesSelectedKeys.value.size
     if (nftTypesSelectedKeys.value.add(type).size > s) {
