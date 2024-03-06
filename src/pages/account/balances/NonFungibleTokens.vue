@@ -9,8 +9,8 @@
                     </q-badge>
                 </h5>
                 <div>
-                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid color="warning"
-                        :loading="populatingTable" title="My Collections" :rows="nftCollections.results" :columns="[
+                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid
+                        title="My Collections" :rows="nftCollections.results" :columns="[
                             {
                                 name: 'name', label: 'Name',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
@@ -25,27 +25,17 @@
                                 <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys"
                                     class="text-grey-6" dense>
                                     <q-tooltip>
-                                        Excludes NFT that could be possibly an AuthKey so you don't accidentally send it to
+                                        Excludes NFT that could be possibly an AuthKey so you don't accidentally send it
+                                        to
                                         someone.
                                     </q-tooltip>
                                 </q-checkbox>
                             </div>
                         </template>
+
                         <template v-slot:item="i">
-                            <q-skeleton v-if="i.row.processing" class="my-card q-pb-xs q-ma-sm text-center col-grow"
-                                style="border-radius: 15px; max-width:200px">
-                                <div class="flex justify-center">
-                                    <q-skeleton height="170px" width="170px" type="rect" square></q-skeleton>
-                                </div>
-                                <div class="q-px-sm q-mt-xs text-left">
-                                    <q-skeleton bordered square></q-skeleton>
-                                </div>
-                                <div class="flex justify-end q-mt-xs q-mr-sm">
-                                    <q-skeleton type="QBtn" bordered square width="3em"></q-skeleton>
-                                </div>
-                            </q-skeleton>
-                            <q-card v-else class="my-card q-ma-sm text-center col-grow"
-                                style="border-radius: 15px; max-width:200px">
+                            <q-card class="my-card q-ma-sm text-center col-grow"
+                                style="border-radius: 15px; max-width:170px">
                                 <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
                                     :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
@@ -53,11 +43,11 @@
                                     <div class="absolute-bottom text-left">
                                         <div class="text-subtitle1">
                                             {{
-                                                i.row.token?.commitment ? (i.row.nftCollectionType ==
-                                                    'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
-                                                        'vm-number',
-                                                        'decimal') : i.row.token.commitment) : ''
-                                            }}
+                            i.row.token?.commitment ? (i.row.nftCollectionType ==
+                                'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
+                                    'vm-number',
+                                    'decimal') : i.row.token.commitment) : ''
+                        }}
                                         </div>
                                     </div>
                                 </q-img>
@@ -68,7 +58,8 @@
                                         {{ i.row.nftTypeMetadata?.name }}
                                     </div>
                                     <div v-else-if="i.row.token?.commitment" class="ellipsis">
-                                        <code class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
+                                        <code
+                                            class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
                                     </div>
                                 </div>
                                 <q-card-actions align="right">
@@ -91,6 +82,7 @@
             @hide="onHide" @nft-transferred="() => onNftTransfer()" />
     </q-page>
 </template>
+
 <script setup lang="ts">
 import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
