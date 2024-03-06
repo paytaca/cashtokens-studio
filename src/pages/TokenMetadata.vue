@@ -383,17 +383,38 @@
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
-                                <div class="text-grey-6 ellipsis-2-lines">
-                                  Description: {{
-                  value.row[value.row._meta?.commitment || value.row.commitment]?.description
-                  || '<no description>' }}
+                                <div class="text-grey-6 text-justify"
+                                  :style="$q.screen.xs ? 'text-wrap:wrap;width:20ch;max-width:20ch' : 'text-wrap:wrap;width:60ch;max-width:80ch'">
+                                  Description:
+                                  {{
+                  value.row[value.row._meta?.commitment ||
+                    value.row.commitment]?.description + 'helle there abc efg times up' ||
+                  '<no description>'
+                }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-8">
-                                  Commitment: {{
+                                  <!-- Commitment: {{
                   value.row._meta?.commitment || value.row.commitment
-                }}
+                }} --> <q-chip v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]?.extensions?.attributes || {})"
+                                    :label="value.row[value.row._meta?.commitment || value.row.commitment]?.extensions?.attributes[k]"
+                                    :key="'attributes' + i">
+                                  </q-chip>
+                                </div>
+                              </div>
+                              <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                                <div class="text-grey-8">
+                                  <span
+                                    v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]?.extensions || {})"
+                                    :key="'extensions' + i">
+                                    <q-chip
+                                      v-if="typeof (value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]) == 'string'"
+                                      :label="value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]"></q-chip>
+                                    <q-chip v-else :label="'ext: ' + k + '...'"></q-chip>
+
+                                  </span>
+
                                 </div>
                               </div>
                               <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm"
