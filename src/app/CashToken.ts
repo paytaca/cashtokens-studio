@@ -932,6 +932,7 @@ export class CashToken implements UtxoI, PartialBcmr {
    * @param {boolean} arg.newMinterCommitment - If present the minter's commitment will be updated using this value
    */
   async mintChildrenExt(arg: {
+<<<<<<< HEAD
     tokens: [TokenI];
     recipient: string;
     newMinterCommitment?: string;
@@ -946,6 +947,23 @@ export class CashToken implements UtxoI, PartialBcmr {
       { P2SH: 1, P2PKH: 3 + arg.tokens.length }
     );
     const mintCost = minerFee + DEFAULT_TOKEN_VALUE * arg.tokens.length;
+=======
+    tokens: [TokenI], 
+    recipient: string, 
+    publish?: {
+      uris: string[], 
+      contentHash: string
+    },
+    newMinterCommitment?: string,
+  }){
+
+    if (!arg.tokens) return
+    this.ensureOwnerWallet()
+    this.ensureAuthKey()
+    this._processing = 'Processing'
+    const minerFee = calcMinerFee({'P2SH-P2WPKH':1, P2PKH:2}, {P2SH:1, P2PKH: 3 + arg.tokens.length})
+    const mintCost = minerFee + (DEFAULT_TOKEN_VALUE * arg.tokens.length)
+>>>>>>> 62ccec8 (support mint and publish registry in single tx)
     // TODO: use watchtower
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost)
@@ -1005,6 +1023,7 @@ export class CashToken implements UtxoI, PartialBcmr {
             // Return minting AuthNFT / minting baton to owner
             to: batonOwner,
             amount: BigInt(this.authKey!.satoshis),
+<<<<<<< HEAD
             token: authKeyInput.token,
           },
         ])
@@ -1023,6 +1042,34 @@ export class CashToken implements UtxoI, PartialBcmr {
         .withoutChange()
         .withoutTokenChange()
         .withHardcodedFee(BigInt(minerFee));
+=======
+            token: authKeyInput.token
+          }])
+          .to(mintOutputs)
+          
+          if (arg.publish) {
+            let contentHash = arg.publish.contentHash
+            if (contentHash && !contentHash.startsWith('0x')) {
+              contentHash = `0x${contentHash}`
+            }
+            const opReturnData = [
+              'BCMR',
+              contentHash,
+              ...arg.publish.uris.map(u => u.replace(/https:\/\/|ipfs:\/\//, ''))
+            ]
+            console.log('OP_RETURN VALUE', opReturnData)
+            transaction = transaction.withOpReturn(opReturnData)
+          }
+
+      transaction = transaction
+
+          .to(funderInput.satoshis - BigInt(mintCost) > 546 ?[{
+            // change
+            to: tokenOwner,
+            amount: funderInput.satoshis - BigInt(mintCost)
+          }]:[])
+        .withoutChange().withoutTokenChange().withHardcodedFee(BigInt(minerFee))
+>>>>>>> 62ccec8 (support mint and publish registry in single tx)
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
       if (typeof decoded === 'string') {

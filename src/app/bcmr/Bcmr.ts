@@ -8,6 +8,8 @@ import {
 import { AuthchainIdentity } from "../";
 import { BcmrStorageArtifact } from "../types";
 
+type ISODateString = `${number}-${number}-${number}T${number}:${number}:${number}.${number}Z`;
+
 // ! Copied, because it's not exported by mainnet-js
 /**
  * Interpretation information for a collection of sequential NFTs, a collection
@@ -123,7 +125,12 @@ export class Bcmr implements Registry {
   chains?: { [splitId: string]: ChainHistory; } | undefined;
   license?: string | undefined;
   extensions?: Extensions | undefined;
+  // helper fields
   private _versionString?: string
+  /**
+   * The key of the new IdentitySnapshot if any.
+   */
+  newRevision?: ISODateString
   private _originalContentHash?: string // To track if content changed
   authchainIdentity?: AuthchainIdentity
   private _processing?:string
@@ -362,13 +369,6 @@ export class Bcmr implements Registry {
   
   addIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
     if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
-      // if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
-      //   this.identities[authbase][identity_history].uris = {
-      //     ...this.identities[authbase][identity_history].uris,
-      //     ...uri
-      //   }
-      //   console.log('AFTER', this.identities[authbase][identity_history].uris)
-      // } 
       this.identities[authbase][identity_history].uris = {
         ...this.identities[authbase][identity_history].uris,
         ...uri
@@ -381,12 +381,6 @@ export class Bcmr implements Registry {
    */
   setIdentitySnapshotUri(authbase:string, identity_history:string, uri:URIs) {
     if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
-      // if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
-      //   this.identities[authbase][identity_history].uris = {
-      //     ... this.identities[authbase][identity_history].uris,
-      //     ...uri
-      //   }
-      // } 
       this.identities[authbase][identity_history].uris = {
         ...this.identities[authbase][identity_history].uris,
         ...uri
@@ -397,8 +391,6 @@ export class Bcmr implements Registry {
   removeIdentitySnapshotUri(authbase:string, identity_history:string, uriName: string) {
     if (this.identities && this.identities[authbase] && this.identities[authbase][identity_history]) {
       if (this.identities && this.identities[authbase] && this.identities![authbase]![identity_history].uris) {
-        console.log('URI NAME', uriName)
-        console.log('REMOVING', this.identities![authbase]![identity_history].uris)
         delete this.identities![authbase]![identity_history].uris![uriName]
       } 
     }
@@ -486,14 +478,30 @@ export class Bcmr implements Registry {
   /**
    *
    * The json content
+   * 
+   * @param {ISODateString} identityHistoryTimestamp If present, will only keep the IdentityHistory with
+   * this key.
+   * 
    */
-  getContent(){
+  getContent(authbase?:string, identityHistoryTimestamp?: ISODateString|string){
+    console.log('AUTHBASE', authbase, identityHistoryTimestamp)
+
+    const timestamp = identityHistoryTimestamp || this.latestRevision
+    let identities = this.identities
+    if (authbase && identityHistoryTimestamp) {
+      identities = {
+        [authbase]: {
+          [timestamp]: this.identities![authbase][identityHistoryTimestamp]
+        }
+      }
+    }
+    console.log('IDENTITIES', identities)
     const content: Registry = {
       $schema: this.$schema,
       version: this.version,
-      latestRevision: this.latestRevision,
+      latestRevision: timestamp,
       registryIdentity: this.registryIdentity,
-      identities: this.identities
+      identities: identities
     }
 
     if (this.tags) {
@@ -538,11 +546,11 @@ export class Bcmr implements Registry {
    * Stores this registry to the ipfs server. Invoke this first before publishing so
    * that the registry uri can be populated.
    */
-  async storeRegistry(): Promise<BcmrStorageArtifact|undefined> {
+  async storeRegistry(authbase?: string, identityHistoryTimestamp?: ISODateString|string): Promise<BcmrStorageArtifact|undefined> {
     this._processing = 'Storing in IPFS'
     try {
       const resp = await fetch('/api/tokens/registry/storage', {
-        method: 'POST', body: this.getContent(),
+        method: 'POST', body: this.getContent(authbase, identityHistoryTimestamp),
         headers: { 'Content-Type': 'application/json' }
       })
       if (resp.status >= 400) {
@@ -556,6 +564,66 @@ export class Bcmr implements Registry {
     } finally {
       delete this._processing
     }
+  }
+  
+  // New
+  getIdentityHistoryTimestamps(authbase?:string): ISODateString[] {
+    if (!this.identities || Object.keys(this.identities || {}).length == 0) return []
+    if (typeof(this.registryIdentity) != 'string' && !authbase && Object.keys(this.identities || {}).length > 1) {
+      throw new Error('Please provide authbase')
+    }
+    let values:ISODateString[] = []
+    if (authbase) {
+      values = Object.keys(this.identities[authbase]) as ISODateString[]
+    } else if(typeof(this.registryIdentity) == 'string') {
+      values = Object.keys(this.identities[this.registryIdentity]) as ISODateString[]
+    }
+    return values.sort((date1: string, date2: string) => {
+      if (date1 > date2) return -1;
+      if (date1 < date2) return 1;
+      return 0;
+    }) 
+  }
+
+  /**
+   * Creates new IdentitySnapshot.
+   * @param {string} authbase 
+   * @param {ISODateString} identityHistoryTimestamp The IdentitySnapshot timestamp
+   */
+  createNewIdentitySnapshot(authbase?:string, identityHistoryTimestamp?:ISODateString) {
+    if (typeof(this.registryIdentity) != 'string' && !authbase && Object.keys(this.identities || {}).length > 1) {
+      throw new Error('Please provide authbase')
+    }
+    this.newRevision = identityHistoryTimestamp || new Date().toISOString() as ISODateString
+    if(!this.identities) {
+      throw new Error('No existing identities')
+    }
+    // cloning latestRevision as starting point
+    this.identities[authbase || this.registryIdentity as string][this.newRevision] 
+      = structuredClone(this.identities[authbase || this.registryIdentity as string][this.getIdentityHistoryTimestamps()[0]])
+    return this
+  }
+
+  /**
+   * Adds the NftType(s) to the IdentitySnapshot keyed with identityHistoryTimestamp or the latest IdentityHistory.
+   */
+  addNftTypes(nftTypes: {[key:string]: NftType}, authbase?:string, identityHistoryTimestamp?: ISODateString) {
+    if (typeof(this.registryIdentity) != 'string' && !authbase && Object.keys(this.identities || {}).length > 1) {
+      throw new Error('Please provide authbase')
+    }
+    identityHistoryTimestamp = identityHistoryTimestamp || this.newRevision || this.getIdentityHistoryTimestamps()[0]
+    if (!this.identities![authbase || this.registryIdentity as string][identityHistoryTimestamp].token?.nfts) {
+      this.identities![authbase || this.registryIdentity as string][identityHistoryTimestamp].token!.nfts = {
+        parse: {
+          bytecode: '',
+          types: {}
+        }
+      }
+    }
+    for (const key of Object.keys(nftTypes)) {
+      this.identities![authbase || this.registryIdentity as string][identityHistoryTimestamp].token!.nfts!.parse!.types[key] = nftTypes[key]
+    }
+    return this
   }
 
 }

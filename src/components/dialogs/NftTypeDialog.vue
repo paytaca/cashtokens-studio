@@ -211,9 +211,11 @@ const nftTypeSchema = {
 }
 
 const $q = useQuasar()
+
 defineEmits([
   ...useDialogPluginComponent.emits,
 ])
+
 const props = defineProps<{
   token: { amount: number, category: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,

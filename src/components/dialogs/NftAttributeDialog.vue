@@ -1,7 +1,11 @@
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide" title="Add NFT Attribute">
-    <q-card class="q-dialog-plugin q-pa-md q-gutter-md">
-      <q-card-section class="text-h6">Add NFT Attribute</q-card-section>
+    <q-card class="q-dialog-plugin q-pa-md">
+      <q-toolbar>
+        <q-toolbar-title class="text-h5">
+          Add NFT Attribute
+        </q-toolbar-title>
+      </q-toolbar>
       <q-form @submit.prevent="onSubmit">
         <q-input v-model="attribute.name" label="Attribute Name*" outlined clearable
           :rules="[(v) => v.length > 0 || 'Required']" bottom-slots autofocus></q-input>
@@ -19,7 +23,6 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
 import { ref } from 'vue';
-import { stringify } from 'querystring';
 
 const props = defineProps<{
   name?: string,
