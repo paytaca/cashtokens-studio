@@ -4,9 +4,9 @@
       <q-card-section class="text-h6">Add NFT Attribute</q-card-section>
       <q-form @submit.prevent="onSubmit">
         <q-input v-model="attribute.name" label="Attribute Name*" outlined clearable
+          :rules="[(v) => v.length > 0 || 'Required']" bottom-slots autofocus></q-input>
+        <q-input v-model="attribute.value" label="Value*" outlined clearable
           :rules="[(v) => v.length > 0 || 'Required']" bottom-slots></q-input>
-        <q-input v-model="attribute.value" label="Value*" outlined clearable :rules="[(v) => v.length > 1 || 'Required']"
-          bottom-slots></q-input>
         <q-card-actions align="right">
           <q-btn color="negative" size="lg" flat label="Cancel" @click="onDialogCancel" />
           <q-btn color="primary" size="lg" flat label="OK" type="submit" />
