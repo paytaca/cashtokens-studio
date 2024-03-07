@@ -133,7 +133,7 @@
             :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
           <q-btn v-if="editor == 'form'" @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
             :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
-          <q-btn v-if="editor == 'json'" @click.stop="(e) => onOk()" color="primary" size="lg" type="submit"
+          <q-btn v-if="editor == 'json'" @click.stop="(e) => onOk()" color="primary" size="lg"
             :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
         </div>
       </q-card-section>
@@ -142,12 +142,73 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, toRaw, unref, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
-import { IdentitySnapshot, NftType, TokenI } from 'mainnet-js'
+import { IdentitySnapshot, NftType } from 'mainnet-js'
 import { ipfsToGatewayUrl } from 'src/app/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import JsonEditor from 'json-editor-vue'
+import { Draft07 } from 'json-schema-library'
+
+const nftTypeSchema = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "A definition for one type of NFT within a token category.",
+  "properties": {
+    "description": {
+      "description": "A string describing this NFT type for use in user interfaces.\n\nIn user interfaces with limited space, names should be hidden beyond the first newline character or `140` characters until revealed by the user.\n\nE.g.:\n- \"Receipts issued by the exchange to record details about purchases. After settlement, these receipts are redeemed for the purchased tokens.\";\n- \"Receipts issued by the crowdfunding campaign to document the value of funds pledged. If the user decides to cancel their pledge before the campaign completes, these receipts can be redeemed for a full refund.\";\n- \"Tickets issued for events at ACME Stadium.\";\n- Sealed ballots certified by ACME decentralized organization during the voting period. After the voting period ends, these ballots must be revealed to reclaim the tokens used for voting.\"",
+      "type": "string"
+    },
+    "extensions": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": "string"
+          }
+        }
+      ],
+      "additionalProperties": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        ]
+      },
+      "description": "A mapping of extension identifiers to extension definitions. Extensions may be widely standardized or application-specific, and extension definitions must be either:\n\n- `string`s,\n- key-value mappings of `string`s, or\n- two-dimensional, key-value mappings of `string`s.\n\nThis limitation encourages safety and wider compatibility across implementations.\n\nTo encode an array, it is recommended that each value be assigned to a numeric key indicating the item's index (beginning at `0`). Numerically-indexed objects are often a more useful and resilient data-transfer format than simple arrays because they simplify difference-only transmission: only modified indexes need to be transferred, and shifts in item order must be explicit, simplifying merges of conflicting updates.\n\nFor encoding of more complex data, consider using base64 and/or string-encoded JSON.",
+      "type": "object"
+    },
+    "fields": {
+      "description": "A list of identifiers for fields contained in NFTs of this type. On successful parsing evaluations, the bottom item on the altstack indicates the matched NFT type, and the remaining altstack items represent NFT field contents in the order listed (where `fields[0]` is the second-to-bottom item, and the final item in `fields` is the top of the altstack).\n\nFields should be ordered by recommended importance from most important to least important; in user interfaces, clients should display fields at lower indexes more prominently than those at higher indexes, e.g. if some fields cannot be displayed in minimized interfaces, higher-importance fields can still be represented. (Note, this ordering is controlled by the bytecode specified in `token.nft.parse.bytecode`.)\n\nIf this is a sequential NFT, (the category's `parse.bytecode` is undefined), `fields` should be omitted or set to `undefined`.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "name": {
+      "description": "The name of this NFT type for use in interfaces. Names longer than `20` characters may be elided in some interfaces.\n\nE.g. `Market Order Buys`, `Limit Order Sales`, `Pledge Receipts`, `ACME Stadium Tickets`, `Sealed Votes`, etc.",
+      "type": "string"
+    },
+    "uris": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "description": "A mapping of identifiers to URIs associated with an entity. URI identifiers may be widely-standardized or registry-specific. Values must be valid URIs, including a protocol prefix – e.g. `https://` or `ipfs://`., Clients are only required to support `https` and `ipfs` URIs, but any scheme may be specified.",
+      "type": "object"
+    }
+  },
+  "required": ["name"],
+  "type": "object"
+}
 
 const $q = useQuasar()
 defineEmits([
@@ -259,9 +320,17 @@ const onOk = async () => {
       v = JSON.parse(nftTypeJson.value)
     }
   }
-  onDialogOK({ type: props.token.commitment, nftType: v })
+  const d = new Draft07(nftTypeSchema)
+  const errors: any = d.validate(v)
+  if (errors.length == 0) {
+    onDialogOK({ type: props.token.commitment, nftType: v })
+  } else {
+    $q.dialog({
+      message: 'Format error! Make sure the value conforms to BCMR\'s NftType spec. If you\'re using the `extensions` field, make sure it has a maximum nesting depth of 2 and only has `string` values. Example: {"extensions": "value"}, {"extensions": {"key":"value"}}',
+      class: 'q-pa-lg text-justify'
+    })
+  }
 }
-
 
 watch(() => iconFile.value, async (v) => {
   if (v) { await uploadIconToIpfs() }
