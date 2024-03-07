@@ -274,6 +274,18 @@
                       <q-tab name="unpublished" label="Unpublished" />
                       <q-tab name="minted" label="Minted" />
                     </q-tabs>
+                    <div v-if="nftTypesSelectedForPublication.length > 0" class="text-center q-my-sm">
+                      <q-icon name="warning" color="warning"></q-icon>
+                      <span class="text-grey-4"> There are unpublished NFT metadata. Click <q-btn
+                          @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" color="primary"
+                          :disabled="!!progress || newTokenIconUploading" size="xs" round>
+                          <q-tooltip>Publish changes</q-tooltip>
+                          <q-spinner
+                            v-if="!!progress || newTokenIconUploading && !progress?.toString().includes('Download')"></q-spinner>
+                          <q-icon v-else name="cloud_upload"></q-icon>
+                        </q-btn>
+                        to publish. </span>
+                    </div>
                     <q-tab-panels v-model="nftTypesShown" style="background: unset">
                       <q-tab-panel name="published" label="Published">
                         <div class="text-grey-5 row items-center">
