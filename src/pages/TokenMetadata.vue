@@ -400,7 +400,7 @@
                                   Description:
                                   {{
                   value.row[value.row._meta?.commitment ||
-                    value.row.commitment]?.description + 'helle there abc efg times up' ||
+                    value.row.commitment]?.description ||
                   '<no description>'
                 }}
                                 </div>
