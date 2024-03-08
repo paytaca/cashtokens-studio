@@ -24,11 +24,14 @@
               :rules="[(v) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token addresss']"
               bottom-slots></q-input>
           </div>
+
           <div class="col-xs-6 q-gutter-y-sm items-center">
             <label>Type {{ !bytecode ? '(Sequence #)' : '(BottomAltStackHex)' }}</label>
             <q-input v-model="form.nftTypeKey" outlined :rules="[(v) => v.length > 0 || 'Required']"
               bottom-slots></q-input>
           </div>
+
+          <div class="text-h6 q-my-lg">Metadata</div>
           <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
             <label>Name *</label>
             <q-input v-model="form.nftType.name" label="Name*" outlined clearable

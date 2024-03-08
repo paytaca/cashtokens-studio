@@ -37,14 +37,20 @@
                 style="border-radius: 15px 15px 0 0;line-height: 1.3em; background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
                 <div class="row items-center q-p-sm">
                   <div class="col">
-                    <q-chip size="1.5em" class="bg-transparent">
+                    <q-chip size="1.5em" class="row bg-transparent">
                       <q-avatar>
                         <q-img v-if="selectedCollection?.identitySnapshot?.uris?.icon"
                           :src="ipfsToGatewayUrl(selectedCollection.identitySnapshot.uris.icon)" />
                         <q-icon v-else name="broken_image" color="grey-8"></q-icon>
                       </q-avatar>
                       <span style="letter-spacing: 5px;">
-                        {{ selectedCollection?.identitySnapshot?.token?.symbol }}
+                        <div class="flex items-center">{{ selectedCollection?.identitySnapshot?.token?.symbol }}
+                          <span class="text-caption text-grey-8">
+                            {{ shortenTokenId(selectedCollection?.token?.tokenId) }}
+                            <CopyText :text="selectedCollection?.token?.tokenId" />
+                          </span>
+                        </div>
+
                       </span>
                     </q-chip>
                   </div>
@@ -258,13 +264,12 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount, nextTick } from 'vue';
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, CashToken, ChainGraph, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
 import { UtxoI, Wallet, NFTCapability, NftType, TokenI, delay, IdentitySnapshot } from 'mainnet-js';
-import TokenCategory from 'src/components/TokenCategory.vue'
-import TokenSymbol from 'src/components/TokenSymbol.vue'
+import CopyText from 'src/components/CopyText.vue'
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import NftTypesForPublicationDialog from 'src/components/dialogs/NftTypesForPublicationDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
@@ -605,122 +610,126 @@ const openAddNftDialog = () => {
 }
 
 const mint = async (recipient: string, category: string, nftTypeKey: string, nftType: NftType) => {
-  progress.value = 'Processing metadata, please wait...'
-  const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(selectedCollection.value.token.tokenId)
-  if (trackedAuthhead != selectedCollection.value.txid) {
-    await new Promise(res => {
-      $q.dialog({
-        message: `This UTXO is not authorized to publish metadata for token ${shortenTokenId(selectedCollection.value.token.tokenId)}`,
-        ok: true,
-        focus: 'ok',
-        class: 'q-pa-lg'
-      }).onDismiss(() => res(null))
-    })
-    return
-  }
-  const r = await locateRegistry(selectedCollection.value.token.tokenId)
-  let proceed = true
-  if (!r) {
-    proceed = await new Promise((resolve) => {
-      $q.dialog({
-        message: 'Unable to locate registry. Please publish this token\'s registry first.',
-        ok: true,
-        focus: 'ok',
-        class: 'q-pa-lg'
-      }).onOk(() => {
-        resolve(false)
-      })
-    })
-  }
-
-  if (!proceed) return
-  const bcmr = new Bcmr({ ...r! })
-  bcmr.createNewIdentitySnapshot(selectedCollection.value.identitySnapshot?.token?.category)
-    .addNftTypes({ [nftTypeKey]: nftType })
-  const artifact = await bcmr.storeRegistry(selectedCollection.value.identitySnapshot?.token?.category, bcmr.newRevision)
-  console.log('BCMR', bcmr, nftType)
-  console.log('ARTIFACT', artifact)
-  if (!artifact) {
-    proceed = await new Promise((resolve) => {
-      $q.dialog({
-        message: 'Problem uploading metadata. Mint cancelled. Please try again later!',
-        ok: true,
-        focus: 'ok',
-        class: 'q-pa-lg'
-      }).onOk(() => {
-        resolve(false)
-      })
-    })
-    return
-  }
-
-  if (!proceed) return
-
-  progress.value = 'Still Processing, please wait...'
-
-  let commitment = nftTypeKey // Parsable
-  if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
-    // conver to vm-number
-    commitment = formatCommitment(String(Number(nftTypeKey)), 'decimal', 'vm-number')
-  }
-  console.log('newMinterCommitment', commitment)
-
-  let newMinterCommitment = commitment
-  const nfts = [{
-    amount: BigInt(0),
-    tokenId: category,
-    commitment: String(commitment),
-    capability: NFTCapability.none
-  }]
-  try {
-    const ct = new CashToken({ ...selectedCollection.value }, user.transactionSigner)
-    const tx = await ct.mintChildrenExt({
-      tokens: nfts as [TokenI],
-      recipient: recipient,
-      publish: {
-        uris: [artifact.uris.https, artifact.uris.ipfs],
-        contentHash: artifact.contentHash
-      },
-      newMinterCommitment: newMinterCommitment
-    })
-    console.log('tx', tx)
-    if (tx) {
-      progress.value = 'Transaction submitted, awaiting propagation...'
-      try {
-        await ct.ownerWallet!.waitForTransaction({ txHash: tx })
-        await ct.updateUtxo(tx)
-        await ct.updateAuthKeyUtxo(tx)
-        progress.value = `(${nfts.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
-        await delay(1000)
-        $ebus?.emit('transaction', {
-          txid: tx,
-          txType: 'CashToken.mint',
-          timestamp: new Date().getTime(),
-          successMsg: `(${nfts?.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
-        })
-
-        progress.value = 'Loading minted NFT(s), please wait...'
-      } catch (error: any) {
+  progress.value = 'Processing, please wait...'
+  nextTick(async () => {
+    document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(selectedCollection.value.token.tokenId)
+    if (trackedAuthhead != selectedCollection.value.txid) {
+      await new Promise(res => {
         $q.dialog({
-          message: error?.toString(),
+          message: `This UTXO is not authorized to publish metadata for token ${shortenTokenId(selectedCollection.value.token.tokenId)}`,
           ok: true,
           focus: 'ok',
           class: 'q-pa-lg'
+        }).onDismiss(() => res(null))
+      })
+      return
+    }
+    const r = await locateRegistry(selectedCollection.value.token.tokenId)
+    let proceed = true
+    if (!r) {
+      proceed = await new Promise((resolve) => {
+        $q.dialog({
+          message: 'Unable to locate registry. Please publish this token\'s registry first.',
+          ok: true,
+          focus: 'ok',
+          class: 'q-pa-lg'
+        }).onOk(() => {
+          resolve(false)
         })
-      } finally {
-        progress.value = false
-      }
+      })
     }
 
-  } catch (error: any) {
-    console.log('ERROR', error)
-    // ui.setStatusMessage({
-    //   statusMessage: error,
-    //   statusMessageType: 'error',
-    // })
-  } finally {
-    progress.value = false
-  }
+    if (!proceed) return
+    const bcmr = new Bcmr({ ...r! })
+    bcmr.createNewIdentitySnapshot(selectedCollection.value.identitySnapshot?.token?.category)
+      .addNftTypes({ [nftTypeKey]: nftType })
+    const artifact = await bcmr.storeRegistry(selectedCollection.value.identitySnapshot?.token?.category, bcmr.newRevision)
+    console.log('BCMR', bcmr, nftType)
+    console.log('ARTIFACT', artifact)
+    if (!artifact) {
+      proceed = await new Promise((resolve) => {
+        $q.dialog({
+          message: 'Problem uploading metadata. Mint cancelled. Please try again later!',
+          ok: true,
+          focus: 'ok',
+          class: 'q-pa-lg'
+        }).onOk(() => {
+          resolve(false)
+        })
+      })
+      return
+    }
+
+    if (!proceed) return
+
+    progress.value = 'Still Processing, please wait...'
+
+    let commitment = nftTypeKey // Parsable
+    if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
+      // conver to vm-number
+      commitment = formatCommitment(String(Number(nftTypeKey)), 'decimal', 'vm-number')
+    }
+    console.log('newMinterCommitment', commitment)
+
+    let newMinterCommitment = commitment
+    const nfts = [{
+      amount: BigInt(0),
+      tokenId: category,
+      commitment: String(commitment),
+      capability: NFTCapability.none
+    }]
+    try {
+      const ct = new CashToken({ ...selectedCollection.value }, user.transactionSigner)
+      const tx = await ct.mintChildrenExt({
+        tokens: nfts as [TokenI],
+        recipient: recipient,
+        publish: {
+          uris: [artifact.uris.https, artifact.uris.ipfs],
+          contentHash: artifact.contentHash
+        },
+        newMinterCommitment: newMinterCommitment
+      })
+      console.log('tx', tx)
+      if (tx) {
+        progress.value = 'Transaction submitted, awaiting propagation...'
+        try {
+          await ct.ownerWallet!.waitForTransaction({ txHash: tx })
+          await ct.updateUtxo(tx)
+          await ct.updateAuthKeyUtxo(tx)
+          progress.value = `(${nfts.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
+          await delay(1000)
+          $ebus?.emit('transaction', {
+            txid: tx,
+            txType: 'CashToken.mint',
+            timestamp: new Date().getTime(),
+            successMsg: `(${nfts?.length}) ${selectedCollection.value.identitySnapshot?.token?.symbol} NFT(s) minted!`
+          })
+
+          progress.value = 'Loading minted NFT(s), please wait...'
+        } catch (error: any) {
+          $q.dialog({
+            message: error?.toString(),
+            ok: true,
+            focus: 'ok',
+            class: 'q-pa-lg'
+          })
+        } finally {
+          progress.value = false
+        }
+      }
+
+    } catch (error: any) {
+      console.log('ERROR', error)
+      // ui.setStatusMessage({
+      //   statusMessage: error,
+      //   statusMessageType: 'error',
+      // })
+    } finally {
+      progress.value = false
+    }
+  })
+
 }
 
 const publish = async () => {
@@ -838,7 +847,7 @@ const publish = async () => {
 
 
 watch(() => selectedCollection.value, async (v) => {
-  document.getElementById('minted-nfts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  // document.getElementById('minted-nfts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   await populateMintedNfts()
   await populatedOwnedNfts(user.wallet as Wallet, user.transactionSigner!, v)
   await loadUnpublishedNftTypes(selectedCollection.value)
@@ -847,7 +856,9 @@ watch(() => selectedCollection.value, async (v) => {
 watch(() => progress.value, (v) => {
   const top = window.scrollY
   const left = window.scrollX
+  console.log('VV', v)
   if (v) {
+    console.log('V', v)
     document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   } else {
     window.scrollTo(left, top)
