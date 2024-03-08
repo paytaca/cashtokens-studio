@@ -416,17 +416,15 @@
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
-                                <div class="text-grey-8">
+                                <div class="text-grey-8 flex wrap">
                                   <span
                                     v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]?.extensions || {})"
                                     :key="'extensions' + i">
                                     <q-chip
                                       v-if="typeof (value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]) == 'string'"
                                       :label="value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]"></q-chip>
-                                    <q-chip v-else :label="'ext: ' + k + '...'"></q-chip>
-
+                                    <q-chip v-else :label="'ext.' + k + '...'"></q-chip>
                                   </span>
-
                                 </div>
                               </div>
                               <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm"
