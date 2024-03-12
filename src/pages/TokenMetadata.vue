@@ -13,15 +13,20 @@
                   <q-tooltip>Click to edit</q-tooltip>
                 </q-btn>
                 <div v-else class="q-gutter-md">
+
                   <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset"
                     size="md" icon="undo" text-color="negative">
-                    <q-tooltip>Reset</q-tooltip>
+                    <q-tooltip>Reset/Cancel Edit</q-tooltip>
                   </q-btn>
                   <q-btn @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
                     text-color="primary" :disabled="!!progress || newTokenIconUploading">
                     <q-tooltip>Download registry</q-tooltip>
                     <q-spinner v-if="!!progress || newTokenIconUploading"></q-spinner>
                     <q-icon v-else name="download"></q-icon>
+                  </q-btn>
+                  <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false"
+                    @click.stop="openPublishRegistryFromFileDialog" size="md" icon="file_open" text-color="primary">
+                    <q-tooltip>Publish registry from file</q-tooltip>
                   </q-btn>
                   <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md"
                     color="primary" :disabled="!!progress || newTokenIconUploading">
@@ -476,7 +481,7 @@
                 <div class="q-gutter-md">
                   <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" fab
                     size="md" icon="undo" text-color="negative">
-                    <q-tooltip>Reset</q-tooltip>
+                    <q-tooltip>Reset/Cancel Edit</q-tooltip>
                   </q-btn>
                   <q-btn v-if="bcmrNotFound == false"
                     @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
@@ -484,6 +489,10 @@
                     <q-tooltip>Download registry</q-tooltip>
                     <q-spinner v-if="!!progress || newTokenIconUploading"></q-spinner>
                     <q-icon v-else name="download"></q-icon>
+                  </q-btn>
+                  <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false"
+                    @click.stop="openPublishRegistryFromFileDialog" size="md" icon="file_open" text-color="primary">
+                    <q-tooltip>Publish registry from file</q-tooltip>
                   </q-btn>
                   <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md"
                     color="primary" :disabled="!!progress || newTokenIconUploading" fab>
@@ -514,6 +523,7 @@ import { useUI } from 'src/stores/ui'
 import { Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublishFromFileDialog.vue';
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
 import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
@@ -811,6 +821,45 @@ const openDeleteUnpublishNftsDialog = () => {
     cancel: 'No',
   }).onOk(async () => {
     deleteSelectedUnpublishedNfts()
+  })
+}
+
+const openPublishRegistryFromFileDialog = () => {
+  $q.dialog({
+    component: RegistryPublishFromFileDialog,
+    componentProps: {
+      authchainIdentity: tokenStore.token
+    }
+  }).onOk(async (param: { authbase: string, tx: string }) => {
+    if (param.authbase && param.tx) {
+      publicationTx.value = param.tx
+      progress.value = 'Loading update...'
+      const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(param.authbase)
+      if (pubInfo && pubInfo[0]) {
+        if (pubInfo[0].httpsUrl) {
+          try {
+            // TODO: use pubInfo URIs
+            const r = await fetch(pubInfo[0].httpsUrl)
+            if (r.status == 200) {
+              const rj = await r.json()
+              if (rj) {
+                initBcmr(rj)
+              }
+
+            }
+          } catch (error) {
+            $q.dialog({
+              message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+            })
+          }
+        }
+      }
+      progress.value = 'Updating authhead'
+      await tokenStore.token.updateUtxo()
+      await tokenStore.token.updateAuthKeyUtxo()
+      progress.value = ''
+    }
+
   })
 }
 
@@ -1168,6 +1217,12 @@ watch(() => tokenStore?.token?.processing, async (v) => {
     progress.value = v
   } else {
     progress.value = false
+  }
+})
+
+watch(() => progress.value, async (v) => {
+  if (v) {
+    document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 })
 
