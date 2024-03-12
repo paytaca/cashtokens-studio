@@ -5,21 +5,15 @@
         <q-toolbar-title class="col-12 text-h5 text-bold q-mb-md" style="text-wrap:wrap">Publish BCMR File
         </q-toolbar-title>
       </q-toolbar>
-
       <div class="rounded bordered">
         <q-avatar class="q-ma-sm" v-if="authchainIdentity.identitySnapshot?.uris?.icon">
           <img :src="authchainIdentity.identitySnapshot?.uris?.icon" alt="">
         </q-avatar>
-        <!-- <span v-if="authchainIdentity.identitySnapshot?.token?.symbol" class="q-ma-sm text-bold">{{
-    authchainIdentity.identitySnapshot?.token?.symbol }} </span> -->
-
-        <!-- <TokenCategory :token-id="authchainIdentity.identitySnapshot?.token?.category" /> -->
       </div>
-
       <div class="q-ma-md text-justify">
         <q-icon name="info"></q-icon>
         <span>
-          If you have a BCMR file you can upload and publish it here.
+          If you have a BCMR file for this token, you can upload and publish it here.
         </span>
       </div>
       <q-card-section>
@@ -34,11 +28,6 @@
             <q-icon name="attach_file"></q-icon>
           </template>
         </q-file>
-        <!-- <q-uploader @uploaded="onFileUploaded" field-name="registryFile"
-          :label="uploaded ? 'BCMR file uploaded' : 'Click + to select file'"
-          :url="`api/tokens/registry-file/storage?tokenId=${authchainIdentity.identitySnapshot?.token?.category}`"
-          auto-upload flat dense size="sm" style="width:100%;max-width: 100%;" @uploading="() => uploading = true"
-          :multiple="false" color="dark" /> -->
         <div class="q-mt-sm" style="max-width: 100%;overflow-x: auto;">
           <q-markup-table v-if="uploadArtifact" flat dense>
             <thead>
@@ -67,11 +56,7 @@
           </q-markup-table>
         </div>
       </q-card-section>
-      <q-card-actions class="row justify-end">
-        <div v-if="uploading" class="row items-end text-warning">
-          <i class="q-mr-xs">Storing file in IPFS. This may take a while, please
-            wait</i><q-spinner-dots></q-spinner-dots>
-        </div>
+      <q-card-actions class="row justify-end q-gutter-x-md">
         <q-btn v-if="!progress && !authchainIdentity?.processing" text-color="negative" size="lg" label="Cancel"
           @click="onDialogHide()"></q-btn>
         <BusyButton v-if="uploadArtifact" :busy-label="progress || authchainIdentity?.processing" label="Publish"
@@ -84,17 +69,17 @@
 
 <script setup lang="ts">
 import { useDialogPluginComponent, useQuasar } from 'quasar'
-import { onMounted, ref, watch } from 'vue'
+import { ref, watch, nextTick } from 'vue'
 import { AuthchainIdentity, ChainGraph } from 'src/app'
 import { shortenTokenId } from 'src/app/utils'
 import { BcmrStorageArtifact } from 'src/app/types'
 import { copyText } from 'src/app/utils'
 import { useEventBus } from 'src/composables'
-import { useUI } from 'src/stores/ui'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { Registry } from 'mainnet-js'
-import { nextTick } from 'process'
+import { Draft07 } from 'json-schema-library'
+import bcmrSchema from 'src/app/bcmr/bcmr-schema.json'
 
 defineEmits([
   ...useDialogPluginComponent.emits,
@@ -108,7 +93,6 @@ const bcmrFile = ref()
 const bcmrFileUploading = ref<boolean>()
 const bcmrFileRef = ref()
 const uploadArtifact = ref<BcmrStorageArtifact>()
-const uploading = ref<boolean>(false)
 const progress = ref<string>()
 
 watch(() => bcmrFile.value, async (v) => {
@@ -119,6 +103,24 @@ watch(() => bcmrFile.value, async (v) => {
 
 const uploadBCMR = async () => {
   if (bcmrFile.value) {
+
+    const d = new Draft07(bcmrSchema)
+    const errors: any = d.validate(JSON.parse(await bcmrFile.value.text()))
+    let proceed = true
+    if (errors.length > 0) {
+      proceed = await new Promise((resolv) => {
+        $q.dialog({
+          title: 'BCMR Validation Error!',
+          message: errors[0].message || 'Format error! Make sure the value conforms to BCMR\'s NftType spec. If you\'re using the `extensions` field, make sure it has a maximum nesting depth of 2 and only has `string` values. Example: {"extensions": "value"}, {"extensions": {"key":"value"}}',
+          class: 'q-pa-lg text-justify'
+        }).onDismiss(() => {
+          resolv(false)
+        })
+      })
+    }
+
+    if (!proceed) return
+
     try {
       progress.value = 'Uploading...'
       const formData = new FormData();

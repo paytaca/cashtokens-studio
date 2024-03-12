@@ -858,6 +858,7 @@ const openPublishRegistryFromFileDialog = () => {
       await tokenStore.token.updateUtxo()
       await tokenStore.token.updateAuthKeyUtxo()
       progress.value = ''
+      bcmrNewRevision.value = undefined
     }
 
   })
