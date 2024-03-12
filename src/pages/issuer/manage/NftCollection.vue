@@ -7,7 +7,9 @@
         </div>
         <div>
           <div class="col-xs-12 text-right">
-            <q-btn icon="add">New Collection</q-btn>
+            <q-btn icon="add"
+              :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">New
+              Collection</q-btn>
           </div>
           <q-table v-model:collectionsPagination="collectionsPagination" @request="onTableRequest" flat bordered grid
             color="warning" :loading="populatingCollectionsTable" title="Click a collection" :rows="collections.results"
@@ -31,6 +33,7 @@
         </div>
 
         <template v-if="selectedCollection">
+          {{ selectedCollection.identitySnapshot }}
           <div style="border:3px solid rgb(73, 72, 72);border-radius: 15px">
             <section id="banner">
               <q-banner class="rounded-borders text-grey-4 q-pa-xs q-mb-lg"
@@ -69,20 +72,19 @@
                 <div style="overflow-x: scroll">
                   <q-table v-model:pagination="mintedNftsPagination" flat :rows="mintedNfts.results"
                     :loading="populatingMintedNftsTable" color="warning" @request="onMintedNftsRequest"
-                    style="background:unset;margin-bottom: 3rem;" :columns="[
-        {
-          name: 'nfttype', label: 'NFTs in circulation',
-          field: r => '',
-          align: 'left',
-          headerStyle: 'padding: 1.5em',
-        },
-        {
-          name: 'actions', label: '',
-          field: r => '',
-          align: 'center',
-          headerStyle: 'padding: 1.5em',
-        },
-      ]" :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']">
+                    style="background:unset;margin-bottom: 3rem;" :columns="[{
+
+        name: 'nfttype', label: 'NFTs in circulation',
+        field: (r: any) => '',
+        align: 'left',
+        headerStyle: 'padding: 1.5em',
+      },
+      {
+        name: 'actions', label: '',
+        field: (r: any) => '',
+        align: 'center',
+        headerStyle: 'padding: 1.5em'
+      }]" :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']">
                     <template v-slot:body-cell-nfttype="value">
                       <td>
                         <div class="row justify-left items-center flex wrap q-gutter-sm">
@@ -180,77 +182,9 @@
                       </q-td>
                     </template>
                   </q-table>
-
                 </div>
               </section>
-              <section id="owned-nfts">
-                <q-table v-model:pagination="ownedNftsPagination" @request="onOwnedNftsTableRequest" flat bordered grid
-                  title="NFT(s) in your wallet" color="warning" :loading="populatingOwnedNftsTable"
-                  :rows="ownedNfts.results" :columns="[
-        {
-          name: 'name', label: 'Name',
-          field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
-        },
-        {
-          name: 'commitment', label: 'Commitment',
-          field: r => r.nftType?._meta?.commitment ? r.nftType._meta.commitment : '---',
-        }
-      ]" :rows-per-page-options="[6, 12, 24]" row-key="name" hide-header align="center">
 
-                  <template v-slot:item="i">
-                    <q-skeleton v-if="i.row.processing" class="my-card q-pb-xs q-ma-md text-center col-grow"
-                      style="border-radius: 15px; max-width:180px">
-                      <div class="flex justify-center">
-                        <q-skeleton height="140px" width="140px" type="rect" square></q-skeleton>
-                      </div>
-                      <div class="q-px-sm q-mt-xs text-left">
-                        <q-skeleton bordered square></q-skeleton>
-                      </div>
-                      <div class="flex justify-end q-mt-xs q-mr-sm">
-                        <q-skeleton type="QBtn" bordered square width="3em"></q-skeleton>
-                      </div>
-                    </q-skeleton>
-                    <q-card v-else class="my-card q-ma-md text-center col-grow"
-                      style="border-radius: 15px; max-width:180px">
-                      <q-img v-if="i.row.nftTypeMetadata?.uris?.icon"
-                        style="width:140px; height: 140px; min-width: 170px;" fit="fill"
-                        :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
-                        alt="na">
-                        <div class="absolute-bottom text-left">
-                          <div class="text-subtitle1">
-                            {{
-        i.row.token?.commitment ? (i.row.nftCollectionType ==
-          'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
-            'vm-number',
-            'decimal') : i.row.token.commitment) : ''
-      }}
-                          </div>
-                        </div>
-                      </q-img>
-                      <q-icon v-else name="perm_media" size="140px" color="grey"></q-icon>
-                      <div class="q-px-sm text-left">
-                        <code class="text-caption">{{ `<${i.row.token.commitment}>` }}</code>
-                        <div v-if="i.row.nftTypeMetadata?.name" class="ellipsis">
-                          {{ i.row.nftTypeMetadata?.name }}
-                        </div>
-                        <div v-else-if="i.row.token?.commitment" class="ellipsis">
-                          <code class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
-                        </div>
-                      </div>
-                      <q-card-actions align="right">
-                        <!-- <q-btn dense no-caps icon="send" size="lg" text-color="primary"
-                        :disable="!!isTokenTransferred(i.row.utxo)"
-                        @click="() => openNFTTransferDialog(i.row as CashToken)">
-                      </q-btn> -->
-                      </q-card-actions>
-                      <q-inner-loading :showing="!!isTokenTransferred(i.row.utxo)" label="Test">
-                        <span class="text-bold text-negative q-px-sm rounded-borders">Sent</span>
-                        <q-spinner-gears class="hidden"></q-spinner-gears>
-                      </q-inner-loading>
-                    </q-card>
-                  </template>
-                </q-table>
-              </section>
             </div>
           </div>
         </template>
@@ -285,6 +219,7 @@ import { shortenTokenId } from 'src/app/utils'
 import NftTypeForPublicationDialog from 'src/components/dialogs/NftTypeForPublicationDialog.vue';
 import { useEventBus } from 'src/composables';
 import { locateRegistry } from 'src/app/modules';
+import { NFTCollectionType } from 'src/app/bcmr/types';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -547,7 +482,7 @@ const removeSavedNftsTypes = async () => {
 
 const openNftTypeDialog = (token: TokenI) => {
   const defaultNftType = {
-    name: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${token.commitment}`,
+    name: selectedCollection.value.nftCollectionType == NFTCollectionType.sequential ? `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : `${selectedCollection.value.identitySnapshot?.token?.symbol} - ${token.commitment}`,
     uris: {
       icon: '',
       asset: ''
@@ -557,7 +492,7 @@ const openNftTypeDialog = (token: TokenI) => {
     component: NftTypeDialog,
     componentProps: {
       token: token,
-      title: selectedCollection.value.nftCollectionType == 'SequentialNftCollection' ? `Metadata of ${selectedCollection.value.identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
+      title: selectedCollection.value.nftCollectionType == NFTCollectionType.sequential ? `Metadata of ${selectedCollection.value.identitySnapshot?.token?.symbol} #${formatCommitment(token.commitment || '', 'vm-number', 'decimal')}` : 'Metadata',
       defaultNftType: nftsTypesForPublication.value[token.commitment!] || defaultNftType
     }
   }).onOk(async ({ type, nftType }) => {
@@ -585,7 +520,7 @@ const openAddNftDialog = () => {
 
   console.log(selectedCollection.value.token.commitment)
   let nftTypeKey = selectedCollection.value.token.commitment
-  if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
+  if (selectedCollection.value.nftCollectionType == NFTCollectionType.sequential) {
     nftTypeKey = formatCommitment(selectedCollection.value.token.commitment, 'vm-number', 'decimal')
     nftTypeKey = (Number(nftTypeKey) + 1).toString()
   }
@@ -666,7 +601,7 @@ const mint = async (recipient: string, category: string, nftTypeKey: string, nft
     progress.value = 'Still Processing, please wait...'
 
     let commitment = nftTypeKey // Parsable
-    if (selectedCollection.value.nftCollectionType == 'SequentialNftCollection') {
+    if (selectedCollection.value.nftCollectionType == NFTCollectionType.sequential) {
       // conver to vm-number
       commitment = formatCommitment(String(Number(nftTypeKey)), 'decimal', 'vm-number')
     }
