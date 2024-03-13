@@ -128,7 +128,7 @@
           </div>
           <q-card-actions align="right">
             <q-btn :label="cancel || 'Cancel'" color="negative" size="lg" flat @click="onDialogHide"></q-btn>
-            <q-btn :label="ok || 'Ok'" color="primary" size="lg" flat type="submit"></q-btn>
+            <q-btn :label="ok || 'Ok'" color="primary" size="lg" type="submit"></q-btn>
           </q-card-actions>
         </q-form>
       </q-card-section>

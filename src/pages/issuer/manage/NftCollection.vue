@@ -7,7 +7,7 @@
         </div>
         <div>
           <div class="col-xs-12 text-right">
-            <q-btn icon="add" text-color="primary" size="lg"
+            <q-btn icon="add" color="primary" size="lg"
               :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
               New Collection
             </q-btn>
@@ -62,7 +62,7 @@
                   <div class="col text-right">
                     <q-btn text-color="primary"
                       :to="`/issuer/manage/token/${selectedCollection.identitySnapshot?.token?.category}`"
-                      label="View Token Registry" dense flat>
+                      label="View Token Registry" icon="visibility" dense flat>
                     </q-btn>
                   </div>
                 </div>
@@ -93,10 +93,15 @@
                     :columns="[{ name: 'nfttype', label: 'NFTs in circulation', field: (r: any) => '', align: 'left', headerStyle: 'padding: 1.5em', }]"
                     :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']">
                     <template v-slot:header>
-                      <div class="row items-center q-ma-md">
+                      <div class="row items-center justify-between q-ma-md">
                         <span class="text-h6 q-mr-sm">NFTs in circulation</span>
-                        <q-btn icon="add" @click="openAddNftDialog" text-color="primary" size="md">
-                        </q-btn>
+                        <div class="q-gutter-x-md">
+                          <q-btn icon="add" label="Mint" @click="openAddNftDialog" color="primary" size="md" no-caps>
+                          </q-btn>
+                          <q-btn icon="add" label="Mint (advanced)" :to="{ name: 'mint-nft' }" color="primary" size="md"
+                            no-caps>
+                          </q-btn>
+                        </div>
                       </div>
                     </template>
                     <template v-slot:body-cell-nfttype="value">
@@ -166,7 +171,7 @@
                           </div>
                         </div>
                         <div class="row justify-end q-gutter-x-sm">
-                          <q-btn label="View Metadata" text-color="primary"
+                          <q-btn icon="visibility" label="View Metadata" text-color="primary"
                             @click.stop="openNftTypeDialog(value.row as BcmrIndexerNftsResponse)" dense no-caps>
                           </q-btn>
                         </div>
@@ -259,7 +264,7 @@ const mintedNftsPagination = ref({
   rowsPerPage: 12,
   rowsNumber: 12
 })
-const mintedNftsSelected = ref()
+
 const populatingMintedNftsTable = ref<boolean>()
 
 
@@ -287,18 +292,6 @@ const populatingOwnedNftsTable = ref<boolean>()
  * Remember's the transferred NFTs after a transfer transaction.
  */
 const transferredTokens = ref<UtxoI[]>()
-
-/**
- * True if the utxo is in the transferredTokens list
- */
-const isTokenTransferred = computed(() => {
-  return (utxo: UtxoI) => {
-    const trans = transferredTokens.value?.find((u: UtxoI) => (
-      Boolean(utxo.txid == u.txid && utxo.token?.commitment == u.token?.commitment && utxo.token?.tokenId == u.token?.tokenId)
-    ))
-    return trans
-  }
-})
 
 
 const populateCollections = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
@@ -344,8 +337,6 @@ const populateMintedNfts = async () => {
     results: []
   }
 
-  console.log('pagination', mintedNftsPagination.value)
-
   const query = {
     paginated: true,
     // limit: mintedNftsPagination.value.rowsPerPage,
@@ -354,15 +345,12 @@ const populateMintedNfts = async () => {
     include_metadata: true,
     capability: ['none', 'mutable']
   }
-  // if (showselectedCollectionsInMintedNfts.value) {
-  //   query.capability.push('minting')
-  // }
+
   populatingMintedNftsTable.value = true
 
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(selectedCollection.value?.identitySnapshot?.token?.category, query)
 
   if (fntResp && fntResp.results) {
-    console.log('RESPONSE', fntResp)
     mintedNftsPagination.value.rowsNumber = fntResp.count
     type ItemType = {
       capability?: string,
@@ -384,36 +372,6 @@ const populateMintedNfts = async () => {
   populatingMintedNftsTable.value = false
 }
 
-const populatedOwnedNfts = async (wallet: Wallet, transactionSigner: TransactionSigner, selectedCollection: AuthchainIdentity) => {
-  populatingOwnedNftsTable.value = true
-  const query = {
-    limit: ownedNftsPagination.value.rowsPerPage,
-    offset: (ownedNftsPagination.value.page - 1) * ownedNftsPagination.value.rowsPerPage,
-    is_token: true,
-    category: selectedCollection.identitySnapshot?.token?.category,
-  }
-  const resp = await (new Watchtower()).fetchNfts(wallet.getTokenDepositAddress(), query)
-  populatingOwnedNftsTable.value = false
-  if (resp?.count > 0) {
-    ownedNfts.value = resp
-    ownedNftsPagination.value.rowsNumber = resp.count
-    ownedNfts.value.results?.forEach(async (cashtoken, i) => {
-      const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
-      const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: wallet })
-      const {
-        txid,
-        vout,
-        satoshis,
-        height,
-        coinbase,
-        token
-      } = cashtoken
-      ownedNfts.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
-      await ownedNfts.value.results[i].resolveIdentitySnapshot()
-    })
-  }
-}
-
 const loadUnpublishedNftTypes = async (selectedCollection: AuthchainIdentity) => {
   nftsTypesForPublication.value = {}
   for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
@@ -433,12 +391,8 @@ const loadUnpublishedNftTypes = async (selectedCollection: AuthchainIdentity) =>
 }
 
 const clearUnpublishedMetadata = async () => {
-  console.log('SELECTED', selectedCollection.value)
   for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
-    console.log(index)
-    console.log(key)
     if (key.startsWith(selectedCollection.value.token.tokenId)) {
-      console.log(await localForage.nftTypesStore.getItem(key))
       await localForage.nftTypesStore.removeItem(key)
       nftsTypesForPublication.value = {}
     }
@@ -450,29 +404,10 @@ const onTableRequest = async (props: any) => {
   await populateCollections(user.wallet as Wallet, user.transactionSigner!)
 }
 
-const onOwnedNftsTableRequest = async (props: any) => {
-  ownedNftsPagination.value = props.pagination
-  await populatedOwnedNfts(user.wallet as Wallet, user.transactionSigner!, selectedCollection.value)
-}
 
 const onMintedNftsRequest = async (props: any) => {
   ownedNftsPagination.value = props.pagination
   await populateMintedNfts()
-}
-
-
-const getLatestIdentitySnapshot = (bcmr: Bcmr, authbase: string): { latestIdentitySnapshot: IdentitySnapshot, latestRevisionTimestamp: string } => {
-  if (!bcmr.identities || Object.keys(bcmr.identities[authbase]).length == 0) {
-    // Just incase
-    throw new Error('No published registry identities. Please publish a registry first.')
-  }
-  let identityHistory: Date[] = []
-  identityHistory = Object.keys(bcmr.identities[authbase] || {})
-    .filter((v) => !Number.isNaN(new Date(v).getDate()))
-    .map(v => new Date(v))
-    .sort((a: any, b: any) => b - a)
-  let latestRevision = identityHistory.filter((d) => d <= new Date())[0]
-  return { latestIdentitySnapshot: bcmr.identities[authbase][latestRevision.toISOString()], latestRevisionTimestamp: latestRevision.toISOString() } // clone latest
 }
 
 const removeSavedNftsTypes = async () => {
@@ -516,17 +451,14 @@ const openNftsForPubDialog = () => {
       nftsTypes: Object.keys(nftsTypesForPublication.value || {}).map(nftTypeKey => ({ [nftTypeKey]: nftsTypesForPublication.value[nftTypeKey] }))
     }
   }).onOk(async () => {
-    console.log('Publishing this', nftsTypesForPublication.value)
     await publish()
   })
 }
 
 const openAddNftDialog = () => {
-  console.log(selectedCollection.value.token.commitment)
   let nftTypeKey = selectedCollection.value.token.commitment
   if (selectedCollection.value.nftCollectionType == NFTCollectionType.sequential) {
     nftTypeKey = formatCommitment(selectedCollection.value.token.commitment, 'vm-number', 'decimal')
-    console.log(nftTypeKey)
     nftTypeKey = (Number(nftTypeKey) + 1).toString()
   }
   const defaultNftType = {
@@ -808,16 +740,13 @@ const publish = async () => {
 watch(() => selectedCollection.value, async (v) => {
   // document.getElementById('minted-nfts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   await populateMintedNfts()
-  await populatedOwnedNfts(user.wallet as Wallet, user.transactionSigner!, v)
   await loadUnpublishedNftTypes(selectedCollection.value)
 })
 
 watch(() => progress.value, (v) => {
   const top = window.scrollY
   const left = window.scrollX
-  console.log('VV', v)
   if (v) {
-    console.log('V', v)
     document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   } else {
     window.scrollTo(left, top)
