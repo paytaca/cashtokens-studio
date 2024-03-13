@@ -12,7 +12,8 @@
               Collection</q-btn>
           </div>
           <q-table v-model:collectionsPagination="collectionsPagination" @request="onTableRequest" flat bordered grid
-            color="warning" :loading="populatingCollectionsTable" title="Click a collection" :rows="collections.results"
+            color="warning" :loading="populatingCollectionsTable" loading-label="Loading NFT collections"
+            :title="collections.results ? 'Click a collection' : ''" :rows="collections.results"
             :rows-per-page-options="[12, 18, 24]" row-key="name" hide-header align="center">
             <template v-slot:item="i">
               <q-btn class="q-ma-sm col-grow" style="border-radius: 15px; max-width:95px; width: min-content"
@@ -38,7 +39,7 @@
             <section id="banner">
               <q-banner class="rounded-borders text-grey-4 q-pa-xs q-mb-lg"
                 style="border-radius: 15px 15px 0 0;line-height: 1.3em; background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
-                <div class="row items-center q-p-sm">
+                <div class="row items-center justify-between q-p-sm">
                   <div class="col">
                     <q-chip size="1.5em" class="row bg-transparent">
                       <q-avatar>
@@ -56,6 +57,12 @@
 
                       </span>
                     </q-chip>
+                  </div>
+                  <div class="col text-right">
+                    <q-btn text-color="secondary"
+                      :to="`/issuer/manage/token/${selectedCollection.identitySnapshot?.token?.category}`"
+                      label="View Metadata" dense flat>
+                    </q-btn>
                   </div>
                 </div>
               </q-banner>
@@ -522,7 +529,16 @@ const openAddNftDialog = () => {
   let nftTypeKey = selectedCollection.value.token.commitment
   if (selectedCollection.value.nftCollectionType == NFTCollectionType.sequential) {
     nftTypeKey = formatCommitment(selectedCollection.value.token.commitment, 'vm-number', 'decimal')
+    console.log(nftTypeKey)
     nftTypeKey = (Number(nftTypeKey) + 1).toString()
+  }
+  const defaultNftType = {
+    name: `${selectedCollection.value?.identitySnapshot?.token?.symbol} - ${nftTypeKey}`,
+    description: '',
+    uris: {
+      icon: '',
+      asset: ''
+    }
   }
 
   $q.dialog({
@@ -531,6 +547,7 @@ const openAddNftDialog = () => {
       ok: 'Mint',
       title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
       nftTypeKey,
+      nftType: defaultNftType,
       category: selectedCollection.value?.identitySnapshot?.token?.category,
       bytecode: selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode,
       recipient: user.walletTokenAddress
@@ -540,7 +557,11 @@ const openAddNftDialog = () => {
     }
 
   }).onOk(async (data) => {
-    await mint(data.recipient, data.category, data.nftTypeKey, Object.assign({}, data.nftType))
+    let nftTypeKey = data.nftTypeKey
+    if (!selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode) {
+      nftTypeKey = formatCommitment(nftTypeKey, 'decimal', 'vm-number')
+    }
+    await mint(data.recipient, data.category, nftTypeKey, Object.assign({}, data.nftType))
   })
 }
 
