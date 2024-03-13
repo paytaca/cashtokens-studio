@@ -21,7 +21,7 @@
             <div class="col-xs-12 col-sm-8 col-lg-9">
               <div class="row justify-center">
                 <!-- <div class="text-h4 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Token Genesis</div> -->
-                <div class="text-h4 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">{{ route?.query?.title
+                <div class="text-h5 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">{{ route?.query?.title
         || 'Token Genesis' }}</div>
                 <div class="text-h6 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Dependencies</div>
                 <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8 q-mb-lg">

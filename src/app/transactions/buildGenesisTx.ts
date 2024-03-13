@@ -83,7 +83,6 @@ export const buildGenesisTx = async (
   let tokenRecipient = opt.recipient;
   if (opt.authKey) {
     // we are using authguard
-    console.log('opt.authKey');
     if (opt.authKey.token?.tokenId) {
       if (opt.authKey.token.commitment != '00') {
         throw new Error(
@@ -106,13 +105,11 @@ export const buildGenesisTx = async (
       toSpend.push(opt.authKey);
     }
 
-    console.log('AUTHKEY TOKEN ID', authKeyTokenId);
     const authGuard = getInstance('authguard-contract', {
       authKeyTokenId: authKeyTokenId as string,
       network: opt.wallet.network,
     });
     tokenRecipient = authGuard?.getTokenDepositAddress();
-    console.log('TOKEN RECIPIENT', tokenRecipient);
   }
 
   toSpend.push(funds);
