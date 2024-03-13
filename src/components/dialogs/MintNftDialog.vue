@@ -27,8 +27,8 @@
 
           <div class="col-xs-6 q-gutter-y-sm items-center">
             <label>Type {{ !bytecode ? '(Sequence #)' : '(BottomAltStackHex)' }}</label>
-            <q-input v-model="form.nftTypeKey" outlined :rules="[(v) => v.length > 0 || 'Required']"
-              bottom-slots></q-input>
+            <q-input v-model="form.nftTypeKey" :rules="nftTypeKeyValidationRules" outlined bottom-slots>
+            </q-input>
           </div>
 
           <div class="text-h6 q-my-lg">Metadata</div>
@@ -170,7 +170,15 @@ const assetFile = ref()
 const assetFileRef = ref()
 const assetPreviewUrl = ref()
 const assetFileUploading = ref<boolean>(false)
-
+const nftTypeKeyValidationRules = [
+  (v: any) => v.length > 0 || 'Required',
+  (v: any) => {
+    if (props.bytecode) {
+      return /^[0-9a-fA-F]+$/.test(v) || 'Value should be a number'
+    }
+    return isNaN(v) == false || 'Value should be a number'
+  }
+]
 const form = ref<{
   category: string,
   nftTypeKey: string | number,
