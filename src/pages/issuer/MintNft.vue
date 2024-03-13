@@ -335,9 +335,10 @@ const hints: any = {
 
 const sequentialOpts = [
   { value: MINT_NEXT_SEQUENCE, label: MINT_NEXT_SEQUENCE },
-  { value: MINT_A_TYPE, label: 'Mint a particular sequence #' }
+  { value: MINT_A_TYPE, label: 'Mint a particular sequence #' },
+  { value: MINT_ANOTHER_MINTER, label: MINT_ANOTHER_MINTER }
   // { value: MINT_A_MUTABLE_NFT, label: MINT_A_MUTABLE_NFT },
-  // { value: MINT_ANOTHER_MINTER, label: MINT_ANOTHER_MINTER }
+
 ]
 
 const parsableOpts = [
@@ -471,6 +472,19 @@ const mint = async () => {
         amount: BigInt(0),
         tokenId: minter.value?.token?.tokenId,
         commitment: String(commitment),
+        capability: mintOptions.value.capability
+      })
+      // don't update the type
+      // newMinterCommitment = vmNumber
+    }
+  } else if (mintStrategy.value?.value == MINT_ANOTHER_MINTER) {
+    newMinterCommitment = ''
+    for (let i = 0; i < mintOptions.value.mintQuantity; i++) {
+
+      nfts.value.push({
+        amount: BigInt(0),
+        tokenId: minter.value?.token?.tokenId,
+        commitment: '',
         capability: mintOptions.value.capability
       })
       // don't update the type
