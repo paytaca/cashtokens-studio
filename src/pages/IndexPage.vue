@@ -39,7 +39,7 @@
 <script setup lang="ts">
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import WalletConnect from 'components/WalletConnect.vue';
-import { delay } from 'mainnet-js';
+import { BCMR, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import { computed, onMounted, ref } from 'vue';
