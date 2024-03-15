@@ -2,10 +2,10 @@
   <div class="q-pa-md">
     <q-layout view="lHh Lpr lFf" container style="height: 100vh">
       <q-footer v-if="genesisInput && authKey" style="background-color: unset;">
-        <div class="text-right">
+        <div class="text-right q-ma-lg">
           <q-btn v-if="!progress" color="primary" size="lg" @click.stop="(e: any) => form.submit(e)">
             <q-spinner v-if="progress"></q-spinner>
-            <label>Create Token</label>
+            <span>Create Token</span>
           </q-btn>
         </div>
       </q-footer>
@@ -44,9 +44,9 @@
                       <q-icon :name="genesisInput?.txid ? 'do_not_touch' : ''"></q-icon>
                     </template>
                     <template v-slot:after>
-                      <q-btn v-if="!genesisInput?.txid" icon="handyman" label="Generate"
+                      <q-btn v-if="!genesisInput?.txid" icon="handyman" text-color="primary" size="lg" label="Generate"
                         @click.stop="generateGenesisInput" :disable="!!progress">
-                        <q-spinner-dots v-if="!!progress && !genesisInput?.txid"></q-spinner-dots>
+                        <q-spinner-dots v-if="!!progress && !genesisInput?.txid" class="q-ml-sm"></q-spinner-dots>
                       </q-btn>
                     </template>
                   </q-input>
@@ -73,9 +73,9 @@
                   </q-select>
                   <q-input v-else :model-value="authKey?.txid" :loading="!!progress" outlined readonly disable>
                     <template v-slot:after>
-                      <q-btn v-if="!authKey" icon="handyman" label="Generate" @click.stop="generateAuthKeyGenesisInput"
-                        :disable="!!progress">
-                        <q-spinner-dots v-if="!!progress"></q-spinner-dots>
+                      <q-btn v-if="!authKey" icon="handyman" text-color="primary" size="lg" label="Generate"
+                        @click.stop="generateAuthKeyGenesisInput" :disable="!!progress">
+                        <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
                       </q-btn>
                     </template>
                     <template v-slot:prepend>
@@ -237,7 +237,7 @@
                           :disable="iconFileUploading" outlined bottom-slots class="hidden">
                         </q-file>
                         <q-input v-model="tokenMetadata.uris!.icon" outlined autogrow bottom-slots
-                          placeholder="Click upload icon to upload or paste URL">
+                          placeholder="Click the upload button or paste the icon's URL">
 
                           <template v-slot:prepend>
                             <div @click.stop="iconFileRef.pickFiles()">
@@ -267,9 +267,10 @@
                       <div v-for="[k], i  in  Object.entries(tokenMetadata.uris!)" :key="i" class="q-gutter-sm">
                         <template v-if="k != 'icon'">
                           <label style="text-transform: capitalize;">{{ k }}</label>
-                          <q-input input-class="registry-field"
+                          <q-input input-
                             @update:model-value="(v: any) => tokenMetadata.uris = { ...tokenMetadata.uris, ...{ [k]: v } }"
-                            :model-value="tokenMetadata.uris?.[k]" outlined>
+                            :model-value="tokenMetadata.uris?.[k]"
+                            :placeholder="k == 'web' ? 'Your token project\'s website' : ''" outlined>
                             <template v-slot:after>
                               <q-btn v-if="k !== 'icon' && k !== 'web'" text-color="negative" icon="delete"
                                 @click="delete tokenMetadata.uris![k]"></q-btn>
@@ -351,7 +352,7 @@
                         <q-input v-model="nftType.description" outlined>
                         </q-input>
                       </div>
-                      <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center"
+                      <div class="col-xs-12  q-my-md q-gutter-y-sm items-center"
                         :style="$q.screen.xs ? 'margin-bottom: 2rem' : ''">
                         <label>NFT Asset {{ assetFileUploading ? 'Uploading' : '' }}<q-spinner-dots
                             v-if="assetFileUploading" color="warning" class="q-mr-sm"></q-spinner-dots></label>
@@ -360,8 +361,8 @@
                             @rejected="() => $q.dialog({ message: 'File Rejected!' })" :disable="assetFileUploading"
                             outlined bottom-slots class="hidden">
                           </q-file>
-                          <q-input class="registry-field" v-model="nftType.uris!.asset" outlined autogrow bottom-slots
-                            placeholder="Click upload icon to upload or paste URL">
+                          <q-input v-model="nftType.uris!.asset" outlined autogrow bottom-slots
+                            placeholder="Click the upload button or paste the icon's URL">
                             <template v-slot:prepend>
                               <div @click.stop="assetFileRef.pickFiles()">
                                 <q-spinner-box v-if="assetFileUploading" color="warning"></q-spinner-box>
@@ -382,7 +383,7 @@
                           </q-input>
                         </div>
                       </div>
-                      <div class="col-xs-12 col-md-8 q-my-lg q-gutter-y-sm items-center"
+                      <div class="col-xs-12  q-my-lg q-gutter-y-sm items-center"
                         :style="$q.screen.xs ? 'margin-bottom: 4rem' : 'margin-bottom: 2rem'">
                         <label>NFT Icon {{ nftIconUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="nftIconUploading"
                             color="warning" class="q-mr-sm"></q-spinner-dots></label>
@@ -392,7 +393,7 @@
                             :disable="nftIconUploading" outlined bottom-slots class="hidden">
                           </q-file>
                           <q-input v-model="nftType.uris!.icon" outlined autogrow bottom-slots
-                            placeholder="Click upload icon to upload or paste URL">
+                            placeholder="Click the upload button or paste the icon's URL">
 
                             <template v-slot:prepend>
                               <div @click.stop=" nftIconFileRef.pickFiles()">
@@ -581,7 +582,7 @@ const assetPreviewUrl = ref()
 const assetFileUploading = ref<boolean>(false)
 const editor = ref<'form' | 'json'>()
 
-const showAdvancedOptions = ref<boolean>(false) // TODO
+const showAdvancedOptions = ref<boolean>() // TODO
 
 const nftCapabilityOptions = computed(() => {
   if (tokenSpec.value.nftCollectionType) {

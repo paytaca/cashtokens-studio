@@ -156,26 +156,6 @@ export const buildBcmrPublicationTx = async (
   }
 
   const sourceOutputs = [
-    // {
-    //   ...decoded.inputs[0],
-    //   lockingBytecode: (
-    //     cashAddressToLockingBytecode(authGuard!.getTokenDepositAddress()) as any
-    //   ).bytecode,
-    //   valueSatoshis: BigInt(authHead.satoshis),
-    //   token: authHead.token && {
-    //     ...authHead.token,
-    //     category: hexToBin(authHead.token!.category),
-    //     nft: authHead.token.nft && {
-    //       ...authHead.token.nft,
-    //       commitment: hexToBin(authHead.token.nft.commitment),
-    //     },
-    //   },
-    //   contract: {
-    //     abiFunction: (transaction as any).abiFunction,
-    //     redeemScript: scriptToBytecode(bytecode),
-    //     artifact: artifact,
-    //   },
-    // },
     authHeadSourceOutput,
     {
       ...decoded.inputs[1],

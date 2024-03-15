@@ -3,11 +3,11 @@
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10 q-mt-lg" :class="$q.screen.gt.xs ? 'q-ma-sm' : ''">
         <div class="text-center text-h5 q-my-lg">
-          My NFT Reserved Collections
+          NFT Collections
         </div>
         <div>
-          <div class="col-xs-12 text-right">
-            <q-btn icon="add" color="primary" size="lg"
+          <div class="col-xs-12 text-right q-mx-md">
+            <q-btn icon="add" color="primary" :size="$q.screen.lt.sm ? 'md' : 'lg'"
               :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
               New Collection
             </q-btn>
@@ -16,21 +16,23 @@
           <q-table v-model:collectionsPagination="collectionsPagination" @request="onTableRequest" flat bordered grid
             color="warning" :loading="populatingCollectionsTable" loading-label="Loading NFT collections"
             :title="collections.results ? 'Click a collection' : ''" :rows="collections.results"
-            :rows-per-page-options="[12, 18, 24]" row-key="name" hide-header align="center">
+            :rows-per-page-options="[12, 18, 24]" row-key="name" hide-header align="center" dense>
             <template v-slot:item="i">
-              <q-btn class="q-ma-sm col-grow" style="border-radius: 15px; max-width:95px; width: min-content"
-                @click="() => { if (!i.row.processing) selectedCollection = i.row }"
-                :class="selectedCollection?.txid == i.row?.txid ? 'selected' : ''">
-                <q-card flat>
-                  <q-skeleton v-if="i.row.processing" height="80px" width="80px" type="rect" square></q-skeleton>
-                  <q-img v-else-if="i.row.identitySnapshot?.uris?.icon"
-                    style="border-radius: 10px;height: 80px; max-width:80px; min-width: 80px;" fit="fill"
-                    :src="i.row.identitySnapshot?.uris?.icon ? (i.row.identitySnapshot.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.identitySnapshot.uris.icon) : i.row.identitySnapshot.uris.icon) : ''"
-                    alt="na">
-                  </q-img>
-                  <q-icon v-else name="broken_image" color="grey-8" size="80"></q-icon>
-                </q-card>
-              </q-btn>
+              <div class="q-ma-sm col-xs-4 col-sm-1 col-grow">
+                <q-btn style="border-radius: 15px; max-width:95px; width: min-content"
+                  @click="() => { if (!i.row.processing) selectedCollection = i.row }"
+                  :class="selectedCollection?.txid == i.row?.txid ? 'selected' : ''">
+                  <q-card flat>
+                    <q-skeleton v-if="i.row.processing" height="80px" width="80px" type="rect" square></q-skeleton>
+                    <q-img v-else-if="i.row.identitySnapshot?.uris?.icon"
+                      style="border-radius: 10px;height: 80px; max-width:80px; min-width: 80px;" fit="fill"
+                      :src="i.row.identitySnapshot?.uris?.icon ? (i.row.identitySnapshot.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.identitySnapshot.uris.icon) : i.row.identitySnapshot.uris.icon) : ''"
+                      alt="na">
+                    </q-img>
+                    <q-icon v-else name="broken_image" color="grey-8" size="80px"></q-icon>
+                  </q-card>
+                </q-btn>
+              </div>
             </template>
           </q-table>
         </div>
@@ -41,12 +43,12 @@
               <q-banner class="rounded-borders text-grey-4 q-pa-sm q-mb-lg"
                 style="border-radius: 15px 15px 0 0;line-height: 1.3em; background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
                 <div class="row items-center justify-between q-p-sm">
-                  <div class="col">
-                    <q-chip size="1.5em" class="row bg-transparent">
+                  <div class="col-xs-12 col-sm-6">
+                    <q-chip size="1.5em" class="row bg-transparent items-center">
                       <q-avatar>
                         <q-img v-if="selectedCollection?.identitySnapshot?.uris?.icon"
                           :src="ipfsToGatewayUrl(selectedCollection.identitySnapshot.uris.icon)" />
-                        <q-icon v-else name="broken_image" color="grey-8"></q-icon>
+                        <q-icon v-else name="broken_image" color="grey-8" size="80px"></q-icon>
                       </q-avatar>
                       <span style="letter-spacing: 5px;">
                         <div class="flex items-center">{{ selectedCollection?.identitySnapshot?.token?.symbol }}
@@ -55,14 +57,14 @@
                             <CopyText :text="selectedCollection?.token?.tokenId" />
                           </span>
                         </div>
-
                       </span>
                     </q-chip>
                   </div>
-                  <div class="col text-right">
+                  <div class="col-xs-12 col-sm-6 text-right">
                     <q-btn text-color="primary"
                       :to="`/issuer/manage/token/${selectedCollection.identitySnapshot?.token?.category}`"
-                      label="View Token Registry" icon="visibility" dense flat>
+                      @click="() => tokenStore.token = selectedCollection" label="View Token Registry" icon="visibility"
+                      dense flat>
                     </q-btn>
                   </div>
                 </div>
@@ -89,20 +91,24 @@
                 <div style="overflow-x: scroll">
                   <q-table v-model:pagination="mintedNftsPagination" flat :rows="mintedNfts.results"
                     :loading="populatingMintedNftsTable" color="warning" @request="onMintedNftsRequest"
+                    :loading-label="`Loading ${selectedCollection.identitySnapshot?.token?.symbol}...`"
                     style="background:unset;margin-bottom: 3rem;"
                     :columns="[{ name: 'nfttype', label: 'NFTs in circulation', field: (r: any) => '', align: 'left', headerStyle: 'padding: 1.5em', }]"
                     :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']">
                     <template v-slot:header>
                       <div class="row items-center justify-between q-ma-md">
-                        <span class="text-h6 q-mr-sm">NFTs in circulation</span>
+                        <span class="text-h6 q-mr-sm text-grey-6">NFTs in circulation</span>
                         <div class="q-gutter-x-md">
-                          <q-btn icon="add" label="Mint" @click="openAddNftDialog" color="primary" size="md" no-caps>
+                          <q-btn icon="add" label="Mint" @click="openAddNftDialog" color="primary" size="md"
+                            :disable="populatingMintedNftsTable || !!progress" no-caps>
                           </q-btn>
                           <q-btn icon="add" label="Mint (advanced)" :to="{ name: 'mint-nft' }" color="primary" size="md"
-                            no-caps>
+                            :disable="populatingMintedNftsTable || !!progress" no-caps>
                           </q-btn>
                         </div>
+
                       </div>
+                      <q-separator></q-separator>
                     </template>
                     <template v-slot:body-cell-nfttype="value">
                       <td>
@@ -214,7 +220,7 @@ import { useAuthhead } from 'src/stores/authhead';
 import { shortenTokenId } from 'src/app/utils'
 import NftTypeForPublicationDialog from 'src/components/dialogs/NftTypeForPublicationDialog.vue';
 import { useEventBus } from 'src/composables';
-import { locateRegistry } from 'src/app/modules';
+import { locateRegistry } from 'src/app/bcmr/locateRegistry';
 import { BcmrIndexerNftsResponse, NFTCollectionType } from 'src/app/bcmr/types';
 import { buildMintTx } from 'src/app/transactions/buildMintTx';
 import { broadcastTx, signTx } from 'src/app/transactions';
@@ -223,6 +229,7 @@ const $q = useQuasar()
 const { $ebus } = useEventBus()
 const ui = useUI()
 const user = useUser()
+const tokenStore = useTokenStore()
 const localForage = useLocalForage()
 const eventBus = inject<EventBus>('eventBus')
 const progress = ref<string | boolean>()
@@ -286,7 +293,6 @@ const ownedNfts = ref<PaginatedData>({
   previous: null,
   results: []
 })
-const populatingOwnedNftsTable = ref<boolean>()
 
 /**
  * Remember's the transferred NFTs after a transfer transaction.
