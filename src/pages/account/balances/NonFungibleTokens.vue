@@ -19,7 +19,7 @@
                                 name: 'commitment', label: 'Commitment',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType._meta.commitment : '---',
                             }
-                        ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header>
+                        ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header align="center">
                         <template v-slot:top>
                             <div v-if="!populatingTable" class="col-12 text-right q-my-sm">
                                 <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys"
@@ -35,7 +35,7 @@
 
                         <template v-slot:item="i">
                             <q-card class="my-card q-ma-sm text-center col-grow"
-                                style="border-radius: 15px; max-width:170px">
+                                style="border-radius: 15px; max-width:190px">
                                 <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
                                     :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
@@ -57,9 +57,10 @@
                                     <div v-if="i.row.nftTypeMetadata?.name" class="ellipsis">
                                         {{ i.row.nftTypeMetadata?.name }}
                                     </div>
-                                    <div v-else-if="i.row.token?.commitment" class="ellipsis">
-                                        <code
-                                            class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
+                                    <div v-else-if="i.row.token?.tokenId" class="ellipsis">
+                                        <code class="text-caption">
+                                            {{ `<${shortenTokenId(i.row.token.tokenId)}>` }}
+                                        </code>
                                     </div>
                                 </div>
                                 <q-card-actions align="right">

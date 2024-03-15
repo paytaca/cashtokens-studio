@@ -23,7 +23,7 @@
                     <div class="row items-center q-p-sm">
                       <div class="col-xs-4">Collection</div>
                       <div class="col">
-                        <q-chip size="1.5em">
+                        <q-chip size="1.5em" class="bg-transparent">
                           <q-avatar>
                             <q-img v-if="minter.value.identitySnapshot.uris.icon"
                               :src="ipfsToGatewayUrl(minter.value.identitySnapshot.uris.icon || '')" />
