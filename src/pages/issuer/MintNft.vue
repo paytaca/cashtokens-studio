@@ -36,9 +36,9 @@
                     </div>
                     <div class="row items-center q-py-sm">
                       <div class="col-xs-4">Type</div>
-                      <div class="col">{{ minter.value.nftCollectionType }}</div>
+                      <div class="col">{{ minter.value?.nftCollectionType }}</div>
                     </div>
-                    <div v-if="minter.value.nftCollectionType == 'SequentialNftCollection'"
+                    <div v-if="minter.value?.nftCollectionType == 'SequentialNftCollection'"
                       class="row items-center q-py-sm">
                       <div class="col-xs-4">Last minted sequence #</div>
                       <div class="col">
@@ -65,17 +65,17 @@
                   <div class="q-mb-lg q-gutter-y-sm items-center">
                     <label>Choose Mint Option</label>
                     <q-select
-                      :options="minter.value.nftCollectionType == 'SequentialNftCollection' ? sequentialOpts : parsableOpts"
+                      :options="minter.value?.nftCollectionType == 'SequentialNftCollection' ? sequentialOpts : parsableOpts"
                       v-model="mintStrategy" class="q-mb-xs" label="I want to" stack-label outlined>
                       <template v-slot:hint>
                         <span
-                          v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value.nftCollectionType == 'SequentialNftCollection'">
+                          v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value?.nftCollectionType == 'SequentialNftCollection'">
                           The minter's commitment value will not change. i.e., for SequentialNftCollection,
                           last-minted sequence# value will not be updated.</span>
                       </template>
                     </q-select>
                     <span class="text-wrap "
-                      v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value.nftCollectionType == 'SequentialNftCollection'">
+                      v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value?.nftCollectionType == 'SequentialNftCollection'">
                       The minter's commitment value will not change. i.e., for SequentialNftCollection,
                       last-minted sequence# value will not be updated.
                     </span>
@@ -389,7 +389,7 @@ const mintOptions = ref<{
   mintQuantity: 1,
   nftType: '',
   capability: NFTCapability.none,
-  recipient: minter.value.ownerWallet.getTokenDepositAddress()
+  recipient: ''
 })
 
 
@@ -461,7 +461,7 @@ const mint = async () => {
     }
   } else if (mintStrategy.value?.value == MINT_A_TYPE || mintStrategy.value?.value == MINT_A_MUTABLE_NFT) {
     let commitment = mintOptions.value.nftType // Parsable
-    if (minter.value.nftCollectionType == 'SequentialNftCollection') {
+    if (minter.value?.nftCollectionType == 'SequentialNftCollection') {
       // conver to vm-number
       commitment = formatCommitment(String(Number(mintOptions.value.nftType)), 'decimal', 'vm-number')
     }
@@ -811,7 +811,7 @@ watch(() => mintStrategy.value, (v) => {
 
 })
 
-watch(() => minter.value.processing, (m) => {
+watch(() => minter.value?.processing, (m) => {
   progress.value = m
 })
 
@@ -822,13 +822,14 @@ watch(() => publisher.value?.processing, (m) => {
 
 onMounted(async () => {
   ui.routeBack = `nft-reserves`
-  if (minter.value.nftCollectionType == 'SequentialNftCollection') {
+  if (minter.value?.nftCollectionType == 'SequentialNftCollection') {
     mintStrategy.value = { value: MINT_NEXT_SEQUENCE, label: MINT_NEXT_SEQUENCE }
     mintOptions.value.nftType = Number(formatCommitment(minter.value.token.commitment || 0, 'vm-number', 'decimal')) + 1
   }
-  if (minter.value.nftCollectionType == 'ParsableNftCollection') {
+  if (minter.value?.nftCollectionType == 'ParsableNftCollection') {
     mintStrategy.value = { value: MINT_A_TYPE, label: MINT_A_TYPE }
   }
+  mintOptions.value.recipient = minter.value?.ownerWallet?.getTokenDepositAddress()
 })
 
 </script>
