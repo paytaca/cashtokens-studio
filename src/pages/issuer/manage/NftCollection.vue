@@ -63,8 +63,8 @@
                   <div class="col-xs-12 col-sm-6 text-right">
                     <q-btn text-color="primary"
                       :to="`/issuer/manage/token/${selectedCollection.identitySnapshot?.token?.category}`"
-                      @click="() => tokenStore.token = selectedCollection" label="View Token Registry" icon="visibility"
-                      dense flat>
+                      @click="() => { tokenStore.token = selectedCollection; }" label="View Token Registry"
+                      icon="visibility" dense flat>
                     </q-btn>
                   </div>
                 </div>
@@ -200,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount, nextTick, toRaw } from 'vue';
+import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount, nextTick, toRaw, capitalize } from 'vue';
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, CashToken, ChainGraph, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
@@ -224,12 +224,15 @@ import { locateRegistry } from 'src/app/bcmr/locateRegistry';
 import { BcmrIndexerNftsResponse, NFTCollectionType } from 'src/app/bcmr/types';
 import { buildMintTx } from 'src/app/transactions/buildMintTx';
 import { broadcastTx, signTx } from 'src/app/transactions';
+import { bigIntToVmNumber, binToHex, vmNumberToBigInt } from '@bitauth/libauth';
+import { useMinter } from 'src/stores/minter';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
 const ui = useUI()
 const user = useUser()
 const tokenStore = useTokenStore()
+const minter = useMinter()
 const localForage = useLocalForage()
 const eventBus = inject<EventBus>('eventBus')
 const progress = ref<string | boolean>()
@@ -328,6 +331,7 @@ const populateCollections = async (wallet: Wallet, transactionSigner: Transactio
         } = cashtoken
         collections.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
         await collections.value.results[i].resolveIdentitySnapshot()
+
       })
     }
   }
@@ -463,12 +467,14 @@ const openNftsForPubDialog = () => {
 
 const openAddNftDialog = () => {
   let nftTypeKey = selectedCollection.value.token.commitment
+  let nftTypeName = `${selectedCollection.value?.identitySnapshot?.token?.symbol} - ${nftTypeKey}`
   if (selectedCollection.value.nftCollectionType == NFTCollectionType.sequential) {
     nftTypeKey = formatCommitment(selectedCollection.value.token.commitment, 'vm-number', 'decimal')
-    nftTypeKey = (Number(nftTypeKey) + 1).toString()
+    nftTypeName = `${selectedCollection.value?.identitySnapshot?.token?.symbol} - ${Number(nftTypeKey) + 1}`
+    nftTypeKey = formatCommitment((Number(nftTypeKey) + 1).toString(), 'decimal', 'vm-number')
   }
   const defaultNftType = {
-    name: `${selectedCollection.value?.identitySnapshot?.token?.symbol} - ${nftTypeKey}`,
+    name: nftTypeName,
     description: '',
     uris: {
       icon: '',
@@ -476,27 +482,51 @@ const openAddNftDialog = () => {
     }
   }
 
-  $q.dialog({
-    component: MintNftDialog,
-    componentProps: {
-      ok: 'Mint',
-      title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
-      nftTypeKey,
-      nftType: defaultNftType,
-      category: selectedCollection.value?.identitySnapshot?.token?.category,
-      bytecode: selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode,
-      recipient: user.walletTokenAddress
-    },
-    ok: {
-      push: true
-    }
+  // $q.dialog({
+  //   component: MintNftDialog,
+  //   componentProps: {
+  //     ok: 'Mint',
+  //     title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
+  //     nftTypeKey,
+  //     nftType: defaultNftType,
+  //     category: selectedCollection.value?.identitySnapshot?.token?.category,
+  //     bytecode: selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode,
+  //     recipient: user.walletTokenAddress
+  //   },
+  //   ok: {
+  //     push: true
+  //   }
 
-  }).onOk(async (data) => {
-    let nftTypeKey = data.nftTypeKey
-    if (!selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode) {
-      nftTypeKey = formatCommitment(nftTypeKey, 'decimal', 'vm-number')
+  // }).onOk(async (data) => {
+  //   let nftTypeKey = data.nftTypeKey
+  //   if (!selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode) {
+  //     nftTypeKey = formatCommitment(nftTypeKey, 'decimal', 'vm-number')
+  //   }
+  //   await mint(data.recipient, data.category, nftTypeKey, Object.assign({}, data.nftType))
+  // })
+  const token = {
+    amount: BigInt(0),
+    category: selectedCollection.value!.identitySnapshot!.token!.category,
+    commitment: nftTypeKey,
+    capability: NFTCapability.none
+  }
+  console.log('TOKEN', token)
+
+  $q.dialog({
+    component: NftTypeDialog,
+    componentProps: {
+      owner: user.wallet!.getTokenDepositAddress(),
+      ownerLabel: 'Send To',
+      token: token,
+      identitySnapshot: selectedCollection.value?.identitySnapshot,
+      title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
+      defaultNftType: defaultNftType,
+
+      ok: 'Mint'
     }
-    await mint(data.recipient, data.category, nftTypeKey, Object.assign({}, data.nftType))
+  }).onOk(async ({ type, nftType, owner }) => {
+    console.log('MINT', type, nftType, owner, selectedCollection.value?.identitySnapshot?.token?.category)
+    await mint(owner, selectedCollection.value.identitySnapshot.token.category, nftTypeKey, Object.assign({}, nftType))
   })
 }
 
@@ -727,7 +757,8 @@ const publish = async () => {
         successMsg: `Published ${selectedCollection.value.identitSnapshot?.token?.symbol}'s nfts`
       })
       nftsTypesForPublication.value = {}
-      removeSavedNftsTypes()
+      // removeSavedNftsTypes()
+      clearUnpublishedMetadata()
 
     } catch (error: any) {
       $q.dialog({
@@ -745,8 +776,11 @@ const publish = async () => {
 
 watch(() => selectedCollection.value, async (v) => {
   // document.getElementById('minted-nfts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  minter.value = new CashToken({ ...selectedCollection.value }, user.transactionSigner)
+  minter.value.identitySnapshot = selectedCollection.value.identitySnapshot
   await populateMintedNfts()
   await loadUnpublishedNftTypes(selectedCollection.value)
+
 })
 
 watch(() => progress.value, (v) => {

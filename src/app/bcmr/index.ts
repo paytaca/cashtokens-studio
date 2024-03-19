@@ -255,4 +255,20 @@ export const create = (
   return b;
 };
 
+export const getIdentitySnapshot = async (
+  tokenId: string,
+  url?: string
+): Promise<undefined | any> => {
+  try {
+    const r = await fetch(
+      `${url || process.env.BCMR_API}registry/${tokenId}/identity-snapshot/`
+    );
+    if (r.status == 200) {
+      return await r.json();
+    }
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getInstance = create;

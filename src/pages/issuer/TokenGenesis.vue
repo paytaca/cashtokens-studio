@@ -181,7 +181,7 @@
                     </div>
                     <div class="col-8 q-gutter-y-sm col-xs-grow">
                       <label>Token Symbol *</label>
-                      <q-input v-model="tokenMetadata.token!.symbol" :rules="[(v: any) => !!v || 'Required']" outlined>
+                      <q-input v-model="tokenMetadata.token!.symbol" :rules="symbolRules" outlined>
                       </q-input>
                     </div>
                     <div v-if="tokenSpec.tokenType == 'ft' || tokenSpec.tokenType == 'hybrid'"
@@ -296,7 +296,7 @@
                       </div>
                       <div class="col-12 q-gutter-y-sm">
                         <q-option-group v-model="tokenSpec.nftCollectionType"
-                          :options="[{ value: NFTCollectionType.sequential, label: 'SequentialNftCollection (Basic)' }, { value: NFTCollectionType.parsable, label: 'ParsableNftCollection (Advanced)' },]"
+                          :options="[{ value: NFTCollectionType.sequential, label: 'SequentialNftCollection (Basic)' }, { value: NFTCollectionType.parsable, label: 'ParsableNftCollection (Advanced/Not Yet Supported)', disable: true },]"
                           color="primary" inline :disable="!showAdvancedOptions" />
                       </div>
                       <div v-if="tokenSpec.nftCollectionType == NFTCollectionType.parsable"
@@ -307,7 +307,7 @@
                         </q-input>
                       </div>
                       <div class="text-h6 col-xs-12 col-md-8  text-white text-bold text-white">
-                        NFT Metadata
+                        NFT Metadata <span class="text-thin">(Optional)</span>
                       </div>
                       <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
                         <label>NFT Type</label>
@@ -499,7 +499,10 @@ import { getInstance as getAuthguardInstance } from 'src/app/contracts'
 import HelpDialog from 'src/components/dialogs/HelpDialog.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
+import { default as reservedTokenSymbols } from 'src/app/bcmr/reserved-token-symbols-ISO-4217.json'
+import { default as reservedCryptoSymbols } from 'src/app/bcmr/reserved-token-symbols-cryptocurrencies.json'
 
+const reservedSymbols = reservedCryptoSymbols.concat(reservedCryptoSymbols)
 const $q = useQuasar()
 const { $ebus } = useEventBus()
 const user = useUser()
@@ -611,6 +614,13 @@ const commitmentRules = [
 
   }) || 'Invalid value'
 ]
+
+const symbolRules = [
+  (v: any) => !!v || 'Required',
+  (v: any) => /^[-A-Z0-9]+$/.test(v) || 'Invalid value.Symbol should only contain capitals letters A-Z, numbers 0-9 or -',
+  (v: any) => !reservedSymbols.includes(v) || 'Symbol is reserved',
+]
+
 
 const form = ref()
 const disableForm = ref<'' | 'disabled'>()
