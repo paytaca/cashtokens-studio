@@ -104,7 +104,7 @@
                         outlined disable readonly bottom-slots>
 
                         <template v-slot:hint>
-                          <i>Commitment (VM Number = <code>{{ formatCommitment(String(Number(mintOptions.nftType) + Number(mintOptions.mintQuantity)), 'decimal',
+                          <i>Commitment (VM Number = <code>{{ formatCommitment(String(Number(mintOptions.nftType) + Number(mintOptions.mintQuantity - 1)), 'decimal',
         'vm-number') }}</code>)
                           </i>
                         </template>
