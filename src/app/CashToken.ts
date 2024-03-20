@@ -940,6 +940,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     this.ensureOwnerWallet();
     this.ensureAuthKey();
     this._processing = 'Processing';
+
     const minerFee = calcMinerFee(
       { 'P2SH-P2WPKH': 1, P2PKH: 2 },
       { P2SH: 1, P2PKH: 3 + arg.tokens.length }
@@ -1117,7 +1118,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       this.utxoSpent = true;
       return tx;
     } catch (error: any) {
-      throw error;
+      throw new Error(error);
     } finally {
       this._processing = '';
     }
