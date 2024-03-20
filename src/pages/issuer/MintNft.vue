@@ -801,7 +801,6 @@ const onDone = () => {
 }
 
 watch(() => mintStrategy.value, (v) => {
-  console.log('v', v, MINT_A_MUTABLE_NFT)
   if (v?.value == MINT_A_MUTABLE_NFT) {
     return mintOptions.value.capability = NFTCapability.mutable
   }
