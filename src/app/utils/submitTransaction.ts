@@ -1,19 +1,22 @@
-import { Wallet, hexToBin } from "mainnet-js"
-import { Watchtower } from "../Watchtower"
+import { Wallet, hexToBin } from 'mainnet-js';
+import { Watchtower } from '../Watchtower';
 
 /**
  * Submits a signed transaction
  */
-export default async (signingResult:any, ownerWallet: Wallet): Promise<string|undefined> => {
+export default async (
+  signingResult: any,
+  ownerWallet: Wallet
+): Promise<string | undefined> => {
   if (signingResult?.signedTransaction) {
     // return ownerWallet!.submitTransaction(hexToBin(signResult.signedTransaction), true)
-    const w = new Watchtower()
-    const broadcastResp = await w.broadcastTx(signingResult.signedTransaction)
+    const w = new Watchtower();
+    const broadcastResp = await w.broadcastTx(signingResult.signedTransaction);
     if (broadcastResp && broadcastResp.success) {
-      return broadcastResp.txid
+      return broadcastResp.txid;
     }
-    if (w.error) {
-      throw w.error
+    if (broadcastResp.error) {
+      throw new Error(broadcastResp.error);
     }
   }
-}
+};
