@@ -493,12 +493,15 @@ const mint = async () => {
   }
 
 
+
   try {
     const tx = await minter.value.mintChildrenExt({
       tokens: nfts.value,
       recipient: mintOptions.value.recipient,
       newMinterCommitment: newMinterCommitment
     })
+
+    console.log('WALLET', minter.value.ownerWallet)
 
     if (tx) {
       progress.value = 'Transaction submitted, awaiting propagation...'
