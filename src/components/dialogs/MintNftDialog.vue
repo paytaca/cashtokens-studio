@@ -22,7 +22,8 @@
             <label>Send To </label>
             <q-input v-model="form.recipient" outlined
               :rules="[(v) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token addresss']"
-              bottom-slots></q-input>
+              bottom-slots>
+            </q-input>
           </div>
 
           <div class="col-xs-6 q-gutter-y-sm items-center">

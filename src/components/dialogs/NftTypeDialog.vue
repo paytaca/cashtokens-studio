@@ -16,9 +16,37 @@
         </div>
         <q-tab-panels v-model="editor">
           <q-tab-panel name="form">
-            <div class="row justify-center q-gutter-lg">
+            <div class="row justify-center q-gutter-md">
+              <div v-if="owner" class="col-xs-12 q-gutter-y-sm items-center">
+                <label>{{ ownerLabel }}</label>
+                <q-input v-model="newOwner" outlined :rules="newOwnerRules" bottom-slots>
+                </q-input>
+              </div>
+              <template v-if="token">
+                <div class="col-xs-12 text-h6 text-bold">
+                  Token Spec
+                </div>
+                <div class="col-xs-12 q-gutter-y-sm">
+                  <label>Category</label>
+                  <q-input :model-value="token.category" outlined disable readonly>
+                    <template v-slot:after>
+                      <CopyText :text="token.category" />
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-xs-12  q-gutter-y-sm">
+                  <label>Capability</label>
+                  <q-input :model-value="token.capability" outlined disable readonly>
+                  </q-input>
+                </div>
+                <div class="col-xs-12  q-gutter-y-sm">
+                  <label>Commitment</label>
+                  <q-input :model-value="token.commitment" outlined disable readonly>
+                  </q-input>
+                </div>
+              </template>
               <div class="col-xs-12">
-                <div class="text-h6 q-mb-md">
+                <div class="text-h6 q-mb-md text-bold">
                   Details
                 </div>
                 <q-form ref="form" class="q-gutter-md" @submit.prevent="onOk">
@@ -132,9 +160,9 @@
           <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg"
             :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
           <q-btn v-if="editor == 'form'" @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
-            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
+            :disable="iconFileUploading || assetFileUploading">{{ ok || 'Ok' }}</q-btn>
           <q-btn v-if="editor == 'json'" @click.stop="(e) => onOk()" color="primary" size="lg"
-            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
+            :disable="iconFileUploading || assetFileUploading">{{ ok || 'Ok' }}</q-btn>
         </div>
       </q-card-section>
     </q-card>
@@ -145,10 +173,12 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { IdentitySnapshot, NftType } from 'mainnet-js'
-import { ipfsToGatewayUrl } from 'src/app/utils'
+import { ipfsToGatewayUrl, isTokenAddress } from 'src/app/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
+
 
 const nftTypeSchema = {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -220,7 +250,10 @@ const props = defineProps<{
   token: { amount: number, category: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
-  title?: string
+  title?: string,
+  owner?: string // address,
+  ownerLabel?: string,
+  ok?: string
 }>()
 
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
@@ -239,8 +272,13 @@ const nftType = ref<NftType>({
   }
 })
 
-const nftTypeJson = ref()
+const newOwnerRules = [
+  // (v:string) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token address',
+  (v: string) => isTokenAddress(v) || 'Enter a valid token address'
+]
+const newOwner = ref<string>()
 
+const nftTypeJson = ref()
 const justMounted = ref<boolean>()
 const nftTypeAttributes = ref<{ [name: string]: string }>({})
 const iconFile = ref()
@@ -325,7 +363,7 @@ const onOk = async () => {
   const d = new Draft07(nftTypeSchema)
   const errors: any = d.validate(v)
   if (errors.length == 0) {
-    onDialogOK({ type: props.token.commitment, nftType: v })
+    onDialogOK({ type: props.token.commitment, nftType: v, owner: newOwner?.value })
   } else {
     $q.dialog({
       message: 'Format error! Make sure the value conforms to BCMR\'s NftType spec. If you\'re using the `extensions` field, make sure it has a maximum nesting depth of 2 and only has `string` values. Example: {"extensions": "value"}, {"extensions": {"key":"value"}}',
@@ -394,6 +432,7 @@ onMounted(() => {
       nftTypeAttributes.value = Object.assign({}, nftType.value.extensions?.attributes as any)
     }
   }
+  newOwner.value = props.owner
 })
 
 

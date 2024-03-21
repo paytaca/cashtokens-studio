@@ -177,7 +177,10 @@
                           </div>
                         </div>
                         <div class="row justify-end q-gutter-x-sm">
-                          <q-btn icon="visibility" label="View Metadata" text-color="primary"
+                          <q-btn icon="visibility" label="View" text-color="primary" @click.stop="viewNft(value.row)"
+                            dense no-caps>
+                          </q-btn>
+                          <q-btn icon="data_object" label="Metadata" text-color="primary"
                             @click.stop="openNftTypeDialog(value.row as BcmrIndexerNftsResponse)" dense no-caps>
                           </q-btn>
                         </div>
@@ -186,7 +189,6 @@
                   </q-table>
                 </div>
               </section>
-
             </div>
           </div>
         </template>
@@ -219,6 +221,7 @@ import { ipfsToGatewayUrl, formatCommitment } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { shortenTokenId } from 'src/app/utils'
 import NftTypeForPublicationDialog from 'src/components/dialogs/NftTypeForPublicationDialog.vue';
+import NftViewDialog from 'src/components/dialogs/NftViewDialog.vue'
 import { useEventBus } from 'src/composables';
 import { locateRegistry } from 'src/app/bcmr/locateRegistry';
 import { BcmrIndexerNftsResponse, NFTCollectionType } from 'src/app/bcmr/types';
@@ -226,6 +229,7 @@ import { buildMintTx } from 'src/app/transactions/buildMintTx';
 import { broadcastTx, signTx } from 'src/app/transactions';
 import { bigIntToVmNumber, binToHex, vmNumberToBigInt } from '@bitauth/libauth';
 import { useMinter } from 'src/stores/minter';
+import TokenCategory from 'src/components/TokenCategory.vue';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -410,6 +414,7 @@ const clearUnpublishedMetadata = async () => {
 }
 
 const onTableRequest = async (props: any) => {
+  console.log('ONtABLE REQUEST')
   collectionsPagination.value = props.pagination
   await populateCollections(user.wallet as Wallet, user.transactionSigner!)
 }
@@ -420,16 +425,33 @@ const onMintedNftsRequest = async (props: any) => {
   await populateMintedNfts()
 }
 
-const removeSavedNftsTypes = async () => {
-  for (const type of Object.keys(nftsTypesForPublication.value)) {
-    try {
-      await localForage.nftTypesStore.removeItem(`${selectedCollection.value.token.tokenId}-${type}`)
-    } catch (error) {
-      console.log('Error removing NFT Type from local storage')
-    }
-  }
-}
+// const removeSavedNftsTypes = async () => {
+//   for (const type of Object.keys(nftsTypesForPublication.value)) {
+//     try {
+//       await localForage.nftTypesStore.removeItem(`${selectedCollection.value.token.tokenId}-${type}`)
+//     } catch (error) {
+//       console.log('Error removing NFT Type from local storage')
+//     }
+//   }
+// }
 
+const viewNft = (row: any) => {
+  // Commitment in bcmr indexer is actually commitmentOrbottomAltStackItemHex not the NFT commitment, BCMR indexer needs to be refactored
+  // We are just future proofing
+
+  const nftTypeKey = row._meta.commitment || row._meta.commitmentOrbottomAltStackItemHex
+  $q.dialog({
+    component: NftViewDialog,
+    componentProps: {
+      tokenSymbol: selectedCollection.value?.identitySnapshot?.token?.symbol,
+      tokenIconUri: selectedCollection.value?.identitySnapshot?.uris?.icon,
+      tokenCategory: selectedCollection.value?.identitySnapshot?.token?.category,
+      nftTypeKey: nftTypeKey,
+      nftType: row[nftTypeKey]
+    }
+  })
+
+}
 
 const openNftTypeDialog = (token: BcmrIndexerNftsResponse) => {
   const defaultNftType = token[token.commitment || ''] || {

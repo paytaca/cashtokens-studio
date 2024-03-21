@@ -34,12 +34,12 @@
                         </template>
 
                         <template v-slot:item="i">
-                            <q-card class="my-card q-ma-sm text-center col-grow"
+                            <q-card v-ripple class="my-card q-ma-sm text-center col-grow"
                                 style="border-radius: 15px; max-width:190px">
                                 <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
                                     :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
-                                    alt="na">
+                                    alt="na" class="cursor-pointer" @click="viewNft(i.row)">
                                     <div class="absolute-bottom text-left">
                                         <div class="text-subtitle1">
                                             {{
@@ -95,6 +95,7 @@ import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTrans
 import { UtxoI, Wallet } from 'mainnet-js';
 import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
 import { EventBus, useQuasar } from 'quasar';
+import NftViewDialog from 'src/components/dialogs/NftViewDialog.vue'
 defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
 const user = useUser()
@@ -135,6 +136,27 @@ const isTokenTransferred = computed(() => {
 })
 
 const populatingTable = ref<boolean>()
+
+const viewNft = async (cashtoken: any) => {
+    // Commitment in bcmr indexer is actually commitmentOrbottomAltStackItemHex not the NFT commitment, BCMR indexer needs to be refactored
+    // We are just future proofing
+    const nftTypeKey = cashtoken.nftType._meta.commitment || cashtoken.nftType._meta.commitmentOrbottomAltStackItemHex
+
+    if (!cashtoken.identitySnapshot) {
+        await cashtoken.resolveIdentitySnapshot()
+    }
+    $q.dialog({
+        component: NftViewDialog,
+        componentProps: {
+            tokenSymbol: cashtoken.identitySnapshot?.token?.symbol,
+            tokenIconUri: cashtoken.identitySnapshot?.uris?.icon,
+            tokenCategory: cashtoken.identitySnapshot?.token?.category,
+            nftTypeKey: nftTypeKey,
+            nftType: cashtoken.nftType[nftTypeKey]
+        }
+    })
+
+}
 
 const openNFTTransferDialog = (nft: CashToken) => {
     nft.ownerWallet = user.wallet as Wallet // embedding wallet
@@ -186,7 +208,9 @@ const populateNftCollections = async (wallet: Wallet, transactionSigner: Transac
                     token
                 } = cashtoken
                 nftCollections.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+
                 await nftCollections.value.results[i].resolveNftType()
+                nftCollections.value.results[i].resolveIdentitySnapshot()
             })
 
         }
