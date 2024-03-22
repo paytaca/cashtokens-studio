@@ -152,7 +152,8 @@ const viewNft = async (cashtoken: any) => {
             tokenIconUri: cashtoken.identitySnapshot?.uris?.icon,
             tokenCategory: cashtoken.identitySnapshot?.token?.category,
             nftTypeKey: nftTypeKey,
-            nftType: cashtoken.nftType[nftTypeKey]
+            nftType: cashtoken.nftType[nftTypeKey],
+            utxo: cashtoken.utxo
         }
     })
 

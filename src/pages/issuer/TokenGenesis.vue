@@ -15,15 +15,16 @@
           <div class="row justify-center"
             :class="$q.screen.gt.xs && $q.screen.lt.lg ? 'justify-between' : 'justify-center'">
             <div class="col-xs-12 col-sm-2 text-center">
-              <q-img v-if="iconPreviewUrl" :src="iconPreviewUrl" class="rounded-borders"></q-img>
-              <q-icon v-else name="broken_image" size="250px" color="grey-8"></q-icon>
+              <q-img v-if="iconPreviewUrl" :src="iconPreviewUrl" class="rounded-borders" size="400px"></q-img>
+              <q-icon v-else name="broken_image" :size="$q.screen.xs ? '250px' : '400px'" color="grey-8"></q-icon>
             </div>
             <div class="col-xs-12 col-sm-8 col-lg-9">
               <div class="row justify-center">
                 <!-- <div class="text-h4 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Token Genesis</div> -->
-                <div class="text-h5 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">{{ route?.query?.title
+                <div class="text-h3 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white"
+                  :class="$q.screen.xs ? 'text-center' : ''">{{ route?.query?.title
         || 'Token Genesis' }}</div>
-                <div class="text-h6 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Dependencies</div>
+                <div class="text-h4 col-xs-12 col-md-8 q-mb-lg text-white text-bold text-white">Dependencies</div>
                 <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8 q-mb-lg">
                   <div class="row items-center text-center q-gutter-sm">
                     <q-icon name="warning" color="warning"></q-icon>
@@ -93,76 +94,8 @@
                   </div>
                   <q-form ref="form" class="col-xs-12 col-md-8 q-mb-lg q-gutter-y-md items-center row"
                     :disabled="disableForm" @submit.prevent="createToken">
-                    <div class="text-h6 col-xs-12 col-md-8 text-white text-bold text-white">
-                      Token Spec
-                    </div>
-                    <div class="col-12 q-gutter-y-sm">
-                      <label>{{ route.query.tokenType ? 'Token Type' : 'Select Token Type' }}</label>
-                      <q-option-group v-if="!route.query.tokenType" name="preferred_genre" v-model="tokenSpec.tokenType"
-                        :options="[{ value: 'nft', label: 'Non Fungible Token(NFT)' }, { value: 'ft', label: 'Fungible Token(FT)' }]"
-                        color="primary" inline />
-                      <q-input v-else :model-value="(route.query.tokenType as string)" outlined disable readonly>
-                        <template v-slot:append>
-                          <q-icon name="do_not_touch"></q-icon>
-                        </template>
-                      </q-input>
-                    </div>
-                    <template v-if="tokenSpec.tokenType == 'nft' || tokenSpec.tokenType == 'hybrid'">
-                      <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
-                        <label>{{ !route.query.capability ? 'Select ' : '' }} NFT Capability</label>
-                        <q-select v-if="!route.query.capability || showAdvancedOptions"
-                          v-model="tokenSpec.token.capability" :options="nftCapabilityOptions" outlined>
-                        </q-select>
-                        <q-input v-else :model-value="(route.query.capability as string)" outlined disable readonly>
-                          <template v-slot:append>
-                            <q-icon name="do_not_touch"></q-icon>
-                          </template>
-                        </q-input>
-                      </div>
-                      <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
-                        <label>NFT Commitment (Optional)</label>
-                        <q-input v-model="tokenSpec.token.commitment" :rules="commitmentRules" bottom-slots outlined>
-                          <template v-slot:prepend>
-                            <span class="text-grey-8">
-                              {{ tokenSpec.nftCommitmentFormat == 'hex' ? '0x' : '#' }}
-                            </span>
-                          </template>
-                          <template v-slot:append>
-                            <q-btn :label="tokenSpec.nftCommitmentFormat == 'hex' ? 'To Number' : 'To Hex'"
-                              text-color="warning" @click.stop="convertCommitment" dense no-caps></q-btn>
-                          </template>
-                          <template v-slot:hint>
-                            <span>No need to set this when creating a SequentialNftCollection. </span>
-                          </template>
-                        </q-input>
-                      </div>
-                    </template>
-                    <div v-if="tokenSpec.tokenType == 'ft' || tokenSpec.tokenType == 'hybrid'"
-                      class="col-12 q-gutter-y-sm">
-                      <label>Max Supply</label>
-                      <q-input v-model="tokenSpec.token.amount" outlined :rules="tokenAmountRules">
-                        <template v-slot:append>
-                          <q-btn text-color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
-                            @click="setFtSupplyToMax" label="Max" />
-                        </template>
-                      </q-input>
-                      <div class="row justify-end">
-                        <div class="col">
-                          <div v-if="tokenSpec.token.amount" class="row items-center justify-left">
-                            <span style="font-variant-numeric: tabular-nums;font-size: .9em;"
-                              class="col-auto text-thin text-orange text-caption">
-                              Raw FT Amount:
-                              {{ tokenSpec.token.amount.replace('.', '') }}
-                            </span>
-                            <span class="col-auto text-bold text-grey-4 q-ml-md"
-                              style="font-size: 2em; letter-spacing: 3px; font-variant: unicase; text-transform: uppercase;">
-                              {{ `${tokenMetadata.token!.symbol}` }}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    <div class="text-h6 col-xs-12 col-md-8 q-mt-lg text-white text-bold text-white">
+
+                    <div class="text-h4 col-xs-12 col-md-8 q-mt-lg text-white text-bold text-white">
                       Token Metadata
                       <div class="text-caption text-italic">
                         Describe your {{ tokenSpec?.tokenType == 'nft' ? 'NFT Collection' : 'token' }}
@@ -222,7 +155,7 @@
                         </template>
                       </q-file>
                     </div> -->
-                    <div class="col-xs-12 q-my-lg q-gutter-y-sm items-center"
+                    <div class="col-xs-12 q-gutter-y-sm items-center"
                       :style="$q.screen.xs ? 'margin-bottom: 4rem' : 'margin-bottom: 2rem'">
                       <label>
                         {{ tokenSpec.tokenType == 'nft' ? 'NFT Collection' : 'Token' }}
@@ -262,7 +195,7 @@
                         </q-input>
                       </div>
                     </div>
-                    <div class="col-12 text-h6">URIs</div>
+                    <div class="col-12 text-h6  text-bold">URIs</div>
                     <div class="col-12 q-gutter-y-sm">
                       <div v-for="[k], i  in  Object.entries(tokenMetadata.uris!)" :key="i" class="q-gutter-sm">
                         <template v-if="k != 'icon'">
@@ -289,9 +222,82 @@
                         </q-btn>
                       </div>
                     </div>
+                    <template v-if=showAdvancedOptions>
+                      <div class="text-h4 col-xs-12 col-md-8 text-white text-bold text-white">
+                        Token Spec
+                      </div>
+                      <div class="col-12 q-gutter-y-sm">
+                        <label>{{ route.query.tokenType ? 'Token Type' : 'Select Token Type' }}</label>
+                        <q-option-group v-if="!route.query.tokenType" name="preferred_genre"
+                          v-model="tokenSpec.tokenType"
+                          :options="[{ value: 'nft', label: 'Non Fungible Token(NFT)' }, { value: 'ft', label: 'Fungible Token(FT)' }]"
+                          color="primary" inline />
+                        <q-input v-else :model-value="(route.query.tokenType as string)" outlined disable readonly>
+                          <template v-slot:append>
+                            <q-icon name="do_not_touch"></q-icon>
+                          </template>
+                        </q-input>
+                      </div>
+                      <template v-if="tokenSpec.tokenType == 'nft' || tokenSpec.tokenType == 'hybrid'">
+                        <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
+                          <label>{{ !route.query.capability ? 'Select ' : '' }} NFT Capability</label>
+                          <q-select v-if="!route.query.capability || showAdvancedOptions"
+                            v-model="tokenSpec.token.capability" :options="nftCapabilityOptions" outlined>
+                          </q-select>
+                          <q-input v-else :model-value="(route.query.capability as string)" outlined disable readonly>
+                            <template v-slot:append>
+                              <q-icon name="do_not_touch"></q-icon>
+                            </template>
+                          </q-input>
+                        </div>
+                        <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
+                          <label>NFT Commitment (Optional)</label>
+                          <q-input v-model="tokenSpec.token.commitment" :rules="commitmentRules" bottom-slots outlined>
+                            <template v-slot:prepend>
+                              <span class="text-grey-8">
+                                {{ tokenSpec.nftCommitmentFormat == 'hex' ? '0x' : '#' }}
+                              </span>
+                            </template>
+                            <template v-slot:append>
+                              <q-btn :label="tokenSpec.nftCommitmentFormat == 'hex' ? 'To Number' : 'To Hex'"
+                                text-color="warning" @click.stop="convertCommitment" dense no-caps></q-btn>
+                            </template>
+                            <template v-slot:hint>
+                              <span>No need to set this when creating a SequentialNftCollection. </span>
+                            </template>
+                          </q-input>
+                        </div>
+                      </template>
 
+                    </template>
+
+                    <div v-if="tokenSpec.tokenType == 'ft' || tokenSpec.tokenType == 'hybrid'"
+                      class="col-12 q-gutter-y-sm">
+                      <label>Max Supply</label>
+                      <q-input v-model="tokenSpec.token.amount" outlined :rules="tokenAmountRules">
+                        <template v-slot:append>
+                          <q-btn text-color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
+                            @click="setFtSupplyToMax" label="Max" />
+                        </template>
+                      </q-input>
+                      <div class="row justify-end">
+                        <div class="col">
+                          <div v-if="tokenSpec.token.amount" class="row items-center justify-left">
+                            <span style="font-variant-numeric: tabular-nums;font-size: .9em;"
+                              class="col-auto text-thin text-orange text-caption">
+                              Raw FT Amount:
+                              {{ tokenSpec.token.amount.replace('.', '') }}
+                            </span>
+                            <span class="col-auto text-bold text-grey-4 q-ml-md"
+                              style="font-size: 2em; letter-spacing: 3px; font-variant: unicase; text-transform: uppercase;">
+                              {{ `${tokenMetadata.token!.symbol}` }}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                     <template v-if="tokenSpec.tokenType !== 'ft' && showAdvancedOptions">
-                      <div class="text-h6 col-xs-12 col-md-8  text-white text-bold text-white">
+                      <div class="text-h4 col-xs-12 col-md-8 q-mt-lg text-white text-bold text-white">
                         NFT Collection Type
                       </div>
                       <div class="col-12 q-gutter-y-sm">
@@ -306,7 +312,7 @@
                           :rules="[(v: any) => !!v || 'Required']" outlined>
                         </q-input>
                       </div>
-                      <div class="text-h6 col-xs-12 col-md-8  text-white text-bold text-white">
+                      <div class="text-h4 col-xs-12 col-md-8  text-white text-bold text-white">
                         NFT Metadata <span class="text-thin">(Optional)</span>
                       </div>
                       <div v-if="showAdvancedOptions" class="col-12 q-gutter-y-sm">
@@ -1072,6 +1078,10 @@ onBeforeMount(async () => {
       u.txid != genesisInput.value!.txid
     )[0]
   }
+})
+
+onMounted(() => {
+  showAdvancedOptions.value = false
 })
 
 </script>

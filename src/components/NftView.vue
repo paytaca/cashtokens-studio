@@ -22,18 +22,18 @@
       <q-img :src="ipfsToGatewayUrl(nftType?.uris?.icon || '')" class="rounded-borders" fit="fill" :ratio="1"
         style="max-height: 400px;"></q-img>
     </div>
-    <div class="col-xs-12 text-h6">
-      {{ nftType.name }}
+    <div class="col-xs-12 q-gutter-sm">
+      <div>Name</div>
+      <div class="word-break-all bg-grey-10 q-pa-sm rounded-borders">{{ nftType.name }}</div>
     </div>
-    <div class="col-xs-12 ellipsis">
-      <q-banner class="bg-grey-10 rounded-borders">
-        {{ nftType.description }}
-      </q-banner>
+    <div class="col-xs-12 q-gutter-sm">
+      <div>Description</div>
+      <div class="word-break-all bg-grey-10 q-pa-sm rounded-borders">{{ nftType.description }}</div>
     </div>
     <template v-if="Object.keys(nftType.uris || {}).length > 0">
       <div v-for="uriName, i in Object.keys(nftType.uris!)" class="col-xs-12 q-gutter-sm" :key="i">
         <div v-if="uriName != 'icon'" class="text-capitalize">{{ uriName }}</div>
-        <div v-if="uriName != 'icon'">
+        <div v-if="uriName != 'icon'" class="word-break-all bg-grey-10 q-pa-sm rounded-borders">
           <a :href=ipfsToGatewayUrl(nftType.uris![uriName]) target="_blank" rel="noopener noreferrer">
             <span class="text-primary word-break-all">{{ nftType.uris![uriName] }}</span>
           </a>
@@ -42,15 +42,15 @@
     </template>
     <div v-if="nftType.extensions" class="col-xs-12 q-gutter-sm">
       <div>Extensions</div>
-      <div class="word-break-all">{{ nftType.extensions }}</div>
+      <div class="word-break-all bg-grey-10 q-pa-sm rounded-borders">{{ nftType.extensions }}</div>
     </div>
     <div v-if="nftType.fields" class="col-xs-12 q-gutter-sm">
       <div>Fields</div>
-      <div>{{ nftType.fields }}</div>
+      <div class="word-break-all bg-grey-10 q-pa-sm rounded-borders">{{ nftType.fields }}</div>
     </div>
-    <div v-if="utxo" class="col-xs-12">
+    <div v-if="utxo" class="col-xs-12 q-gutter-sm">
       <div>Utxo</div>
-      <div>{{ utxo }}</div>
+      <div class="word-break-all bg-grey-10 q-pa-sm rounded-borders">{{ utxo }}</div>
     </div>
   </div>
 </template>

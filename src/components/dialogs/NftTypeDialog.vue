@@ -46,10 +46,19 @@
                 </div>
               </template>
               <div class="col-xs-12">
-                <div class="text-h6 q-mb-md text-bold">
+                <div class="text-h6 q-mb-md q-mt-lg text-bold">
                   Details
                 </div>
                 <q-form ref="form" class="q-gutter-md" @submit.prevent="onOk">
+                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
+                    <label>
+                      {{ identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number' }}
+                    </label>
+                    <q-input class="registry-field" v-model="nftTypeKey"
+                      placeholder="Sequence Number or Bottom Alt Stack Hex" :rules="nftTypeKeyRules" outlined required
+                      autofocus>
+                    </q-input>
+                  </div>
                   <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
                     <label>Name *</label>
                     <q-input class="registry-field" v-model="nftType.name"
@@ -250,6 +259,7 @@ const props = defineProps<{
   token: { amount: number, category: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
+  defaultNftTypeKey?: string,
   title?: string,
   owner?: string // address,
   ownerLabel?: string,
@@ -271,6 +281,12 @@ const nftType = ref<NftType>({
     attributes: {}
   }
 })
+
+const nftTypeKey = ref<string>()
+
+const nftTypeKeyRules = [
+  (v: string | number) => !v || /^[0-9a-fA-F]+$/.test(String(v)) || `${props.identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Enter a hex value' : 'Enter a number'}`
+]
 
 const newOwnerRules = [
   // (v:string) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token address',
