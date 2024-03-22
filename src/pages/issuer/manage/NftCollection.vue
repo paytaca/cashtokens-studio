@@ -2,39 +2,56 @@
   <q-page>
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10 q-mt-lg" :class="$q.screen.gt.xs ? 'q-ma-sm' : ''">
-        <div class="text-center text-h5 q-my-lg">
+        <div class="text-center text-h4 q-my-lg text-white text-bold">
           NFT Collections
         </div>
-        <div>
-          <div class="col-xs-12 text-right q-mx-md">
-            <q-btn icon="add" color="primary" :size="$q.screen.lt.sm ? 'md' : 'lg'"
-              :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
-              New Collection
-            </q-btn>
+        <div class="row q-mx-xs q-my-lg justify-between">
+          <q-btn label="Choose A Collection" text-color="primary" class="rounded-borders" outline no-caps
+            :size="$q.screen.xs ? 'md' : 'lg'">
+            <q-menu v-model="collectionMenu" anchor="bottom left" self="top left"
+              :style="$q.screen.lt.md ? 'width: 100%' : 'width: 55%'">
+              <q-item-label header>
+                Guarded NFT Collections
+              </q-item-label>
+              <q-separator />
+              <q-list ref=" scrollTargetRef" class="scroll" style="max-height: 30em;">
+                <q-infinite-scroll @load="onLoadMenu" :offset="250" :scroll-target="scrollTargetRef">
+                  <q-item v-for="(item, index) in  collections.results " :key="index" clickable
+                    @click="(e) => { selectedCollection = item; collectionMenu = !collectionMenu }">
+                    <q-item-section>
+                      <q-banner v-ripple class="rounded-borders text-grey-4 q-pa-sm"
+                        style="border: 3px solid rgb(73, 72, 72);border-radius: 15px; line-height: 1.3em;background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
+                        <div class="row items-center q-p-sm">
+                          <div class="col-xs-12">
+                            <q-chip size="1.5em" class="bg-transparent">
+                              <q-avatar>
+                                <q-img v-if="item.identitySnapshot?.uris?.icon"
+                                  :src="ipfsToGatewayUrl(item.identitySnapshot.uris.icon)" />
+                                <q-icon v-else name="broken_image" color="grey-8"></q-icon>
+                              </q-avatar>
+                              <span style="letter-spacing: 5px;">
+                                {{ item.identitySnapshot?.token?.symbol }}
+                              </span>
+                            </q-chip>
+                          </div>
+                        </div>
+                      </q-banner>
+                    </q-item-section>
+                  </q-item>
 
-          </div>
-          <q-table v-model:collectionsPagination="collectionsPagination" @request="onTableRequest" flat bordered grid
-            color="warning" :loading="populatingCollectionsTable" loading-label="Loading NFT collections"
-            :title="collections.results ? 'Click a collection' : ''" :rows="collections.results"
-            :rows-per-page-options="[12, 18, 24]" row-key="name" hide-header align="center" dense>
-            <template v-slot:item="i">
-              <div class="q-ma-sm col-xs-4 col-sm-1 col-grow">
-                <q-btn style="border-radius: 15px; max-width:95px; width: min-content"
-                  @click="() => { if (!i.row.processing) selectedCollection = i.row }"
-                  :class="selectedCollection?.txid == i.row?.txid ? 'selected' : ''">
-                  <q-card flat>
-                    <q-skeleton v-if="i.row.processing" height="80px" width="80px" type="rect" square></q-skeleton>
-                    <q-img v-else-if="i.row.identitySnapshot?.uris?.icon"
-                      style="border-radius: 10px;height: 80px; max-width:80px; min-width: 80px;" fit="fill"
-                      :src="i.row.identitySnapshot?.uris?.icon ? (i.row.identitySnapshot.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.identitySnapshot.uris.icon) : i.row.identitySnapshot.uris.icon) : ''"
-                      alt="na">
-                    </q-img>
-                    <q-icon v-else name="broken_image" color="grey-8" size="80px"></q-icon>
-                  </q-card>
-                </q-btn>
-              </div>
-            </template>
-          </q-table>
+                  <template v-slot:loading>
+                    <div class="text-center q-my-md">
+                      <q-spinner-dots color="primary" size="40px" />
+                    </div>
+                  </template>
+                </q-infinite-scroll>
+              </q-list>
+            </q-menu>
+          </q-btn>
+          <q-btn icon="add" color="primary" :size="$q.screen.xs ? 'md' : 'lg'" class="rounded-borders"
+            :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
+            New Collection
+          </q-btn>
         </div>
 
         <template v-if="selectedCollection">
@@ -130,7 +147,7 @@
                               {{
         !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
           value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-          `#${formatCommitment(value.row.commitment, 'vm-number', 'decimal')}` :
+          `#${formatCommitment(value.row.commitment, 'vm-number', 'decimal')} ` :
           value.row._meta?.commitment
       }}
                             </div>
@@ -151,13 +168,13 @@
                           </div>
                           <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                             <div class="text-grey-8 flex wrap">
-                              <span v-for="k, i in Object.keys(value.row[value.row.commitment]?.extensions || {})"
+                              <span v-for=" k, i  in  Object.keys(value.row[value.row.commitment]?.extensions || {}) "
                                 :key="'extensions' + i">
                                 <q-chip v-if="typeof (value.row[value.row.commitment]?.extensions[k]) == 'string'"
                                   :label="value.row[value.row.commitment]?.extensions[k]"></q-chip>
                                 <span v-else-if="typeof (value.row[value.row.commitment]?.extensions[k]) == 'object'">
                                   <span
-                                    v-for="kk, ii in Object.keys(value.row[value.row.commitment]?.extensions[k] || {})"
+                                    v-for=" kk, ii  in  Object.keys(value.row[value.row.commitment]?.extensions[k] || {}) "
                                     :key="kk + ii" class="flex wrap">
                                     <q-chip
                                       v-if="typeof (value.row[value.row.commitment]?.extensions[k][kk]) == 'string'"
@@ -172,7 +189,7 @@
                           <div v-if="Object.keys(value.row[value.row.commitment]).length == 0"
                             class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                             <div class="text-grey-8">
-                              {{ `<no metadata>` }}
+                              {{ `< no metadata>` }}
                             </div>
                           </div>
                         </div>
@@ -257,6 +274,10 @@ const collectionsPagination = ref({
   rowsPerPage: 12,
   rowsNumber: 12
 })
+
+const collectionMenu = ref<boolean>()
+
+const scrollTargetRef = ref()
 
 const selectedCollection = ref()
 
@@ -413,10 +434,41 @@ const clearUnpublishedMetadata = async () => {
   }
 }
 
-const onTableRequest = async (props: any) => {
-  console.log('ONtABLE REQUEST')
-  collectionsPagination.value = props.pagination
-  await populateCollections(user.wallet as Wallet, user.transactionSigner!)
+const onLoadMenu = async (index: number, done: CallableFunction) => {
+  if (user.wallet) {
+    populatingCollectionsTable.value = true
+    const query = {
+      limit: collectionsPagination.value.rowsPerPage,
+      offset: (collectionsPagination.value.page - 1) * collectionsPagination.value.rowsPerPage,
+      token_amount__eq: 0,
+      token_is_nft: true,
+      token_capability: NFTCapability.minting
+    }
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(user.wallet.getTokenDepositAddress(), query)
+    populatingCollectionsTable.value = false
+    const { results, ...rest } = resp
+    if (resp?.count > 0) {
+      collectionsPagination.value.rowsNumber = resp.count
+      results?.forEach(async (cashtoken, i) => {
+        const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
+        const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
+        const {
+          txid,
+          vout,
+          satoshis,
+          height,
+          coinbase,
+          token
+        } = cashtoken
+        results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
+        await results[i].resolveIdentitySnapshot()
+        collections.value.results.push(results[i])
+        if (i >= results.length) {
+          done()
+        }
+      })
+    }
+  }
 }
 
 
@@ -424,16 +476,6 @@ const onMintedNftsRequest = async (props: any) => {
   ownedNftsPagination.value = props.pagination
   await populateMintedNfts()
 }
-
-// const removeSavedNftsTypes = async () => {
-//   for (const type of Object.keys(nftsTypesForPublication.value)) {
-//     try {
-//       await localForage.nftTypesStore.removeItem(`${selectedCollection.value.token.tokenId}-${type}`)
-//     } catch (error) {
-//       console.log('Error removing NFT Type from local storage')
-//     }
-//   }
-// }
 
 const viewNft = (row: any) => {
   // Commitment in bcmr indexer is actually commitmentOrbottomAltStackItemHex not the NFT commitment, BCMR indexer needs to be refactored
@@ -503,36 +545,12 @@ const openAddNftDialog = () => {
       asset: ''
     }
   }
-
-  // $q.dialog({
-  //   component: MintNftDialog,
-  //   componentProps: {
-  //     ok: 'Mint',
-  //     title: `Mint ${selectedCollection.value?.identitySnapshot?.token?.symbol}`,
-  //     nftTypeKey,
-  //     nftType: defaultNftType,
-  //     category: selectedCollection.value?.identitySnapshot?.token?.category,
-  //     bytecode: selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode,
-  //     recipient: user.walletTokenAddress
-  //   },
-  //   ok: {
-  //     push: true
-  //   }
-
-  // }).onOk(async (data) => {
-  //   let nftTypeKey = data.nftTypeKey
-  //   if (!selectedCollection.value?.identitySnapshot?.token?.nfts?.parse?.bytecode) {
-  //     nftTypeKey = formatCommitment(nftTypeKey, 'decimal', 'vm-number')
-  //   }
-  //   await mint(data.recipient, data.category, nftTypeKey, Object.assign({}, data.nftType))
-  // })
   const token = {
     amount: BigInt(0),
     category: selectedCollection.value!.identitySnapshot!.token!.category,
     commitment: nftTypeKey,
     capability: NFTCapability.none
   }
-  console.log('TOKEN', token)
 
   $q.dialog({
     component: NftTypeDialog,
@@ -818,6 +836,9 @@ watch(() => progress.value, (v) => {
 onBeforeMount(async () => {
   if (user.wallet) {
     await populateCollections(user.wallet as Wallet, user.transactionSigner!)
+    if (collections.value.results.length > 0) {
+      selectedCollection.value = collections.value.results[0]
+    }
   }
 })
 
