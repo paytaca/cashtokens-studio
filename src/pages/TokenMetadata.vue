@@ -391,12 +391,14 @@
                                 <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                                   {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
                   value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-                  `#${formatCommitment(value.row._meta?.commitment || value.row.commitment, 'vm-number',
+                  `#${formatCommitment(value.row._meta?.commitment || value.row.commitment || '',
+                    'vm-number',
                     'decimal')}` :
                   value.row._meta?.commitment || value.row.commitment }}
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
-                                  {{ `(${value.row[value.row._meta?.commitment || value.row.commitment]?.name})` }}
+                                  {{ `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
+                                  }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -405,7 +407,7 @@
                                   Description:
                                   {{
                   value.row[value.row._meta?.commitment ||
-                    value.row.commitment]?.description ||
+                    value.row.commitment || '']?.description ||
                   '<no description>'
                 }}
                                 </div>
@@ -414,7 +416,7 @@
                                 <div class="text-grey-8">
                                   <!-- Commitment: {{
                   value.row._meta?.commitment || value.row.commitment
-                }} --> <q-chip v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]?.extensions?.attributes || {})"
+                }} --> <q-chip v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment || '']?.extensions?.attributes || {})"
                                     :label="value.row[value.row._meta?.commitment || value.row.commitment]?.extensions?.attributes[k]"
                                     :key="'attributes' + i">
                                   </q-chip>
@@ -423,10 +425,10 @@
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-8 flex wrap">
                                   <span
-                                    v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]?.extensions || {})"
+                                    v-for="k, i in Object.keys(value.row[value.row._meta?.commitment || value.row.commitment || '']?.extensions || {})"
                                     :key="'extensions' + i">
                                     <q-chip
-                                      v-if="typeof (value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]) == 'string'"
+                                      v-if="typeof (value.row[value.row._meta?.commitment || value.row.commitment || '']?.extensions[k]) == 'string'"
                                       :label="value.row[value.row._meta?.commitment || value.row.commitment]?.extensions[k]"></q-chip>
                                     <q-chip v-else :label="'ext.' + k + '...'"></q-chip>
                                   </span>
@@ -435,13 +437,11 @@
                               <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm"
                                 style="letter-spacing: 2px;">
                                 <div class="text-grey-8">
-                                  Capability: {{
-                  value.row.capability
-                }}
+                                  Capability: {{ value.row.capability }}
                                 </div>
                               </div>
                               <div
-                                v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0"
+                                v-if="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment || ''] || {}).length == 0"
                                 class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                                 <div class="text-grey-8">
                                   {{ `<no metadata>` }}
@@ -455,7 +455,7 @@
                           <q-td class="text-center">
                             <div>
                               <q-btn
-                                :label="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment]).length == 0 ? 'Add Metadata' : 'Edit Metadata'"
+                                :label="Object.keys(value.row[value.row._meta?.commitment || value.row.commitment || ''] || {}).length == 0 ? 'Add Metadata' : 'Edit Metadata'"
                                 text-color="primary" @click.stop="() => openNftTypeDialog(value.row)"
                                 :disable="!bcmrNewRevision">
                               </q-btn>
