@@ -41,7 +41,7 @@
               </q-td>
             </template>
 
-            <template v-slot:body-cell-tokenid="value">
+<template v-slot:body-cell-tokenid="value">
               <q-td class="text-center">
                 <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
                 <div v-else>
@@ -68,10 +68,11 @@
                     </template>
                     <template v-else>
                       <div style="font-variant-numeric: tabular-nums;" class="text-positive">
-                        {{
-                          ftAmountFormatter.toDecimal(value.row.balance.toString(),
-                            value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                        }}
+                        <!-- {{
+              ftAmountFormatter.toDecimal(value.row.balance.toString(),
+                value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+            }} -->
+                        {{ formatBalance(value.row) }}
                       </div>
                       <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                         ({{ value.row.identitySnapshot?.token?.symbol }})
@@ -92,7 +93,7 @@
                         <div class="text-weight-thin text-caption text-grey-8">
                           Decimals: <span
                             :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-                              value.row.identitySnapshot?.token?.decimals }}</span>
+              value.row.identitySnapshot?.token?.decimals }}</span>
                         </div>
                       </div>
                       <div v-else class="text-grey-8">
@@ -139,7 +140,6 @@ import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDia
 import { IdentitySnapshot, UtxoI, Wallet } from 'mainnet-js';
 import { shortenTokenId } from 'src/app/utils';
 import { useQuasar } from 'quasar';
-import TokenCategory from 'src/components/TokenCategory.vue'
 import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
 defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
@@ -166,6 +166,21 @@ const pagination = ref({
 const rowsPerPageOptions = computed(() => {
   return [12, 24, 36]
 })
+
+const formatBalance = computed(() => {
+  return (ct: FungibleTokenBalanceImpl) => {
+    const [w, d] = ftAmountFormatter.toDecimal(
+      ct.balance.toString(), ct.identitySnapshot?.token?.decimals
+    ).split('.')
+    let b = w
+    if (d && Number(d) > 0) {
+      b = b + `.${d}`
+    }
+    b = b.includes('.') ? b.replace(/\B(?=(\d{3})+(?!\d).)/g, ",") : b.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+    return b
+  }
+})
+
 
 const onFTTransferred = () => {
   hideDialog()

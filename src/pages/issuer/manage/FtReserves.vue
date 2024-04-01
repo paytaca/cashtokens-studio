@@ -6,20 +6,21 @@
           FT Reserve Supplies
         </h5>
         <div>
-          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            color="warning" :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
-              {
-                name: 'balance', label: 'Balance',
-                field: r => r.token?.amount || 0,
-                align: 'left',
-                headerClasses: 'text-h5 text-bold'
-              },
-              {
-                name: 'actions', label: '',
-                field: r => '',
-                align: 'center',
-              }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
+            :rows="ownedAuthHeads.results" color="warning" :loading="populatingTable"
+            loading-label="Loading, please wait..." :columns="[
+    {
+      name: 'balance', label: 'Balance',
+      field: r => r.token?.amount || 0,
+      align: 'left',
+      headerClasses: 'text-h5 text-bold'
+    },
+    {
+      name: 'actions', label: '',
+      field: r => '',
+      align: 'center',
+    }
+  ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
             :dense="$q.screen.lt.sm">
             <template v-slot:body-cell-balance="value">
               <q-td>
@@ -38,10 +39,7 @@
 
                     <div v-else>
                       <div style="font-variant-numeric: tabular-nums;" class="text-positive">
-                        {{
-                          ftAmountFormatter.toDecimal(value.row.token?.amount.toString(),
-                            value.row.identitySnapshot?.token?.decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                        }}
+                        {{ formatBalance(value.row) }}
                       </div>
                       <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                         ({{ value.row.identitySnapshot?.token?.symbol }})
@@ -60,7 +58,7 @@
                         <div class="text-weight-thin text-caption text-grey-8">
                           Decimals: <span
                             :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-                              value.row.identitySnapshot?.token?.decimals }}</span>
+    value.row.identitySnapshot?.token?.decimals }}</span>
                         </div>
                       </div>
                       <div v-else class="text-grey-8">
@@ -96,13 +94,11 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
+import { onMounted, ref, computed, inject, onBeforeUnmount } from 'vue';
 import { useUser } from 'src/stores/user'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { UtxoI, Wallet, NFTCapability } from 'mainnet-js';
-import TokenCategory from 'src/components/TokenCategory.vue'
-import TokenSymbol from 'src/components/TokenSymbol.vue'
+import { Wallet } from 'mainnet-js';
 import { EventBus, useQuasar } from 'quasar';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
@@ -110,7 +106,7 @@ import { useMinter } from 'src/stores/minter';
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { useDialogs } from 'src/composables'
 import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
-import { shortenTokenId, copyText } from 'src/app/utils'
+import { shortenTokenId } from 'src/app/utils'
 import CopyText from 'src/components/CopyText.vue';
 
 const $q = useQuasar()
@@ -150,17 +146,19 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'balance', 'decimals', 'actions']
 })
 
-// const formatReservedSupply = computed(() => {
-//   return (authchainIdentity: AuthchainIdentity) => {
-
-//     if (authchainIdentity.token!.amount && authchainIdentity.identitySnapshot?.token?.decimals) {
-//       return ftAmtFormatter.toDecimal(
-//         authchainIdentity.token!.amount.toString(), authchainIdentity.identitySnapshot?.token?.decimals
-//       )
-//     }
-//     return authchainIdentity.token?.amount
-//   }
-// })
+const formatBalance = computed(() => {
+  return (authchainIdentity: AuthchainIdentity) => {
+    const [w, d] = ftAmountFormatter.toDecimal(
+      authchainIdentity.token!.amount.toString(), authchainIdentity.identitySnapshot?.token?.decimals
+    ).split('.')
+    let b = w
+    if (d && Number(d) > 0) {
+      b = b + `.${d}`
+    }
+    b = b.includes('.') ? b.replace(/\B(?=(\d{3})+(?!\d).)/g, ",") : b.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+    return b
+  }
+})
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
