@@ -8,8 +8,10 @@
           <CopyText :text="tokenCategory.category" />
         </template>
       </q-input>
-      <q-input v-model="tokenCategory.symbol" label="Symbol *" placeholder="E.g. BITCATS-NFT or BITCASH"
-        :rules="symbolRules" outlined></q-input>
+      <q-input label="Symbol *" placeholder="E.g. BITCATS-NFT or BITCASH" :rules="symbolRules"
+        :model-value="tokenCategory.symbol"
+        @update:model-value="(v) => tokenCategory.symbol = String((v ?? '')).toUpperCase()" outlined>
+      </q-input>
       <q-input v-if="!(hide || []).includes('decimals')" v-model="tokenCategory.decimals" label="Decimals" outlined
         type="number">
       </q-input>

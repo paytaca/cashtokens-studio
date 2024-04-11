@@ -9,17 +9,21 @@
         </template>
       </q-input>
       <q-input v-if="!hide?.includes('amount')" v-model="token.amount" :label="(labels || {})['amount'] ?? 'Amount'"
-        outlined>
+        outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive">
+        <template v-if="symbol" v-slot:prepend>
+          <span class="text-grey-8" style="letter-spacing: 5px;">{{ symbol }}</span>
+        </template>
         <template v-if="enableMaxAmountSetter" v-slot:append>
           <q-btn text-color="warning" :class="$q.dark.isActive ? '' : 'text-black'" @click="setFtSupplyToMax"
             label="Max" />
         </template>
       </q-input>
       <q-select v-if="!hide?.includes('capability')" v-model="token.capability"
-        :options="capabilities ?? [NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]" label="Capability"
-        outlined>
+        :options="capabilities ?? [NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]"
+        label="NFT Capability" outlined>
       </q-select>
-      <q-input v-if="!hide?.includes('commitment')" v-model="token.commitment" label="Commitment" outlined></q-input>
+      <q-input v-if="!hide?.includes('commitment')" v-model="token.commitment" label="NFT Commitment"
+        outlined></q-input>
     </div>
   </div>
 </template>
@@ -38,7 +42,8 @@ export type TokenProps = {
     [field: string]: string
   },
   capabilities?: NFTCapability[],
-  title?: string
+  title?: string,
+  symbol?: string
 }
 const props = defineProps<TokenProps>()
 const token = defineModel<Omit<TokenI, 'amount'> & { amount: string }>('token', { required: true })

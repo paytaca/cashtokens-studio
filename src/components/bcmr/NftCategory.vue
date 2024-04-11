@@ -11,15 +11,17 @@
       <div class="text-h5 q-my-lg">Parse</div>
       <q-input v-model="nftCategory.parse.bytecode" label="Bytecode"
         placeholder="Enter the parsing bytecode. Leave this empty for sequential." outlined
-        :rules="[(v: string) => /[0-9A-Fa-f]+/.test(v) || 'Value must be a hex string']">
+        :rules="[(v: string) => !v || /[0-9A-Fa-f]+/.test(v) || 'Value must be a hex string']">
         <template v-slot:prepend>
           <span class="text-grey-8 text-italic">0x</span>
         </template>
       </q-input>
-      <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">Type</div>
+      <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">
+        {{ nftCollectionType == NFTCollectionType.sequential ? 'NFT Sequence#' : 'Bottom Alt Stack Hex' }}
+      </div>
       <div v-for="type, i in Object.keys(nftCategory.parse.types || {})" :key="'nft-category' + i">
         <q-input :model-value="type"
-          :label="nftCollectionType == NFTCollectionType.sequential ? 'Sequence #' : 'Bottom Alt Stack Hex'" outlined
+          :label="nftCollectionType == NFTCollectionType.sequential ? 'Sequence#' : 'Bottom Alt Stack Hex'" outlined
           :disable="nftCollectionType == NFTCollectionType.sequential">
         </q-input>
         <NftTypeComponent v-model:nft-type="nftCategory.parse.types[type]" class="q-my-lg" />

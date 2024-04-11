@@ -1,6 +1,6 @@
 <template>
   <div class="q-gutter-lg">
-    <div class="text-h5 q-my-lg">NFT Metadata</div>
+    <div class="text-h5 q-my-lg">NFT Type</div>
     <q-input v-model="nftType.name" label="Name *" outlined></q-input>
     <q-input v-model="nftType.description" label="Description" outlined></q-input>
     <template v-if="nftType.fields != undefined">

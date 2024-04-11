@@ -88,11 +88,11 @@ const menu = computed<any[]>(() => {
           href: hrefs.manageNFTReserves,
           icon: 'art_track',
         },
-        {
-          label: 'NFT Collections',
-          href: hrefs.manageNFTCollection,
-          icon: 'art_track',
-        },
+        // {
+        //   label: 'NFT Collections',
+        //   href: hrefs.manageNFTCollection,
+        //   icon: 'art_track',
+        // },
         {
           label: 'Metadata',
           href: hrefs.manageRegistries,
