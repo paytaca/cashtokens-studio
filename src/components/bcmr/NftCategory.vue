@@ -10,8 +10,12 @@
       </q-banner>
       <div class="text-h5 q-my-lg">Parse</div>
       <q-input v-model="nftCategory.parse.bytecode" label="Bytecode"
-        placeholder="Enter bytecode used to parse the NFTs of this collection. Leave this empty for sequential NFTs."
-        outlined></q-input>
+        placeholder="Enter the parsing bytecode. Leave this empty for sequential." outlined
+        :rules="[(v: string) => /[0-9A-Fa-f]+/.test(v) || 'Value must be a hex string']">
+        <template v-slot:prepend>
+          <span class="text-grey-8 text-italic">0x</span>
+        </template>
+      </q-input>
       <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">Type</div>
       <div v-for="type, i in Object.keys(nftCategory.parse.types || {})" :key="'nft-category' + i">
         <q-input :model-value="type"

@@ -6,53 +6,54 @@
           NFT Reserves
         </h5>
         <div>
-          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            color="warning" :loading="populatingTable" loading-label="Loading, please wait..." :columns="[
-              {
-                name: 'icon', label: 'Icon',
-                field: r => r.identitySnapshot?.uris?.icon || '<not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'symbol', label: 'Symbol',
-                field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em',
-                style: 'font-size: 1em;font-weight: bold'
-              },
-              {
-                name: 'tokenid', label: 'Category',
-                field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'commitment', label: 'Commitment',
-                field: r => r.token?.commitment || '<empty>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em',
-                classes: r => {
-                  if (r.token?.commitment == '') {
-                    return 'text-grey-8'
-                  }
-                  return ''
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
+            :rows="ownedAuthHeads.results" color="warning" :loading="populatingTable"
+            loading-label="Loading, please wait..." :columns="[
+            {
+              name: 'icon', label: 'Icon',
+              field: r => r.identitySnapshot?.uris?.icon || '<not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+            },
+            {
+              name: 'symbol', label: 'Symbol',
+              field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em',
+              style: 'font-size: 1em;font-weight: bold'
+            },
+            {
+              name: 'tokenid', label: 'Category',
+              field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+            },
+            {
+              name: 'commitment', label: 'Commitment',
+              field: r => r.token?.commitment || '<empty>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em',
+              classes: r => {
+                if (r.token?.commitment == '') {
+                  return 'text-grey-8'
                 }
-              },
-              {
-                name: 'capability', label: 'Capability',
-                field: r => r.token?.capability,
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'actions', label: 'Actions',
-                field: r => '',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-
+                return ''
               }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+            },
+            {
+              name: 'capability', label: 'Capability',
+              field: r => r.token?.capability,
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+            },
+            {
+              name: 'actions', label: 'Actions',
+              field: r => '',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+
+            }
+          ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
             :dense="$q.screen.lt.sm">
 
             <template v-slot:body-cell-icon="value">
@@ -62,7 +63,7 @@
                 </div>
                 <div v-else>
                   <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
                   </q-avatar>
                   <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                 </div>
@@ -129,6 +130,7 @@ import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useMinter } from 'src/stores/minter';
 import { useUI } from 'src/stores/ui';
+import { ipfsToGatewayUrl } from 'src/app/utils';
 
 const $q = useQuasar()
 const ui = useUI()
