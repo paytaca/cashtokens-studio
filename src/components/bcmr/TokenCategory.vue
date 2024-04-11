@@ -2,7 +2,8 @@
   <div>
     <div class="q-gutter-lg q-my-lg">
       <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
-      <q-input v-model="tokenCategory.category" label="Category *" outlined readonly>
+      <q-input v-if="!(hide || []).includes('category')" v-model="tokenCategory.category" label="Category *" outlined
+        readonly>
         <template v-slot:append>
           <CopyText :text="tokenCategory.category" />
         </template>

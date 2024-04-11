@@ -4,16 +4,16 @@
     <div v-else>
       <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
       <q-section class="q-gutter-y-lg">
-        <q-input v-model="identitySnapshot.name" label="Name *" placeholder="E.g. `Bitcats` or `ACME Class A Shares`"
-          required outlined>
+        <q-input v-model="identitySnapshot.name" label="Token Name *"
+          placeholder="E.g. `Bitcats` or `ACME Class A Shares`" required outlined>
         </q-input>
-        <q-input v-model="identitySnapshot.description" label="Description"
-          placeholder="E.g. Bitcats is the best NFT..." autogrow outlined>
+        <q-input v-model="identitySnapshot.description" label="Describe your token"
+          placeholder="E.g. Bitcats is the best NFT..." autogrow outlined aria-rowspan="2">
         </q-input>
       </q-section>
       <q-section>
         <slot name="token">
-          <TokenCategoryComponent v-if="identitySnapshot.token" v-model:token="identitySnapshot.token" />
+          <TokenCategoryComponent v-if="identitySnapshot.token" v-model:token="identitySnapshot.token" :hide="hide" />
         </slot>
       </q-section>
       <q-section>
@@ -41,7 +41,8 @@ import ExtensionsComponent from './Extensions.vue'
 
 export type IdentitySnapshotProps = {
   title?: string,
-  editor?: 'json' | 'form'
+  editor?: 'json' | 'form',
+  hide?: string[]
 }
 const props = defineProps<IdentitySnapshotProps>()
 const editor = ref<'json' | 'form'>(props.editor || 'form')

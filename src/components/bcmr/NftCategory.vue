@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="q-gutter-lg q-mt-lg">
-      <div class="text-h4 q-my-lg">NFT Category</div>
+      <div class="text-h4 q-my-lg">{{ title }}</div>
       <q-input v-if="nftCategory.description" v-model="nftCategory.description" label="Description" outlined></q-input>
       <div v-if="nftCategory.fields" class="text-h5 q-my-lg">Fields</div>
       <q-banner v-if="nftCategory.fields" style="background-color: #55454512; color:orange" class="rounded-borders">
@@ -9,25 +9,40 @@
         registry and add the field values manually.
       </q-banner>
       <div class="text-h5 q-my-lg">Parse</div>
-      <q-input v-model="nftCategory.parse.bytecode" label="Bytecode" outlined></q-input>
-      <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">Types</div>
+      <q-input v-model="nftCategory.parse.bytecode" label="Bytecode"
+        placeholder="Enter bytecode used to parse the NFTs of this collection. Leave this empty for sequential NFTs."
+        outlined></q-input>
+      <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">Type</div>
       <div v-for="type, i in Object.keys(nftCategory.parse.types || {})" :key="'nft-category' + i">
         <q-input :model-value="type"
-          :label="nftCategory.parse.bytecode && nftCategory.parse.bytecode != '00cf6b' ? 'Sequence #' : 'Bottom Alt Stack Hex'"
-          outlined disable>
+          :label="nftCollectionType == NFTCollectionType.sequential ? 'Sequence #' : 'Bottom Alt Stack Hex'" outlined
+          :disable="nftCollectionType == NFTCollectionType.sequential">
         </q-input>
-        <NftTypeComponent v-model:nft-type="nftCategory.parse.types[type]" />
+        <NftTypeComponent v-model:nft-type="nftCategory.parse.types[type]" class="q-my-lg" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, defineModel } from 'vue'
+import { computed, defineComponent, defineModel } from 'vue'
 import type { NftCategory } from 'mainnet-js'
 import NftTypeComponent from 'src/components/bcmr/NftType.vue'
+import { NFTCollectionType } from 'src/app/bcmr/types';
+
+export type NftCategoryProps = {
+  title?: string,
+  hide?: string[],
+  labels?: {
+    [field: string]: string
+  }
+}
 
 defineComponent({ name: 'NftCategoryComponent' })
+const props = defineProps<NftCategoryProps>()
 const nftCategory = defineModel<NftCategory>('nftCategory', { required: true })
+const nftCollectionType = computed<NFTCollectionType>(() => {
+  return !nftCategory.value.parse.bytecode || nftCategory.value.parse.bytecode == '00cf6b' ? NFTCollectionType.sequential : NFTCollectionType.parsable
+})
 
 </script>
