@@ -31,7 +31,7 @@
         <q-input label="Web" :model-value="uris['web']" @update:model-value="onUpdateModelValue"
           @focus="selectedUriName = 'web'" outlined autogrow>
           <template v-slot:after>
-            <q-btn icon="remove" @click="() => deleteUri('web')"></q-btn>
+            <q-btn icon="remove" @click="() => deleteUri('web')" text-color="negative"> </q-btn>
           </template>
         </q-input>
       </div>
@@ -40,7 +40,7 @@
           :model-value="uris[uriName]" @update:model-value="onUpdateModelValue" @focus="selectedUriName = uriName"
           outlined autogrow>
           <template v-slot:after>
-            <q-btn icon="remove" @click="() => deleteUri(uriName)"></q-btn>
+            <q-btn icon="remove" @click="() => deleteUri(uriName)" text-color="negative"></q-btn>
           </template>
         </q-input>
       </div>

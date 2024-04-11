@@ -1,7 +1,7 @@
 <template>
   <div>
     <div class="q-gutter-lg q-my-lg">
-      <div class="text-h4 q-my-lg">Token Spec</div>
+      <div class="text-h4 q-my-lg">{{ title }}</div>
       <q-input v-if="!hide?.includes('tokenId')" v-model="token.tokenId"
         :label="(labels || {})['tokenId'] ?? 'Token ID'" outlined readonly>
         <template v-slot:append>
@@ -16,7 +16,8 @@
         </template>
       </q-input>
       <q-select v-if="!hide?.includes('capability')" v-model="token.capability"
-        :options="capabilities ?? [NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]" outlined>
+        :options="capabilities ?? [NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]" label="Capability"
+        outlined>
       </q-select>
       <q-input v-if="!hide?.includes('commitment')" v-model="token.commitment" label="Commitment" outlined></q-input>
     </div>
@@ -36,7 +37,8 @@ export type TokenProps = {
   labels?: {
     [field: string]: string
   },
-  capabilities?: NFTCapability[]
+  capabilities?: NFTCapability[],
+  title?: string
 }
 const props = defineProps<TokenProps>()
 const token = defineModel<Omit<TokenI, 'amount'> & { amount: string }>('token', { required: true })

@@ -35,11 +35,11 @@
                       AuthGuard contract in keeping your token safe. AuthGuard requires an <b>AuthKey</b>, creating an
                       AuthKey also requires a genesis input, <q-btn icon="handyman" text-color="primary"
                         :label="!progress ? 'Click here!' : ''" @click.stop="generateAuthKeyGenesisInput"
-                        :disable="!!progress" no-caps dense>
-                        <q-spinner-dots v-if="!!progress && !genesisInput?.txid" class="q-ml-sm"></q-spinner-dots>
+                        :disable="!!progress" size="lg" no-caps dense>
+                        <q-spinner-dots v-if="!!progress && !authKey" class="q-ml-sm"></q-spinner-dots>
                       </q-btn> to generate the genesis input for a new <b>AuthKey</b>. <span
                         v-if="authKeyOptions && authKeyOptions.length > 0"> If you want to use
-                        an existing <b>AuthKey</b> <q-btn text-color="secondary" label="Click here!"
+                        an existing <b>AuthKey</b> <q-btn text-color="secondary" label="Click here!" size="lg"
                           @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps>
                         </q-btn></span>
                     </span>
@@ -75,19 +75,24 @@
 
               <div class="text-h4 q-mb-lg">Token Type</div>
               <q-select v-if="!route.query.tokenType" v-model="tokenType"
-                :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'Non-Fungible Token (NFT)' }, { value: TokenType.hybrid, label: 'Hybrid' }]"
+                :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'Non-Fungible Token (NFT)' }]"
                 outlined autofocus>
+                <template v-slot:prepend>
+                  <q-icon v-if="tokenType?.value"
+                    :name="tokenType.value == TokenType.ft ? 'money' : 'collections'"></q-icon>
+                </template>
               </q-select>
               <template v-if="authKey && tokenType">
                 <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
-                  :hide="['commitment', 'capability']" :labels="{ amount: 'Maximum Supply' }"
+                  :hide="['commitment', 'capability']" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
                   enable-max-amount-setter />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
-                  v-model:token="token" :hide="['amount', 'commitment']"
+                  v-model:token="token" :hide="['amount', 'commitment']" title="Token Details"
                   :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft" v-model:token="token"
-                  :hide="['amount']" />
-                <Token v-else v-model:token="token" :labels="{ amount: 'Maximum Supply' }" enable-max-amount-setter />
+                  :hide="['amount']" title="Token Details" />
+                <Token v-else v-model:token="token" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
+                  enable-max-amount-setter />
                 <q-input
                   v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                   :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
@@ -117,14 +122,10 @@
                     v-model:nft-category="registry.identities[registry.registryIdentity][registry.latestRevision].token!.nfts"
                     title="Token's NFT category details (Optional)" />
                 </template>
-
               </template>
-
             </div>
-
           </div>
         </div>
-        <!-- Progress {{ progress }} -->
         <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
           <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
           <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
@@ -138,7 +139,7 @@
 <script setup lang="ts">
 
 import { computed, onBeforeMount, onMounted, ref, toRaw, watch } from 'vue'
-import { NFTCapability, type Registry, type IdentitySnapshot, type TokenI, type UtxoI, type Wallet, TokenCategory, URIs } from 'mainnet-js'
+import { NFTCapability, type Registry, type IdentitySnapshot, type TokenI, type UtxoI, type Wallet } from 'mainnet-js'
 import { useRoute, useRouter } from 'vue-router'
 import Token from 'src/components/Token.vue'
 import TokenCategoryComponent from 'src/components/bcmr/TokenCategory.vue'
@@ -155,7 +156,6 @@ import { useQuasar } from 'quasar'
 import { shortenTx } from 'src/app/utils'
 import { createRegistryTemplate } from 'src/app/bcmr'
 import { getInstance as getAuthguardInstance } from 'src/app/contracts'
-import { ISODateString } from 'src/app/bcmr/types'
 import { Draft07 } from 'json-schema-library'
 import bcmrSchema from 'src/app/bcmr/bcmr-v2.schema.json'
 import { storeRegistry } from 'src/app/ipfs'
@@ -223,6 +223,20 @@ const generateGenesisInput = async () => {
           u.vout == 0 &&
           u.satoshis >= DEFAULT_TOKEN_VALUE
         )[0]
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'generate-genesis-input',
+          timestamp: new Date().getTime(),
+          successMsg: `Genesis input created!`
+        })
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'success',
+            statusText: `Genesis input created!`,
+            txid: tx
+          }
+        })
       }
     }
   } catch (error) {
@@ -259,6 +273,22 @@ const generateAuthKeyGenesisInput = async () => {
           u.txid != genesisInput.value?.txid &&
           u.txid == tx
         )[0]
+
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'generate-genesis-input',
+          timestamp: new Date().getTime(),
+          successMsg: `Genesis input for AuthKey created!`
+        })
+
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'success',
+            statusText: `Genesis input created!`,
+            txid: tx
+          }
+        })
       }
     }
 
@@ -386,7 +416,7 @@ const createToken = async () => {
           }
         }).onOk(() => {
           if (tokenType.value?.value == 'nft' || tokenType.value?.value == 'hybrid') {
-            router.push({ name: 'nft-collection' })
+            router.push({ name: 'nft-reserves' })
           } else {
             router.push({ name: 'ft-reserves' })
           }
