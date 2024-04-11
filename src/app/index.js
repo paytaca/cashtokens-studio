@@ -12,3 +12,4 @@ export * from './ProcessingMessage';
 // export * from './ProcessingMessageHandler'
 export * from './CtsRegistry';
 export * from './ChainGraph';
+export * from './types';

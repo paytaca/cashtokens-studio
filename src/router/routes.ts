@@ -18,7 +18,8 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'create-token',
         path: 'tokens/create',
-        component: () => import('pages/issuer/CreateToken.vue'),
+        // component: () => import('pages/issuer/CreateToken.vue'),
+        component: () => import('pages/issuer/TokenGenesis.vue'),
       },
       {
         name: 'token-genesis',
@@ -80,10 +81,6 @@ const routes: RouteRecordRaw[] = [
         name: 'authguards',
         path: 'authguards',
         component: () => import('pages/issuer/manage/AuthGuards.vue'),
-      },
-      {
-        path: 'token/:identifier',
-        component: () => import('pages/TokenMetadata.vue'),
       },
     ],
   },
