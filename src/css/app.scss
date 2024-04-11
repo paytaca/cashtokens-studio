@@ -207,3 +207,8 @@ body.body--dark {
 .rounded-borders {
   border-radius: 15px;
 }
+
+.q-field--readonly.q-field--float .q-field__native,
+.q-field--readonly.q-field--float .q-field__input {
+  color: #816f6f;
+}

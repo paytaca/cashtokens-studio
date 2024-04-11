@@ -16,7 +16,8 @@
         </template>
       </q-input>
       <q-select v-if="!hide?.includes('capability')" v-model="token.capability"
-        :options="[NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]" outlined></q-select>
+        :options="capabilities ?? [NFTCapability.minting, NFTCapability.mutable, NFTCapability.none]" outlined>
+      </q-select>
       <q-input v-if="!hide?.includes('commitment')" v-model="token.commitment" label="Commitment" outlined></q-input>
     </div>
   </div>
@@ -34,7 +35,8 @@ export type TokenProps = {
   maxAmount?: string,
   labels?: {
     [field: string]: string
-  }
+  },
+  capabilities?: NFTCapability[]
 }
 const props = defineProps<TokenProps>()
 const token = defineModel<Omit<TokenI, 'amount'> & { amount: string }>('token', { required: true })
