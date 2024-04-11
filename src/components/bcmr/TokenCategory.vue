@@ -1,13 +1,14 @@
 <template>
   <div>
     <div class="q-gutter-lg q-my-lg">
-      <div class="text-h4 q-my-lg">Token Metadata</div>
-      <q-input v-model="tokenCategory.category" label="Category" outlined readonly>
+      <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
+      <q-input v-model="tokenCategory.category" label="Category *" outlined readonly>
         <template v-slot:append>
           <CopyText :text="tokenCategory.category" />
         </template>
       </q-input>
-      <q-input v-model="tokenCategory.symbol" label="Symbol" :rules="symbolRules" outlined></q-input>
+      <q-input v-model="tokenCategory.symbol" label="Symbol *" placeholder="E.g. BITCATS-NFT or BITCASH"
+        :rules="symbolRules" outlined></q-input>
       <q-input v-if="!(hide || []).includes('decimals')" v-model="tokenCategory.decimals" label="Decimals" outlined
         type="number">
       </q-input>
@@ -25,6 +26,7 @@ import CopyText from '../CopyText.vue';
 import { default as reservedCryptoSymbols } from 'src/app/bcmr/reserved-token-symbols-cryptocurrencies.json'
 
 export type TokenCategoryProps = {
+  title?: string,
   hide?: string[],
   labels?: {
     [field: string]: string

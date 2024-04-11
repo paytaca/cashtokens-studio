@@ -1,2 +1,3 @@
-export * from './interfaces'
-export * from './storeRegistry'
+export * from './types';
+export * from './storeRegistry';
+export * from './uploadIcon';

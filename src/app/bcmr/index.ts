@@ -40,7 +40,7 @@ import {
   sha256,
   utf8ToBin,
 } from 'mainnet-js';
-import { BcmrStorageArtifact } from '../ipfs/interfaces';
+import type { BcmrStorageArtifact } from '../ipfs';
 import { ISODateString } from './types';
 import { storeRegistry } from '../ipfs';
 export { locateRegistry } from './locateRegistry';
@@ -232,7 +232,7 @@ export class Bcmr implements Registry {
    * that the registry uri can be populated.
    */
   async storeRegistry(): Promise<BcmrStorageArtifact | undefined> {
-    return await storeRegistry(this);
+    return await storeRegistry(this.getContent());
   }
 }
 
@@ -274,3 +274,5 @@ export const getIdentitySnapshot = async (
 };
 
 export const getInstance = create;
+
+export * from './createRegistryTemplate';
