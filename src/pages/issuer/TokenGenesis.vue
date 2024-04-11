@@ -12,6 +12,12 @@
     <q-page-container>
       <q-page>
         <div class="row justify-center q-mx-sm">
+          <div v-if="authKey && genesisInput" class="col-xs-12 col-sm-6 q-mt-lg">
+            <span class="text-h2 flex flex-wrap item-center q-gutter-x-sm">
+              <span>Create Token</span>
+
+            </span>
+          </div>
           <div class="col-xs-12 col-sm-6 q-col-gutter-y-lg q-ma-lg">
             <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8 q-mb-lg">
               <div class="row items-center text-center q-gutter-sm justify-center">
@@ -69,9 +75,7 @@
             </template>
 
             <div v-if="genesisInput?.txid && authKey?.txid">
-              <div class="text-right">
-                <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
-              </div>
+
 
               <div class="text-h4 q-mb-lg">Token Type</div>
               <q-select v-if="!route.query.tokenType" v-model="tokenType"
@@ -82,17 +86,21 @@
                     :name="tokenType.value == TokenType.ft ? 'money' : 'collections'"></q-icon>
                 </template>
               </q-select>
+              <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
+                <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
+              </div>
               <template v-if="authKey && tokenType">
                 <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
                   :hide="['commitment', 'capability']" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
-                  enable-max-amount-setter />
+                  enable-max-amount-setter :symbol="symbol" />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
                   v-model:token="token" :hide="['amount', 'commitment']" title="Token Details"
-                  :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" />
+                  :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft" v-model:token="token"
-                  :hide="['amount']" title="Token Details" />
+                  :hide="['amount']" title="Token Details" :symbol="symbol" />
                 <Token v-else v-model:token="token" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
-                  enable-max-amount-setter />
+                  enable-max-amount-setter :symbol="symbol" />
+
                 <q-input
                   v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                   :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
@@ -153,7 +161,7 @@ import { signTx } from 'src/app/transactions/signTx'
 import { broadcastTx, buildGenesisTx } from 'src/app/transactions'
 import { useUser } from 'src/stores/user'
 import { useQuasar } from 'quasar'
-import { shortenTx } from 'src/app/utils'
+import { shortenTx, ipfsToGatewayUrl } from 'src/app/utils'
 import { createRegistryTemplate } from 'src/app/bcmr'
 import { getInstance as getAuthguardInstance } from 'src/app/contracts'
 import { Draft07 } from 'json-schema-library'
@@ -187,6 +195,20 @@ const identitySnapshot = computed<IdentitySnapshot | null>(() => {
     return registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]
   }
   return null
+})
+
+const symbol = computed<string | undefined>(() => {
+  if (registry.value?.registryIdentity && typeof (registry.value.registryIdentity) == 'string' && registry.value.latestRevision && registry.value.identities) {
+    return registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision].token?.symbol
+  }
+  return ''
+})
+
+const icon = computed<string | undefined>(() => {
+  if (registry.value?.registryIdentity && typeof (registry.value.registryIdentity) == 'string' && registry.value.latestRevision && registry.value.identities) {
+    return registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision].uris?.icon
+  }
+  return ''
 })
 
 
@@ -541,13 +563,12 @@ watch(() => tokenType.value, (v) => {
     if (registry.value?.registryIdentity && registry.value?.latestRevision && typeof (registry.value.registryIdentity) == 'string' && registry.value.identities) {
       registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]?.token?.nfts
     }
-
   }
 })
 
 
 onBeforeMount(async () => {
-  progress.value = 'Checking your wallet for genesis inputs...'
+  progress.value = 'Checking your wallet for valid genesis inputs...'
   genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis >= DEFAULT_TOKEN_VALUE)[0]
   if (genesisInput.value) {
     authKey.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) =>

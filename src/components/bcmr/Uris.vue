@@ -21,7 +21,8 @@
             <div v-if="enableIconUpload" @click.stop="iconFileRef.pickFiles()">
               <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
               <span v-else>
-                <q-btn icon="upload_file" class="cursor-pointer" text-color="warning" dense />
+                <q-btn icon="upload_file" class="cursor-pointer" text-color="warning" label="Upload Icon" dense
+                  no-caps />
               </span>
             </div>
           </template>
