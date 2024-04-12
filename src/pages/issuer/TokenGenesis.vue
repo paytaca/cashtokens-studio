@@ -86,9 +86,9 @@
                     :name="tokenType.value == TokenType.ft ? 'money' : 'collections'"></q-icon>
                 </template>
               </q-select>
-              <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
+              <!-- <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
                 <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
-              </div>
+              </div> -->
               <template v-if="authKey && tokenType">
                 <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
                   :hide="['commitment', 'capability']" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
