@@ -159,7 +159,8 @@
                         <label>Decimals (For Fungible Tokens)</label>
                         <q-input class="registry-field"
                           v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token!.decimals"
-                          outlined autogrow :disable="!bcmrNewRevision">
+                          outlined autogrow :disable="!bcmrNewRevision"
+                          :rules="[(v) => (Number(v) >= 0 && Number(v) <= 18) || 'Value should be between 0 - 18 inclusive. Default is 0.']">
                         </q-input>
                       </div>
                       <div class="col-xs-12 col-md-8 q-gutter-y-sm items-center q-mb-md">
@@ -674,8 +675,8 @@ const promptForRevisionOptions = async (callback: RevisionOptionCallback, okLabe
     expansionItemOne.value = true
     expansionItemTwo.value = true
     $q.dialog({
-      title: 'Form validation failed!',
-      message: 'Please check required * fields.',
+      title: 'Validation failed!',
+      message: 'Please check input fields for errors.',
       class: 'q-pa-md'
     })
   }
@@ -757,6 +758,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   progress.value = 'Uploading registry to IPFS, please wait...'
   const tokenSymbol = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.symbol
 
+  bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.decimals = Number(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.decimals || 0)
   let tx = ''
   try {
     const artifact = await bcmr.value.storeRegistry()
