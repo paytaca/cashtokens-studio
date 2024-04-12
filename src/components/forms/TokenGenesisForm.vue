@@ -8,10 +8,10 @@
     <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
       Select a token type: <sup><code class="text-caption">{{ tType }}</code></sup>
       <q-option-group name="preferred_genre" v-model="tType" :options="[
-        { value: 'ft', label: 'Fungible Token(FT)' },
-        { value: 'nft', label: 'Non Fungible Token(NFT)' },
-      ]
-        " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+    { value: 'ft', label: 'Fungible Token(FT)' },
+    { value: 'nft', label: 'Non Fungible Token(NFT)' },
+  ]
+    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
     </div>
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" filled disable dense />
@@ -43,7 +43,8 @@
       </q-input>
       <template v-if="tType === 'ft' || tType === 'fnft'">
         <q-input v-model="genesisTokenMetadata.decimals" label="Decimals" filled dense
-          :disable="Boolean(cashToken?.processing)" />
+          :disable="Boolean(cashToken?.processing)" type="number"
+          :rules="[(v) => (Number(v) >= 0 && Number(v) <= 18) || 'Value should be between 0 - 18 inclusive. Default is 0.']" />
         <q-input v-model="genesisToken.amount" label="Maximum Supply" filled dense
           :disable="Boolean(cashToken?.processing)">
           <template v-slot:append>
@@ -58,7 +59,8 @@
           <div class="col">
             <div class="row">{{ !isValidTokenAmount ? 'Invalid amount' : '' }}</div>
             <div v-if="genesisToken.amount" class="row">
-              <code>{{ tokenAmountWithDecimal }} <q-chip v-if="genesisTokenMetadata.symbol" class="text-uppercase" color="orange-10" size="sm" square outline>{{ genesisTokenMetadata.symbol }}</q-chip></code>
+              <code>{{ tokenAmountWithDecimal }} <q-chip v-if="genesisTokenMetadata.symbol" class="text-uppercase"
+          color="orange-10" size="sm" square outline>{{ genesisTokenMetadata.symbol }}</q-chip></code>
             </div>
             <!-- <div class="row">
               <code>Raw FT Amount: {{ tokenAmountWithDecimal.replace('.', '') }} <q-chip v-if="genesisTokenMetadata.symbol" class="text-uppercase" color="orange-10"  size="sm" square outline>{{ genesisTokenMetadata.symbol }}</q-chip></code>
@@ -70,16 +72,16 @@
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
-            { value: NFTCapability.minting, label: 'Minting' },
-            { value: NFTCapability.mutable, label: 'Mutable' },
-            { value: NFTCapability.none, label: 'None' }
-          ]
-            " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+    { value: NFTCapability.minting, label: 'Minting' },
+    { value: NFTCapability.mutable, label: 'Mutable' },
+    { value: NFTCapability.none, label: 'None' }
+  ]
+    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
         </div>
         <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
           filled :placeholder="tokenCommmitmentPlaceholderText"
-          :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :disable="Boolean(cashToken?.processing)"
-          dense stack-label>
+          :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']"
+          :disable="Boolean(cashToken?.processing)" dense stack-label>
           <template v-slot:prepend>
             <q-btn :label="genesisToken.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm" no-caps
               :icon-right="genesisToken.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -90,9 +92,9 @@
               :label="genesisToken.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
               <q-tooltip>
                 {{
-                  genesisToken.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                  : 'Click to convert value to a number'
-                }}
+    genesisToken.commitmentFormat === 'decimal' ? 'Click to value to hex'
+      : 'Click to convert value to a number'
+  }}
               </q-tooltip>
             </q-btn>
           </template>
@@ -171,21 +173,21 @@
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
         :force-disable="(
-          !user.wallet ||
-          !genesisInput ||
-          Boolean(busyButtonLabel) ||
-          !isValidTokenAmount ||
-          !genesisTokenMetadata.name ||
-          !genesisTokenMetadata.symbol ||
-          iconUploader?.isUploading
-        )
-          " color="primary" size="lg" />
+    !user.wallet ||
+    !genesisInput ||
+    Boolean(busyButtonLabel) ||
+    !isValidTokenAmount ||
+    !genesisTokenMetadata.name ||
+    !genesisTokenMetadata.symbol ||
+    iconUploader?.isUploading
+  )
+    " color="primary" size="lg" />
     </div>
-    <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)" :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name"
-      @close="hideBcmrLinkAdderDialog" @confirm="(links) => {
-        genesisTokenMetadata.links = links;
-        hideBcmrLinkAdderDialog()
-      }" :links="genesisTokenMetadata.links" persistent />
+    <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)"
+      :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name" @close="hideBcmrLinkAdderDialog" @confirm="(links) => {
+    genesisTokenMetadata.links = links;
+    hideBcmrLinkAdderDialog()
+  }" :links="genesisTokenMetadata.links" persistent />
   </q-form>
 </template>
 <script setup lang="ts">
