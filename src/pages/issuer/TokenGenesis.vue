@@ -4,7 +4,7 @@
       <div class="text-right q-ma-lg">
         <q-btn
           v-if="!progress && registryIsValid && identitySnapshot?.name && identitySnapshot?.token?.symbol && identitySnapshot?.token?.category"
-          color="primary" size="lg" @click.stop="createToken">
+          color="primary" size="lg" @click.stop="createToken" :disable="!!progress">
           <span>Create Token</span>
         </q-btn>
       </div>
@@ -23,7 +23,7 @@
               <div class="row items-center text-center q-gutter-sm justify-center">
                 <span style="text-wrap:wrap" class="text-h5">
                   <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Creating a new token requires a
-                  "genesis input". A valid genesis input is just a utxo that is the first output(v-out 0) of a previous
+                  "genesis input". A valid genesis input is just a UTXO that is the first output(v-out 0) of a previous
                   transaction. <q-btn icon="handyman" text-color="primary"
                     :label="!progress ? 'Generate genesis input' : ''" @click.stop="generateGenesisInput"
                     :disable="!!progress" no-caps size="lg">
@@ -98,15 +98,14 @@
                   :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft" v-model:token="token"
                   :hide="['amount']" title="Token Details" :symbol="symbol" />
-                <Token v-else v-model:token="token" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
+                <Token v-else v-model:token="token"
+                  :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Token Details"
                   enable-max-amount-setter :symbol="symbol" />
-
                 <q-input
                   v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                   :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
-                  @update:model-value="(v) => registry!.identities![String(registry!.registryIdentity)][registry!.latestRevision].token!.decimals = Number(v || 0)"
-                  label="Decimals" type="number" :rules="[(v: number) => v >= 0 || 'Invalid value']" outlined
-                  style="width:max-content">
+                  @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" type="number"
+                  :rules="[(v: number) => v >= 0 || 'Invalid value']" outlined style="width:max-content">
                 </q-input>
                 <IdentitySnapshotComponent
                   v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
@@ -116,12 +115,13 @@
                     <TokenCategoryComponent
                       v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.token"
                       v-model:token="registry.identities[registry.registryIdentity][registry.latestRevision].token"
-                      :hide="tokenType.value == TokenType.nft || tokenType.value == TokenType.hybrid ? ['decimals', 'nfts', 'category'] : ['decimals', 'nfts', 'category']" />
+                      :hide="tokenCategoryHide" />
                   </template>
                   <template v-slot:uris>
                     <Uris v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.uris"
                       v-model:uris="registry.identities[registry.registryIdentity][registry.latestRevision].uris"
-                      title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid" />
+                      title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
+                      @icon-file-uploading="(v) => progress = v" />
                   </template>
                 </IdentitySnapshotComponent>
                 <template v-if="showAdvancedFields">
@@ -204,12 +204,24 @@ const symbol = computed<string | undefined>(() => {
   return ''
 })
 
-const icon = computed<string | undefined>(() => {
-  if (registry.value?.registryIdentity && typeof (registry.value.registryIdentity) == 'string' && registry.value.latestRevision && registry.value.identities) {
-    return registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision].uris?.icon
-  }
-  return ''
+const tokenCategoryHide = computed<string[]>(() => {
+  return ['decimals', 'nfts', 'category']
 })
+
+const updateDecimals = (v: string) => {
+  if (identitySnapshot.value?.token) {
+    if (!v && token.value.amount) {
+      return token.value.amount = token.value.amount.replace('.', '')
+    }
+    identitySnapshot.value.token.decimals = Number(v)
+    const newAmount = token.value.amount?.replace('.', '') || ''
+    const decimal_place = newAmount.length - Number(v)
+    const whole = newAmount.substring(0, decimal_place)
+    const decimal = newAmount.substring(decimal_place)
+    return token.value.amount = `${whole}.${decimal}`
+  }
+}
+// test
 
 
 const registryIsValid = computed(() => {
@@ -475,8 +487,10 @@ watch(() => useExistingAuthKey.value, async (yes) => {
     progress.value = 'Checking your wallet for AuthKeys...'
     authKeyOptions.value = await getAuthKeyOptions()
     progress.value = false
-    authKeySelectedOption.value = authKeyOptions.value[0]
-    authKey.value = authKeySelectedOption.value.value
+    if (authKeyOptions.value) {
+      authKeySelectedOption.value = authKeyOptions.value[0]
+      authKey.value = authKeySelectedOption.value.value
+    }
     authKeyOptionsLoading.value = false
   } else {
     progress.value = 'Checking for valid genesis input...'
@@ -494,44 +508,16 @@ watch(() => authKeySelectedOption.value, (v) => {
   authKey.value = v.value
 })
 
-watch(() => identitySnapshot.value?.token?.decimals, (v) => {
-  if (
-    Number(v) > 0
-  ) {
-    let newTokenAmt = token.value.amount
-    if (token.value.amount.includes('.')) {
-      newTokenAmt = token.value.amount.replace('.', '')
-
-    }
-    if (
-      newTokenAmt >= MAX_FUNGIBLE_AMOUNT ||
-      Number(`${newTokenAmt.toString()}`.padEnd(newTokenAmt.toString().length + Number(v), '0')) >= Number(MAX_FUNGIBLE_AMOUNT)
-    ) {
-      // don't pad, accomodate
-      const decimal_place = newTokenAmt.toString().length - Number(v)
-      const whole = newTokenAmt.toString().substring(0, decimal_place)
-      const decimal = newTokenAmt.toString().substring(decimal_place)
-      return token.value.amount = `${whole}.${decimal}`
-    }
-    token.value.amount = `${newTokenAmt.toString()}.`.padEnd(`${newTokenAmt.toString()}`.length + Number(v) + 1, '0')
-  } else {
-    token.value.amount = token.value.amount.replace('.', '')
-  }
-})
-
 watch(() => token.value.amount, (v) => {
-  if (registry.value?.registryIdentity && registry.value.latestRevision && registry.value.identities && typeof (registry.value.registryIdentity) == 'string') {
-    const identity = registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]
-    if (Number(v) > 0 && v.includes('.')) {
-
-      if (!identity.token?.decimals) {
-        identity.token!.decimals = v.split('.')[1].length
-      }
+  console.log('V', v)
+  if (identitySnapshot.value?.token) {
+    let decimalPlacePosition = (v || '').indexOf('.')
+    if (decimalPlacePosition >= 0) {
+      identitySnapshot.value.token.decimals = v.substring(decimalPlacePosition + 1).length
     } else {
-      identity.token!.decimals = 0
+      identitySnapshot.value.token.decimals = 0
     }
   }
-
 })
 
 watch(() => tokenType.value, (v) => {
