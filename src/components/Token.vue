@@ -3,13 +3,14 @@
     <div class="q-gutter-lg q-my-lg">
       <div class="text-h4 q-my-lg">{{ title }}</div>
       <q-input v-if="!hide?.includes('tokenId')" v-model="token.tokenId"
-        :label="(labels || {})['tokenId'] ?? 'Token ID'" outlined readonly>
+        :label="(labels || {})['tokenId'] ?? 'Token ID'" outlined readonly size="lg">
         <template v-slot:append>
           <CopyText :text="token.tokenId" />
         </template>
       </q-input>
       <q-input v-if="!hide?.includes('amount')" v-model="token.amount" :label="(labels || {})['amount'] ?? 'Amount'"
-        outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive">
+        outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive"
+        :rules="amountRules">
         <template v-if="symbol" v-slot:prepend>
           <span class="text-grey-8" style="letter-spacing: 5px;">{{ symbol }}</span>
         </template>
@@ -52,4 +53,10 @@ const setFtSupplyToMax = () => {
   token.value.amount = props.maxAmount || MAX_FUNGIBLE_AMOUNT
 }
 
+const amountRules = [
+  (v: string) => {
+    const sanitizedAmt = (v ?? '').replace('.', '')
+    return BigInt(sanitizedAmt) <= BigInt(MAX_FUNGIBLE_AMOUNT) || `Max amount = ${MAX_FUNGIBLE_AMOUNT}`
+  }
+]
 </script>
