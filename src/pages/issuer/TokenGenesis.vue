@@ -39,7 +39,7 @@
                     <span style="text-wrap:wrap" class="text-h5">
                       <q-icon name="info" class="q-mr-xs"></q-icon>Cashtokens Studio uses an
                       AuthGuard contract in keeping your token safe. AuthGuard requires an "AuthKey". <q-btn
-                        text-color="primary" :label="!progress ? 'Click me!' : ''"
+                        text-color="primary" :label="!progress ? 'Click here!' : ''"
                         @click.stop="generateAuthKeyGenesisInput" :disable="!!progress" size="lg" no-caps dense>
                         <q-spinner-dots v-if="!!progress && !authKey" class="q-ml-sm"></q-spinner-dots>
                       </q-btn> if you want a new AuthKey for this token (Recommended, so each of your token won't share
@@ -47,7 +47,7 @@
                       <div class="q-my-lg">Or</div>
                       <div v-if="authKeyOptions && authKeyOptions.length > 0"> If
                         you want to use
-                        an existing AuthKey <q-btn text-color="primary" label="Click me!" size="lg"
+                        an existing AuthKey <q-btn text-color="primary" label="Click here!" size="lg"
                           @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps dense>
                         </q-btn>
                       </div>
@@ -75,7 +75,7 @@
                 :label="authKey?.token?.tokenId ? 'AuthKey ID(existing, will be used)' : 'AuthKey ID (new, will be created)'"
                 outlined readonly>
                 <template v-slot:append>
-                  <CopyText :text="authKey?.token?.tokenId" />
+                  <CopyText :text="authKey?.token?.tokenId || ''" />
                 </template>
               </q-input>
             </template>
