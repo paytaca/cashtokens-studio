@@ -8,7 +8,6 @@
           <CopyText :text="token.tokenId" />
         </template>
       </q-input>
-      <q-input v-if="decimals" :model-value="decimals" label="Decimals" outlined readonly></q-input>
       <q-input v-if="!hide?.includes('amount')" v-model="token.amount" :label="(labels || {})['amount'] ?? 'Amount'"
         outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive" :rules="amountRules"
         :readonly="readonly?.includes('amount')">
@@ -47,7 +46,6 @@ export type TokenProps = {
   capabilities?: NFTCapability[],
   title?: string,
   symbol?: string,
-  decimals?: number,
   readonly?: string[]
 }
 const props = defineProps<TokenProps>()
@@ -64,9 +62,4 @@ const amountRules = [
   }
 ]
 
-onMounted(() => {
-  if (props.decimals) {
-    token.value.amount = token.value.amount
-  }
-})
 </script>

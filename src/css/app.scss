@@ -85,7 +85,7 @@ label {
 }
 input,
 textarea {
-  font-size: small;
+  font-size: large;
 }
 
 .q-textarea .q-field__native {
@@ -159,14 +159,9 @@ textarea {
   background: #0ac18e;
 }
 
-// .q-field--disabled {
-//   border: 2px dotted rgb(211, 176, 176);
-//   // background-color: white !important;
-// }
-// .q-field--dark.q-field--disabled {
-//   // background-color: black !important;
-//   border: 2px dotted #3b3636;
-// }
+.q-field {
+  font-size: large;
+}
 
 .q-field--disabled .q-field__label {
   color: rgb(55, 46, 46) !important;
@@ -211,4 +206,11 @@ body.body--dark {
 .q-field--readonly.q-field--float .q-field__native,
 .q-field--readonly.q-field--float .q-field__input {
   color: #816f6f;
+}
+
+// Custom
+.token-symbol {
+  letter-spacing: 4px;
+  font-variant: unicase;
+  color: grey;
 }
