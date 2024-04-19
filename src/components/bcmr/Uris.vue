@@ -76,6 +76,7 @@ import { IconStorageArtifact, uploadIcon } from 'src/app/ipfs';
 import { defineComponent, defineModel, ref, watch } from 'vue'
 import { ipfsToGatewayUrl } from 'src/app/utils'
 
+const emit = defineEmits(['icon-file-uploading'])
 defineComponent({ name: 'UrisComponent' })
 export type UrisProps = {
   title?: string,
@@ -135,6 +136,7 @@ watch(() => iconFile.value, async (v) => {
     }
     iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
     iconFileUploading.value = true
+    emit('icon-file-uploading', true)
     try {
       const artifact = await uploadIcon(iconFile.value, props.tokenId ?? '')
       uris.value!.icon = artifact?.iconUris.ipfs || ''
@@ -142,6 +144,7 @@ watch(() => iconFile.value, async (v) => {
       console.log(error)
     } finally {
       iconFileUploading.value = false
+      emit('icon-file-uploading', false)
     }
 
   }
