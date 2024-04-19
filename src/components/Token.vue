@@ -8,9 +8,10 @@
           <CopyText :text="token.tokenId" />
         </template>
       </q-input>
+      <q-input v-if="decimals" :model-value="decimals" label="Decimals" outlined readonly></q-input>
       <q-input v-if="!hide?.includes('amount')" v-model="token.amount" :label="(labels || {})['amount'] ?? 'Amount'"
-        outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive"
-        :rules="amountRules">
+        outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive" :rules="amountRules"
+        :readonly="readonly?.includes('amount')">
         <template v-if="symbol" v-slot:prepend>
           <span class="bg-grey-8" style="letter-spacing: 3px; border-radius: 3px; padding: 3px;">{{
         symbol }}</span>
@@ -31,7 +32,7 @@
 </template>
 
 <script setup lang="ts">
-import { defineComponent, defineModel } from 'vue'
+import { defineComponent, defineModel, onMounted } from 'vue'
 import { NFTCapability, TokenI } from 'mainnet-js'
 import CopyText from './CopyText.vue'
 import { MAX_FUNGIBLE_AMOUNT } from 'src/app/constants';
@@ -45,7 +46,9 @@ export type TokenProps = {
   },
   capabilities?: NFTCapability[],
   title?: string,
-  symbol?: string
+  symbol?: string,
+  decimals?: number,
+  readonly?: string[]
 }
 const props = defineProps<TokenProps>()
 const token = defineModel<Omit<TokenI, 'amount'> & { amount: string }>('token', { required: true })
@@ -60,4 +63,10 @@ const amountRules = [
     return BigInt(sanitizedAmt) <= BigInt(MAX_FUNGIBLE_AMOUNT) || `Max amount = ${MAX_FUNGIBLE_AMOUNT}`
   }
 ]
+
+onMounted(() => {
+  if (props.decimals) {
+    token.value.amount = token.value.amount
+  }
+})
 </script>
