@@ -1,112 +1,190 @@
 <template>
   <q-page class="q-pa-sm">
     <div class="row justify-center">
-      <div class="col-xs-12 col-sm-10 col-lg-9">
-        <div class="row justify-center q-my-lg">
+      <div class="col-xs-12 col-sm-6 ">
+
+        <div class="row justify-center q-my-lg q-gutter-y-lg">
           <template v-if="!genesisInput">
-            <q-banner class="q-mt-lg q-px-lg q-py-xl text-justify" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'"
-              rounded>
-              <div class="row justify-center q-mb-md">
-                <q-icon name="info" size="lg" color="info" />
-              </div>
-              <p>
-                Creating a new AuthKey requires a "genesis input". A valid genesis input is just a utxo that is the
-                first
-                output(v-out 0) of a previous transaction.
-              </p>
-              <p>
-                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length || 0 }}</span> utxo
-                that
-                we can use as genesis input. This
-                operation <span class="text-positive">requires 1</span> genesis input. You can create a genesis input by
-                clicking the button below.
-              </p>
-              <q-expansion-item label="What's an AuthKey?">
-                <p>
-                  When you create a new token (genesis) in CashTokens Studio it's locked in a contract called an
-                  <q-btn href="https://github.com/mr-zwets/AuthGuard" target="_blank" color="secondary" flat dense
-                    label="AuthGuard" no-caps style="text-indent:0" />.
-                  An AuthKey is an NFT that let's the holder manage the locked tokens.
-                  Holder of the AuthKey can manage the authchain, can publish registry updates, issue tokens from fungible
-                  reserves or mint new NFTs
-                  if the token created was a `minting` NFT.
-                </p>
-                <q-icon name="warning" color="warning"></q-icon>
-                <p>
-                  Don't send an AuthKey to anyone unless you intend to give them
-                  permission to manage your tokens.
-                </p>
-              </q-expansion-item>
-              <template v-slot:action>
-                <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
-                  @click="generateGenesisInputs" color="primary" />
-              </template>
-            </q-banner>
-
+            <div class="col-xs-12 text-h5 text-justify">
+              <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Creating a new AuthKey requires a
+              "genesis input". A valid genesis input is just a UTXO that is the first output(v-out 0) of a previous
+              transaction.
+            </div>
+            <div class="col-xs-12 text-right">
+              <q-btn icon="handyman" color="primary" :label="!progress ? 'Generate Genesis Input' : ''"
+                @click.stop="generateGenesisInput" :disable="!!progress" no-caps size="lg">
+                <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
+              </q-btn>
+            </div>
           </template>
-
           <template v-else>
-            <AuthKeyForm :genesis-input="genesisInput" :owner-wallet="(user.wallet as Wallet)"
-              @auth-key-created="onCreateAuthKey" />
+            <div class="col-xs-12 text-h3 q-my-lg">
+              <span>Create AuthKey</span><q-icon name="key" color="warning"></q-icon>
+            </div>
+            <div class="col-xs-12">
+              <q-input :model-value="genesisInput.txid" label="AuthKey ID" outlined readonly>
+                <template v-slot:append>
+                  <CopyText :text="genesisInput.txid" />
+                </template>
+              </q-input>
+            </div>
+            <div class="col-xs-12 text-right">
+              <q-btn icon="handyman" color="primary" :label="!progress ? 'Create AuthKey' : ''"
+                @click.stop="createAuthKey" :disable="!!progress" no-caps size="lg">
+                <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
+              </q-btn>
+            </div>
           </template>
         </div>
       </div>
     </div>
+    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
+      <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
+      <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">
+        {{ progress }}
+      </span>
+    </q-inner-loading>
   </q-page>
 </template>
 
 <script setup lang="ts">
 
-import { ref, watch, onMounted } from 'vue'
-import { UtxoI, Wallet } from 'mainnet-js';
+import { ref, onBeforeMount, toRaw } from 'vue'
+import { NFTCapability, UtxoI, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
+import { useRouter } from 'vue-router';
 import { useUser } from 'src/stores/user';
-import BusyButton from 'src/components/BusyButton.vue'
-import { AuthKey, GenesisInput } from 'src/app'
-import AuthKeyForm from 'src/components/forms/AuthKeyForm.vue'
-import { useUI } from 'src/stores/ui';
+import { DEFAULT_TOKEN_VALUE } from 'src/app'
+import { broadcastTx, buildGenesisInputTx, buildGenesisTx, signTx } from 'src/app/transactions';
+import { useEventBus } from 'src/composables';
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import CopyText from 'src/components/CopyText.vue'
 
 const $q = useQuasar()
+const { $ebus } = useEventBus()
 const user = useUser()
-const ui = useUI()
+const router = useRouter()
 const genesisInput = ref<UtxoI>()
-const genesisInputInstance = ref<GenesisInput>()
+const progress = ref<string | boolean>()
 
-watch(() => user.genesisInputs, (value) => {
-  if (value && value.length >= 1) {
-    // use first for AuthKey
-    genesisInput.value = user.genesisInputs![0]
-  }
-})
-
-onMounted(async () => {
-  if (user.genesisInputs && user.genesisInputs?.length >= 1) {
-    genesisInput.value = user.genesisInputs[0]
-  }
-})
-
-const generateGenesisInputs = async () => {
-  if (!user.wallet) {
-    $q.notify({ type: 'negative', message: 'Wallet not connected' })
-    return
-  }
+const generateGenesisInput = async () => {
   try {
-    genesisInputInstance.value = new GenesisInput({ vout: 0, satoshis: 0, txid: '' }, user.transactionSigner) // 
-    const tx = await genesisInputInstance.value.generate(user.wallet! as Wallet, 1)
-    if (tx) {
-      $q.notify({ type: 'positive', message: 'Genesis inputs created' })
+    progress.value = 'Preparing transaction, please wait...'
+    const { decoded, sourceOutputs } = await buildGenesisInputTx({ wallet: user.wallet as Wallet })
+    progress.value = 'Waiting for signature. Pls check your wallet!'
+    const signingResult = await signTx({
+      signer: user.transactionSigner!,
+      decodedTx: decoded, sourceOutputs: sourceOutputs,
+      prompt: 'Create genesis input'
+    })
+    if (signingResult?.signedTransaction) {
+      const tx = await broadcastTx(signingResult)
+      if (tx) {
+        progress.value = 'Transaction submitted, awaiting propagation...'
+        await user.wallet?.waitForTransaction({ txHash: tx })
+        genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
+          !u.token &&
+          u.vout == 0 &&
+          u.satoshis >= DEFAULT_TOKEN_VALUE
+        )[0]
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'generate-genesis-input',
+          timestamp: new Date().getTime(),
+          successMsg: `Genesis input created!`
+        })
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'success',
+            statusText: `Genesis input created!`,
+            txid: tx
+          }
+        })
+      }
+    }
+  } catch (error) {
+    $q.dialog({
+      component: TransactionStatusDialog,
+      componentProps: {
+        message: error,
+        type: 'error'
+      },
+      ok: true
+    })
+  } finally {
+    progress.value = false
+  }
+}
+
+const createAuthKey = async () => {
+  progress.value = 'Processing, please wait...'
+
+  try {
+    const genesisTransaction = await buildGenesisTx({
+      input: toRaw(genesisInput.value!),
+      token: {
+        tokenId: genesisInput.value!.txid!,
+        commitment: '00',
+        capability: NFTCapability.none,
+        amount: BigInt(0),
+      },
+      wallet: user.wallet as Wallet,
+      recipient: await user.wallet.getTokenDepositAddress()
+    })
+    progress.value = 'Waiting for signature. Pls check your wallet!'
+    const signingResult = await signTx({
+      signer: user.transactionSigner!,
+      decodedTx: genesisTransaction.decoded, sourceOutputs: genesisTransaction.sourceOutputs,
+      prompt: 'Create AuthKey'
+    })
+    if (signingResult?.signedTransaction) {
+      progress.value = 'Submitting transaction, please wait...'
+
+      const tx = await broadcastTx(signingResult)
+      if (tx) {
+        progress.value = 'Transaction submitted, awaiting propagation...'
+        await user.wallet?.waitForTransaction({ txHash: tx })
+        genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
+          !u.token &&
+          u.vout == 0 &&
+          u.satoshis >= DEFAULT_TOKEN_VALUE
+        )[0]
+        $ebus?.emit('transaction', {
+          txid: tx,
+          txType: 'token-genesis',
+          timestamp: new Date().getTime(),
+          successMsg: `AuthKey Created!`
+        })
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'success',
+            statusText: `AuthKey Created`,
+            txid: tx
+          }
+        }).onOk(() => {
+          router.push({ name: 'authkeys' })
+
+        })
+
+      }
     }
   } catch (error: any) {
-    ui.setStatusMessage({
-      statusMessage: error,
-      statusMessageType: 'error'
+    console.log(error)
+    $q.dialog({
+      message: 'Error:' + error
     })
-    $q.notify({ type: 'negative', message: 'Error creating genesis inputs' })
+  } finally {
+    progress.value = false
   }
 }
 
-const onCreateAuthKey = () => {
-  genesisInput.value = undefined
-}
-</script>
 
+onBeforeMount(async () => {
+  progress.value = 'Checking your wallet for valid genesis inputs...'
+  genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis >= DEFAULT_TOKEN_VALUE)[0]
+  progress.value = false
+})
+
+</script>
