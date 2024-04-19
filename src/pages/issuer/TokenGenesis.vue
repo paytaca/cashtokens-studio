@@ -567,9 +567,6 @@ onBeforeMount(async () => {
     )[0]
   }
   progress.value = false
-  // if (genesisInput.value?.txid) {
-  //   identitySnapshot.value.token!.category = genesisInput.value?.txid
-  // }
 })
 
 onMounted(() => {
