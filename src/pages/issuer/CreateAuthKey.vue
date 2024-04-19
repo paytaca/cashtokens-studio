@@ -6,7 +6,7 @@
         <div class="row justify-center q-my-lg q-gutter-y-lg">
           <template v-if="!genesisInput">
             <div class="col-xs-12 text-h5 text-justify">
-              <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Creating a new AuthKey requires a
+              <q-icon name="info" class="q-mr-xs"></q-icon>Creating a new AuthKey requires a
               "genesis input". A valid genesis input is just a UTXO that is the first output(v-out 0) of a previous
               transaction.
             </div>
