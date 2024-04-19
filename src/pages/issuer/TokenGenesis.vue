@@ -22,11 +22,11 @@
             <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8">
               <div class="row items-center text-center q-gutter-sm justify-center">
                 <span style="text-wrap:wrap" class="text-h5">
-                  <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Creating a new token requires a
+                  <q-icon name="info" class="q-mr-xs"></q-icon>Creating a new token requires a
                   "genesis input". A valid genesis input is just a UTXO that is the first output(v-out 0) of a previous
                   transaction. <q-btn icon="handyman" text-color="primary"
                     :label="!progress ? 'Generate Genesis Input' : ''" @click.stop="generateGenesisInput"
-                    :disable="!!progress" no-caps size="lg">
+                    :disable="!!progress" no-caps size="lg" dense>
                     <q-spinner-dots v-if="!!progress && !genesisInput?.txid" class="q-ml-sm"></q-spinner-dots>
                   </q-btn>
                 </span>
@@ -37,17 +37,20 @@
                 <div class="row items-center text-center q-gutter-sm">
                   <div class="row items-center text-center q-gutter-sm">
                     <span style="text-wrap:wrap" class="text-h5">
-                      <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Cashtokens Studio uses an
-                      AuthGuard contract in keeping your token safe. AuthGuard requires an <b>AuthKey</b>, creating an
-                      AuthKey also requires a genesis input, <q-btn icon="handyman" text-color="primary"
-                        :label="!progress ? 'Create AuthKey Genesis Input!' : ''"
+                      <q-icon name="info" class="q-mr-xs"></q-icon>Cashtokens Studio uses an
+                      AuthGuard contract in keeping your token safe. AuthGuard requires an "AuthKey". <q-btn
+                        text-color="primary" :label="!progress ? 'Click me!' : ''"
                         @click.stop="generateAuthKeyGenesisInput" :disable="!!progress" size="lg" no-caps dense>
                         <q-spinner-dots v-if="!!progress && !authKey" class="q-ml-sm"></q-spinner-dots>
-                      </q-btn> for the new <b>AuthKey</b>. <span v-if="authKeyOptions && authKeyOptions.length > 0"> If
+                      </q-btn> if you want a new AuthKey for this token (Recommended, so each of your token won't share
+                      an AuthKey).
+                      <div class="q-my-lg">Or</div>
+                      <div v-if="authKeyOptions && authKeyOptions.length > 0"> If
                         you want to use
-                        an existing <b>AuthKey</b> <q-btn text-color="primary" label="Use Existing AuthKey!" size="lg"
-                          @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps>
-                        </q-btn></span>
+                        an existing AuthKey <q-btn text-color="primary" label="Click me!" size="lg"
+                          @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps dense>
+                        </q-btn>
+                      </div>
                     </span>
                   </div>
                 </div>
@@ -77,7 +80,7 @@
               </q-input>
             </template>
             <div v-if="genesisInput?.txid && authKey?.txid">
-              <div class="text-h4 q-mb-lg">Token Type</div>
+              <div class="text-h4 q-mb-lg">Select Token Type</div>
               <q-select v-if="!route.query.tokenType" v-model="tokenType"
                 :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'Non-Fungible Token (NFT)' }]"
                 outlined autofocus>
@@ -295,12 +298,12 @@ const generateGenesisInput = async () => {
 
 const generateAuthKeyGenesisInput = async () => {
   try {
-    progress.value = 'Generating auth key genesis input'
+    progress.value = 'Generating AuthKey genesis input'
     const { decoded, sourceOutputs } = await buildGenesisInputTx({ wallet: user.wallet as Wallet })
     const signingResult = await signTx({
       signer: user.transactionSigner!,
       decodedTx: decoded, sourceOutputs: sourceOutputs,
-      prompt: 'Create genesis input'
+      prompt: 'Create AuthKey genesis input'
     })
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
