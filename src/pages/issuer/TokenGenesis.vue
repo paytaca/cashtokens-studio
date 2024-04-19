@@ -12,20 +12,20 @@
     <q-page-container>
       <q-page>
         <div class="row justify-center q-mx-sm">
-          <div v-if="authKey && genesisInput" class="col-xs-12 col-sm-6 q-mt-lg">
-            <span class="text-h2 flex flex-wrap item-center q-gutter-x-sm">
-              <span>Create Token</span>
 
-            </span>
-          </div>
-          <div class="col-xs-12 col-sm-6 q-col-gutter-y-lg q-ma-lg">
-            <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8 q-mb-lg">
+          <div class="col-xs-12 q-col-gutter-y-lg col-sm-6 q-mt-md">
+            <div v-if="authKey && genesisInput" class="col-xs-12 col-sm-6 ">
+              <span class="text-h3 flex flex-wrap item-center">
+                <span>Create Token</span>
+              </span>
+            </div>
+            <div v-if="!genesisInput?.txid" class="col-xs-12 col-md-8">
               <div class="row items-center text-center q-gutter-sm justify-center">
                 <span style="text-wrap:wrap" class="text-h5">
                   <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Creating a new token requires a
                   "genesis input". A valid genesis input is just a UTXO that is the first output(v-out 0) of a previous
                   transaction. <q-btn icon="handyman" text-color="primary"
-                    :label="!progress ? 'Generate genesis input' : ''" @click.stop="generateGenesisInput"
+                    :label="!progress ? 'Generate Genesis Input' : ''" @click.stop="generateGenesisInput"
                     :disable="!!progress" no-caps size="lg">
                     <q-spinner-dots v-if="!!progress && !genesisInput?.txid" class="q-ml-sm"></q-spinner-dots>
                   </q-btn>
@@ -40,12 +40,12 @@
                       <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>Cashtokens Studio uses an
                       AuthGuard contract in keeping your token safe. AuthGuard requires an <b>AuthKey</b>, creating an
                       AuthKey also requires a genesis input, <q-btn icon="handyman" text-color="primary"
-                        :label="!progress ? 'Click here!' : ''" @click.stop="generateAuthKeyGenesisInput"
-                        :disable="!!progress" size="lg" no-caps dense>
+                        :label="!progress ? 'Create AuthKey Genesis Input!' : ''"
+                        @click.stop="generateAuthKeyGenesisInput" :disable="!!progress" size="lg" no-caps dense>
                         <q-spinner-dots v-if="!!progress && !authKey" class="q-ml-sm"></q-spinner-dots>
-                      </q-btn> to generate the genesis input for a new <b>AuthKey</b>. <span
-                        v-if="authKeyOptions && authKeyOptions.length > 0"> If you want to use
-                        an existing <b>AuthKey</b> <q-btn text-color="secondary" label="Click here!" size="lg"
+                      </q-btn> for the new <b>AuthKey</b>. <span v-if="authKeyOptions && authKeyOptions.length > 0"> If
+                        you want to use
+                        an existing <b>AuthKey</b> <q-btn text-color="primary" label="Use Existing AuthKey!" size="lg"
                           @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps>
                         </q-btn></span>
                     </span>
@@ -54,7 +54,7 @@
               </div>
               <label v-if="useExistingAuthKey" class="flex justify-between items-center">
                 <div class="text-h4 q-my-lg">Select AuthKey <q-icon name="key" color="warning"></q-icon></div>
-                <q-btn color="secondary" label="Create New AuthKey?" @click.stop="useExistingAuthKey = false" flat
+                <q-btn color="primary" label="Create New AuthKey?" @click.stop="useExistingAuthKey = false" flat
                   no-caps>
                 </q-btn>
               </label>
@@ -64,19 +64,19 @@
             <template v-if="authKey?.txid && !useExistingAuthKey">
               <div class="flex justify-between">
                 <span class="text-h4">AuthKey <q-icon name="key" color="warning"></q-icon> </span>
-                <q-btn v-if="!authKey?.token?.tokenId" color="secondary" label="Use Existing AuthKey?"
+                <q-btn v-if="!authKey?.token?.tokenId" color="primary" label="Use Existing AuthKey?"
                   @click.stop="useExistingAuthKey = true" flat no-caps>
                 </q-btn>
               </div>
               <q-input :model-value="authKey?.token?.tokenId || authKey?.txid"
-                :label="authKey?.token?.tokenId ? 'Token ID of the AuthKey (existing)' : 'Token ID of the AuthKey (that will be created)'"
+                :label="authKey?.token?.tokenId ? 'AuthKey ID(existing, will be used)' : 'AuthKey ID (new, will be created)'"
                 outlined readonly>
+                <template v-slot:append>
+                  <CopyText :text="authKey?.token?.tokenId" />
+                </template>
               </q-input>
             </template>
-
             <div v-if="genesisInput?.txid && authKey?.txid">
-
-
               <div class="text-h4 q-mb-lg">Token Type</div>
               <q-select v-if="!route.query.tokenType" v-model="tokenType"
                 :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'Non-Fungible Token (NFT)' }]"
@@ -86,26 +86,27 @@
                     :name="tokenType.value == TokenType.ft ? 'money' : 'collections'"></q-icon>
                 </template>
               </q-select>
-              <!-- <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
+              <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
                 <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
-              </div> -->
+              </div>
               <template v-if="authKey && tokenType">
                 <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
-                  :hide="['commitment', 'capability']" :labels="{ amount: 'Maximum Supply' }" title="Token Details"
+                  :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Token Details"
                   enable-max-amount-setter :symbol="symbol" />
                 <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
-                  v-model:token="token" :hide="['amount', 'commitment']" title="Token Details"
+                  v-model:token="token" :hide="['amount', 'commitment', 'capability']" title="Token Details"
                   :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
-                <Token v-else-if="tokenType && tokenType.value == TokenType.nft" v-model:token="token"
-                  :hide="['amount']" title="Token Details" :symbol="symbol" />
+                <Token v-else-if="tokenType && tokenType.value == TokenType.nft && showAdvancedFields"
+                  v-model:token="token" :hide="['amount']" title="Token Details" :symbol="symbol"
+                  :capabilities="[NFTCapability.minting, NFTCapability.mutable]" />
                 <Token v-else v-model:token="token"
                   :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Token Details"
                   enable-max-amount-setter :symbol="symbol" />
                 <q-input
                   v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                   :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
-                  @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" type="number"
-                  :rules="[(v: number) => v >= 0 || 'Invalid value']" outlined style="width:max-content">
+                  @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" :rules="decimalsRules"
+                  outlined style="width:max-content" :disable="!token.amount">
                 </q-input>
                 <IdentitySnapshotComponent
                   v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
@@ -128,7 +129,7 @@
                   <NftCategoryComponent
                     v-if="tokenType.value != TokenType.ft && registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string' && registry.identities[registry.registryIdentity][registry.latestRevision]?.token?.nfts"
                     v-model:nft-category="registry.identities[registry.registryIdentity][registry.latestRevision].token!.nfts"
-                    title="Token's NFT category details (Optional)" />
+                    title="NFT Category (Optional)" />
                 </template>
               </template>
             </div>
@@ -149,25 +150,26 @@
 import { computed, onBeforeMount, onMounted, ref, toRaw, watch } from 'vue'
 import { NFTCapability, type Registry, type IdentitySnapshot, type TokenI, type UtxoI, type Wallet } from 'mainnet-js'
 import { useRoute, useRouter } from 'vue-router'
+import { Draft07 } from 'json-schema-library'
+import { DEFAULT_TOKEN_VALUE, TokenType, Watchtower } from 'src/app'
+import { buildGenesisInputTx } from 'src/app/transactions/buildGenesisInputTx'
+import { signTx } from 'src/app/transactions/signTx'
+import { broadcastTx, buildGenesisTx } from 'src/app/transactions'
+import { useUser } from 'src/stores/user'
+import { useQuasar } from 'quasar'
+import { shortenTx } from 'src/app/utils'
+import { createRegistryTemplate } from 'src/app/bcmr'
+import { getInstance as getAuthguardInstance } from 'src/app/contracts'
+import bcmrSchema from 'src/app/bcmr/bcmr-v2.schema.json'
+import { storeRegistry } from 'src/app/ipfs'
+import { useEventBus } from 'src/composables'
 import Token from 'src/components/Token.vue'
 import TokenCategoryComponent from 'src/components/bcmr/TokenCategory.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import IdentitySnapshotComponent from 'src/components/bcmr/IdentitySnapshot.vue'
 import NftCategoryComponent from 'src/components/bcmr/NftCategory.vue'
 import Uris from 'src/components/bcmr/Uris.vue'
-import { DEFAULT_TOKEN_VALUE, MAX_FUNGIBLE_AMOUNT, TokenType, Watchtower } from 'src/app'
-import { buildGenesisInputTx } from 'src/app/transactions/buildGenesisInputTx'
-import { signTx } from 'src/app/transactions/signTx'
-import { broadcastTx, buildGenesisTx } from 'src/app/transactions'
-import { useUser } from 'src/stores/user'
-import { useQuasar } from 'quasar'
-import { shortenTx, ipfsToGatewayUrl } from 'src/app/utils'
-import { createRegistryTemplate } from 'src/app/bcmr'
-import { getInstance as getAuthguardInstance } from 'src/app/contracts'
-import { Draft07 } from 'json-schema-library'
-import bcmrSchema from 'src/app/bcmr/bcmr-v2.schema.json'
-import { storeRegistry } from 'src/app/ipfs'
-import { useEventBus } from 'src/composables'
+import CopyText from 'src/components/CopyText.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -204,6 +206,8 @@ const symbol = computed<string | undefined>(() => {
   return ''
 })
 
+
+
 const tokenCategoryHide = computed<string[]>(() => {
   return ['decimals', 'nfts', 'category']
 })
@@ -231,7 +235,9 @@ const registryIsValid = computed(() => {
   return errors.length == 0
 })
 
-
+const decimalsRules = [
+  (v: string | number) => (!v || (Number(v) >= 0 && Number(v) <= 18)) || 'Valid value is between 0 - 18 (inclusive)'
+]
 const showAdvancedFields = ref<boolean>()
 const progress = ref<string | boolean>()
 const user = useUser()
@@ -534,11 +540,7 @@ watch(() => tokenType.value, (v) => {
         registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision].token!.nfts = {
           parse: {
             bytecode: '',
-            types: {
-              '': {
-                name: ''
-              }
-            }
+            types: {}
           }
         }
       }

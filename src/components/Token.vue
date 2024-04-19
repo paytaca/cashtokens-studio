@@ -12,7 +12,8 @@
         outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive"
         :rules="amountRules">
         <template v-if="symbol" v-slot:prepend>
-          <span class="text-grey-8" style="letter-spacing: 5px;">{{ symbol }}</span>
+          <span class="bg-grey-8" style="letter-spacing: 3px; border-radius: 3px; padding: 3px;">{{
+        symbol }}</span>
         </template>
         <template v-if="enableMaxAmountSetter" v-slot:append>
           <q-btn text-color="warning" :class="$q.dark.isActive ? '' : 'text-black'" @click="setFtSupplyToMax"
