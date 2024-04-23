@@ -29,7 +29,7 @@
                     <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
                     <div v-else>
                       <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                        <q-img :src="value.row.identitySnapshot.uris.icon" />
+                        <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
                       </q-avatar>
                       <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                     </div>
@@ -109,7 +109,7 @@ import { useRouter } from 'vue-router';
 import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
 import { useDialogs, useEventBus } from 'src/composables'
 import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
-import { shortenTokenId } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils'
 import CopyText from 'src/components/CopyText.vue';
 import FTBurnDialog from 'src/components/dialogs/FTBurnDialog.vue'
 import { buildBurnFtReserveTx, signTx } from 'src/app/transactions'
