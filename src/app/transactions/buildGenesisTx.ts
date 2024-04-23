@@ -147,9 +147,6 @@ export const buildGenesisTx = async (
     expenses.push(opt.authKey);
   }
   expenses.push(funds);
-  console.log('EXPENSES', expenses);
-  console.log('REQUESTS', requests);
-
   const { encodedTransaction, sourceOutputs } =
     await opt.wallet.encodeTransaction(requests, false, {
       tokenOperation: 'genesis',
@@ -158,8 +155,6 @@ export const buildGenesisTx = async (
       utxoIds: expenses,
       ensureUtxos: expenses,
     });
-
-  console.log('TRANSACTION', decodeTransaction(encodedTransaction));
 
   return {
     encoded: encodedTransaction,

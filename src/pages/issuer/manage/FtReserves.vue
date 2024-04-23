@@ -216,8 +216,6 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
       identitySnapshot
     }
   }).onOk(async (value: { amountToBurn: string, newBalance: string, decimals: number }) => {
-    console.log('AMOUNT TO BURN', value.amountToBurn)
-    console.log('Amount to', (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString())
     const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
     progress.value = 'Processing...'
     try {
@@ -246,6 +244,7 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
             timestamp: new Date().getTime(),
             successMsg: `${value.amountToBurn} ${identitySnapshot?.token?.symbol || 'FTs'} Burned!`
           })
+          progress.value = false
           $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
