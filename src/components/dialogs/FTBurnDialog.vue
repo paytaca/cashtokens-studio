@@ -67,7 +67,7 @@ const newBalance = computed(() => {
   if (tokenCopy.value?.amount) {
     return new BigNumber(tokenCopy.value.amount).minus(burnAmount.value).toString()
   }
-  return 0
+  return new BigNumber(tokenCopy.value?.amount || 0).toString()
 
 })
 
@@ -77,7 +77,8 @@ defineEmits([
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
 
 const confirmBurn = () => {
-  onDialogOK({ amountToBurn: burnAmount.value, newBalance: newBalance.value })
+  const decimals = Number(props.identitySnapshot?.token?.decimals || 0)
+  onDialogOK({ amountToBurn: burnAmount.value, newBalance: newBalance.value, decimals })
 }
 
 onMounted(() => {
