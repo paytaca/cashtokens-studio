@@ -71,7 +71,8 @@
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <div v-if="!!value.row.processing" class="flex justify-center">
+                <div v-if="!!value.row.processing" class="flex justify-center q-gutter-x-lg">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
                   <q-skeleton type="QToggle" bordered square></q-skeleton>
                 </div>
                 <div v-else>
