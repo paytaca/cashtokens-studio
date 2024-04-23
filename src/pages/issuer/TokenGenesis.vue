@@ -42,15 +42,17 @@
                         text-color="primary" :label="!progress ? 'Click here!' : ''"
                         @click.stop="generateAuthKeyGenesisInput" :disable="!!progress" size="lg" no-caps dense>
                         <q-spinner-dots v-if="!!progress && !authKey" class="q-ml-sm"></q-spinner-dots>
-                      </q-btn> if you want a new AuthKey for this token (Recommended, so each of your token won't share
-                      an AuthKey).
-                      <div class="q-my-lg">Or</div>
-                      <div v-if="authKeyOptions && authKeyOptions.length > 0"> If
-                        you want to use
-                        an existing AuthKey <q-btn text-color="primary" label="Click here!" size="lg"
-                          @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps dense>
-                        </q-btn>
-                      </div>
+                      </q-btn> if you want a new AuthKey for this token.
+                      <template v-if="authKeyOptions && authKeyOptions.length > 0">
+                        <div class="q-my-lg">Or</div>
+                        <div> If
+                          you want to use
+                          an existing AuthKey <q-btn text-color="primary" label="Click here!" size="lg"
+                            @click.stop="useExistingAuthKey = !useExistingAuthKey" no-caps dense>
+                          </q-btn>
+                        </div>
+                      </template>
+
                     </span>
                   </div>
                 </div>
@@ -125,7 +127,7 @@
                     <Uris v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.uris"
                       v-model:uris="registry.identities[registry.registryIdentity][registry.latestRevision].uris"
                       title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
-                      @icon-file-uploading="(v) => progress = v" />
+                      @icon-file-uploading="(v) => progress = v ? 'Uploading icon...' : false" />
                   </template>
                 </IdentitySnapshotComponent>
                 <template v-if="showAdvancedFields">
@@ -256,7 +258,6 @@ const generateGenesisInput = async () => {
       decodedTx: decoded, sourceOutputs: sourceOutputs,
       prompt: 'Create genesis input'
     })
-    console.log(signingResult)
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
@@ -367,6 +368,11 @@ const createToken = async () => {
       message: 'Invalid metadata'
     })
   }
+  if (!authKey.value) {
+    return $q.dialog({
+      message: 'Please select an AuthKey'
+    })
+  }
   progress.value = 'Processing, please wait...'
 
   if (tokenType.value?.value == TokenType.ft) {
@@ -404,7 +410,6 @@ const createToken = async () => {
     } else {
       delete aKey.token
     }
-
     amount = String(amount).replace('.', '')
     const genesisTransaction = await buildGenesisTx({
       input: toRaw(genesisInput.value!),
@@ -466,7 +471,6 @@ const createToken = async () => {
       }
     }
   } catch (error: any) {
-    console.log(error)
     $q.dialog({
       message: 'Error:' + error
     })
@@ -515,7 +519,6 @@ watch(() => authKeySelectedOption.value, (v) => {
 })
 
 watch(() => token.value.amount, (v) => {
-  console.log('V', v)
   if (identitySnapshot.value?.token) {
     let decimalPlacePosition = (v || '').indexOf('.')
     if (decimalPlacePosition >= 0) {
@@ -587,10 +590,10 @@ onMounted(() => {
   }
 
   (async () => {
-    if (genesisInput.value?.txid) {
-      authKeyOptions.value = await getAuthKeyOptions()
+    authKeyOptions.value = await getAuthKeyOptions()
+    if ((authKeyOptions.value?.length ?? 0) > 0) {
+      useExistingAuthKey.value = true
     }
-
   })()
 
 })
