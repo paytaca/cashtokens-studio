@@ -460,6 +460,8 @@ onMounted(() => {
   if (!props.identitySnapshot?.token?.nfts?.parse?.bytecode || props.identitySnapshot?.token?.nfts?.parse?.bytecode == '00cf6b') {
     if (props.token.commitment) {
       nftTypeKey.value = vmNumberToBigInt(hexToBin(props.token.commitment)).toString()
+    } else {
+      nftTypeKey.value = '1'
     }
 
   }
