@@ -217,9 +217,9 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
       identitySnapshot
     }
   }).onOk(async (value: { amountToBurn: string, newBalance: string, decimals: number }) => {
-    const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
-    progress.value = 'Processing...'
     try {
+      const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
+      progress.value = 'Processing...'
       const burnTx = await buildBurnFtReserveTx({
         authUtxo: v,
         authKey: v.authKey,
@@ -269,6 +269,8 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
         class: 'q-pa-lg'
       })
       v.token.amount = originalBalance
+    } finally {
+      progress.value = false
     }
 
 
