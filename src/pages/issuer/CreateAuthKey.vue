@@ -11,7 +11,7 @@
               transaction.
             </div>
             <div class="col-xs-12 text-right">
-              <q-btn icon="handyman" color="primary" :label="!progress ? 'Generate Genesis Input' : ''"
+              <q-btn icon="handyman" text-color="primary" :label="!progress ? 'Generate Genesis Input' : ''"
                 @click.stop="generateGenesisInput" :disable="!!progress" no-caps size="lg">
                 <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
               </q-btn>
@@ -29,7 +29,7 @@
               </q-input>
             </div>
             <div class="col-xs-12 text-right">
-              <q-btn icon="handyman" color="primary" :label="!progress ? 'Create AuthKey' : ''"
+              <q-btn icon="handyman" text-color="primary" :label="!progress ? 'Create AuthKey' : ''"
                 @click.stop="createAuthKey" :disable="!!progress" no-caps size="lg">
                 <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
               </q-btn>
@@ -105,12 +105,10 @@ const generateGenesisInput = async () => {
     }
   } catch (error) {
     $q.dialog({
-      component: TransactionStatusDialog,
-      componentProps: {
-        message: error,
-        type: 'error'
-      },
-      ok: true
+      message: error?.toString(),
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
     })
   } finally {
     progress.value = false

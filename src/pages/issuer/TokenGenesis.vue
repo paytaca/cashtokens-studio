@@ -256,6 +256,7 @@ const generateGenesisInput = async () => {
       decodedTx: decoded, sourceOutputs: sourceOutputs,
       prompt: 'Create genesis input'
     })
+    console.log(signingResult)
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
@@ -284,12 +285,10 @@ const generateGenesisInput = async () => {
     }
   } catch (error) {
     $q.dialog({
-      component: TransactionStatusDialog,
-      componentProps: {
-        message: error,
-        type: 'error'
-      },
-      ok: true
+      message: error?.toString(),
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
     })
   } finally {
     progress.value = false
@@ -337,12 +336,10 @@ const generateAuthKeyGenesisInput = async () => {
 
   } catch (error) {
     $q.dialog({
-      component: TransactionStatusDialog,
-      componentProps: {
-        message: error,
-        type: 'error'
-      },
-      ok: true
+      message: error?.toString(),
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
     })
   } finally {
     progress.value = false
@@ -590,7 +587,10 @@ onMounted(() => {
   }
 
   (async () => {
-    authKeyOptions.value = await getAuthKeyOptions()
+    if (genesisInput.value?.txid) {
+      authKeyOptions.value = await getAuthKeyOptions()
+    }
+
   })()
 
 })
