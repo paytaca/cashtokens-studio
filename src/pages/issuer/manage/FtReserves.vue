@@ -99,7 +99,7 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, computed, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, computed, inject, onBeforeUnmount, watch } from 'vue';
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
@@ -115,6 +115,7 @@ import FTBurnDialog from 'src/components/dialogs/FTBurnDialog.vue'
 import { buildBurnFtReserveTx, signTx } from 'src/app/transactions'
 import { broadcastTx } from 'src/app/transactions/broadcastTx'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import BigNumber from 'bignumber.js';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
@@ -214,14 +215,16 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
       token: v.token,
       identitySnapshot
     }
-  }).onOk(async (value: { amountToBurn: string, newBalance: string }) => {
+  }).onOk(async (value: { amountToBurn: string, newBalance: string, decimals: number }) => {
     console.log('AMOUNT TO BURN', value.amountToBurn)
+    console.log('Amount to', (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString())
+    const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
     progress.value = 'Processing...'
     try {
       const burnTx = await buildBurnFtReserveTx({
         authUtxo: v,
         authKey: v.authKey,
-        amount: value.amountToBurn.replace('.', ''),
+        amount: amountToBurnRaw.replace('.', ''),
         wallet: user.wallet
       })
       progress.value = 'Waiting for signature. Pls check your wallet!'
@@ -273,6 +276,12 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
     v.token.amount = originalBalance
   })
 }
+
+watch(() => progress.value, async (v) => {
+  if (v) {
+    document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+})
 
 onMounted(async () => {
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
