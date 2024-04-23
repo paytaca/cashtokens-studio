@@ -28,9 +28,9 @@
                 </div>
                 <div class="col-xs-12 q-gutter-y-sm">
                   <label>Category</label>
-                  <q-input :model-value="token.category" outlined disable readonly>
+                  <q-input :model-value="token.tokenId" outlined disable readonly>
                     <template v-slot:after>
-                      <CopyText :text="token.category" />
+                      <CopyText :text="token.tokenId" />
                     </template>
                   </q-input>
                 </div>
@@ -55,8 +55,8 @@
                       {{ identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number' }}
                     </label>
                     <q-input class="registry-field" v-model="nftTypeKey"
-                      placeholder="Sequence Number or Bottom Alt Stack Hex" :rules="nftTypeKeyRules" outlined required
-                      autofocus>
+                      :placeholder="identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number'"
+                      :rules="nftTypeKeyRules" outlined required autofocus>
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
@@ -187,6 +187,7 @@ import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
+import { hexToBin, vmNumberToBigInt } from '@bitauth/libauth'
 
 
 const nftTypeSchema = {
@@ -256,7 +257,7 @@ defineEmits([
 ])
 
 const props = defineProps<{
-  token: { amount: number, category: string, capability: string, commitment: string },
+  token: { amount: number, tokenId: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
   defaultNftTypeKey?: string,
@@ -285,7 +286,14 @@ const nftType = ref<NftType>({
 const nftTypeKey = ref<string>()
 
 const nftTypeKeyRules = [
-  (v: string | number) => !v || /^[0-9a-fA-F]+$/.test(String(v)) || `${props.identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Enter a hex value' : 'Enter a number'}`
+  (v: string | number) => {
+    if (!v) return true
+    if (props.identitySnapshot?.token?.nfts?.parse?.bytecode && props.identitySnapshot?.token?.nfts?.parse?.bytecode != '00cf6b') {
+      return /^[0-9a-fA-F]+$/.test(String(v)) || 'Enter a hex value'
+    } else {
+      return /^[0-9]+$/.test(String(v)) || 'Enter a number'
+    }
+  }
 ]
 
 const newOwnerRules = [
@@ -316,7 +324,7 @@ const uploadIconToIpfs = async () => {
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -339,7 +347,7 @@ const uploadAssetToIpfs = async () => {
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -449,6 +457,12 @@ onMounted(() => {
     }
   }
   newOwner.value = props.owner
+  if (!props.identitySnapshot?.token?.nfts?.parse?.bytecode || props.identitySnapshot?.token?.nfts?.parse?.bytecode == '00cf6b') {
+    if (props.token.commitment) {
+      nftTypeKey.value = vmNumberToBigInt(hexToBin(props.token.commitment)).toString()
+    }
+
+  }
 })
 
 
