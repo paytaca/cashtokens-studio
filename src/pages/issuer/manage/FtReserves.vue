@@ -310,7 +310,7 @@ const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
             txid: tx,
             txType: 'ft-issuance',
             timestamp: new Date().getTime(),
-            successMsg: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} Issued to ${shortenAddress(value.recipient)}!`
+            successMsg: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`
           })
           progress.value = false
           populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, true)
@@ -318,7 +318,7 @@ const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
             component: TransactionStatusDialog,
             componentProps: {
               statusType: 'success',
-              statusText: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} Issued ${shortenAddress(value.recipient)}!`,
+              statusText: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`,
               txid: tx
             }
           })
