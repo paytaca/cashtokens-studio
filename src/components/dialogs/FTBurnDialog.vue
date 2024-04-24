@@ -61,6 +61,12 @@ const burnAmountRules = [
     const i = v.indexOf('.')
     if (i == -1) return true
     return v.substring(i + 1).length <= Number(props.identitySnapshot?.token?.decimals || 0) || 'Violates max decimal value'
+  },
+  (v: string) => {
+    if (v.includes('.')) {
+      return (v.match(/./g)?.filter(i => i == '.') || []).length <= 1 || 'Invalid number of decimal point'
+    }
+    return true
   }
 ]
 const newBalance = computed(() => {
