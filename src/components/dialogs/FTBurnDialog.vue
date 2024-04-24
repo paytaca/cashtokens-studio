@@ -60,6 +60,7 @@ const burnAmountRules = [
   (v: string) => {
     const i = v.indexOf('.')
     if (i == -1) return true
+    if (Number(props.identitySnapshot?.token?.decimals || 0) == 0) return 'Violates max decimal value'
     return v.substring(i + 1).length <= Number(props.identitySnapshot?.token?.decimals || 0) || 'Violates max decimal value'
   },
   (v: string) => {
