@@ -54,8 +54,8 @@ const namePlaceholder = computed(() => {
 })
 const descriptionPlaceholder = computed(() => {
   if (identitySnapshot.value?.token?.nfts) {
-    return 'E.g. My NFT, Bitcats NFT, Gambling Apes Club NFT'
+    return 'E.g. My NFT, is a collection of 1000 digital artworks...'
   }
-  return 'E.g. My NFT, is a collection of 1000 digital artworks...'
+  return ''
 })
 </script>
