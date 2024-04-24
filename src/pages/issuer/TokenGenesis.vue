@@ -4,7 +4,7 @@
       <div class="text-right q-ma-lg">
         <q-btn
           v-if="!progress && registryIsValid && identitySnapshot?.name && identitySnapshot?.token?.symbol && identitySnapshot?.token?.category"
-          color="primary" size="lg" @click.stop="createToken" :disable="!!progress">
+          color="primary" size="lg" @click.stop="(e) => form.submit(e)" :disable="!!progress">
           <span>Create Token</span>
         </q-btn>
       </div>
@@ -95,47 +95,49 @@
                 <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
               </div>
               <template v-if="authKey && tokenType">
-                <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
-                  :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Token Details"
-                  enable-max-amount-setter :symbol="symbol" />
-                <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
-                  v-model:token="token" :hide="['amount', 'commitment', 'capability']" title="Token Details"
-                  :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
-                <Token v-else-if="tokenType && tokenType.value == TokenType.nft && showAdvancedFields"
-                  v-model:token="token" :hide="['amount']" title="Token Details" :symbol="symbol"
-                  :capabilities="[NFTCapability.minting, NFTCapability.mutable]" />
-                <Token v-else v-model:token="token"
-                  :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Token Details"
-                  enable-max-amount-setter :symbol="symbol" />
-                <q-input
-                  v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
-                  :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
-                  @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" :rules="decimalsRules"
-                  outlined style="width:max-content" :disable="!token.amount">
-                </q-input>
-                <IdentitySnapshotComponent
-                  v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
-                  v-model:identity-snapshot="registry.identities[registry.registryIdentity][registry.latestRevision]"
-                  :hide="['category']">
-                  <template v-slot:token>
-                    <TokenCategoryComponent
-                      v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.token"
-                      v-model:token="registry.identities[registry.registryIdentity][registry.latestRevision].token"
-                      :hide="tokenCategoryHide" />
+                <q-form ref="form" @submit.prevent="createToken">
+                  <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
+                    :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Token Details"
+                    enable-max-amount-setter :symbol="symbol" />
+                  <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
+                    v-model:token="token" :hide="['amount', 'commitment', 'capability']" title="Token Details"
+                    :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
+                  <Token v-else-if="tokenType && tokenType.value == TokenType.nft && showAdvancedFields"
+                    v-model:token="token" :hide="['amount']" title="Token Details" :symbol="symbol"
+                    :capabilities="[NFTCapability.minting, NFTCapability.mutable]" />
+                  <Token v-else v-model:token="token"
+                    :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Token Details"
+                    enable-max-amount-setter :symbol="symbol" />
+                  <q-input
+                    v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
+                    :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
+                    @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" :rules="decimalsRules"
+                    outlined style="width:max-content" :disable="!token.amount">
+                  </q-input>
+                  <IdentitySnapshotComponent
+                    v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
+                    v-model:identity-snapshot="registry.identities[registry.registryIdentity][registry.latestRevision]"
+                    :hide="['category']">
+                    <template v-slot:token>
+                      <TokenCategoryComponent
+                        v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.token"
+                        v-model:token="registry.identities[registry.registryIdentity][registry.latestRevision].token"
+                        :hide="tokenCategoryHide" />
+                    </template>
+                    <template v-slot:uris>
+                      <Uris v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.uris"
+                        v-model:uris="registry.identities[registry.registryIdentity][registry.latestRevision].uris"
+                        title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
+                        @icon-file-uploading="(v) => progress = v ? 'Uploading icon...' : false" />
+                    </template>
+                  </IdentitySnapshotComponent>
+                  <template v-if="showAdvancedFields">
+                    <NftCategoryComponent
+                      v-if="tokenType.value != TokenType.ft && registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string' && registry.identities[registry.registryIdentity][registry.latestRevision]?.token?.nfts"
+                      v-model:nft-category="registry.identities[registry.registryIdentity][registry.latestRevision].token!.nfts"
+                      title="NFT Category (Optional)" />
                   </template>
-                  <template v-slot:uris>
-                    <Uris v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.uris"
-                      v-model:uris="registry.identities[registry.registryIdentity][registry.latestRevision].uris"
-                      title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
-                      @icon-file-uploading="(v) => progress = v ? 'Uploading icon...' : false" />
-                  </template>
-                </IdentitySnapshotComponent>
-                <template v-if="showAdvancedFields">
-                  <NftCategoryComponent
-                    v-if="tokenType.value != TokenType.ft && registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string' && registry.identities[registry.registryIdentity][registry.latestRevision]?.token?.nfts"
-                    v-model:nft-category="registry.identities[registry.registryIdentity][registry.latestRevision].token!.nfts"
-                    title="NFT Category (Optional)" />
-                </template>
+                </q-form>
               </template>
             </div>
           </div>
@@ -194,6 +196,8 @@ const token = ref<Omit<TokenI, 'amount'> & { amount: string }>({
   capability: undefined,
   commitment: undefined
 })
+
+const form = ref()
 
 const registry = ref<Registry>()
 
@@ -531,10 +535,7 @@ watch(() => token.value.amount, (v) => {
 
 watch(() => tokenType.value, (v) => {
   if (v?.value == TokenType.nft || v?.value == TokenType.hybrid) {
-    if (!token.value.capability) {
-      token.value.capability = NFTCapability.minting
-
-    }
+    token.value.capability = NFTCapability.minting
     if (!token.value.commitment) {
       token.value.commitment = ''
     }
@@ -549,7 +550,7 @@ watch(() => tokenType.value, (v) => {
       }
     }
   } else {
-    delete token.value.capability
+    token.value.capability = NFTCapability.mutable
     delete token.value.commitment
     if (registry.value?.registryIdentity && registry.value?.latestRevision && typeof (registry.value.registryIdentity) == 'string' && registry.value.identities) {
       delete registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]?.token?.nfts
