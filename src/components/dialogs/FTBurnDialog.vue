@@ -35,7 +35,8 @@
       </q-card-section>
       <q-card-actions class="row justify-end">
         <q-btn text-color="orange" label="Burn" icon="local_fire_department" @click.stop="(e) => form.submit(e)"
-          size="lg"></q-btn>
+          size="lg" :disable="!burnAmount || BigInt(burnAmount.replace('.', '')) <= 0">
+        </q-btn>
       </q-card-actions>
     </q-card>
   </q-dialog>
