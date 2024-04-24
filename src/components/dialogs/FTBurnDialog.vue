@@ -1,5 +1,5 @@
 <template>
-  <q-dialog ref="burnDialogRef" @hide="onDialogHide" title="Burn" :no-refocus="true" :no-focus="true">
+  <q-dialog ref="burnDialogRef" @hide="onDialogHide" title="Burn">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
@@ -25,7 +25,12 @@
                 class="currency-amount" readonly>
               </q-input>
               <q-input v-model="burnAmount" label="Enter amount to burn" :rules="burnAmountRules" outlined
-                class="currency-amount">
+                class="currency-amount" autofocus>
+                <template v-if="identitySnapshot?.uris?.icon" v-slot:prepend>
+                  <q-avatar>
+                    <q-img :src="ipfsToGatewayUrl(identitySnapshot.uris.icon)"></q-img>
+                  </q-avatar>
+                </template>
               </q-input>
             </div>
           </q-form>
