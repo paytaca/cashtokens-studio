@@ -481,7 +481,7 @@ const createToken = async () => {
 
 watch(() => genesisInput.value?.txid, (v) => {
   if (v) {
-    registry.value = createRegistryTemplate(v, new Date().toISOString())
+    registry.value = createRegistryTemplate(v, new Date().toISOString(), tokenType.value?.value == 'nft' || tokenType.value?.value == 'hybrid')
   } else {
     registry.value = undefined
   }
@@ -552,7 +552,7 @@ watch(() => tokenType.value, (v) => {
     delete token.value.capability
     delete token.value.commitment
     if (registry.value?.registryIdentity && registry.value?.latestRevision && typeof (registry.value.registryIdentity) == 'string' && registry.value.identities) {
-      registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]?.token?.nfts
+      delete registry.value.identities[registry.value.registryIdentity][registry.value.latestRevision]?.token?.nfts
     }
   }
 })
@@ -597,17 +597,4 @@ onMounted(() => {
   })()
 
 })
-
-
-
-// const nftType = ref<NftType>({
-//   name: '',
-//   description: '',
-//   fields: [''],
-//   uris: {
-//     web: ''
-//   },
-//   extensions: { test: 'one' }
-// })
-
 </script>
