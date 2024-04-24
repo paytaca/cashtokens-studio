@@ -10,8 +10,8 @@
       </q-banner>
       <div class="text-h5 q-my-lg">Parse</div>
       <q-input v-model="nftCategory.parse.bytecode" label="Bytecode"
-        placeholder="Enter the parsing bytecode. Leave this empty for sequential NFTs." outlined
-        :rules="[(v: string) => !v || /[0-9A-Fa-f]+/.test(v) || 'Value must be a hex string']">
+        placeholder="Enter parsing bytecode. Leave this empty for sequential NFTs." outlined
+        :rules="[(v: string) => !v || /\b[0-9A-Fa-f]+\b/g.test(v) || 'Value must be a hex string']">
         <template v-slot:prepend>
           <span class="text-grey-8 text-italic">0x</span>
         </template>
@@ -33,8 +33,8 @@
 <script setup lang="ts">
 import { computed, defineComponent, defineModel } from 'vue'
 import type { NftCategory } from 'mainnet-js'
-import NftTypeComponent from 'src/components/bcmr/NftType.vue'
 import { NFTCollectionType } from 'src/app/bcmr/types';
+import NftTypeComponent from './NftType.vue'
 
 export type NftCategoryProps = {
   title?: string,

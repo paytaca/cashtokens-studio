@@ -11,10 +11,6 @@
       <q-input v-if="!hide?.includes('amount')" v-model="token.amount" :label="(labels || {})['amount'] ?? 'Amount'"
         outlined style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive" :rules="amountRules"
         :readonly="readonly?.includes('amount')">
-        <template v-if="symbol" v-slot:prepend>
-          <span class="bg-grey-8" style="letter-spacing: 3px; border-radius: 3px; padding: 3px;">{{
-        symbol }}</span>
-        </template>
         <template v-if="enableMaxAmountSetter" v-slot:append>
           <q-btn text-color="warning" :class="$q.dark.isActive ? '' : 'text-black'" @click="setFtSupplyToMax"
             label="Max" />
