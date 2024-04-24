@@ -1,10 +1,10 @@
 <template>
-  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" title="Issue" :no-refocus="true" :no-focus="true">
+  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" title="Issue">
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
           <div class="flex items-center col justify-between">
-            <div class="flex items-center"><q-icon name="send"></q-icon><span>Issue</span></div>
+            <div class="flex items-center"><span>Issue</span></div>
             <div class="flex items-center token-symbol q-gutter-xs">
               <q-avatar v-if="identitySnapshot?.uris?.icon">
                 <q-img :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)"></q-img>
@@ -25,9 +25,15 @@
                 class="currency-amount" readonly>
               </q-input>
               <q-input v-model="issuedAmount" label="Enter amount to Send" :rules="issuedAmountRules" outlined
-                class="currency-amount">
+                class="currency-amount" autofocus>
+                <template v-if="identitySnapshot?.uris?.icon" v-slot:prepend>
+                  <q-avatar>
+                    <q-img :src="ipfsToGatewayUrl(identitySnapshot.uris.icon)"></q-img>
+                  </q-avatar>
+                </template>
               </q-input>
-              <q-input v-if="issuedAmount" v-model="recipient" label="Recipient"
+              <q-input v-if="issuedAmount && BigInt(issuedAmount.replace('.', '')) > 0" v-model="recipient"
+                label="Recipient" placeholder="Paste recipient's token address"
                 :rules="[(v: string) => v && isTokenAddress(v) || 'Value should be a cashtoken address']" outlined>
               </q-input>
             </div>
@@ -35,7 +41,7 @@
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn text-color="orange" label="Send" icon="send" @click.stop="(e) => issuerForm.submit(e)" size="lg"
+        <q-btn text-color="primary" label="Send" icon="send" @click.stop="(e) => issuerForm.submit(e)" size="lg"
           :disable="!issuedAmount || BigInt(issuedAmount.replace('.', '')) <= 0">
         </q-btn>
       </q-card-actions>
