@@ -55,6 +55,10 @@ const amountRules = [
   (v: string) => {
     const sanitizedAmt = (v ?? '').replace('.', '')
     return BigInt(sanitizedAmt) <= BigInt(MAX_FUNGIBLE_AMOUNT) || `Max amount = ${MAX_FUNGIBLE_AMOUNT}`
+  },
+  (v: string) => {
+    const sanitizedAmt = (v ?? '').replace('.', '')
+    return BigInt(sanitizedAmt) > 0 || 'Amount should be greater than 0'
   }
 ]
 
