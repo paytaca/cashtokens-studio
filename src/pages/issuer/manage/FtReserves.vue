@@ -117,6 +117,7 @@ import { buildBurnFtReserveTx, signTx } from 'src/app/transactions'
 import { broadcastTx } from 'src/app/transactions/broadcastTx'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import BigNumber from 'bignumber.js';
+import { nextTick } from 'process';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
@@ -218,8 +219,8 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
     }
   }).onOk(async (value: { amountToBurn: string, newBalance: string, decimals: number }) => {
     try {
-      const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
       progress.value = 'Processing...'
+      const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
       const burnTx = await buildBurnFtReserveTx({
         authUtxo: v,
         authKey: v.authKey,
@@ -281,7 +282,9 @@ const openBurnFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
 
 watch(() => progress.value, async (v) => {
   if (v) {
-    document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    nextTick(() => {
+      document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
   }
 })
 
