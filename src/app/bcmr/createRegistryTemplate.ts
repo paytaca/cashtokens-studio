@@ -1,10 +1,12 @@
 import { type Registry } from 'mainnet-js';
+import { NFTCollectionType } from './types';
 
 export const createRegistryTemplate = (
   registryIdentity: string,
-  latestRevision: string
+  latestRevision: string,
+  nft?: boolean
 ): Registry => {
-  return {
+  const registryTemplate: Registry = {
     $schema: 'https://cashtokens.org/bcmr-v2.schema.json',
     version: {
       major: 0,
@@ -25,7 +27,7 @@ export const createRegistryTemplate = (
           },
           uris: {
             icon: '',
-            web: 'https://',
+            web: '',
           },
         },
       },
@@ -35,4 +37,14 @@ export const createRegistryTemplate = (
       authNft: '',
     },
   };
+  if (nft) {
+    registryTemplate.identities![registryIdentity][latestRevision].token!.nfts =
+      {
+        parse: {
+          bytecode: '',
+          types: {},
+        },
+      };
+  }
+  return registryTemplate;
 };
