@@ -113,7 +113,7 @@
       :thumb-style="{ width: '0px' }">
       <q-page-container>
         <q-toolbar v-if="ui.routeBack" class="q-mt-sm q-mb-sm">
-          <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" />
+          <!-- <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" /> -->
           <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title>
         </q-toolbar>
         <router-view />
