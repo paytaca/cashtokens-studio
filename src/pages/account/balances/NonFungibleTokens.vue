@@ -9,8 +9,8 @@
                     </q-badge>
                 </h5>
                 <div>
-                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid color="warning"
-                        :loading="populatingTable" title="My Collections" :rows="nftCollections.results" :columns="[
+                    <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered grid
+                        title="My Collections" :rows="nftCollections.results" :columns="[
                             {
                                 name: 'name', label: 'Name',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType[r.nftType._meta.commitment]?.name : '---',
@@ -19,45 +19,35 @@
                                 name: 'commitment', label: 'Commitment',
                                 field: r => r.nftType?._meta?.commitment ? r.nftType._meta.commitment : '---',
                             }
-                        ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header>
+                        ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" hide-header align="center">
                         <template v-slot:top>
                             <div v-if="!populatingTable" class="col-12 text-right q-my-sm">
                                 <q-checkbox v-model="excludePossibleAuthKeys" label="Exclude Possible AuthKeys"
                                     class="text-grey-6" dense>
                                     <q-tooltip>
-                                        Excludes NFT that could be possibly an AuthKey so you don't accidentally send it to
+                                        Excludes NFT that could be possibly an AuthKey so you don't accidentally send it
+                                        to
                                         someone.
                                     </q-tooltip>
                                 </q-checkbox>
                             </div>
                         </template>
+
                         <template v-slot:item="i">
-                            <q-skeleton v-if="i.row.processing" class="my-card q-pb-xs q-ma-sm text-center col-grow"
-                                style="border-radius: 15px; max-width:200px">
-                                <div class="flex justify-center">
-                                    <q-skeleton height="170px" width="170px" type="rect" square></q-skeleton>
-                                </div>
-                                <div class="q-px-sm q-mt-xs text-left">
-                                    <q-skeleton bordered square></q-skeleton>
-                                </div>
-                                <div class="flex justify-end q-mt-xs q-mr-sm">
-                                    <q-skeleton type="QBtn" bordered square width="3em"></q-skeleton>
-                                </div>
-                            </q-skeleton>
-                            <q-card v-else class="my-card q-ma-sm text-center col-grow"
-                                style="border-radius: 15px; max-width:200px">
+                            <q-card v-ripple class="my-card q-ma-sm text-center col-grow"
+                                style="border-radius: 15px; max-width:190px">
                                 <q-img v-if="i.row.nftTypeMetadata?.uris?.icon" style="height: 170px; min-width: 170px;"
                                     fit="fill"
                                     :src="i.row.nftTypeMetadata?.uris?.icon ? (i.row.nftTypeMetadata.uris?.icon.startsWith('ipfs://') ? ipfsToGatewayUrl(i.row.nftTypeMetadata.uris.icon) : i.row.nftTypeMetadata.uris.icon) : ''"
-                                    alt="na">
+                                    alt="na" class="cursor-pointer" @click="viewNft(i.row)">
                                     <div class="absolute-bottom text-left">
                                         <div class="text-subtitle1">
                                             {{
-                                                i.row.token?.commitment ? (i.row.nftCollectionType ==
-                                                    'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
-                                                        'vm-number',
-                                                        'decimal') : i.row.token.commitment) : ''
-                                            }}
+                            i.row.token?.commitment ? (i.row.nftCollectionType ==
+                                'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
+                                    'vm-number',
+                                    'decimal') : i.row.token.commitment) : ''
+                        }}
                                         </div>
                                     </div>
                                 </q-img>
@@ -67,8 +57,10 @@
                                     <div v-if="i.row.nftTypeMetadata?.name" class="ellipsis">
                                         {{ i.row.nftTypeMetadata?.name }}
                                     </div>
-                                    <div v-else-if="i.row.token?.commitment" class="ellipsis">
-                                        <code class="text-caption">{{ `<${shortenTokenId(i.row.token.tokenId)}>` }}</code>
+                                    <div v-else-if="i.row.token?.tokenId" class="ellipsis">
+                                        <code class="text-caption">
+                                            {{ `<${shortenTokenId(i.row.token.tokenId)}>` }}
+                                        </code>
                                     </div>
                                 </div>
                                 <q-card-actions align="right">
@@ -91,6 +83,7 @@
             @hide="onHide" @nft-transferred="() => onNftTransfer()" />
     </q-page>
 </template>
+
 <script setup lang="ts">
 import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
@@ -102,6 +95,7 @@ import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTrans
 import { UtxoI, Wallet } from 'mainnet-js';
 import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
 import { EventBus, useQuasar } from 'quasar';
+import NftViewDialog from 'src/components/dialogs/NftViewDialog.vue'
 defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
 const user = useUser()
@@ -142,6 +136,28 @@ const isTokenTransferred = computed(() => {
 })
 
 const populatingTable = ref<boolean>()
+
+const viewNft = async (cashtoken: any) => {
+    // Commitment in bcmr indexer is actually commitmentOrbottomAltStackItemHex not the NFT commitment, BCMR indexer needs to be refactored
+    // We are just future proofing
+    const nftTypeKey = cashtoken.nftType._meta.commitment || cashtoken.nftType._meta.commitmentOrbottomAltStackItemHex
+
+    if (!cashtoken.identitySnapshot) {
+        await cashtoken.resolveIdentitySnapshot()
+    }
+    $q.dialog({
+        component: NftViewDialog,
+        componentProps: {
+            tokenSymbol: cashtoken.identitySnapshot?.token?.symbol,
+            tokenIconUri: cashtoken.identitySnapshot?.uris?.icon,
+            tokenCategory: cashtoken.identitySnapshot?.token?.category,
+            nftTypeKey: nftTypeKey,
+            nftType: cashtoken.nftType[nftTypeKey],
+            utxo: cashtoken.utxo
+        }
+    })
+
+}
 
 const openNFTTransferDialog = (nft: CashToken) => {
     nft.ownerWallet = user.wallet as Wallet // embedding wallet
@@ -193,7 +209,9 @@ const populateNftCollections = async (wallet: Wallet, transactionSigner: Transac
                     token
                 } = cashtoken
                 nftCollections.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
+
                 await nftCollections.value.results[i].resolveNftType()
+                nftCollections.value.results[i].resolveIdentitySnapshot()
             })
 
         }

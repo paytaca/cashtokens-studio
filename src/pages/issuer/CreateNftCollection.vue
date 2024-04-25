@@ -60,11 +60,11 @@
                   style="width:100%">
                   Capability <sup><code class="text-caption">{{ token.capability }}</code></sup>
                   <q-option-group name="preferred_genre" v-model="token.capability" :options="[
-                    { value: NFTCapability.minting, label: 'Minting' },
-                    { value: NFTCapability.mutable, label: 'Mutable' },
-                    { value: NFTCapability.none, label: 'None' }
-                  ]
-                    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+              { value: NFTCapability.minting, label: 'Minting' },
+              { value: NFTCapability.mutable, label: 'Mutable' },
+              { value: NFTCapability.none, label: 'None' }
+            ]
+              " color="primary" inline :disable="Boolean(cashToken?.processing)" />
                 </div>
               </div>
 
@@ -111,7 +111,7 @@ import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs, useEventBus } from 'src/composables'
 import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
 import { buildAuthchain } from 'src/app/globalfunctions'
-import { numberToTokeshi, shortenTx } from 'src/app/utils'
+import { shortenTx } from 'src/app/utils'
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import { ref, watch, onMounted, computed } from 'vue'

@@ -934,6 +934,10 @@ export class CashToken implements UtxoI, PartialBcmr {
   async mintChildrenExt(arg: {
     tokens: [TokenI];
     recipient: string;
+    publish?: {
+      uris: string[];
+      contentHash: string;
+    };
     newMinterCommitment?: string;
   }) {
     if (!arg.tokens) return;
@@ -1008,7 +1012,24 @@ export class CashToken implements UtxoI, PartialBcmr {
             token: authKeyInput.token,
           },
         ])
-        .to(mintOutputs)
+        .to(mintOutputs);
+
+      if (arg.publish) {
+        let contentHash = arg.publish.contentHash;
+        if (contentHash && !contentHash.startsWith('0x')) {
+          contentHash = `0x${contentHash}`;
+        }
+        const opReturnData = [
+          'BCMR',
+          contentHash,
+          ...arg.publish.uris.map((u) => u.replace(/https:\/\/|ipfs:\/\//, '')),
+        ];
+        console.log('OP_RETURN VALUE', opReturnData);
+        transaction = transaction.withOpReturn(opReturnData);
+      }
+
+      transaction = transaction
+
         .to(
           funderInput.satoshis - BigInt(mintCost) > 546
             ? [

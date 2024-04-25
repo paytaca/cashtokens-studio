@@ -85,14 +85,15 @@ export class GenesisInput implements UtxoI {
   async generate(ownerWallet:Wallet, qty = 2): Promise<string|undefined> {
     this._processing = 'Scanning wallet'
     const fee = calcMinerFee({P2PKH: 1}, {P2PKH: qty})
-    let funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
+    const funder = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> Boolean(!u.token) && u.satoshis > DEFAULT_TOKEN_VALUE + fee)[0]
     if (!funder) {
-      if (this.satoshis <= (DEFAULT_TOKEN_VALUE + fee)) {
-        delete this._processing
-        throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
-      } else {
-        funder = this.utxo
-      }
+      throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      // if (this.satoshis <= (DEFAULT_TOKEN_VALUE + fee)) {
+      //   delete this._processing
+      //   throw new Error('Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.')
+      // } else {
+      //   funder = this.utxo
+      // }
       // use this input to fund the transaction 
       //if it we can't find a different funder utxo and if it has enough satoshis
     }
@@ -120,8 +121,10 @@ export class GenesisInput implements UtxoI {
     // request signature
     delete this._processing
     this._processing = 'Waiting for signature'
+    console.log('WAITING FOR SIGNATURE')
     let signResult: {signedTransaction:any, signedTransactionHash?:any} | undefined
     try {
+      console.log('SIGN', signResult)
       signResult = await this.transactionSigner?.signTransaction(decoded, sourceOutputs, false, 'Generate genesis inputs')
     } catch (error:any) {
       delete this._processing
@@ -147,6 +150,18 @@ export class GenesisInput implements UtxoI {
       delete this._processing
     }
   }
+
+  async updateUtxo(ownerWallet: Wallet, txid: string): Promise<boolean> {
+    this._processing = 'Updating'
+    const utxoToUse = (await ownerWallet.getAddressUtxos()).filter((u:UtxoI)=> u.txid = txid)
+    if (!utxoToUse) return false
+    this.utxo = utxoToUse[0]
+    delete this._processing
+    return true
+
+  }
+
+
 
   /**
    * Generate genesis inputs from wallet's utxos
