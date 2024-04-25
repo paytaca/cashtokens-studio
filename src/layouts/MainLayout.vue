@@ -71,10 +71,10 @@
                 <q-item clickable
                   @click="() => { copyText(user.walletTokenAddress); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
                   <q-avatar class="q-mr-xs">
-                    <q-img src="images/cts_icon.png"></q-img>
+                    <q-img src="images/cashtokens.svg"></q-img>
                   </q-avatar>
                   <q-item-section>
-                    <q-item-label>TOKEN</q-item-label>
+                    <!-- <q-item-label>TOKEN</q-item-label> -->
                     <q-item-label caption>{{ shortenAddress(user.walletTokenAddress) }}</q-item-label>
                   </q-item-section>
                 </q-item>
