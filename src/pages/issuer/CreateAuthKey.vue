@@ -1,9 +1,8 @@
 <template>
-  <q-page class="q-pa-sm">
+  <q-page class="q-ma-sm">
     <div class="row justify-center">
-      <div class="col-xs-12 col-sm-6 ">
-
-        <div class="row justify-center q-my-lg q-gutter-y-lg">
+      <div class="col-xs-12 col-sm-6 bg-content rounded-borders q-pa-lg">
+        <div class="row justify-center q-gutter-lg q-ma-sm">
           <template v-if="!genesisInput">
             <div class="col-xs-12 text-h5 text-justify">
               <q-icon name="info" class="q-mr-xs"></q-icon>Creating a new AuthKey requires a
@@ -18,10 +17,11 @@
             </div>
           </template>
           <template v-else>
-            <div class="col-xs-12 text-h3 q-my-lg">
-              <span>Create AuthKey</span><q-icon name="key" color="warning"></q-icon>
+            <div class="col-xs-12 ">
+              <span class="text-h3">Create AuthKey</span>
             </div>
-            <div class="col-xs-12">
+            <div class="col-xs-12 q-my-lg">
+              <div class="text-h5 q-my-lg">AuthKey <q-icon name="key" color="warning"></q-icon></div>
               <q-input :model-value="genesisInput.txid" label="AuthKey ID" outlined readonly>
                 <template v-slot:append>
                   <CopyText :text="genesisInput.txid" />
@@ -29,7 +29,7 @@
               </q-input>
             </div>
             <div class="col-xs-12 text-right">
-              <q-btn icon="handyman" text-color="primary" :label="!progress ? 'Create AuthKey' : ''"
+              <q-btn icon="handyman" color="primary" :label="!progress ? 'Create AuthKey' : ''"
                 @click.stop="createAuthKey" :disable="!!progress" no-caps size="lg">
                 <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
               </q-btn>

@@ -1,8 +1,8 @@
 <template>
   <div>
-    <div v-if="title" class="text-h6 q-my-lg flex items-center">
-      <span>{{ title || 'URIs' }}</span>
-      <q-btn v-if="enableAddUri" @click="addUri" text-color="primary" icon="add" dense flat></q-btn>
+    <div v-if="title" class="text-h6 q-my-lg flex items-center q-gutter-x-md">
+      <div class="q-gutter-x-xs"><q-icon name="link"></q-icon><span>{{ title || 'Links' }}</span></div>
+      <q-btn v-if="enableAddUri" @click="addUri" text-color="primary" icon="add"></q-btn>
     </div>
     <div class="q-col-gutter-y-md">
       <div>
@@ -10,7 +10,8 @@
           @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
           :disable="iconFileUploading" outlined bottom-slots class="hidden">
         </q-file>
-        <q-input v-model="uris!.icon" outlined autogrow bottom-slots placeholder="Icon">
+        <q-input v-model="uris!.icon" outlined bottom-slots label="Icon"
+          placeholder="Enter icon's URL or upload an icon">
           <template v-slot:prepend>
             <q-avatar v-if="uris!.icon">
               <q-img :src="ipfsToGatewayUrl(uris!.icon)"></q-img>
@@ -30,7 +31,7 @@
       </div>
       <div v-if="uris.web != undefined">
         <q-input label="Web" :model-value="uris['web']" @update:model-value="onUpdateModelValue"
-          @focus="selectedUriName = 'web'" outlined autogrow>
+          @focus="selectedUriName = 'web'" outlined>
           <template v-slot:after>
             <q-btn icon="remove" @click="() => deleteUri('web')" text-color="negative"> </q-btn>
           </template>
@@ -39,29 +40,26 @@
       <div v-for="uriName, i in Object.keys(uris || {})" :key="'uris' + i">
         <q-input v-if="uriName != 'icon' && uriName != 'asset' && uriName != 'web'" :label="uriName"
           :model-value="uris[uriName]" @update:model-value="onUpdateModelValue" @focus="selectedUriName = uriName"
-          outlined autogrow>
+          outlined>
           <template v-slot:after>
             <q-btn icon="remove" @click="() => deleteUri(uriName)" text-color="negative"></q-btn>
           </template>
         </q-input>
       </div>
-      <!-- <div v-if="enableAddUri" class="text-right">
-        <q-btn @click="addUri" text-color="primary" icon="add" class="q-mt-md"></q-btn>
-      </div> -->
       <div class="col-xs-12 col-sm-6">
         <q-dialog v-model="dialog" @before-show="onBeforeDialogShow" @before-hide="onBeforeDialogHide" class="q-pa-lg">
           <q-card style="min-width: 400px">
             <q-card-section>
-              <div class="text-h6">Add URI</div>
+              <div class="text-h6">Add Link</div>
             </q-card-section>
             <q-card-section class="q-pt-none q-gutter-lg">
               <q-select v-model="selectedUriName" :options="options" label="Name" stack-label class="text-capitalize"
                 outlined />
-              <q-input :model-value="uris[selectedUriName]" @update:model-value="onUpdateModelValue" outlined autofocus
-                placeholder="https:// or ipfs://" />
+              <q-input :model-value="uris[selectedUriName]" @update:model-value="onUpdateModelValue" label="Enter a URL"
+                outlined autofocus />
             </q-card-section>
             <q-card-actions align="right" class="text-primary q-my-lg">
-              <q-btn label="Add" v-close-popup />
+              <q-btn label="Add" v-close-popup size="lg" />
             </q-card-actions>
           </q-card>
         </q-dialog>

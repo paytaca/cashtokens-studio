@@ -1,7 +1,7 @@
 <template>
   <div>
-    <div class="q-gutter-lg q-my-lg">
-      <div class="text-h4 q-my-lg">{{ title }}</div>
+    <div class="q-gutter-lg q-my-md">
+      <div class="text-h5 q-my-lg">{{ title }}</div>
       <q-input v-if="!hide?.includes('tokenId')" v-model="token.tokenId"
         :label="(labels || {})['tokenId'] ?? 'Token ID'" outlined readonly size="lg">
         <template v-slot:append>
