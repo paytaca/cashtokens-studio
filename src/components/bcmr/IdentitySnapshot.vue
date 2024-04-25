@@ -4,9 +4,10 @@
     <div v-else>
       <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
       <q-section class="q-gutter-y-lg">
-        <q-input v-model="identitySnapshot.name" label="Token Name *" :placeholder="namePlaceholder" required outlined>
+        <q-input v-model="identitySnapshot.name" :label="labels?.name || 'Token Name *'" :placeholder="namePlaceholder"
+          required outlined :rules="[(v: any) => !!v || 'Required']">
         </q-input>
-        <q-input v-model="identitySnapshot.description" label="Describe your token"
+        <q-input v-model="identitySnapshot.description" :label="labels?.description || 'Describe your token'"
           :placeholder="descriptionPlaceholder" autogrow outlined aria-rowspan="2">
         </q-input>
       </q-section>
@@ -41,7 +42,10 @@ import ExtensionsComponent from './Extensions.vue'
 export type IdentitySnapshotProps = {
   title?: string,
   editor?: 'json' | 'form',
-  hide?: string[]
+  hide?: string[],
+  labels?: {
+    [field: string]: string
+  }
 }
 const props = defineProps<IdentitySnapshotProps>()
 const editor = ref<'json' | 'form'>(props.editor || 'form')

@@ -1,6 +1,6 @@
 <template>
   <q-layout view="lHh Lpr lFf" container style="height: 100vh">
-    <q-footer style="background-color: unset;">
+    <q-footer style="background-color:#19191ab0">
       <div class="text-right q-ma-lg">
         <q-btn
           v-if="!progress && registryIsValid && identitySnapshot?.name && identitySnapshot?.token?.symbol && identitySnapshot?.token?.category"
@@ -11,9 +11,8 @@
     </q-footer>
     <q-page-container>
       <q-page>
-        <div class="row justify-center q-mx-sm">
-
-          <div class="col-xs-12 q-col-gutter-y-lg col-sm-6 q-mt-md">
+        <div class="row justify-center q-mx-sm ">
+          <div class="col-xs-12 q-col-gutter-y-lg col-sm-6 q-mt-md bg-content q-pa-lg rounded-borders">
             <div v-if="authKey && genesisInput" class="col-xs-12 col-sm-6 ">
               <span class="text-h3 flex flex-wrap item-center">
                 <span>Create Token</span>
@@ -58,7 +57,7 @@
                 </div>
               </div>
               <label v-if="useExistingAuthKey" class="flex justify-between items-center">
-                <div class="text-h4 q-my-lg">Select AuthKey <q-icon name="key" color="warning"></q-icon></div>
+                <div class="text-h5 q-my-lg">Select AuthKey <q-icon name="key" color="warning"></q-icon></div>
                 <q-btn color="primary" label="Create New AuthKey?" @click.stop="useExistingAuthKey = false" flat
                   no-caps>
                 </q-btn>
@@ -68,7 +67,7 @@
             </div>
             <template v-if="authKey?.txid && !useExistingAuthKey">
               <div class="flex justify-between">
-                <span class="text-h4">AuthKey <q-icon name="key" color="warning"></q-icon> </span>
+                <span class="text-h5">AuthKey <q-icon name="key" color="warning"></q-icon> </span>
                 <q-btn v-if="!authKey?.token?.tokenId" color="primary" label="Use Existing AuthKey?"
                   @click.stop="useExistingAuthKey = true" flat no-caps>
                 </q-btn>
@@ -82,31 +81,31 @@
               </q-input>
             </template>
             <div v-if="genesisInput?.txid && authKey?.txid">
-              <div class="text-h4 q-mb-lg">Select Token Type</div>
+              <div class="text-h5 q-mb-lg">Select Type</div>
               <q-select v-if="!route.query.tokenType" v-model="tokenType"
-                :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'Non-Fungible Token (NFT)' }]"
+                :options="[{ value: TokenType.ft, label: 'Fungible Token' }, { value: TokenType.nft, label: 'NFT Collection' }]"
                 outlined autofocus>
                 <template v-slot:prepend>
                   <q-icon v-if="tokenType?.value"
                     :name="tokenType.value == TokenType.ft ? 'money' : 'collections'"></q-icon>
                 </template>
               </q-select>
-              <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
+              <!-- <div v-if="tokenType && tokenType?.value != TokenType.ft" class="text-right q-mt-lg">
                 <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
-              </div>
+              </div> -->
               <template v-if="authKey && tokenType">
-                <q-form ref="form" @submit.prevent="createToken">
+                <q-form ref="form" @submit.prevent="createToken" class="q-my-lg">
                   <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
-                    :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Token Details"
+                    :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Details"
                     enable-max-amount-setter :symbol="symbol" />
                   <Token v-else-if="tokenType && tokenType.value == TokenType.nft && !showAdvancedFields"
-                    v-model:token="token" :hide="['amount', 'commitment', 'capability']" title="Token Details"
+                    v-model:token="token" :hide="['amount', 'commitment', 'capability']" title="Details"
                     :capabilities="!showAdvancedFields ? [NFTCapability.minting] : undefined" :symbol="symbol" />
                   <Token v-else-if="tokenType && tokenType.value == TokenType.nft && showAdvancedFields"
-                    v-model:token="token" :hide="['amount']" title="Token Details" :symbol="symbol"
+                    v-model:token="token" :hide="['amount']" title="Details" :symbol="symbol"
                     :capabilities="[NFTCapability.minting, NFTCapability.mutable]" />
                   <Token v-else v-model:token="token"
-                    :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Token Details"
+                    :labels="{ amount: `Max Supply (vm = ${token.amount.replace('.', '')})` }" title="Details"
                     enable-max-amount-setter :symbol="symbol" />
                   <q-input
                     v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
@@ -117,7 +116,8 @@
                   <IdentitySnapshotComponent
                     v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
                     v-model:identity-snapshot="registry.identities[registry.registryIdentity][registry.latestRevision]"
-                    :hide="['category']">
+                    :hide="['category']"
+                    :labels="{ name: tokenType.value == TokenType.ft ? 'Token Name' : 'Collection Name', description: tokenType.value == TokenType.nft ? 'Describe your NFT collection' : '' }">
                     <template v-slot:token>
                       <TokenCategoryComponent
                         v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.token"
@@ -127,7 +127,7 @@
                     <template v-slot:uris>
                       <Uris v-if="registry.identities[registry.registryIdentity][registry.latestRevision]?.uris"
                         v-model:uris="registry.identities[registry.registryIdentity][registry.latestRevision].uris"
-                        title="URIs" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
+                        title="Links" enable-icon-upload enable-add-uri :token-id="genesisInput?.txid"
                         @icon-file-uploading="(v) => progress = v ? 'Uploading icon...' : false" />
                     </template>
                   </IdentitySnapshotComponent>

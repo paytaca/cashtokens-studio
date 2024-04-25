@@ -1,13 +1,43 @@
 <template>
   <q-page>
     <q-layout view="lHh Lpr lFf" container style="height: 100vh">
+      <q-footer style="background-color:#19191ab0">
+        <div v-if="!bcmrNewRevision" class="row justify-end q-pa-md">
+          <q-btn @click="newRevision" fab icon="edit" color="primary" />
+        </div>
+        <div v-else class="row justify-end q-pa-md">
+          <div class="q-gutter-md">
+            <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" fab size="md"
+              icon="undo" text-color="negative">
+              <q-tooltip>Reset/Cancel Edit</q-tooltip>
+            </q-btn>
+            <q-btn v-if="bcmrNotFound == false"
+              @click.stop="() => promptForRevisionOptions(downloadRevisedRegistry, 'Download')" size="md"
+              text-color="primary" :disabled="!!progress || newTokenIconUploading" fab>
+              <q-tooltip>Download registry</q-tooltip>
+              <q-spinner v-if="!!progress || newTokenIconUploading"></q-spinner>
+              <q-icon v-else name="download"></q-icon>
+            </q-btn>
+            <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false"
+              @click.stop="openPublishRegistryFromFileDialog" size="md" icon="file_open" text-color="primary">
+              <q-tooltip>Publish registry from file</q-tooltip>
+            </q-btn>
+            <q-btn @click.stop="() => promptForRevisionOptions(publish, 'Confirm Publish')" size="md" color="primary"
+              :disabled="!!progress || newTokenIconUploading" fab>
+              <q-tooltip>Publish changes</q-tooltip>
+              <q-spinner
+                v-if="!!progress || newTokenIconUploading && !progress?.toString().includes('Download')"></q-spinner>
+              <q-icon v-else name="cloud_upload"></q-icon>
+            </q-btn>
+          </div>
+        </div>
+
+      </q-footer>
       <q-page-container>
         <q-page class="q-mb-lg">
-          <h5 class="text-center">
-            Metadata Registry
-          </h5>
           <div class="row justify-center">
-            <div class="col-xs-12 col-sm-10 col-lg-9">
+            <div class="col-xs-12 col-sm-10 col-lg-9 bg-content rounded-borders q-pa-lg">
+              <div class="col-12 text-center text-h3"> Metadata </div>
               <div class="col-12 text-right q-mr-lg q-gutter-md">
                 <q-btn v-if="!bcmrNewRevision" @click.stop="newRevision" size="md" icon="edit" text-color="primary">
                   <q-tooltip>Click to edit</q-tooltip>
@@ -123,8 +153,8 @@
                                 </q-avatar>
                                 <span style="letter-spacing: 5px;">
                                   {{
-                  bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
-                }}
+          bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
+        }}
                                 </span>
                               </q-chip>
                             </div>
@@ -349,19 +379,19 @@
                         :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'" :loading="nftTypesIsLoading"
                         color="warning" @request="onTableRequest" style="background:unset;margin-bottom: 3rem;"
                         :columns="[
-                  {
-                    name: 'nfttype', label: 'Nft Type',
-                    field: r => '',
-                    align: 'left',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                  {
-                    name: 'actions', label: '',
-                    field: r => '',
-                    align: 'center',
-                    headerStyle: 'padding: 1.5em',
-                  },
-                ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id" :visible-columns="['nfttype', 'actions']"
+          {
+            name: 'nfttype', label: 'Nft Type',
+            field: r => '',
+            align: 'left',
+            headerStyle: 'padding: 1.5em',
+          },
+          {
+            name: 'actions', label: '',
+            field: r => '',
+            align: 'center',
+            headerStyle: 'padding: 1.5em',
+          },
+        ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id" :visible-columns="['nfttype', 'actions']"
                         bordered>
 
                         <template v-slot:body-cell-nfttype="value">
@@ -391,11 +421,11 @@
                               <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                                 <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                                   {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
-                  value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-                  `#${formatCommitment(value.row._meta?.commitment || value.row.commitment || '',
-                    'vm-number',
-                    'decimal')}` :
-                  value.row._meta?.commitment || value.row.commitment }}
+          value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
+          `#${formatCommitment(value.row._meta?.commitment || value.row.commitment || '',
+            'vm-number',
+            'decimal')}` :
+          value.row._meta?.commitment || value.row.commitment }}
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                                   {{ `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
@@ -407,10 +437,10 @@
                                   :style="$q.screen.xs ? 'text-wrap:wrap;width:20ch;max-width:20ch' : 'text-wrap:wrap;width:60ch;max-width:80ch'">
                                   Description:
                                   {{
-                  value.row[value.row._meta?.commitment ||
-                    value.row.commitment || '']?.description ||
-                  '<no description>'
-                }}
+          value.row[value.row._meta?.commitment ||
+            value.row.commitment || '']?.description ||
+          '<no description>'
+        }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -467,7 +497,7 @@
                           style="background-color:#0000002b" class="bg-transparent">
                           <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
                           <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{
-                  progress }}</span>
+                            progress }}</span>
                         </q-inner-loading>
                       </q-table>
 
@@ -475,10 +505,10 @@
                   </q-expansion-item>
                 </div>
               </q-form>
-              <q-page-sticky v-if="!bcmrNewRevision" position="bottom-right" :offset="[30, 18]">
+              <!-- <q-page-sticky v-if="!bcmrNewRevision" position="bottom-right" :offset="[30, 18]">
                 <q-btn @click="newRevision" fab icon="edit" color="primary" />
               </q-page-sticky>
-              <q-page-sticky v-else position="bottom-right" :offset="[30, 25]" class="q-gutter-md">
+              <q-page-sticky v-else position="bottom-right">
                 <div class="q-gutter-md">
                   <q-btn v-if="!progress && !newTokenIconUploading && bcmrNotFound == false" @click.stop="reset" fab
                     size="md" icon="undo" text-color="negative">
@@ -503,7 +533,7 @@
                     <q-icon v-else name="cloud_upload"></q-icon>
                   </q-btn>
                 </div>
-              </q-page-sticky>
+              </q-page-sticky> -->
 
             </div>
           </div>

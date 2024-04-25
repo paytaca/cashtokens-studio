@@ -163,6 +163,11 @@ textarea {
   font-size: large;
 }
 
+// input {
+//   // background-color: #1e1e1e00;
+//   background-color: red;
+// }
+
 .q-field--disabled .q-field__label {
   color: rgb(55, 46, 46) !important;
 }
@@ -213,4 +218,12 @@ body.body--dark {
   letter-spacing: 4px;
   font-variant: unicase;
   color: grey;
+}
+
+.bg-content {
+  background: #3b3c3f5e;
+}
+
+.q-field__inner {
+  background-color: #1e1e1e2e;
 }
