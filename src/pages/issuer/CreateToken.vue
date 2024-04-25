@@ -4,8 +4,8 @@
       <div class="col-xs-12 col-sm-10 col-lg-9">
         <div class="row justify-center q-my-lg">
           <template v-if="!genesisInputUtxo || !authKey">
-            <q-banner class="q-mt-lg q-px-lg q-py-xl text-justify" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'"
-              rounded>
+            <q-banner class="q-mt-lg q-px-lg q-py-xl text-justify"
+              :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-3'" rounded>
               <div class="row justify-center q-mb-md">
                 <q-icon name="info" size="lg" color="info" />
               </div>
@@ -14,16 +14,15 @@
                 first
                 output(v-out 0) of a previous transaction.
               </p>
-
               <p>
-                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length }}</span> utxo that
+                Currently <span class="text-negative"> your wallet have {{ user.genesisInputs?.length }}</span> utxo
+                that
                 we can use as genesis input. This
                 operation <span class="text-positive">requires 2</span> genesis input
                 (1 for your token, 1 for an AuthKey token). You can create a genesis input by clicking the button below.
                 If you want to use an existing AuthKey <q-btn to="/issuer/manage/authkeys" flat color="secondary" dense
                   no-caps class="q-pl-0" label="Click Here" style="text-indent:0px !important" />
               </p>
-
               <template v-slot:action>
                 <BusyButton :busy-label="genesisInputInstance?.processing" label="Generate genesis input"
                   @click="generateGenesisInputs" color="primary" />
@@ -146,4 +145,3 @@ onMounted(async () => {
 
 
 </script>
-

@@ -9,34 +9,34 @@
           <q-table v-model:pagination="pagination" @row-click="onRowClicked" @request="onTableRequest" flat bordered
             color="warning" loading-label="Loading, please wait..." :rows="ownedAuthHeads.results"
             :loading="populatingTable" :columns="[
-              {
-                name: 'icon', label: 'Icon',
-                field: r => r.identitySnapshot?.uris?.icon || '<not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'symbol', label: 'Symbol',
-                field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em',
-                style: 'font-size: 1em;font-weight: bold',
-                classes: 'ellipsis'
-              },
-              {
-                name: 'tokenid', label: 'Category',
-                field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
-              },
-              {
-                name: 'actions', label: 'Actions',
-                field: r => '',
-                align: 'center',
-                headerStyle: 'padding: 1.5em'
+            {
+              name: 'icon', label: 'Icon',
+              field: r => r.identitySnapshot?.uris?.icon || '<not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+            },
+            {
+              name: 'symbol', label: 'Symbol',
+              field: r => r.identitySnapshot?.token?.symbol || '<metadata not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em',
+              style: 'font-size: 1em;font-weight: bold',
+              classes: 'ellipsis'
+            },
+            {
+              name: 'tokenid', label: 'Category',
+              field: r => r.identitySnapshot?.token?.category || '<metadata not found>',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
+            },
+            {
+              name: 'actions', label: 'Actions',
+              field: r => '',
+              align: 'center',
+              headerStyle: 'padding: 1.5em'
 
-              }
-            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
+            }
+          ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns">
 
             <template v-slot:body-cell-icon="value">
               <q-td class="text-center">
@@ -45,7 +45,7 @@
                 </div>
                 <div v-else>
                   <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
                   </q-avatar>
                   <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                 </div>
@@ -92,8 +92,8 @@
                 </div>
 
                 <div v-else>
-                  <q-btn id="authchain-action-buttons" text-color="grey-6" icon="auto_stories" size="md" round flat dense
-                    @click.stop="(e) => { e.preventDefault(); onRowClicked(e, value.row) }">
+                  <q-btn id="authchain-action-buttons" text-color="grey-6" icon="auto_stories" size="md" round flat
+                    dense @click.stop="(e) => { e.preventDefault(); onRowClicked(e, value.row) }">
                     <q-tooltip>Open metadata page</q-tooltip>
                   </q-btn>
                   <!-- <q-btn id="authchain-action-buttons" icon="more_vert" size="md" round flat dense
@@ -150,7 +150,7 @@ import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
 import { useAuthhead } from 'src/stores/authhead';
-import { shortenTx } from 'src/app/utils';
+import { ipfsToGatewayUrl, shortenTx } from 'src/app/utils';
 
 defineComponent({ name: 'RegistryList' })
 const $q = useQuasar()

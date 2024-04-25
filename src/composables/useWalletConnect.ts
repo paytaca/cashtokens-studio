@@ -217,7 +217,7 @@ export const useWalletConnect = () => {
     try {
       result = await walletConnectSignerClient.value.request({
         chainId: chainId,
-        topic: walletConnectSession.value.topic,
+        topic: walletConnectSession.value?.topic,
         request: {
           method: "bch_signMessage",
           params: JSON.parse(stringify(options)),

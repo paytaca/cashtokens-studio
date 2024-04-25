@@ -16,12 +16,49 @@
         </div>
         <q-tab-panels v-model="editor">
           <q-tab-panel name="form">
-            <div class="row justify-center q-gutter-lg">
+            <div class="row justify-center q-gutter-md">
+              <div v-if="owner" class="col-xs-12 q-gutter-y-sm items-center">
+                <label>{{ ownerLabel }}</label>
+                <q-input v-model="newOwner" outlined :rules="newOwnerRules" bottom-slots>
+                </q-input>
+              </div>
+              <template v-if="token">
+                <div class="col-xs-12 text-h6 text-bold">
+                  Token Spec
+                </div>
+                <div class="col-xs-12 q-gutter-y-sm">
+                  <label>Category</label>
+                  <q-input :model-value="token.tokenId" outlined disable readonly>
+                    <template v-slot:after>
+                      <CopyText :text="token.tokenId" />
+                    </template>
+                  </q-input>
+                </div>
+                <div class="col-xs-12  q-gutter-y-sm">
+                  <label>Capability</label>
+                  <q-input :model-value="token.capability" outlined disable readonly>
+                  </q-input>
+                </div>
+                <div class="col-xs-12  q-gutter-y-sm">
+                  <label>Commitment</label>
+                  <q-input :model-value="token.commitment" outlined disable readonly>
+                  </q-input>
+                </div>
+              </template>
               <div class="col-xs-12">
-                <div class="text-h6 q-mb-md">
+                <div class="text-h6 q-mb-md q-mt-lg text-bold">
                   Details
                 </div>
                 <q-form ref="form" class="q-gutter-md" @submit.prevent="onOk">
+                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
+                    <label>
+                      {{ identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number' }}
+                    </label>
+                    <q-input class="registry-field" v-model="nftTypeKey"
+                      :placeholder="identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number'"
+                      :rules="nftTypeKeyRules" outlined required autofocus>
+                    </q-input>
+                  </div>
                   <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
                     <label>Name *</label>
                     <q-input class="registry-field" v-model="nftType.name"
@@ -132,9 +169,9 @@
           <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg"
             :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
           <q-btn v-if="editor == 'form'" @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
-            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
+            :disable="iconFileUploading || assetFileUploading">{{ ok || 'Ok' }}</q-btn>
           <q-btn v-if="editor == 'json'" @click.stop="(e) => onOk()" color="primary" size="lg"
-            :disable="iconFileUploading || assetFileUploading">Ok</q-btn>
+            :disable="iconFileUploading || assetFileUploading">{{ ok || 'Ok' }}</q-btn>
         </div>
       </q-card-section>
     </q-card>
@@ -145,10 +182,13 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { IdentitySnapshot, NftType } from 'mainnet-js'
-import { ipfsToGatewayUrl } from 'src/app/utils'
+import { ipfsToGatewayUrl, isTokenAddress } from 'src/app/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
+import { hexToBin, vmNumberToBigInt } from '@bitauth/libauth'
+
 
 const nftTypeSchema = {
   "$schema": "http://json-schema.org/draft-07/schema#",
@@ -211,14 +251,20 @@ const nftTypeSchema = {
 }
 
 const $q = useQuasar()
+
 defineEmits([
   ...useDialogPluginComponent.emits,
 ])
+
 const props = defineProps<{
-  token: { amount: number, category: string, capability: string, commitment: string },
+  token: { amount: number, tokenId: string, capability: string, commitment: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
-  title?: string
+  defaultNftTypeKey?: string,
+  title?: string,
+  owner?: string // address,
+  ownerLabel?: string,
+  ok?: string
 }>()
 
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
@@ -237,8 +283,26 @@ const nftType = ref<NftType>({
   }
 })
 
-const nftTypeJson = ref()
+const nftTypeKey = ref<string>()
 
+const nftTypeKeyRules = [
+  (v: string | number) => {
+    if (!v) return true
+    if (props.identitySnapshot?.token?.nfts?.parse?.bytecode && props.identitySnapshot?.token?.nfts?.parse?.bytecode != '00cf6b') {
+      return /^[0-9a-fA-F]+$/.test(String(v)) || 'Enter a hex value'
+    } else {
+      return /^[0-9]+$/.test(String(v)) || 'Enter a number'
+    }
+  }
+]
+
+const newOwnerRules = [
+  // (v:string) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token address',
+  (v: string) => isTokenAddress(v) || 'Enter a valid token address'
+]
+const newOwner = ref<string>()
+
+const nftTypeJson = ref()
 const justMounted = ref<boolean>()
 const nftTypeAttributes = ref<{ [name: string]: string }>({})
 const iconFile = ref()
@@ -260,7 +324,7 @@ const uploadIconToIpfs = async () => {
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -283,7 +347,7 @@ const uploadAssetToIpfs = async () => {
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.category}&commitment=${props.token.commitment}`, {
+      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
         method: 'POST', body: formData
       })
       const respJson = await resp.json()
@@ -323,7 +387,7 @@ const onOk = async () => {
   const d = new Draft07(nftTypeSchema)
   const errors: any = d.validate(v)
   if (errors.length == 0) {
-    onDialogOK({ type: props.token.commitment, nftType: v })
+    onDialogOK({ type: props.token.commitment, nftType: v, owner: newOwner?.value })
   } else {
     $q.dialog({
       message: 'Format error! Make sure the value conforms to BCMR\'s NftType spec. If you\'re using the `extensions` field, make sure it has a maximum nesting depth of 2 and only has `string` values. Example: {"extensions": "value"}, {"extensions": {"key":"value"}}',
@@ -391,6 +455,15 @@ onMounted(() => {
     if (nftType.value.extensions?.attributes) {
       nftTypeAttributes.value = Object.assign({}, nftType.value.extensions?.attributes as any)
     }
+  }
+  newOwner.value = props.owner
+  if (!props.identitySnapshot?.token?.nfts?.parse?.bytecode || props.identitySnapshot?.token?.nfts?.parse?.bytecode == '00cf6b') {
+    if (props.token.commitment) {
+      nftTypeKey.value = vmNumberToBigInt(hexToBin(props.token.commitment)).toString()
+    } else {
+      nftTypeKey.value = '1'
+    }
+
   }
 })
 

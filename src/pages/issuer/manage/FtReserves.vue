@@ -26,16 +26,16 @@
               <q-td>
                 <div class="row justify-left items-center flex wrap q-gutter-sm">
                   <div class="col-auto">
-                    <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
+                    <q-skeleton v-if="!!value.row.processing && populatingTable" type="circle" bordered></q-skeleton>
                     <div v-else>
                       <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                        <q-img :src="value.row.identitySnapshot.uris.icon" />
+                        <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
                       </q-avatar>
                       <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                     </div>
                   </div>
                   <div class="col text-wrap text-left" style="font-size: 1.2em; letter-spacing: 2px;">
-                    <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                    <q-skeleton v-if="!!value.row.processing && populatingTable" bordered square></q-skeleton>
 
                     <div v-else>
                       <div style="font-variant-numeric: tabular-nums;" class="text-positive">
@@ -48,7 +48,7 @@
                   </div>
 
                   <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
-                    <q-skeleton v-if="!!value.row.processing" bordered square></q-skeleton>
+                    <q-skeleton v-if="!!value.row.processing && populatingTable" bordered square></q-skeleton>
                     <div v-else>
                       <div v-if="value.row.identitySnapshot?.token">
                         <div class="text-weight-thin text-caption text-grey-8">
@@ -71,52 +71,59 @@
             </template>
             <template v-slot:body-cell-actions="value">
               <q-td class="text-center">
-                <div v-if="!!value.row.processing" class="flex justify-center">
+                <div v-if="!!value.row.processing && populatingTable" class="flex justify-center q-gutter-x-lg">
+                  <q-skeleton type="QToggle" bordered square></q-skeleton>
                   <q-skeleton type="QToggle" bordered square></q-skeleton>
                 </div>
                 <div v-else>
                   <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'" text-color="primary" no-caps
-                    @click="openDialog(FungibleTokenIssuerDialog.__name, value.row)">
+                    @click.stop="() => openIssueFtDialog(value.row, value.row.identitySnapshot)"
+                    :disable="!!value.row.processing">
+                  </q-btn>
+                  <q-btn icon="local_fire_department" size="md" :label="$q.screen.xs ? '' : 'Burn'" text-color="orange"
+                    no-caps @click.stop="() => openBurnFtDialog(value.row, value.row.identitySnapshot)"
+                    :disable="!!value.row.processing">
                   </q-btn>
                 </div>
               </q-td>
             </template>
-            <!-- <template v-slot:loading>
-              <q-inner-loading :showing="populatingTable"></q-inner-loading>
-            </template> -->
           </q-table>
-          <FungibleTokenIssuerDialog v-if="dialog" :model-value="dialog === FungibleTokenIssuerDialog.__name"
-            :authchain-identity="(dialogData as AuthchainIdentity)" @hide="onHide"
-            @tokens-issued="(data) => onTokensIssuance(data)" />
         </div>
       </div>
     </div>
+    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
+      <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
+      <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
+        }}</span>
+    </q-inner-loading>
   </q-page>
 </template>
 <script setup lang="ts">
-import { onMounted, ref, computed, inject, onBeforeUnmount } from 'vue';
+import { onMounted, ref, computed, inject, onBeforeUnmount, watch } from 'vue';
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
 import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { Wallet } from 'mainnet-js';
+import { IdentitySnapshot, UtxoI, Wallet } from 'mainnet-js';
 import { EventBus, useQuasar } from 'quasar';
-import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
-import { useMinter } from 'src/stores/minter';
-import FungibleTokenIssuerDialog from 'src/components/dialogs/FungibleTokenIssuerDialog.vue'
-import { useDialogs } from 'src/composables'
+import { useEventBus } from 'src/composables'
 import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
-import { shortenTokenId } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenAddress, shortenTokenId } from 'src/app/utils'
 import CopyText from 'src/components/CopyText.vue';
-
+import FTBurnDialog from 'src/components/dialogs/FTBurnDialog.vue'
+import FTIssuerDialog from 'src/components/dialogs/FTIssuerDialog.vue'
+import { buildBurnFtReserveTx, buildIssueFtReserveTx, signTx } from 'src/app/transactions'
+import { broadcastTx } from 'src/app/transactions/broadcastTx'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import BigNumber from 'bignumber.js';
+import { nextTick } from 'process';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
-const minter = useMinter()
-const tokenStore = useTokenStore()
+const { $ebus } = useEventBus()
 const eventBus = inject<EventBus>('eventBus')
-const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const populatingTable = ref<boolean>(false)
+const progress = ref<string | boolean>()
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
   limit: 0,
@@ -160,9 +167,11 @@ const formatBalance = computed(() => {
   }
 })
 
-const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
+const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner, populateSilently?: boolean) => {
   if (wallet) {
-    populatingTable.value = true
+    if (!populateSilently) {
+      populatingTable.value = true
+    }
     const query = {
       limit: pagination.value.rowsPerPage,
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
@@ -195,16 +204,154 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
 }
 
 
-const onTokensIssuance = async (issued: { tokenId: string, to: string, amount: string }) => {
-  hideDialog()
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+const openBurnFtDialog = (v: AuthchainIdentity, identitySnapshot: IdentitySnapshot) => {
+  const originalBalance = v.token.amount
+  $q.dialog({
+    component: FTBurnDialog,
+    componentProps: {
+      token: v.token,
+      identitySnapshot
+    },
+    focus: 'none'
+  }).onOk(async (value: { amountToBurn: string, newBalance: string, decimals: number }) => {
+    try {
+      progress.value = 'Processing...'
+      const amountToBurnRaw = (new BigNumber(value.amountToBurn).toFixed(value.decimals)).toString()
+      const burnTx = await buildBurnFtReserveTx({
+        authUtxo: v,
+        authKey: v.authKey,
+        amount: amountToBurnRaw.replace('.', ''),
+        wallet: user.wallet
+      })
+      progress.value = 'Waiting for signature. Pls check your wallet!'
+      const signingResult = await signTx({
+        signer: user.transactionSigner!,
+        decodedTx: burnTx.decoded, sourceOutputs: burnTx.sourceOutputs,
+        prompt: `Burn ${value.amountToBurn} ${identitySnapshot?.token?.symbol || 'FTs'}`
+      })
+
+      if (signingResult?.signedTransaction) {
+        progress.value = 'Submitting transaction, please wait...'
+        const tx = await broadcastTx(signingResult)
+        if (tx) {
+          progress.value = 'Transaction submitted, awaiting propagation...'
+          await user.wallet?.waitForTransaction({ txHash: tx })
+          $ebus?.emit('transaction', {
+            txid: tx,
+            txType: 'ft-burn',
+            timestamp: new Date().getTime(),
+            successMsg: `${value.amountToBurn} ${identitySnapshot?.token?.symbol || 'FTs'} Burned!`
+          })
+          progress.value = false
+          populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, true)
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'success',
+              statusText: `${value.amountToBurn} ${identitySnapshot?.token?.symbol || 'FTs'} Burned!`,
+              txid: tx
+            }
+          })
+        }
+      } else {
+        progress.value = false
+        v.token.amount = originalBalance
+      }
+    } catch (error) {
+      $q.dialog({
+        message: error?.toString(),
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
+      v.token.amount = originalBalance
+    } finally {
+      progress.value = false
+    }
+  }).onCancel(() => {
+    v.token.amount = originalBalance
+  })
 }
 
-// onBeforeMount(async () => {
-//   if (user.wallet) {
-//     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
-//   }
-// })
+const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
+  const originalBalance = v.token.amount
+  $q.dialog({
+    component: FTIssuerDialog,
+    componentProps: {
+      token: v.token,
+      identitySnapshot
+    },
+    focus: 'none'
+  }).onOk(async (value: { amountToSend: string, newBalance: string, decimals: number, recipient: string }) => {
+    try {
+      progress.value = 'Processing...'
+      const amountToSendRaw = (new BigNumber(value.amountToSend).toFixed(value.decimals)).toString()
+      const burnTx = await buildIssueFtReserveTx({
+        authUtxo: v,
+        authKey: v.authKey,
+        amount: amountToSendRaw.replace('.', ''),
+        recipient: value.recipient,
+        wallet: user.wallet
+      })
+      progress.value = 'Waiting for signature. Pls check your wallet!'
+      const signingResult = await signTx({
+        signer: user.transactionSigner!,
+        decodedTx: burnTx.decoded, sourceOutputs: burnTx.sourceOutputs,
+        prompt: `Issue ${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} to ${shortenAddress(value.recipient)}`
+      })
+
+      if (signingResult?.signedTransaction) {
+        progress.value = 'Submitting transaction, please wait...'
+        const tx = await broadcastTx(signingResult)
+        if (tx) {
+          progress.value = 'Transaction submitted, awaiting propagation...'
+          await user.wallet?.waitForTransaction({ txHash: tx })
+          $ebus?.emit('transaction', {
+            txid: tx,
+            txType: 'ft-issuance',
+            timestamp: new Date().getTime(),
+            successMsg: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`
+          })
+          progress.value = false
+          populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, true)
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'success',
+              statusText: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`,
+              txid: tx
+            }
+          })
+        }
+      } else {
+        progress.value = false
+        v.token.amount = originalBalance
+      }
+    } catch (error) {
+      $q.dialog({
+        message: error?.toString(),
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
+      v.token.amount = originalBalance
+    } finally {
+      progress.value = false
+    }
+
+
+  }).onCancel(() => {
+    v.token.amount = originalBalance
+  })
+}
+
+watch(() => progress.value, async (v) => {
+  if (v) {
+    nextTick(() => {
+      document.getElementById('inner-loading')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }
+})
 
 onMounted(async () => {
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)

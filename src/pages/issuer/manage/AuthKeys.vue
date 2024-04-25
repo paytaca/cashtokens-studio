@@ -61,12 +61,12 @@
                 <q-btn icon="more_vert" size="md" round flat dense>
                   <q-menu>
                     <q-list>
-                      <q-item clickable v-close-popup
+                      <!-- <q-item clickable v-close-popup
                         @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, { authKey: authKey as AuthKey, tokenType: 'ft' })">
                         Use to create FT</q-item>
                       <q-item clickable v-close-popup
                         @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, { authKey: authKey as AuthKey, tokenType: 'nft' })">
-                        Use to create NFT</q-item>
+                        Use to create NFT</q-item> -->
                       <q-item clickable v-close-popup
                         @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer
                         AuthKey</q-item>

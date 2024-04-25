@@ -8,8 +8,8 @@
   "scripts": {
     "lint": "eslint --ext .js,.ts,.vue ./",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
-    "test": "mocha --experimental-vm-modules",
-    "dev": "NODE_ENV=production quasar dev",
+    "test": "mocha",
+    "dev": "quasar dev",
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build"
   },
@@ -20,6 +20,7 @@
     "@quasar/extras": "^1.16.4",
     "@walletconnect/modal": "^2.6.1",
     "@walletconnect/sign-client": "^2.10.1",
+    "bignumber.js": "^9.1.2",
     "cashscript": "^0.8.0",
     "dotenv": "^16.3.1",
     "express-throttle-bandwidth": "^1.0.1",
@@ -30,12 +31,12 @@
     "multer": "^1.4.5-lts.1",
     "nft.storage": "^7.1.1",
     "pinia": "^2.0.11",
-    "quasar": "^2.6.0",
-    "vue": "^3.0.0",
+    "quasar": "^2.15.2",
+    "vue": "^3.4.0",
     "vue-router": "^4.0.0"
   },
   "devDependencies": {
-    "@quasar/app-webpack": "^3.0.0",
+    "@quasar/app-webpack": "^3.12.0",
     "@types/dropzone": "^5.7.8",
     "@types/jest": "^29.5.4",
     "@types/jquery": "^3.5.29",

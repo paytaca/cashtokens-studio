@@ -1,2 +1,2 @@
 #!/bin/bash
-yarn run quasar dev -m ssr
+./clean && yarn run quasar dev -m ssr
