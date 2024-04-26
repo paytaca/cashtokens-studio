@@ -10,10 +10,10 @@
       </q-input>
       <q-input label="Symbol *" placeholder="E.g. BITCATS-NFT, BANANA" :rules="symbolRules"
         :model-value="tokenCategory.symbol"
-        @update:model-value="(v) => tokenCategory.symbol = String((v ?? '')).toUpperCase()" outlined>
+        @update:model-value="(v) => tokenCategory.symbol = String((v ?? '')).toUpperCase()" hide-bottom-space outlined>
       </q-input>
       <q-input v-if="!(hide || []).includes('decimals')" v-model="tokenCategory.decimals" label="Decimals" outlined
-        :rules="decimalsRules">
+        :rules="decimalsRules" hide-bottom-space>
       </q-input>
       <NftCategoryComponent v-if="tokenCategory.nfts && !(hide || []).includes('nfts')"
         v-model:nft-category="tokenCategory.nfts" />
