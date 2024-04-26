@@ -111,7 +111,7 @@
                     v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                     :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
                     @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" :rules="decimalsRules"
-                    outlined style="width:max-content" :disable="!token.amount">
+                    outlined style="width:max-content" :disable="!token.amount" hide-bottom-space>
                   </q-input>
                   <IdentitySnapshotComponent
                     v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
