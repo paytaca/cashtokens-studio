@@ -5,7 +5,7 @@
       <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
       <q-section class="q-gutter-y-lg">
         <q-input v-model="identitySnapshot.name" :label="labels?.name || 'Token Name *'" :placeholder="namePlaceholder"
-          required outlined :rules="[(v: any) => !!v || 'Required']">
+          required outlined :rules="[(v: any) => !!v || 'Required']" hide-bottom-space>
         </q-input>
         <q-input v-model="identitySnapshot.description" :label="labels?.description || 'Describe your token'"
           :placeholder="descriptionPlaceholder" autogrow outlined aria-rowspan="2">
