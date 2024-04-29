@@ -557,7 +557,7 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublishFromFileDialog.vue';
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
-import { ipfsToGatewayUrl, shortenTokenId, formatCommitment } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage } from 'src/app/utils'
 import { NFTCapability, NftType, TokenI, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
@@ -1223,11 +1223,19 @@ const onTableRequest = async (props: any) => {
 }
 
 
-watch(() => newTokenIconFile.value, async (b) => {
-  if (b) {
-    newTokenIconPreview.value = URL.createObjectURL(b)
-    newTokenIconUploadArtifact.value = undefined
-    await saveNewIconInIPFS()
+watch(() => newTokenIconFile.value, async (file) => {
+  if (file) {
+    const squareIcon = await isSquareImage(file)
+    if (!squareIcon) {
+      $q.dialog({
+        message: `Please provide a square icon. Recommended dimension is 400px by 400px.
+        Icons should also be suitable for display against light and dark backgrounds. Transparency is supported.`
+      })
+    } else {
+      newTokenIconPreview.value = URL.createObjectURL(file)
+      newTokenIconUploadArtifact.value = undefined
+      await saveNewIconInIPFS()
+    }
   }
 })
 

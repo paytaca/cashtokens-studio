@@ -182,7 +182,7 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { IdentitySnapshot, NftType } from 'mainnet-js'
-import { ipfsToGatewayUrl, isTokenAddress } from 'src/app/utils'
+import { ipfsToGatewayUrl, isSquareImage, isTokenAddress } from 'src/app/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
@@ -396,8 +396,18 @@ const onOk = async () => {
   }
 }
 
-watch(() => iconFile.value, async (v) => {
-  if (v) { await uploadIconToIpfs() }
+watch(() => iconFile.value, async (file) => {
+  if (file) {
+    const squareIcon = await isSquareImage(file)
+    if (!squareIcon) {
+      $q.dialog({
+        message: `Please provide a square icon. Recommended dimension is 400px by 400px.
+        Icons should also be suitable for display against light and dark backgrounds. Transparency is supported.`
+      })
+    } else {
+      await uploadIconToIpfs()
+    }
+  }
 })
 
 
