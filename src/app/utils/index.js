@@ -14,3 +14,4 @@ export { default as openTxInExplorer } from './openTxInExplorer';
 export { default as formatCommitment } from './formatCommitment';
 export { default as ipfsToGatewayUrl } from './ipfsToGatewayUrl';
 export { default as isTokenAddress } from './isTokenAddress';
+export { default as isSquareImage } from './isSquareImage';

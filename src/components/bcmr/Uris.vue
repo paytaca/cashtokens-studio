@@ -72,8 +72,10 @@
 import { URIs } from 'mainnet-js'
 import { IconStorageArtifact, uploadIcon } from 'src/app/ipfs';
 import { defineComponent, defineModel, ref, watch } from 'vue'
-import { ipfsToGatewayUrl } from 'src/app/utils'
+import { ipfsToGatewayUrl, isSquareImage } from 'src/app/utils'
+import { useQuasar } from 'quasar';
 
+const $q = useQuasar()
 const emit = defineEmits(['icon-file-uploading'])
 defineComponent({ name: 'UrisComponent' })
 export type UrisProps = {
@@ -126,24 +128,33 @@ const onUpdateModelValue = (v: string | number | null) => {
   uris.value[selectedUriName.value] = String(v)
 }
 
-
 watch(() => iconFile.value, async (v) => {
   if (v) {
-    if (iconPreviewUrl.value) {
-      URL.revokeObjectURL(iconPreviewUrl.value)
+    const squareIcon = await isSquareImage(v)
+    if (!squareIcon) {
+      $q.dialog({
+        message: `Please provide a square icon. Recommended dimension is 400px by 400px.
+        Icons should also be suitable for display against light and dark backgrounds. Transparency is supported.`
+      })
+    } else {
+      if (iconPreviewUrl.value) {
+        URL.revokeObjectURL(iconPreviewUrl.value)
+      }
+      iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
+      iconFileUploading.value = true
+      emit('icon-file-uploading', true)
+      try {
+        const artifact = await uploadIcon(iconFile.value, props.tokenId ?? '')
+        uris.value!.icon = artifact?.iconUris.ipfs || ''
+      } catch (error) {
+        console.log(error)
+      } finally {
+        iconFileUploading.value = false
+        emit('icon-file-uploading', false)
+      }
     }
-    iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
-    iconFileUploading.value = true
-    emit('icon-file-uploading', true)
-    try {
-      const artifact = await uploadIcon(iconFile.value, props.tokenId ?? '')
-      uris.value!.icon = artifact?.iconUris.ipfs || ''
-    } catch (error) {
-      console.log(error)
-    } finally {
-      iconFileUploading.value = false
-      emit('icon-file-uploading', false)
-    }
+
+
 
   }
 })
