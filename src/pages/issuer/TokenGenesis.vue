@@ -316,7 +316,7 @@ const generateAuthKeyGenesisInput = async () => {
         authKey.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
           !u.token &&
           u.vout == 0 &&
-          u.satoshis >= DEFAULT_TOKEN_VALUE &&
+          u.satoshis == DEFAULT_TOKEN_VALUE &&
           u.txid != genesisInput.value?.txid &&
           u.txid == tx
         )[0]
@@ -445,11 +445,11 @@ const createToken = async () => {
       if (tx) {
         progress.value = 'Transaction submitted, awaiting propagation...'
         await user.wallet?.waitForTransaction({ txHash: tx })
-        genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
-          !u.token &&
-          u.vout == 0 &&
-          u.satoshis >= DEFAULT_TOKEN_VALUE
-        )[0]
+        // genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
+        //   !u.token &&
+        //   u.vout == 0 &&
+        //   u.satoshis >= DEFAULT_TOKEN_VALUE
+        // )[0]
         $ebus?.emit('transaction', {
           txid: tx,
           txType: 'token-genesis',
@@ -458,18 +458,18 @@ const createToken = async () => {
         })
         $q.dialog({
           component: TransactionStatusDialog,
+          persistent: true,
           componentProps: {
             statusType: 'success',
             statusText: `${identitySnapshot.value?.token?.symbol} Token Created!`,
-            txid: tx
+            txid: tx,
           }
-        }).onOk(() => {
+        }).onDismiss(() => {
           if (tokenType.value?.value == 'nft' || tokenType.value?.value == 'hybrid') {
             router.push({ name: 'nft-reserves' })
           } else {
             router.push({ name: 'ft-reserves' })
           }
-
         })
 
       }
@@ -511,7 +511,7 @@ watch(() => useExistingAuthKey.value, async (yes) => {
     authKey.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) =>
       u.vout == 0 &&
       !u.token &&
-      u.satoshis >= DEFAULT_TOKEN_VALUE &&
+      u.satoshis == DEFAULT_TOKEN_VALUE &&
       u.txid != genesisInput.value!.txid
     )[0]
     progress.value = false
@@ -561,12 +561,13 @@ watch(() => tokenType.value, (v) => {
 
 onBeforeMount(async () => {
   progress.value = 'Checking your wallet for valid genesis inputs...'
-  genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis >= DEFAULT_TOKEN_VALUE)[0]
+  genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis == DEFAULT_TOKEN_VALUE)[0]
+  console.log('GENESIS INPUT', genesisInput.value)
   if (genesisInput.value) {
     authKey.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) =>
       u.vout == 0 &&
       !u.token &&
-      u.satoshis >= DEFAULT_TOKEN_VALUE &&
+      u.satoshis == DEFAULT_TOKEN_VALUE &&
       u.txid != genesisInput.value!.txid
     )[0]
   }
@@ -574,6 +575,7 @@ onBeforeMount(async () => {
 })
 
 onMounted(() => {
+
   showAdvancedFields.value = false
   let label
   if (route.query.tokenType == TokenType.ft) {
