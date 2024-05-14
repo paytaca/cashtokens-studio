@@ -181,7 +181,7 @@ const createAuthKey = async () => {
 
 onBeforeMount(async () => {
   progress.value = 'Checking your wallet for valid genesis inputs...'
-  genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis >= DEFAULT_TOKEN_VALUE)[0]
+  genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis == DEFAULT_TOKEN_VALUE)[0]
   progress.value = false
 })
 
