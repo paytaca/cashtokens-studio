@@ -76,8 +76,6 @@ export const buildGenesisTx = async (
     throw new Error('Insufficient balance to fund the transaction');
   }
 
-  const toSpend = [opt.input];
-
   let authKeyTokenId;
   let authKeyGenesisRequest = null;
   let tokenRecipient = opt.recipient;
@@ -102,7 +100,6 @@ export const buildGenesisTx = async (
         capability: NFTCapability.none,
         commitment: '00',
       });
-      toSpend.push(opt.authKey);
     }
 
     const authGuard = getInstance('authguard-contract', {
@@ -111,8 +108,6 @@ export const buildGenesisTx = async (
     });
     tokenRecipient = authGuard?.getTokenDepositAddress();
   }
-
-  toSpend.push(funds);
 
   const requests: any[] = [
     new TokenSendRequest({
@@ -146,7 +141,9 @@ export const buildGenesisTx = async (
     // only spend authkey during genesis
     expenses.push(opt.authKey);
   }
+
   expenses.push(funds);
+
   const { encodedTransaction, sourceOutputs } =
     await opt.wallet.encodeTransaction(requests, false, {
       tokenOperation: 'genesis',
