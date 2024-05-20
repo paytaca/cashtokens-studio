@@ -501,7 +501,6 @@ const mint = async () => {
       newMinterCommitment: newMinterCommitment
     })
 
-    console.log('WALLET', minter.value.ownerWallet)
 
     if (tx) {
       progress.value = 'Transaction submitted, awaiting propagation...'
@@ -509,6 +508,7 @@ const mint = async () => {
         await minter.value.ownerWallet.waitForTransaction({ txHash: tx })
         await minter.value.updateUtxo(tx)
         await minter.value.updateAuthKeyUtxo(tx)
+
         $q.dialog({
           component: TransactionStatusDialog,
           componentProps: {

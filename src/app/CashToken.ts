@@ -17,6 +17,8 @@ import submitTransaction from './utils/submitTransaction';
 import {
   cashAddressToLockingBytecode,
   decodeTransaction,
+  encodeTransactionOutputs,
+  getMinimumFee,
   hexToBin,
   utf8ToBin,
 } from '@bitauth/libauth';
@@ -27,6 +29,7 @@ import { NftType, TokenCategory, URIs } from 'mainnet-js';
 import { PartialBcmr } from './interfaces';
 import convertBigIntToHexLE from './utils/convertBigIntToHexLE';
 import { ProcessingMessage } from '.';
+import { getByteCount } from './utils';
 
 /**
  * TODO: Transfer token genesis functionality to GenesisInput,
@@ -945,11 +948,52 @@ export class CashToken implements UtxoI, PartialBcmr {
     this.ensureAuthKey();
     this._processing = 'Processing';
 
-    const minerFee = calcMinerFee(
-      { 'P2SH-P2WPKH': 1, P2PKH: 2 },
-      { P2SH: 1, P2PKH: 3 + arg.tokens.length }
-    );
-    const mintCost = minerFee + DEFAULT_TOKEN_VALUE * arg.tokens.length;
+    const tokenOwner = this.ownerWallet!.getDepositAddress();
+
+    const mintOutputs: any = arg.tokens.map((token: TokenI) => {
+      return {
+        to: arg.recipient, // token address
+        amount: BigInt(DEFAULT_TOKEN_VALUE),
+        token: {
+          amount: BigInt(0),
+          category: this.utxo.token?.tokenId,
+          nft: {
+            commitment: token.commitment,
+            capability: token.capability,
+          },
+        },
+      };
+    });
+
+    const lockingBytecode = cashAddressToLockingBytecode(tokenOwner);
+
+    if (typeof lockingBytecode == 'string') {
+      throw new Error(lockingBytecode);
+    }
+    // Used only for fee calculation
+    const outputs = mintOutputs.map((t: any) => {
+      return {
+        lockingBytecode: lockingBytecode.bytecode,
+        token: {
+          amount: BigInt(0),
+          category: hexToBin(t.token.category),
+          nft: {
+            commitment: hexToBin(t.token.nft.commitment),
+            capability: t.token.nft.capability,
+          },
+        },
+        valueSatoshis: t.amount,
+      };
+    });
+
+    const byteCount =
+      getByteCount({ 'P2SH-P2WPKH': 1, P2PKH: 2 }, { P2SH: 1, P2PKH: 3 }) +
+      encodeTransactionOutputs(outputs).byteLength;
+
+    const minerFee = Number(getMinimumFee(BigInt(byteCount), BigInt(1000)));
+
+    const mintCost = 2000 + minerFee + DEFAULT_TOKEN_VALUE * arg.tokens.length;
+
     // TODO: use watchtower
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter((utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > mintCost)
@@ -961,11 +1005,12 @@ export class CashToken implements UtxoI, PartialBcmr {
     const [minter, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(
       toCashScript
     );
+
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)));
     const contract = this.authKey!.authGuard!.contract!;
     const contractAddress = contract.getTokenDepositAddress();
     const batonOwner = this.authKey!.ownerWallet!.getTokenDepositAddress();
-    const tokenOwner = this.ownerWallet!.getDepositAddress();
+    // const tokenOwner = this.ownerWallet!.getDepositAddress();
 
     let transaction;
     let decoded;
@@ -976,20 +1021,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       minter.token!.nft!.commitment =
         arg.newMinterCommitment || minter.token!.nft!.commitment;
     }
-    const mintOutputs: any = arg.tokens.map((token: TokenI) => {
-      return {
-        to: arg.recipient, // token address
-        amount: BigInt(DEFAULT_TOKEN_VALUE),
-        token: {
-          amount: BigInt(0),
-          category: minter.token!.category,
-          nft: {
-            commitment: token.commitment,
-            capability: token.capability,
-          },
-        },
-      };
-    });
+
     try {
       transaction = contract
         .getContractFunction('unlockWithNft')(true)
@@ -1029,7 +1061,6 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
 
       transaction = transaction
-
         .to(
           funderInput.satoshis - BigInt(mintCost) > 546
             ? [
@@ -1041,6 +1072,7 @@ export class CashToken implements UtxoI, PartialBcmr {
               ]
             : []
         )
+
         .withoutChange()
         .withoutTokenChange()
         .withHardcodedFee(BigInt(minerFee));
