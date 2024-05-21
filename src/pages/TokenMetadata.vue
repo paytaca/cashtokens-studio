@@ -780,7 +780,10 @@ const publish = async (revisionOptions: RevisionOption) => {
       }
     }
     for (const nftType of nftTypesSelectedForPublication.value) {
-      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = nftType[nftType._meta.commitment]
+      let clone = JSON.parse(JSON.stringify(nftType[nftType._meta.commitment]))
+      delete clone.saved
+      delete clone.published
+      bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = clone
     }
   }
   bcmr.value.latestRevision = bcmrNewRevisionISOString
