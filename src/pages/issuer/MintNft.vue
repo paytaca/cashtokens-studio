@@ -697,7 +697,9 @@ const publish = async () => {
       }
     }
     for (const typesKey of Object.keys(nftsTypes.value)) {
-      bcmr.identities![authbase][newRevisionTimestamp].token!.nfts!.parse!.types[typesKey] = nftsTypes.value[typesKey]
+      const clone = JSON.parse(JSON.stringify(nftsTypes.value[typesKey]))
+      delete clone.saved
+      bcmr.identities![authbase][newRevisionTimestamp].token!.nfts!.parse!.types[typesKey] = clone
     }
   }
   bcmr.latestRevision = newRevisionTimestamp
