@@ -699,13 +699,17 @@ const publish = async () => {
     for (const typesKey of Object.keys(nftsTypes.value)) {
       const clone = JSON.parse(JSON.stringify(nftsTypes.value[typesKey]))
       delete clone.saved
+      delete clone.published
       bcmr.identities![authbase][newRevisionTimestamp].token!.nfts!.parse!.types[typesKey] = clone
     }
   }
   bcmr.latestRevision = newRevisionTimestamp
   bcmr.registryIdentity = authbase
   bcmr.versionString = revisionOptions.newVersion
-  bcmr.appendAuthGuardTokenStandardExtension(authbase)
+  if (minter.value?.authKey?.token?.tokenId) {
+    bcmr.appendAuthGuardTokenStandardExtension(minter.value?.authKey?.token?.tokenId)
+  }
+
   progress.value = 'Uploading registry to IPFS, please wait...'
 
   let tx = ''
