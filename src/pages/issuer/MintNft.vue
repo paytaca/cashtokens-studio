@@ -40,27 +40,27 @@
                     </div>
                     <div v-if="minter.value?.nftCollectionType == 'SequentialNftCollection'"
                       class="row items-center q-py-sm">
-                      <div class="col-xs-4">Last minted sequence #</div>
-                      <div class="col">
-                        {{ formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal') }}
-                        <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="
-        $q.dialog({
-          component: HelpDialog,
-          componentProps: {
-            message: `
-                                        Currently, CashTokens Studio stores the last minted sequence on the minter's commitment,
-                                        this is used in tracking and suggesting the next sequence to mint. This doesn't
-                                        inherently guarantee the sequential order or uniqueness of the entire NFT collection.
-                                        The
-                                        responsibility for ensuring sequentiality and uniqueness ultimately lies with the
-                                        issuer.
-                                      `
-          }
-        })
-        ">
+                      <div class="col-xs-4">Last minted sequence #
+                        <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="openLastMintedHelpDialog">
                         </q-icon>
                       </div>
+
+                      <div class="col text-bold">
+                        {{ formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal') }}
+                      </div>
                     </div>
+                    <div class="row items-center q-py-sm">
+                      <div class="col-xs-4">View Metadata
+                        <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="openViewMetadataHelpDialog">
+                        </q-icon>
+                      </div>
+                      <div class="col">
+                        <q-btn icon="open_in_new" :href="`${bcmrApiHost}bcmr/${minter?.value?.token?.tokenId}/`"
+                          target="_blank" dense>
+                        </q-btn>
+                      </div>
+                    </div>
+
                   </q-banner>
                   <div class="q-mb-lg q-gutter-y-sm items-center">
                     <label>Choose Mint Option</label>
@@ -392,9 +392,41 @@ const mintOptions = ref<{
   recipient: ''
 })
 
+const bcmrApiHost = computed(() => {
+  return process.env.BCMR_API
+})
 
 const publicationTx = ref<string>()
 const publisher = ref<AuthchainIdentity>()
+
+const openLastMintedHelpDialog = () => {
+  $q.dialog({
+    component: HelpDialog,
+    componentProps: {
+      message: `
+          Currently, CashTokens Studio stores the last minted sequence on the minter's commitment,
+          this is used in tracking and suggesting the next sequence to mint. This doesn't
+          inherently guarantee the sequential order or uniqueness of the entire NFT collection.
+          The
+          responsibility for ensuring sequentiality and uniqueness ultimately lies with the
+          issuer.
+        `
+    }
+  })
+}
+
+const openViewMetadataHelpDialog = () => {
+  $q.dialog({
+    component: HelpDialog,
+    componentProps: {
+      message: `
+          CashTokens Studio uses the Paytaca's BCMR indexer to retrieve your token's metadata. 
+          It is strongly recommended to check the metadata before minting to make sure that the most recent 
+          one is being used.
+        `
+    }
+  })
+}
 
 const openNftTypeDialog = (token: TokenI) => {
   const defaultNftType = {
