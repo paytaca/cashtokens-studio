@@ -9,7 +9,8 @@
     "lint": "eslint --ext .js,.ts,.vue ./",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "mocha",
-    "dev": "quasar dev",
+    "dev": "quasar dev -m ssr",
+    "prodlocal": "NODE_ENV=production quasar dev -m ssr",
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build"
   },
