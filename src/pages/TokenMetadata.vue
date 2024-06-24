@@ -37,7 +37,12 @@
         <q-page class="q-mb-lg">
           <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-lg-9 bg-content rounded-borders q-pa-lg">
-              <div class="col-12 text-center text-h3"> Metadata </div>
+              <div class="col-12 text-center text-h3">
+                Metadata
+                <q-btn icon="open_in_new" :href="`${bcmrApiHost}bcmr/${tokenStore.token?.token?.tokenId}/`"
+                  target="_blank">
+                </q-btn>
+              </div>
               <div class="col-12 text-right q-mr-lg q-gutter-md">
                 <q-btn v-if="!bcmrNewRevision" @click.stop="newRevision" size="md" icon="edit" text-color="primary">
                   <q-tooltip>Click to edit</q-tooltip>
@@ -558,7 +563,7 @@ import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublis
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
 import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage } from 'src/app/utils'
-import { NFTCapability, NftType, TokenI, delay } from 'mainnet-js';
+import { NFTCapability, NftType, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
@@ -567,7 +572,6 @@ import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
-import { userInfo } from 'os';
 import { useUser } from 'src/stores/user';
 
 
@@ -651,6 +655,10 @@ const nftTypesRowsPerPage = computed(() => {
 })
 
 const progress = ref<boolean | string>()
+
+const bcmrApiHost = computed(() => {
+  return process.env.BCMR_API
+})
 
 const newRevision = () => {
   if (bcmrSelectedAuthbase.value) {
