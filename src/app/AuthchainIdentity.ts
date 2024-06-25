@@ -322,7 +322,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   /**
    * TODO, merge code with publish() once fully tested
    */
-  async publishWithNonTokenAuthhead(opt: { url: string; contentHash: string }) {
+  async publishWithNonTokenAuthhead(opt: {
+    url: string | string[];
+    contentHash: string;
+  }) {
     this.ensureOwnerWallet();
     this.ensureAuthKey();
     this._processing = 'Processing';
@@ -374,8 +377,17 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       delete authhead.token; // toCashscript has token attribute even if utxo has no tokenId
     }
 
-    console.log('AUTHHEAD', authhead);
-    console.log('authheadRecipient', authheadRecipient);
+    const opReturn: any[] = ['BCMR', contentHash];
+
+    if (typeof opt.url == 'string') {
+      const uri = opt.url.replace('https://', '');
+      opReturn.push(uri);
+    }
+
+    if (opt.url instanceof Array) {
+      const uri = opt.url.map((u) => u.replace(/https:\/\//, ''));
+      opReturn.push(...uri);
+    }
 
     try {
       transaction = contract
@@ -398,11 +410,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             token: authKeyInput.token,
           },
         ])
-        .withOpReturn([
-          'BCMR',
-          contentHash, // sha256 of the contents from the uri below
-          opt.url.replace('https://', ''),
-        ])
+        .withOpReturn(opReturn)
         .to(
           funderInput.satoshis - BigInt(issuanceCost) > 546
             ? [
@@ -554,7 +562,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
   /**
    * Use this Authhead to publish metadata.
    */
-  async publish(opt: { url: string; contentHash: string }): Promise<any> {
+  async publish(opt: {
+    url: string | string[];
+    contentHash: string;
+  }): Promise<any> {
     this.ensureOwnerWallet();
     this.ensureAuthKey();
 
@@ -591,6 +602,19 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     if (contentHash && !contentHash.startsWith('0x')) {
       contentHash = `0x${contentHash}`;
     }
+
+    const opReturn: any[] = ['BCMR', contentHash];
+
+    if (typeof opt.url == 'string') {
+      const uri = opt.url.replace('https://', '');
+      opReturn.push(uri);
+    }
+
+    if (opt.url instanceof Array) {
+      const uri = opt.url.map((u) => u.replace(/https:\/\//, ''));
+      opReturn.push(...uri);
+    }
+
     try {
       transaction = contract
         .getContractFunction('unlockWithNft')(true)
@@ -613,11 +637,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             token: authKeyInput.token,
           },
         ])
-        .withOpReturn([
-          'BCMR',
-          contentHash, // sha256 of the contents from the uri below
-          opt.url.replace('https://', ''),
-        ])
+        .withOpReturn(opReturn)
         .to(
           funderInput.satoshis - BigInt(issuanceCost) > 546
             ? [
