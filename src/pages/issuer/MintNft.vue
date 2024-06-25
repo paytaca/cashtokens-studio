@@ -747,11 +747,26 @@ const publish = async () => {
   let tx = ''
   try {
     const artifact = await bcmr.storeRegistry()
-    if (artifact?.uris.https) {
+    // if (artifact?.uris.https) {
+    //   progress.value = 'Publishing, please wait...'
+    //   const publisher = new AuthchainIdentity({ ...minter.value }, minter.value.transactionSigner)
+    //   tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+    // }
+    const urls = []
+
+    if (artifact?.uris?.ipfs) {
+      urls.push(artifact?.uris?.ipfs)
+    }
+    if (artifact?.uris?.https) {
+      urls.push(artifact?.uris?.https)
+    }
+
+    if (urls && artifact?.contentHash) {
       progress.value = 'Publishing, please wait...'
       const publisher = new AuthchainIdentity({ ...minter.value }, minter.value.transactionSigner)
-      tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+      tx = await publisher.publish({ url: urls, contentHash: artifact.contentHash })
     }
+
   } catch (error: any) {
     $q.dialog({
       message: error?.toString(),
