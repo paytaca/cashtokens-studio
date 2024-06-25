@@ -803,9 +803,19 @@ const publish = async (revisionOptions: RevisionOption) => {
   let tx = ''
   try {
     const artifact = await bcmr.value.storeRegistry()
-    if (artifact?.uris.https) {
+
+    const urls = []
+
+    if (artifact?.uris?.ipfs) {
+      urls.push(artifact?.uris?.ipfs)
+    }
+    if (artifact?.uris?.https) {
+      urls.push(artifact?.uris?.https)
+    }
+
+    if (urls && artifact?.contentHash) {
       progress.value = 'Publishing, please wait...'
-      tx = await tokenStore.token.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+      tx = await tokenStore.token.publish({ url: urls, contentHash: artifact.contentHash })
     }
   } catch (error: any) {
     $q.dialog({
