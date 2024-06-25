@@ -540,27 +540,27 @@ export class Bcmr implements Registry {
     }
   }
 
-  async publish() {
-    if (!this.authchainIdentity) {
-      throw new Error('Authchain identity required');
-    }
-    if (!this.getToken()) {
-      throw new Error('Token not set');
-    }
-    if (!this.getRegistryUri()) {
-      throw new Error('Registry URI not set');
-    }
-    try {
-      const clean = Object.assign(
-        {},
-        { ...this, authchainIdentity: undefined }
-      );
-      this.authchainIdentity.publish({
-        url: this.getRegistryUri() as string,
-        contentHash: binToHex(utf8ToBin(JSON.stringify(clean))),
-      });
-    } catch (error) {}
-  }
+  // async publish() {
+  //   if (!this.authchainIdentity) {
+  //     throw new Error('Authchain identity required');
+  //   }
+  //   if (!this.getToken()) {
+  //     throw new Error('Token not set');
+  //   }
+  //   if (!this.getRegistryUri()) {
+  //     throw new Error('Registry URI not set');
+  //   }
+  //   try {
+  //     const clean = Object.assign(
+  //       {},
+  //       { ...this, authchainIdentity: undefined }
+  //     );
+  //     this.authchainIdentity.publish({
+  //       url: [this.getRegistryUri() || ''],
+  //       contentHash: binToHex(utf8ToBin(JSON.stringify(clean))),
+  //     });
+  //   } catch (error) {}
+  // }
 
   removeEmptyFields(obj: Bcmr) {
     return JSON.parse(
