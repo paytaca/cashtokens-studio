@@ -232,7 +232,7 @@ export class CashToken implements UtxoI, PartialBcmr {
           OpReturnData.fromArray([
             'BCMR',
             hexToBin(this.registry.contentHash),
-            this.registry.uri.replace(/https:\/\/|ipfs:\/\//, ''),
+            this.registry.uri.replace(/https:\/\//, ''),
           ]),
         ];
       } else if (this.registry?.uri instanceof Array) {
@@ -240,9 +240,7 @@ export class CashToken implements UtxoI, PartialBcmr {
           OpReturnData.fromArray([
             'BCMR',
             hexToBin(this.registry.contentHash),
-            ...this.registry.uri.map((u) =>
-              u.replace(/https:\/\/|ipfs:\/\//, '')
-            ),
+            ...this.registry.uri.map((u) => u.replace(/https:\/\//, '')),
           ]),
         ];
       }
