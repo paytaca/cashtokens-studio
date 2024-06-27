@@ -159,10 +159,15 @@ watch(() => ui.statusMessage, (value) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
+  let l = await fetch('/api/ipfs?tag=nftasset', { method: 'POST' })
+  l.json()
+
+
   if (!user.walletAddress) {
     router.push('/')
   }
+
 })
 
 
