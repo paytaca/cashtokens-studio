@@ -122,6 +122,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const { /*name, description,*/ image } = await metadataContents.json();
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
+
           .split('/');
         res.status(200).send({
           nftStorageMetadata: metadata,
@@ -281,6 +282,45 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       } catch (error) {
         res.status(400).send(error);
       }
+    }
+  );
+
+  app.post(
+    '/api/ipfs',
+    upload.single('file'),
+    bodyParser.json(),
+    async (req: any, res: any) => {
+      const formData = new FormData();
+
+      let ext = req.file.originalname?.split('.');
+      ext = ext[ext.length - 1];
+
+      const filename = `${req.query.filename}`;
+
+      const file = new File([req.file.buffer], filename, {
+        type: req.file.mimetype,
+      });
+
+      formData.append('file', file);
+      formData.append('pinataMetadata', JSON.stringify({ name: filename }));
+      formData.append('pinataOptions', JSON.stringify({ cidVersion: 1 }));
+
+      try {
+        const resp: any = await fetch(
+          'https://api.pinata.cloud/pinning/pinFileToIPFS',
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${process.env.PINATA_JWT}`,
+            },
+            body: formData,
+          }
+        );
+        if (res.status == 200) {
+          return res.send(await res.json());
+        }
+        throw new Error(``);
+      } catch (error) {}
     }
   );
 });
