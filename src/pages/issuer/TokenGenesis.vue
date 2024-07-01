@@ -426,7 +426,7 @@ const createToken = async () => {
       wallet: user.wallet as Wallet,
       authKey: aKey,
       publishBCMR: {
-        uris: [artifact.uris.https, artifact.uris.ipfs],
+        uris: [artifact.uris.ipfs, artifact.uris.https],
         contentHash: artifact.contentHash
       }
     })
