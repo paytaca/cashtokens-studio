@@ -316,11 +316,16 @@ export default ssrMiddleware(async ({ app, resolve }) => {
             body: formData,
           }
         );
-        if (res.status == 200) {
-          return res.send(await res.json());
+        if (resp.status == 200) {
+          return res.send(await resp.json());
         }
-        throw new Error(``);
-      } catch (error) {}
+        res
+          .send(resp.status)
+          .send({ error: 'Error uploading file, please try again later.' });
+      } catch (error) {
+        console.log('🚀 ~ error:', error);
+        res.status(400).send(error);
+      }
     }
   );
 });
