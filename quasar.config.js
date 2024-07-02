@@ -65,6 +65,9 @@ module.exports = configure(function (ctx) {
     envs.NFT_STORAGE_API_KEY_9 = process.env.NFT_STORAGE_API_KEY_9;
     envs.NFT_STORAGE_API_KEY_10 = process.env.NFT_STORAGE_API_KEY_10;
     envs.PINATA_JWT = process.env.PINATA_JWT;
+    envs.PINATA_API_SECRET = process.env.PINATA_API_SECRET;
+    envs.PINATA_API_KEY = process.env.PINATA_API_KEY;
+    envs.PINATA_GATEWAY_KEY = process.env.PINATA_GATEWAY_KEY;
     envs.CTS_API_KEY_CUSTOM_HEADER = process.env.CTS_API_KEY_CUSTOM_HEADER;
     envs.CTS_API_KEYS = process.env.CTS_API_KEYS;
   }
