@@ -1,10 +1,6 @@
-import compression from 'compression';
 import { ssrMiddleware } from 'quasar/wrappers';
-import express from 'express';
-
 import bodyParser from 'body-parser';
 import { NFTStorage, File } from 'nft.storage';
-import fs from 'fs';
 import crypto from 'crypto';
 const multer = require('multer');
 const throttle = require('express-throttle-bandwidth');
@@ -44,10 +40,26 @@ const nftStorageApiKey = () => {
   ];
 };
 
+import PinataSDK from '@pinata/sdk';
+
 //Setting storage engine
 
 const storage = multer.diskStorage({ dest: 'uploads/' });
 const upload = multer(storage);
+
+const pinCIDOnPinata = async (cid: string) => {
+  const pinata = new PinataSDK(
+    process.env.PINATA_API_KEY,
+    process.env.PINATA_API_SECRET
+  );
+  try {
+    const pinningResponse = await pinata.pinByHash(cid);
+    console.log('🚀 ~ pinCIDOnPinata ~ cid:', cid);
+    console.log('🚀 ~ pinCIDOnPinata ~ pinningResponse:', pinningResponse);
+  } catch (error) {
+    console.log('🚀 ~ pinCIDOnPinata ~ pinningResponse:', error);
+  }
+};
 
 export default ssrMiddleware(async ({ app, resolve }) => {
   app.use(throttle(1024 * 128));
@@ -81,6 +93,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
           .split('/');
+        pinCIDOnPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           iconUris: {
@@ -124,6 +137,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           .replace('ipfs://', '')
 
           .split('/');
+        pinCIDOnPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           uris: {
@@ -168,6 +182,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
           .split('/');
+        pinCIDOnPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           uris: {
@@ -216,6 +231,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const json = await resp.json();
         if (json.ok) {
           const hash = crypto.createHash('sha256');
+          pinCIDOnPinata(json.value.cid);
           res.status(200).send({
             artifact: {
               uris: {
@@ -269,6 +285,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         });
         const json = await resp.json();
         if (json.ok) {
+          pinCIDOnPinata(json.value.cid);
           res.status(200).send({
             artifact: {
               uris: {
@@ -316,11 +333,13 @@ export default ssrMiddleware(async ({ app, resolve }) => {
             body: formData,
           }
         );
+
         if (resp.status == 200) {
           return res.send(await resp.json());
         }
+
         res
-          .send(resp.status)
+          .status(resp.status)
           .send({ error: 'Error uploading file, please try again later.' });
       } catch (error) {
         console.log('🚀 ~ error:', error);
