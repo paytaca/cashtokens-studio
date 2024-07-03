@@ -83,7 +83,9 @@ const nftStorageStoreName = 'CTStudio';
 const nftStorageStoreDescription = 'CTStudio pins';
 
 const init = async (req: any, res: any, next: any) => {
-  req.ipfs = {};
+  req.ipfs = {
+    artifact: {},
+  };
 
   if (req.file?.originalname) {
     let ext = req.file.originalname?.split('.');
@@ -102,24 +104,23 @@ const init = async (req: any, res: any, next: any) => {
   console.log('request is json', req.is('json'));
 
   if (req.is('json')) {
-    if (!req.file) {
-      const jsonString = JSON.stringify(req.body);
+    const hash = crypto.createHash('sha256');
+    let contentHash;
+    if (req.file) {
+      contentHash = hash
+        .update(req.file.buffer.toString('utf-8'))
+        .digest('hex');
 
-      // Create a Blob from the JSON string
-      const blob = new Blob([jsonString], { type: 'application/json' });
-
-      // Create a File object from the Blob
-      req.file = new File([blob], `${req.body.registryIdentity}.json`, {
-        type: 'application/json',
+      req.jsonFile = new File([req.file.buffer], 'file.json', {
+        type: req.file.mimetype,
       });
+    } else {
+      const jsonString = JSON.stringify(req.body);
+      contentHash = hash.update(Buffer.from(jsonString, 'utf-8')).digest('hex');
     }
 
-    const hash = crypto.createHash('sha256');
-    const contentHash = hash
-      .update(req.file.buffer.toString('utf-8'))
-      .digest('hex');
     req.ipfs.artifact.contentHash = contentHash;
-    req.ipfs.filename = `${req.body.registryIdentity}.json`;
+    req.ipfs.filename = `${req.body.registryIdentity || 'file'}.json`;
   }
 
   console.log('🚀 ~ init:', req.ipfs);
@@ -258,12 +259,9 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
     },
   };
   console.log('FILE', req.file);
-  const file = new File([req.file.buffer], req.ipfs.filename, {
-    type: req.file.mimetype,
-  });
 
   const fileStream = new Readable();
-  fileStream.push(req.file.buffer); // Push buffer data to the stream
+  fileStream.push(req.file.buffer);
   fileStream.push(null);
 
   try {
@@ -297,7 +295,7 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
   let options = {
     pinataOptions: {
       cidVersion: 1 as 0 | 1 | undefined,
-      wrapWithDirectory: true,
+      wrapWithDirectory: false,
     },
     pinataMetadata: {
       name: req.ipfs.filename,
@@ -305,9 +303,18 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
   };
 
   try {
-    options.pinataOptions.wrapWithDirectory = false;
+    const fileStream = new Readable();
+    if (req.file?.buffer) {
+      fileStream.push(req.file.buffer); // Push buffer data to the stream
+    } else if (req.body) {
+      const jsonString = JSON.stringify(req.body);
+      fileStream.push(Buffer.from(jsonString));
+    }
+
+    fileStream.push(null);
+
     const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
-      req.file.buffer,
+      fileStream,
       options
     );
     console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
@@ -675,7 +682,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     // pinJsonToNftStorage,
     // pinIpfsCidToPinata,
     pinMediaFileToPinata,
-    // pinJsonFileToPinata,
+    pinJsonFileToPinata,
     handleIpfsError
   );
 });
