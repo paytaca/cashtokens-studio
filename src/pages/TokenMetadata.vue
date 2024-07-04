@@ -747,6 +747,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
   bcmr.value.versionString = newVersion
   progress.value = 'Authenticating authhead, please wait...'
+
   try {
     const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
     progress.value = false
@@ -771,6 +772,7 @@ const publish = async (revisionOptions: RevisionOption) => {
     })
   }
   const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
+  const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
   if (revisionOption == 'update') {
     const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
     bcmr.value.identities![bcmrSelectedAuthbase.value!] = {
@@ -804,7 +806,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.decimals = Number(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.decimals || 0)
   let tx = ''
   try {
-    const artifact = await bcmr.value.storeRegistry()
+    const artifact = await bcmr.value.storeRegistry(tokenId)
 
     const urls = []
 
@@ -867,7 +869,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       progress.value = false
     }
 
-    const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
+
     try {
       if (publicationTx.value) {
         await localForage.registryTempStore.setItem(`registry:${tokenId}`, JSON.parse(bcmr.value.getContent()))

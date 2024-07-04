@@ -722,7 +722,7 @@ const publish = async () => {
     }
   } else {
     // add
-    bcmr.identities![authbase][newRevisionTimestamp] = Object.assign({}, latestIdentitySnapshot)
+    bcmr.identities![authbase][newRevisionTimestamp] = JSON.parse(JSON.stringify(latestIdentitySnapshot))
   }
 
   // add nfts
@@ -755,7 +755,7 @@ const publish = async () => {
   let tx = ''
   try {
 
-    const artifact = await bcmr.storeRegistry()
+    const artifact = await bcmr.storeRegistry(authbase)
     const urls = []
 
     if (artifact?.uris?.ipfs) {
