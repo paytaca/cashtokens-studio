@@ -1,6 +1,7 @@
 <template>
   <q-page>
     <div class="row justify-center">
+
       <div class="col-xs-12 col-sm-11 col-lg-10" :class="$q.screen.xs ? 'q-mx-auto' : ''">
         <div v-if="!mintTx" class="text-center text-h5 text-bold q-py-md">
           Mint
@@ -445,7 +446,6 @@ const openNftTypeDialog = (token: TokenI) => {
     }
   }).onOk(({ type, nftType }) => {
     nftsTypes.value[type] = nftType
-    console.log('nfts types', nftsTypes.value)
   })
 }
 
@@ -597,7 +597,6 @@ const locateRegistry = async () => {
         await delay(1000)
         progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
         const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
-        console.log(pubInfo)
         if (pubInfo && pubInfo[0]) {
           if (pubInfo[0].httpsUrl) {
             try {
@@ -707,7 +706,6 @@ const publish = async () => {
     })
   })
 
-  console.log(revisionOptions)
   if (revisionOptions.revisionOption == 'update') {
     // overwrite
     bcmr.identities![authbase] = {
@@ -738,6 +736,7 @@ const publish = async () => {
   bcmr.latestRevision = newRevisionTimestamp
   bcmr.registryIdentity = authbase
   bcmr.versionString = revisionOptions.newVersion
+
   if (minter.value?.authKey?.token?.tokenId) {
     bcmr.appendAuthGuardTokenStandardExtension(minter.value?.authKey?.token?.tokenId)
   }
@@ -747,11 +746,6 @@ const publish = async () => {
   let tx = ''
   try {
     const artifact = await bcmr.storeRegistry()
-    // if (artifact?.uris.https) {
-    //   progress.value = 'Publishing, please wait...'
-    //   const publisher = new AuthchainIdentity({ ...minter.value }, minter.value.transactionSigner)
-    //   tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
-    // }
     const urls = []
 
     if (artifact?.uris?.ipfs) {
