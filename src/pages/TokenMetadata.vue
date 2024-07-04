@@ -866,6 +866,15 @@ const publish = async (revisionOptions: RevisionOption) => {
     } finally {
       progress.value = false
     }
+
+    const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
+    try {
+      if (publicationTx.value) {
+        await localForage.registryTempStore.setItem(`registry:${tokenId}`, JSON.parse(bcmr.value.getContent()))
+      }
+    } catch (error) {
+      await localForage.registryTempStore.removeItem(`registry:${tokenId}`)
+    }
   }
 }
 
@@ -1039,6 +1048,7 @@ const openNftTypeDialog = async (token: { amount: number, category: string, comm
       }
     }
   }
+
 
   $q.dialog({
     component: NftTypeDialog,
@@ -1314,15 +1324,25 @@ const initBcmr = (r: any) => {
 
     loadNftTypes()
   }
-
-
 }
+
+
 
 onBeforeMount(async () => {
   try {
     if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) return
     progress.value = 'Loading registry, please wait...'
-    const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+    let r
+    try {
+      r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
+    } catch (error) {
+      console.log("🚀 ~ locateRegistry ~ error:", error)
+    }
+
+    if (!r || r == 'undefined') {
+      r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+    }
+
     if (r) {
       initBcmr(r)
     } else {

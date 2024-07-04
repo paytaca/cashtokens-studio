@@ -585,39 +585,48 @@ const mint = async () => {
 type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create', registry?: Bcmr }
 
 const locateRegistry = async () => {
-  const r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
+  let r
   try {
-    if (r) {
-      return r
-    } else {
-      progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
-      await delay(1000)
-      if (minter.value.token?.tokenId) {
-        progress.value = `Trying other methods please wait...`
-        await delay(1000)
-        progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
-        if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl) {
-            try {
-              const r = await fetch(pubInfo[0].httpsUrl)
-              if (r.status == 200) {
-                const rj = await r.json()
-                if (rj) {
-                  return rj
-                }
+    r = await localForage.registryTempStore.getItem(`registry:${minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId}`)
+    if (!r || r == 'undefined') {
+      r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
+    }
 
+    if (r) return r
+
+  } catch (error) {
+    console.log("🚀 ~ locateRegistry ~ error:", error)
+  }
+
+
+  try {
+    progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
+    await delay(1000)
+    if (minter.value.token?.tokenId) {
+      progress.value = `Trying other methods please wait...`
+      await delay(1000)
+      progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
+      const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
+      if (pubInfo && pubInfo[0]) {
+        if (pubInfo[0].httpsUrl) {
+          try {
+            const r = await fetch(pubInfo[0].httpsUrl)
+            if (r.status == 200) {
+              const rj = await r.json()
+              if (rj) {
+                return rj
               }
-            } catch (error) {
-              $q.dialog({
-                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              })
+
             }
+          } catch (error) {
+            $q.dialog({
+              message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+            })
           }
-        } else {
-          // bcmrNotFound.value = true
-          // TODO: show dialog
         }
+      } else {
+        // bcmrNotFound.value = true
+        // TODO: show dialog
       }
     }
   } catch (error) {
@@ -745,6 +754,7 @@ const publish = async () => {
 
   let tx = ''
   try {
+
     const artifact = await bcmr.storeRegistry()
     const urls = []
 
@@ -786,6 +796,7 @@ const publish = async () => {
           txid: tx
         }
       })
+
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.publish',
@@ -798,7 +809,6 @@ const publish = async () => {
         nftsTypes.value[k].published = true
       }
       removeSavedNftsTypes()
-
     } catch (error: any) {
       $q.dialog({
         message: error?.toString(),
@@ -808,6 +818,15 @@ const publish = async () => {
       })
     } finally {
       progress.value = false
+    }
+
+    try {
+      if (publicationTx.value) {
+        await localForage.registryTempStore.setItem(`registry:${minter.value.token.tokenId}`, JSON.parse(bcmr.getContent()))
+      }
+
+    } catch (error) {
+      await localForage.registryTempStore.removeItem(`registry:${minter.value.token.tokenId}`)
     }
   }
 }
