@@ -80,6 +80,7 @@ import BusyButton from 'src/components/BusyButton.vue'
 import { Registry } from 'mainnet-js'
 import { Draft07 } from 'json-schema-library'
 import bcmrSchema from 'src/app/bcmr/bcmr-schema.json'
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 defineEmits([
   ...useDialogPluginComponent.emits,
@@ -123,14 +124,15 @@ const uploadBCMR = async () => {
 
     try {
       progress.value = 'Uploading...'
-      const formData = new FormData();
-      formData.append('registryFile', bcmrFile.value);
+      // const formData = new FormData();
+      // formData.append('registryFile', bcmrFile.value);
       bcmrFileUploading.value = true
-      const resp = await fetch(`api/tokens/registry-file/storage?tokenId=${props.authchainIdentity.identitySnapshot?.token?.category}`, {
-        method: 'POST', body: formData
-      })
-      const respJ = await resp.json()
-      uploadArtifact.value = respJ.artifact
+      // const resp = await fetch(`api/tokens/registry-file/storage?tokenId=${props.authchainIdentity.identitySnapshot?.token?.category}`, {
+      //   method: 'POST', body: formData
+      // })
+      // const respJ = await resp.json()
+      uploadArtifact.value = await uploadToIPFS(bcmrFile.value, { tokenId: props.authchainIdentity.identitySnapshot?.token?.category }) as BcmrStorageArtifact
+
     } catch (error) {
       console.log(error)
     } finally {
@@ -177,7 +179,7 @@ const publish = async () => {
   }
   try {
 
-    const tx = await props.authchainIdentity.publish({ url: uploadArtifact.value!.uris.https!, contentHash: uploadArtifact.value!.contentHash })
+    const tx = await props.authchainIdentity.publish({ url: [uploadArtifact.value!.uris.ipfs!, uploadArtifact.value!.uris.https!], contentHash: uploadArtifact.value!.contentHash })
     if (tx) {
       progress.value = 'Awaiting confirmation'
       await props.authchainIdentity.ownerWallet?.waitForTransaction({ txHash: tx })
