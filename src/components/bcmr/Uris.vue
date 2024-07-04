@@ -134,8 +134,6 @@ const onUpdateModelValue = (v: string | number | null) => {
 
 watch(() => iconFile.value, async (v) => {
   if (v) {
-    const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.tokenId ?? '' })
-    console.log('ARTIFACT', artifact)
 
     const squareIcon = await isSquareImage(v)
     if (!squareIcon) {
@@ -151,10 +149,8 @@ watch(() => iconFile.value, async (v) => {
       iconFileUploading.value = true
       emit('icon-file-uploading', true)
       try {
-        // const artifact = await uploadIcon(iconFile.value, props.tokenId ?? '')
-        // uris.value!.icon = artifact?.iconUris.ipfs || ''
         const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.tokenId ?? '' })
-        console.log('ARTIFACT', artifact)
+        uris.value.icon = artifact?.uris.ipfs || ''
 
       } catch (error) {
         console.log(error)
