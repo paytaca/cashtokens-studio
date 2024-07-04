@@ -1,18 +1,19 @@
 import querify from '../utils/querify';
-import { IpfsUploadArtifact } from './types';
+import { BcmrStorageArtifact, IpfsUploadArtifact } from './types';
 
 /**
  * Stores this registry to the ipfs server.
  */
 export const upload = async (
-  file: File,
-  query?: object
-): Promise<IpfsUploadArtifact | undefined> => {
+  file: File | Blob,
+  query?: object,
+  filename?: string
+): Promise<IpfsUploadArtifact | BcmrStorageArtifact | undefined> => {
   try {
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('file', file, filename);
     let path = 'api/ipfs';
-    if (query) {
+    if (query && Object.keys(query).length > 0) {
       path += `?${querify(query)}`;
     }
     const resp = await fetch(path, {
