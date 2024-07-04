@@ -96,31 +96,23 @@ const init = async (req: any, res: any, next: any) => {
         filename += `-${req.query.commitment}`;
       }
       filename += `.${ext}`;
-      req.ipfs.ext = ext;
+      req.ipfs.fileextension = ext;
       req.ipfs.filename = filename;
     }
   }
 
   console.log('request is json', req.is('json'));
 
-  if (req.is('json')) {
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') {
     const hash = crypto.createHash('sha256');
-    let contentHash;
+    let contentHash: string | undefined = undefined;
     if (req.file) {
       contentHash = hash
         .update(req.file.buffer.toString('utf-8'))
         .digest('hex');
-
-      req.jsonFile = new File([req.file.buffer], 'file.json', {
-        type: req.file.mimetype,
-      });
-    } else {
-      const jsonString = JSON.stringify(req.body);
-      contentHash = hash.update(Buffer.from(jsonString, 'utf-8')).digest('hex');
     }
-
     req.ipfs.artifact.contentHash = contentHash;
-    req.ipfs.filename = `${req.body.registryIdentity || 'file'}.json`;
+    req.ipfs.filename = `${req.ipfs.filename || 'bcmr.json'}`;
   }
 
   console.log('🚀 ~ init:', req.ipfs);
@@ -136,7 +128,7 @@ const init = async (req: any, res: any, next: any) => {
 };
 
 const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
-  if (req.is('json')) return next();
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') return next();
 
   try {
     const metadata = await nftStorageClient().store({
@@ -188,7 +180,7 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
 };
 
 const pinJsonToNftStorage = async (req: any, res: any, next: any) => {
-  if (!req.is('json')) return next();
+  if (req.ipfs.fileextension?.toLowerCase() != 'json') return next();
 
   const headers = {
     Authorization: `Bearer ${nftStorageApiKey()}`,
@@ -196,10 +188,13 @@ const pinJsonToNftStorage = async (req: any, res: any, next: any) => {
   };
 
   try {
+    let jsonFile = new File([req.file.buffer], req.ipfs.filename, {
+      type: 'application/json',
+    });
     const resp: any = await fetch('https://api.nft.storage/upload', {
       method: 'POST',
       headers,
-      body: req.file,
+      body: jsonFile,
     });
 
     if (!resp.ok) {
@@ -247,7 +242,7 @@ const pinIpfsCidToPinata = async (req: any, res: any, next: any) => {
 };
 
 const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
-  if (req.is('json')) return next();
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') return next();
 
   let options = {
     pinataOptions: {
@@ -290,7 +285,7 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
 };
 
 const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
-  if (!req.is('json')) return next();
+  if (req.ipfs.fileextension?.toLowerCase() != 'json') return next();
   console.log('Pinning file to pinata');
   let options = {
     pinataOptions: {
@@ -304,12 +299,14 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
 
   try {
     const fileStream = new Readable();
-    if (req.file?.buffer) {
-      fileStream.push(req.file.buffer); // Push buffer data to the stream
-    } else if (req.body) {
-      const jsonString = JSON.stringify(req.body);
-      fileStream.push(Buffer.from(jsonString));
-    }
+    fileStream.push(req.file.buffer);
+    // if (req.file?.buffer) {
+    //   fileStream.push(req.file.buffer); // Push buffer data to the stream
+    // }
+    // else if (req.body) {
+    //   const jsonString = JSON.stringify(req.body);
+    //   fileStream.push(Buffer.from(jsonString));
+    // }
 
     fileStream.push(null);
 
