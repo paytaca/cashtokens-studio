@@ -573,6 +573,7 @@ import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 
 const $q = useQuasar()
@@ -791,6 +792,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       let clone = JSON.parse(JSON.stringify(nftType[nftType._meta.commitment]))
       delete clone.saved
       delete clone.published
+      delete clone.forPublish
       bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = clone
     }
   }
@@ -957,19 +959,19 @@ const undoCommitOfUnpublishedNfts = () => {
 const saveNewIconInIPFS = async () => {
   if (newTokenIconFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('icon', newTokenIconFile.value);
       newTokenIconUploading.value = true
-      const resp = await fetch(`api/tokens/icon/upload?tokenId=${tokenStore.token?.token?.tokenId}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && respJson.iconUris?.https) {
-        bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: respJson.iconUris?.https })
+      const artifact = await uploadToIPFS(newTokenIconFile.value, { tokenId: tokenStore.token?.token?.tokenId })
+      if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && artifact?.uris?.ipfs) {
+        bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: artifact?.uris?.ipfs })
       }
 
     } catch (error) {
-      console.log(error)
+      $q.dialog({
+        message: error?.toString(),
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
     } finally {
       newTokenIconUploading.value = false
     }
