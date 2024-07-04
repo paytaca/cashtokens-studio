@@ -16,6 +16,7 @@ import {
 } from 'mainnet-js';
 import { AuthchainIdentity } from '../';
 import { BcmrStorageArtifact } from '../types';
+import { IpfsUploadArtifact, upload as uploadToIPFS } from '../ipfs';
 
 type ISODateString =
   `${number}-${number}-${number}T${number}:${number}:${number}.${number}Z`;
@@ -648,21 +649,19 @@ export class Bcmr implements Registry {
   async storeRegistry(
     authbase?: string,
     identityHistoryTimestamp?: ISODateString | string
-  ): Promise<BcmrStorageArtifact | undefined> {
+  ): Promise<BcmrStorageArtifact | IpfsUploadArtifact | undefined> {
     this._processing = 'Storing in IPFS';
     try {
-      const resp = await fetch('/api/tokens/registry/storage', {
-        method: 'POST',
-        body: this.getContent(authbase, identityHistoryTimestamp),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (resp.status >= 400) {
-        throw new Error(
-          'Error, storing registry in IPFS, please try again later.'
-        );
-      }
-      const respJson = await resp.json();
-      return respJson.artifact;
+      const blob = new Blob(
+        [this.getContent(authbase, identityHistoryTimestamp)],
+        { type: 'application/json' }
+      );
+      const artifact = await uploadToIPFS(
+        blob,
+        { tokenId: authbase },
+        `${authbase}.json`
+      );
+      return artifact;
     } catch (error) {
       console.log(error);
       throw error;
