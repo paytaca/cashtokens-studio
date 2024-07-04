@@ -188,6 +188,7 @@ import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
 import { hexToBin, vmNumberToBigInt } from '@bitauth/libauth'
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 
 const nftTypeSchema = {
@@ -317,18 +318,13 @@ const assetFileUploading = ref<boolean>(false)
 const uploadIconToIpfs = async () => {
   if (iconFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('icon', iconFile.value);
       if (iconPreviewUrl.value) {
         URL.revokeObjectURL(iconPreviewUrl.value)
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      nftType.value.uris!.icon = respJson.uris?.ipfs
+      const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      nftType.value.uris!.icon = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
     } finally {
@@ -340,18 +336,13 @@ const uploadIconToIpfs = async () => {
 const uploadAssetToIpfs = async () => {
   if (assetFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('file', assetFile.value);
       if (assetPreviewUrl.value) {
         URL.revokeObjectURL(assetPreviewUrl.value)
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      nftType.value.uris!.asset = respJson.uris?.ipfs
+      const artifact = await uploadToIPFS(assetFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      nftType.value.uris!.asset = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
     } finally {
