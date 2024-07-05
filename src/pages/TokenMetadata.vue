@@ -573,6 +573,7 @@ import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 
 const $q = useQuasar()
@@ -746,6 +747,7 @@ const publish = async (revisionOptions: RevisionOption) => {
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
   bcmr.value.versionString = newVersion
   progress.value = 'Authenticating authhead, please wait...'
+
   try {
     const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
     progress.value = false
@@ -770,6 +772,7 @@ const publish = async (revisionOptions: RevisionOption) => {
     })
   }
   const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
+  const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
   if (revisionOption == 'update') {
     const singleRevision = Object.assign({}, bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString])
     bcmr.value.identities![bcmrSelectedAuthbase.value!] = {
@@ -791,6 +794,7 @@ const publish = async (revisionOptions: RevisionOption) => {
       let clone = JSON.parse(JSON.stringify(nftType[nftType._meta.commitment]))
       delete clone.saved
       delete clone.published
+      delete clone.forPublish
       bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.nfts!.parse!.types[nftType._meta.commitment] = clone
     }
   }
@@ -802,10 +806,20 @@ const publish = async (revisionOptions: RevisionOption) => {
   bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.decimals = Number(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.decimals || 0)
   let tx = ''
   try {
-    const artifact = await bcmr.value.storeRegistry()
-    if (artifact?.uris.https) {
+    const artifact = await bcmr.value.storeRegistry(tokenId)
+
+    const urls = []
+
+    if (artifact?.uris?.ipfs) {
+      urls.push(artifact?.uris?.ipfs)
+    }
+    if (artifact?.uris?.https) {
+      urls.push(artifact?.uris?.https)
+    }
+
+    if (urls && artifact?.contentHash) {
       progress.value = 'Publishing, please wait...'
-      tx = await tokenStore.token.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+      tx = await tokenStore.token.publish({ url: urls, contentHash: artifact.contentHash })
     }
   } catch (error: any) {
     $q.dialog({
@@ -853,6 +867,15 @@ const publish = async (revisionOptions: RevisionOption) => {
       })
     } finally {
       progress.value = false
+    }
+
+
+    try {
+      if (publicationTx.value) {
+        await localForage.registryTempStore.setItem(`registry:${tokenId}`, JSON.parse(bcmr.value.getContent()))
+      }
+    } catch (error) {
+      await localForage.registryTempStore.removeItem(`registry:${tokenId}`)
     }
   }
 }
@@ -947,19 +970,19 @@ const undoCommitOfUnpublishedNfts = () => {
 const saveNewIconInIPFS = async () => {
   if (newTokenIconFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('icon', newTokenIconFile.value);
       newTokenIconUploading.value = true
-      const resp = await fetch(`api/tokens/icon/upload?tokenId=${tokenStore.token?.token?.tokenId}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && respJson.iconUris?.https) {
-        bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: respJson.iconUris?.https })
+      const artifact = await uploadToIPFS(newTokenIconFile.value, { tokenId: tokenStore.token?.token?.tokenId })
+      if (bcmrSelectedAuthbase.value && bcmrNewRevision.value && artifact?.uris?.ipfs) {
+        bcmr.value.addIdentitySnapshotUri(bcmrSelectedAuthbase.value, bcmrNewRevision.value!.toISOString(), { icon: artifact?.uris?.ipfs })
       }
 
     } catch (error) {
-      console.log(error)
+      $q.dialog({
+        message: error?.toString(),
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
     } finally {
       newTokenIconUploading.value = false
     }
@@ -1027,6 +1050,7 @@ const openNftTypeDialog = async (token: { amount: number, category: string, comm
       }
     }
   }
+
 
   $q.dialog({
     component: NftTypeDialog,
@@ -1302,15 +1326,25 @@ const initBcmr = (r: any) => {
 
     loadNftTypes()
   }
-
-
 }
+
+
 
 onBeforeMount(async () => {
   try {
     if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) return
     progress.value = 'Loading registry, please wait...'
-    const r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+    let r
+    try {
+      r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
+    } catch (error) {
+      console.log("🚀 ~ locateRegistry ~ error:", error)
+    }
+
+    if (!r || r == 'undefined') {
+      r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+    }
+
     if (r) {
       initBcmr(r)
     } else {

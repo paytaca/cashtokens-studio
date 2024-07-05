@@ -16,3 +16,11 @@ export type IconStorageArtifact = {
     url: string;
   };
 };
+
+export type IpfsUploadArtifact = {
+  uris: {
+    ipfs: string;
+    https: string;
+  };
+  contentHash?: string;
+};
