@@ -168,7 +168,6 @@ import { shortenTx } from 'src/app/utils'
 import { createRegistryTemplate } from 'src/app/bcmr'
 import { getInstance as getAuthguardInstance } from 'src/app/contracts'
 import bcmrSchema from 'src/app/bcmr/bcmr-v2.schema.json'
-import { storeRegistry } from 'src/app/ipfs'
 import { useEventBus } from 'src/composables'
 import Token from 'src/components/Token.vue'
 import TokenCategoryComponent from 'src/components/bcmr/TokenCategory.vue'
@@ -177,6 +176,7 @@ import IdentitySnapshotComponent from 'src/components/bcmr/IdentitySnapshot.vue'
 import NftCategoryComponent from 'src/components/bcmr/NftCategory.vue'
 import Uris from 'src/components/bcmr/Uris.vue'
 import CopyText from 'src/components/CopyText.vue'
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 const route = useRoute()
 const router = useRouter()
@@ -397,7 +397,13 @@ const createToken = async () => {
   }
 
   try {
-    const artifact = await storeRegistry(JSON.stringify(registry.value))
+
+    const blob = new Blob(
+      [JSON.stringify(registry.value)],
+      { type: 'application/json' }
+    )
+
+    const artifact = await uploadToIPFS(blob, {}, `${registry.value.registryIdentity}.json`)
     if (!artifact) {
       $q.dialog({
         message: `Failed storing metadata in IPFS, please try again later...`
@@ -426,8 +432,8 @@ const createToken = async () => {
       wallet: user.wallet as Wallet,
       authKey: aKey,
       publishBCMR: {
-        uris: [artifact.uris.https, artifact.uris.ipfs],
-        contentHash: artifact.contentHash
+        uris: [artifact.uris.ipfs, artifact.uris.https],
+        contentHash: artifact.contentHash!
       }
     })
     progress.value = 'Waiting for signature. Pls check your wallet!'
@@ -562,7 +568,6 @@ watch(() => tokenType.value, (v) => {
 onBeforeMount(async () => {
   progress.value = 'Checking your wallet for valid genesis inputs...'
   genesisInput.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) => u.vout == 0 && !u.token && u.satoshis == DEFAULT_TOKEN_VALUE)[0]
-  console.log('GENESIS INPUT', genesisInput.value)
   if (genesisInput.value) {
     authKey.value = (await user.wallet!.getAddressUtxos()).filter((u: UtxoI) =>
       u.vout == 0 &&

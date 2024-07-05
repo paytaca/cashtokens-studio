@@ -6,7 +6,11 @@
     </div>
     <div class="q-col-gutter-y-md">
       <div>
-        <q-file ref="iconFileRef" v-model="iconFile" accept=".jpg, .png, image/*"
+        <!-- <q-file ref="iconFileRef" v-model="iconFile" accept=".jpg, .png, image/*"
+          @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
+          :disable="iconFileUploading" outlined bottom-slots class="hidden">
+        </q-file> -->
+        <q-file ref="iconFileRef" v-model="iconFile"
           @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
           :disable="iconFileUploading" outlined bottom-slots class="hidden">
         </q-file>
@@ -70,7 +74,7 @@
 
 <script setup lang="ts">
 import { URIs } from 'mainnet-js'
-import { IconStorageArtifact, uploadIcon } from 'src/app/ipfs';
+import { IconStorageArtifact, uploadIcon, upload as uploadToIPFS } from 'src/app/ipfs';
 import { defineComponent, defineModel, ref, watch } from 'vue'
 import { ipfsToGatewayUrl, isSquareImage } from 'src/app/utils'
 import { useQuasar } from 'quasar';
@@ -130,6 +134,7 @@ const onUpdateModelValue = (v: string | number | null) => {
 
 watch(() => iconFile.value, async (v) => {
   if (v) {
+
     const squareIcon = await isSquareImage(v)
     if (!squareIcon) {
       $q.dialog({
@@ -144,8 +149,9 @@ watch(() => iconFile.value, async (v) => {
       iconFileUploading.value = true
       emit('icon-file-uploading', true)
       try {
-        const artifact = await uploadIcon(iconFile.value, props.tokenId ?? '')
-        uris.value!.icon = artifact?.iconUris.ipfs || ''
+        const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.tokenId ?? '' })
+        uris.value.icon = artifact?.uris.ipfs || ''
+
       } catch (error) {
         console.log(error)
       } finally {

@@ -1,13 +1,28 @@
-import compression from 'compression';
 import { ssrMiddleware } from 'quasar/wrappers';
-import express from 'express';
-
 import bodyParser from 'body-parser';
 import { NFTStorage, File } from 'nft.storage';
-import fs from 'fs';
 import crypto from 'crypto';
+import { type Request } from 'express';
+import PinataSDK from '@pinata/sdk';
+import fs from 'fs';
+import { Readable } from 'stream';
 const multer = require('multer');
 const throttle = require('express-throttle-bandwidth');
+
+interface MulterRequest extends Request {
+  file: any;
+}
+
+export type IpfsUploadArtifact = {
+  uris: {
+    ipfs: string;
+    https: string;
+  };
+  contentHash?: string;
+  originalFilename?: string;
+  h?: string;
+  ipfsCid: string;
+};
 
 let nftStorageApiKeys = [
   process.env.NFT_STORAGE_API_KEY_1,
@@ -30,8 +45,9 @@ nftStorageApiKeys.forEach((apiKey) => {
   nftStorageClients.push(new NFTStorage({ token: apiKey || '' }));
 });
 
-console.log('NFT STORAGE KEYS', nftStorageApiKeys);
-console.log('NFT STORAGE clients', nftStorageClients);
+console.log('🚀 ~ nftStorageApiKeys:', nftStorageApiKeys);
+console.log('🚀 ~ nftStorageClients:', nftStorageClients);
+
 const nftStorageClient = () => {
   return nftStorageClients[
     Math.floor(Math.random() * nftStorageClients.length)
@@ -48,6 +64,281 @@ const nftStorageApiKey = () => {
 
 const storage = multer.diskStorage({ dest: 'uploads/' });
 const upload = multer(storage);
+
+const pinCidToPinata = async (cid: string) => {
+  const pinata = new PinataSDK(
+    process.env.PINATA_API_KEY,
+    process.env.PINATA_API_SECRET
+  );
+  try {
+    const pinningResponse = await pinata.pinByHash(cid);
+    console.log('🚀 ~ pinCidToPinata ~ cid:', cid);
+    console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', pinningResponse);
+  } catch (error) {
+    console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
+  }
+};
+
+const nftStorageStoreName = 'CTStudio';
+const nftStorageStoreDescription = 'CTStudio pins';
+
+const init = async (req: any, res: any, next: any) => {
+  req.ipfs = {
+    artifact: {},
+  };
+
+  if (req.file?.originalname) {
+    let ext = req.file.originalname?.split('.');
+    ext = ext[ext.length - 1];
+    if (ext) {
+      let filename = `${req.query.tokenId}`;
+      if (req.query.commitment) {
+        filename += `-${req.query.commitment}`;
+      }
+      filename += `.${ext}`;
+      req.ipfs.fileextension = ext;
+      req.ipfs.filename = filename;
+    }
+  }
+
+  console.log('request is json', req.is('json'));
+
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') {
+    const hash = crypto.createHash('sha256');
+    let contentHash: string | undefined = undefined;
+    if (req.file) {
+      contentHash = hash
+        .update(req.file.buffer.toString('utf-8'))
+        .digest('hex');
+    }
+    req.ipfs.artifact.contentHash = contentHash;
+    req.ipfs.filename = `${req.ipfs.filename || 'bcmr.json'}`;
+  }
+
+  console.log('🚀 ~ init:', req.ipfs);
+
+  const pinata = new PinataSDK(
+    process.env.PINATA_API_KEY,
+    process.env.PINATA_API_SECRET
+  );
+
+  req.ipfs.pinata = pinata;
+
+  next();
+};
+
+const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') return next();
+
+  try {
+    const metadata = await nftStorageClient().store({
+      name: nftStorageStoreName,
+      description: nftStorageStoreDescription,
+      image: new File([req.file.buffer], req.ipfs.filename, {
+        type: req.file.mimetype,
+      }),
+    });
+    console.log('METADATA', metadata);
+
+    const [metadataCid, metadataFilename] = metadata.url
+      .replace('ipfs://', '')
+      .split('/');
+
+    const metadataContentsResp = await fetch(
+      `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
+    );
+
+    console.log('metadataCid', metadataCid);
+
+    if (!metadataContentsResp.ok) {
+      return next();
+    }
+
+    const { /*name, description,*/ image } = await metadataContentsResp.json();
+    const [cid, fname] = image.replace('ipfs://', '').split('/');
+
+    req.ipfs.artifact = {
+      uris: {
+        ipfs: `ipfs://${cid}/${fname}`,
+        https: `https://nftstorage.link/ipfs/${cid}/${fname}`,
+      },
+      originalFilename: req.file.originalname,
+      h: req.query.h,
+      ipfsCid: cid,
+    };
+  } catch (error) {
+    console.log('🚀 ~ pinMediaFileToNftStorage ~ error:', error);
+    req.ipfs.error = {
+      nftstorage: error,
+    };
+  }
+  console.log(
+    '🚀 ~ pinMediaFileToNftStorage ~ req.ipfs.artifact:',
+    req.ipfs.artifact
+  );
+  next();
+};
+
+const pinJsonToNftStorage = async (req: any, res: any, next: any) => {
+  if (req.ipfs.fileextension?.toLowerCase() != 'json') return next();
+
+  const headers = {
+    Authorization: `Bearer ${nftStorageApiKey()}`,
+    'Content-Type': 'application/json',
+  };
+
+  try {
+    let jsonFile = new File([req.file.buffer], req.ipfs.filename, {
+      type: 'application/json',
+    });
+    const resp: any = await fetch('https://api.nft.storage/upload', {
+      method: 'POST',
+      headers,
+      body: jsonFile,
+    });
+
+    if (!resp.ok) {
+      return next();
+    }
+    const json = await resp.json();
+    req.ipfs.artifact = {
+      uris: {
+        ipfs: `ipfs://${json.value.cid}`,
+        https: `https://nftstorage.link/ipfs/${json.value.cid}`,
+      },
+      contentHash: req.ipfs.artifact?.contentHash,
+      ipfsCid: json.value.cid,
+    };
+  } catch (error) {
+    console.log('🚀 ~ pinJsonToNftStorage ~ error:', error);
+    req.ipfs.error = {
+      nftstorage: error,
+    };
+  }
+  console.log(
+    '🚀 ~ pinJsonToNftStorage ~ req.ipfs.artifact:',
+    req.ipfs.artifact
+  );
+  next();
+};
+
+const pinIpfsCidToPinata = async (req: any, res: any, next: any) => {
+  if (req.ipfs?.artifact?.ipfsCid) {
+    (async () => {
+      try {
+        const pinningResponse = await req.ipfs.pinata.pinByHash(
+          req.ipfs.artifact.ipfsCid
+        );
+        console.log('🚀 ~ pinCidToPinata ~ cid:', req.ipfs.artifact.ipfsCid);
+        console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', pinningResponse);
+      } catch (error) {
+        console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
+      }
+    })();
+
+    return res.send({ ...req.ipfs.artifact });
+  }
+  next();
+};
+
+const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
+  if (req.ipfs?.fileextension?.toLowerCase() == 'json') return next();
+
+  let options = {
+    pinataOptions: {
+      cidVersion: 1 as 0 | 1 | undefined,
+      wrapWithDirectory: true,
+    },
+    pinataMetadata: {
+      name: req.ipfs.filename,
+    },
+  };
+  console.log('FILE', req.file);
+
+  const fileStream = new Readable();
+  fileStream.push(req.file.buffer);
+  fileStream.push(null);
+
+  try {
+    const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
+      fileStream,
+      options
+    );
+    console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
+    return res.send({
+      uris: {
+        ipfs: `ipfs://${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
+        https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
+      },
+      originalFilename: req.file.originalname,
+      h: req.query.h,
+      ipfsCid: pinataPinningResponse.IpfsHash,
+    });
+  } catch (error) {
+    req.ipfs.error = {
+      ...req.ipfs.error,
+      pinata: error,
+    };
+    console.log('🚀 ~ pinMediaFileToPinata ~ req.ipfs.error:', req.ipfs.error);
+  }
+  next();
+};
+
+const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
+  if (req.ipfs.fileextension?.toLowerCase() != 'json') return next();
+  console.log('Pinning file to pinata');
+  let options = {
+    pinataOptions: {
+      cidVersion: 1 as 0 | 1 | undefined,
+      wrapWithDirectory: false,
+    },
+    pinataMetadata: {
+      name: req.ipfs.filename,
+    },
+  };
+
+  try {
+    const fileStream = new Readable();
+    fileStream.push(req.file.buffer);
+    // if (req.file?.buffer) {
+    //   fileStream.push(req.file.buffer); // Push buffer data to the stream
+    // }
+    // else if (req.body) {
+    //   const jsonString = JSON.stringify(req.body);
+    //   fileStream.push(Buffer.from(jsonString));
+    // }
+
+    fileStream.push(null);
+
+    const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
+      fileStream,
+      options
+    );
+    console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
+
+    return res.send({
+      uris: {
+        ipfs: `ipfs://${pinataPinningResponse.IpfsHash}`,
+        https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}`,
+      },
+      contentHash: req.ipfs.artifact.contentHash,
+      ipfsCid: pinataPinningResponse.IpfsHash,
+    });
+  } catch (error) {
+    req.ipfs.error = {
+      ...req.ipfs.error,
+      pinata: error,
+    };
+    console.log('🚀 ~ pinJsonFileToPinata ~ error:', req.ipfs.error);
+  }
+  next();
+};
+
+const handleIpfsError = (req: any, res: any) => {
+  res.status(400).send({
+    ...req.ipfs.error,
+  });
+};
 
 export default ssrMiddleware(async ({ app, resolve }) => {
   app.use(throttle(1024 * 128));
@@ -81,6 +372,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
           .split('/');
+        pinCidToPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           iconUris: {
@@ -122,7 +414,9 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const { /*name, description,*/ image } = await metadataContents.json();
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
+
           .split('/');
+        pinCidToPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           uris: {
@@ -167,6 +461,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const [imageCid, imageFilename] = image
           .replace('ipfs://', '')
           .split('/');
+        pinCidToPinata(imageCid);
         res.status(200).send({
           nftStorageMetadata: metadata,
           uris: {
@@ -215,6 +510,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const json = await resp.json();
         if (json.ok) {
           const hash = crypto.createHash('sha256');
+          pinCidToPinata(json.value.cid);
           res.status(200).send({
             artifact: {
               uris: {
@@ -268,6 +564,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         });
         const json = await resp.json();
         if (json.ok) {
+          pinCidToPinata(json.value.cid);
           res.status(200).send({
             artifact: {
               uris: {
@@ -282,5 +579,18 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         res.status(400).send(error);
       }
     }
+  );
+
+  app.post(
+    '/api/ipfs',
+    upload.single('file'),
+    bodyParser.json(),
+    init,
+    // pinMediaFileToNftStorage,
+    // pinJsonToNftStorage,
+    // pinIpfsCidToPinata,
+    pinMediaFileToPinata,
+    pinJsonFileToPinata,
+    handleIpfsError
   );
 });

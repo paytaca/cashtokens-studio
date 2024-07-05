@@ -129,9 +129,7 @@ export const buildGenesisTx = async (
       OpReturnData.fromArray([
         'BCMR',
         hexToBin(opt.publishBCMR.contentHash),
-        ...opt.publishBCMR.uris.map((u) =>
-          u.replace(/https:\/\/|ipfs:\/\//, '')
-        ),
+        ...opt.publishBCMR.uris.map((u) => u.replace(/https:\/\//, '')),
       ])
     );
   }

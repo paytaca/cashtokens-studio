@@ -16,6 +16,7 @@ import {
 } from 'mainnet-js';
 import { AuthchainIdentity } from '../';
 import { BcmrStorageArtifact } from '../types';
+import { IpfsUploadArtifact, upload as uploadToIPFS } from '../ipfs';
 
 type ISODateString =
   `${number}-${number}-${number}T${number}:${number}:${number}.${number}Z`;
@@ -540,27 +541,27 @@ export class Bcmr implements Registry {
     }
   }
 
-  async publish() {
-    if (!this.authchainIdentity) {
-      throw new Error('Authchain identity required');
-    }
-    if (!this.getToken()) {
-      throw new Error('Token not set');
-    }
-    if (!this.getRegistryUri()) {
-      throw new Error('Registry URI not set');
-    }
-    try {
-      const clean = Object.assign(
-        {},
-        { ...this, authchainIdentity: undefined }
-      );
-      this.authchainIdentity.publish({
-        url: this.getRegistryUri() as string,
-        contentHash: binToHex(utf8ToBin(JSON.stringify(clean))),
-      });
-    } catch (error) {}
-  }
+  // async publish() {
+  //   if (!this.authchainIdentity) {
+  //     throw new Error('Authchain identity required');
+  //   }
+  //   if (!this.getToken()) {
+  //     throw new Error('Token not set');
+  //   }
+  //   if (!this.getRegistryUri()) {
+  //     throw new Error('Registry URI not set');
+  //   }
+  //   try {
+  //     const clean = Object.assign(
+  //       {},
+  //       { ...this, authchainIdentity: undefined }
+  //     );
+  //     this.authchainIdentity.publish({
+  //       url: [this.getRegistryUri() || ''],
+  //       contentHash: binToHex(utf8ToBin(JSON.stringify(clean))),
+  //     });
+  //   } catch (error) {}
+  // }
 
   removeEmptyFields(obj: Bcmr) {
     return JSON.parse(
@@ -648,21 +649,19 @@ export class Bcmr implements Registry {
   async storeRegistry(
     authbase?: string,
     identityHistoryTimestamp?: ISODateString | string
-  ): Promise<BcmrStorageArtifact | undefined> {
+  ): Promise<BcmrStorageArtifact | IpfsUploadArtifact | undefined> {
     this._processing = 'Storing in IPFS';
     try {
-      const resp = await fetch('/api/tokens/registry/storage', {
-        method: 'POST',
-        body: this.getContent(authbase, identityHistoryTimestamp),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      if (resp.status >= 400) {
-        throw new Error(
-          'Error, storing registry in IPFS, please try again later.'
-        );
-      }
-      const respJson = await resp.json();
-      return respJson.artifact;
+      const blob = new Blob(
+        [this.getContent(authbase, identityHistoryTimestamp)],
+        { type: 'application/json' }
+      );
+      const artifact = await uploadToIPFS(
+        blob,
+        { tokenId: authbase },
+        `${authbase}.json`
+      );
+      return artifact;
     } catch (error) {
       console.log(error);
       throw error;

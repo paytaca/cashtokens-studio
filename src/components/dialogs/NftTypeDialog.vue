@@ -8,7 +8,6 @@
           {{ title || 'NFT Metadata' }}
         </q-toolbar-title>
       </q-toolbar>
-
       <q-card-section>
         <div class="text-right">
           <q-btn color="warning" icon="text_format" dense flat @click.stop="editor = 'form'"></q-btn>
@@ -28,13 +27,13 @@
                 </div>
                 <div class="col-xs-12 q-gutter-y-sm">
                   <label>Category</label>
-                  <q-input :model-value="token.tokenId" outlined disable readonly>
+                  <q-input :model-value="token.tokenId || token.category" outlined disable readonly>
                     <template v-slot:after>
                       <CopyText :text="token.tokenId" />
                     </template>
                   </q-input>
                 </div>
-                <div class="col-xs-12  q-gutter-y-sm">
+                <div v-if="token.capability" class="col-xs-12  q-gutter-y-sm">
                   <label>Capability</label>
                   <q-input :model-value="token.capability" outlined disable readonly>
                   </q-input>
@@ -56,7 +55,7 @@
                     </label>
                     <q-input class="registry-field" v-model="nftTypeKey"
                       :placeholder="identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number'"
-                      :rules="nftTypeKeyRules" outlined required autofocus>
+                      :rules="nftTypeKeyRules" outlined required autofocus disable>
                     </q-input>
                   </div>
                   <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
@@ -188,6 +187,7 @@ import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
 import { hexToBin, vmNumberToBigInt } from '@bitauth/libauth'
+import { upload as uploadToIPFS } from 'src/app/ipfs'
 
 
 const nftTypeSchema = {
@@ -257,7 +257,7 @@ defineEmits([
 ])
 
 const props = defineProps<{
-  token: { amount: number, tokenId: string, capability: string, commitment: string },
+  token: { amount: number, tokenId: string, capability: string, commitment: string, category?: string },
   identitySnapshot: IdentitySnapshot,
   defaultNftType?: NftType,
   defaultNftTypeKey?: string,
@@ -317,18 +317,13 @@ const assetFileUploading = ref<boolean>(false)
 const uploadIconToIpfs = async () => {
   if (iconFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('icon', iconFile.value);
       if (iconPreviewUrl.value) {
         URL.revokeObjectURL(iconPreviewUrl.value)
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/icon-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      nftType.value.uris!.icon = respJson.uris?.ipfs
+      const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      nftType.value.uris!.icon = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
     } finally {
@@ -340,18 +335,13 @@ const uploadIconToIpfs = async () => {
 const uploadAssetToIpfs = async () => {
   if (assetFile.value) {
     try {
-      const formData = new FormData();
-      formData.append('file', assetFile.value);
       if (assetPreviewUrl.value) {
         URL.revokeObjectURL(assetPreviewUrl.value)
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const resp = await fetch(`api/tokens/nft/asset-upload?tokenId=${props.token.tokenId}&commitment=${props.token.commitment}`, {
-        method: 'POST', body: formData
-      })
-      const respJson = await resp.json()
-      nftType.value.uris!.asset = respJson.uris?.ipfs
+      const artifact = await uploadToIPFS(assetFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      nftType.value.uris!.asset = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
     } finally {
@@ -384,8 +374,11 @@ const onOk = async () => {
       v = JSON.parse(nftTypeJson.value)
     }
   }
+  let clone = JSON.parse(JSON.stringify(v))
+  delete clone.saved
+  delete clone.published
   const d = new Draft07(nftTypeSchema)
-  const errors: any = d.validate(v)
+  const errors: any = d.validate(clone)
   if (errors.length == 0) {
     onDialogOK({ type: props.token.commitment, nftType: v, owner: newOwner?.value })
   } else {

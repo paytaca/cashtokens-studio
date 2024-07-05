@@ -471,7 +471,7 @@ const createToken = async () => {
 
   try {
     cashToken.value.registry = {
-      uri: [bcmrStorageArtifact.value!.uris.https, bcmrStorageArtifact.value!.uris.ipfs],
+      uri: [bcmrStorageArtifact.value!.uris.ipfs, bcmrStorageArtifact.value!.uris.https],
       contentHash: bcmrStorageArtifact.value!.contentHash
     }
 

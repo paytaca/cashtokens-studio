@@ -1,5 +1,4 @@
 import { type Registry } from 'mainnet-js';
-import { NFTCollectionType } from './types';
 
 export const createRegistryTemplate = (
   registryIdentity: string,

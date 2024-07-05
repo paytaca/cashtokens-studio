@@ -1,6 +1,7 @@
 <template>
   <q-page>
     <div class="row justify-center">
+
       <div class="col-xs-12 col-sm-11 col-lg-10" :class="$q.screen.xs ? 'q-mx-auto' : ''">
         <div v-if="!mintTx" class="text-center text-h5 text-bold q-py-md">
           Mint
@@ -445,7 +446,6 @@ const openNftTypeDialog = (token: TokenI) => {
     }
   }).onOk(({ type, nftType }) => {
     nftsTypes.value[type] = nftType
-    console.log('nfts types', nftsTypes.value)
   })
 }
 
@@ -585,40 +585,48 @@ const mint = async () => {
 type RevisionOption = { newVersion: string, newRevision: string, revisionOption: 'update' | 'create', registry?: Bcmr }
 
 const locateRegistry = async () => {
-  const r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
+  let r
   try {
-    if (r) {
-      return r
-    } else {
-      progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
-      await delay(1000)
-      if (minter.value.token?.tokenId) {
-        progress.value = `Trying other methods please wait...`
-        await delay(1000)
-        progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
-        console.log(pubInfo)
-        if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl) {
-            try {
-              const r = await fetch(pubInfo[0].httpsUrl)
-              if (r.status == 200) {
-                const rj = await r.json()
-                if (rj) {
-                  return rj
-                }
+    r = await localForage.registryTempStore.getItem(`registry:${minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId}`)
+    if (!r || r == 'undefined') {
+      r = await (new BcmrIndexer()).fetchRegistry(minter.value?.identitySnapshot?.token?.category || minter.value.token?.tokenId, true)
+    }
 
+    if (r) return r
+
+  } catch (error) {
+    console.log("🚀 ~ locateRegistry ~ error:", error)
+  }
+
+
+  try {
+    progress.value = `Unable to find registry from Paytaca's BCMR indexer.`
+    await delay(1000)
+    if (minter.value.token?.tokenId) {
+      progress.value = `Trying other methods please wait...`
+      await delay(1000)
+      progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
+      const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
+      if (pubInfo && pubInfo[0]) {
+        if (pubInfo[0].httpsUrl) {
+          try {
+            const r = await fetch(pubInfo[0].httpsUrl)
+            if (r.status == 200) {
+              const rj = await r.json()
+              if (rj) {
+                return rj
               }
-            } catch (error) {
-              $q.dialog({
-                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              })
+
             }
+          } catch (error) {
+            $q.dialog({
+              message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+            })
           }
-        } else {
-          // bcmrNotFound.value = true
-          // TODO: show dialog
         }
+      } else {
+        // bcmrNotFound.value = true
+        // TODO: show dialog
       }
     }
   } catch (error) {
@@ -707,7 +715,6 @@ const publish = async () => {
     })
   })
 
-  console.log(revisionOptions)
   if (revisionOptions.revisionOption == 'update') {
     // overwrite
     bcmr.identities![authbase] = {
@@ -715,7 +722,7 @@ const publish = async () => {
     }
   } else {
     // add
-    bcmr.identities![authbase][newRevisionTimestamp] = Object.assign({}, latestIdentitySnapshot)
+    bcmr.identities![authbase][newRevisionTimestamp] = JSON.parse(JSON.stringify(latestIdentitySnapshot))
   }
 
   // add nfts
@@ -738,6 +745,7 @@ const publish = async () => {
   bcmr.latestRevision = newRevisionTimestamp
   bcmr.registryIdentity = authbase
   bcmr.versionString = revisionOptions.newVersion
+
   if (minter.value?.authKey?.token?.tokenId) {
     bcmr.appendAuthGuardTokenStandardExtension(minter.value?.authKey?.token?.tokenId)
   }
@@ -746,12 +754,23 @@ const publish = async () => {
 
   let tx = ''
   try {
-    const artifact = await bcmr.storeRegistry()
-    if (artifact?.uris.https) {
+
+    const artifact = await bcmr.storeRegistry(authbase)
+    const urls = []
+
+    if (artifact?.uris?.ipfs) {
+      urls.push(artifact?.uris?.ipfs)
+    }
+    if (artifact?.uris?.https) {
+      urls.push(artifact?.uris?.https)
+    }
+
+    if (urls && artifact?.contentHash) {
       progress.value = 'Publishing, please wait...'
       const publisher = new AuthchainIdentity({ ...minter.value }, minter.value.transactionSigner)
-      tx = await publisher.publish({ url: artifact.uris.https, contentHash: artifact.contentHash })
+      tx = await publisher.publish({ url: urls, contentHash: artifact.contentHash })
     }
+
   } catch (error: any) {
     $q.dialog({
       message: error?.toString(),
@@ -777,6 +796,7 @@ const publish = async () => {
           txid: tx
         }
       })
+
       $ebus?.emit('transaction', {
         txid: tx,
         txType: 'AuthchainIdentity.publish',
@@ -789,7 +809,6 @@ const publish = async () => {
         nftsTypes.value[k].published = true
       }
       removeSavedNftsTypes()
-
     } catch (error: any) {
       $q.dialog({
         message: error?.toString(),
@@ -799,6 +818,15 @@ const publish = async () => {
       })
     } finally {
       progress.value = false
+    }
+
+    try {
+      if (publicationTx.value) {
+        await localForage.registryTempStore.setItem(`registry:${minter.value.token.tokenId}`, JSON.parse(bcmr.getContent()))
+      }
+
+    } catch (error) {
+      await localForage.registryTempStore.removeItem(`registry:${minter.value.token.tokenId}`)
     }
   }
 }

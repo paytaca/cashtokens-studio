@@ -159,10 +159,12 @@ watch(() => ui.statusMessage, (value) => {
   }
 })
 
-onMounted(() => {
+onMounted(async () => {
+
   if (!user.walletAddress) {
     router.push('/')
   }
+
 })
 
 
