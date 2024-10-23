@@ -18,6 +18,9 @@
           <q-pagination v-model="pagination.currentPage" :max="pagination.numberOfPages"
             :max-pages="pagination.maxRowsPerPage" :boundary-numbers="false" />
         </div>
+        <div class="q-pb-sm text-right">
+          <q-btn flat icon="refresh" dense no-caps @click="refreshData">Refresh</q-btn>
+        </div>
         <q-markup-table>
           <thead>
             <tr v-if="watchtower.processing && authKeys">
@@ -220,6 +223,7 @@ const refreshLockedTokens = async (authKey: AuthKey) => {
   try {
     await delay(1500)
     await new Watchtower().subscribe(authKey.authGuard.contract!.getTokenDepositAddress())
+    refreshData()
   } catch (error: any) {
     ui.setStatusMessage({
       statusMessage: error,
