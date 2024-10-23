@@ -54,11 +54,12 @@ import { NFTCapability, UtxoI, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useUser } from 'src/stores/user';
-import { DEFAULT_TOKEN_VALUE } from 'src/app'
+import { DEFAULT_TOKEN_VALUE, Watchtower, AuthKey } from 'src/app'
 import { broadcastTx, buildGenesisInputTx, buildGenesisTx, signTx } from 'src/app/transactions';
 import { useEventBus } from 'src/composables';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
+import { getInstance as getContractInstance } from 'src/app/contracts';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()
@@ -117,19 +118,20 @@ const generateGenesisInput = async () => {
 
 const createAuthKey = async () => {
   progress.value = 'Processing, please wait...'
-
+  const authKeyId = genesisInput.value!.txid!
   try {
     const genesisTransaction = await buildGenesisTx({
       input: toRaw(genesisInput.value!),
       token: {
-        tokenId: genesisInput.value!.txid!,
+        tokenId: authKeyId,
         commitment: '00',
         capability: NFTCapability.none,
         amount: BigInt(0),
       },
       wallet: user.wallet as Wallet,
-      recipient: await user.wallet.getTokenDepositAddress()
+      recipient: await user.wallet!.getTokenDepositAddress()
     })
+
     progress.value = 'Waiting for signature. Pls check your wallet!'
     const signingResult = await signTx({
       signer: user.transactionSigner!,
@@ -141,6 +143,7 @@ const createAuthKey = async () => {
 
       const tx = await broadcastTx(signingResult)
       if (tx) {
+
         progress.value = 'Transaction submitted, awaiting propagation...'
         await user.wallet?.waitForTransaction({ txHash: tx })
         genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
@@ -154,6 +157,14 @@ const createAuthKey = async () => {
           timestamp: new Date().getTime(),
           successMsg: `AuthKey Created!`
         })
+
+        const authGuard = getContractInstance('authguard-contract', {
+          authKeyTokenId: authKeyId,
+          network: user.wallet!.network,
+        });
+        const authGuardContractAddress = authGuard!.getTokenDepositAddress();
+        new Watchtower().subscribe(authGuardContractAddress)
+
         $q.dialog({
           component: TransactionStatusDialog,
           componentProps: {
@@ -161,7 +172,9 @@ const createAuthKey = async () => {
             statusText: `AuthKey Created`,
             txid: tx
           }
-        }).onOk(() => {
+        }).onDismiss(() => {
+          // Intentional redundant subscription
+          new Watchtower().subscribe(authGuardContractAddress)
           router.push({ name: 'authkeys' })
 
         })
