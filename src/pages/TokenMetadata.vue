@@ -195,7 +195,7 @@
                         <q-input class="registry-field"
                           v-model="bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token!.decimals"
                           outlined autogrow :disable="!bcmrNewRevision"
-                          :rules="[(v) => (Number(v) >= 0 && Number(v) <= 18) || 'Value should be between 0 - 18 inclusive. Default is 0.']">
+                          :rules="[(v) => v == undefined || (Number(v) >= 0 && Number(v) <= 18) || 'Value should be between 0 - 18 inclusive. Default is 0.']">
                         </q-input>
                       </div>
                       <div class="col-xs-12 col-md-8 q-gutter-y-sm items-center q-mb-md">
