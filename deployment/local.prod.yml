@@ -1,12 +1,10 @@
-version: "3.8"
 services:
   web:
     container_name: cts-prod
     build:
-      context: /home/ubuntu/Codes/scibiz/cashtokens-studio
+      context: ../
       dockerfile: ./deployment/local.prod.Dockerfile
     env_file:
       - .env.local.prod
     ports:
-      - "3000:3000"
-
+      - '3000:3000'
