@@ -1408,6 +1408,19 @@ const downloadRegistryFromPublishedUris = async (publishedUris: string[]) => {
   return downloadResponse
 }
 
+const displayAuthheadAuthFailureDialog = async () => {
+  await new Promise((resolve, reject) => {
+    $q.dialog({
+      title: 'Authhead Authentication Failed!',
+      message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+      class: 'q-pa-md text-justify'
+    }).onDismiss(() => {
+      router.back()
+      resolve(null)
+    })
+  })
+}
+
 onBeforeMount(async () => {
   try {
     if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
@@ -1488,33 +1501,19 @@ onMounted(async () => {
         progress.value = 'Authenticating authhead, please wait...'
         const cg = new ChainGraph()
         const authhead = await cg.fetchAuthheadTxid(authbase)
-        let authheadAuthOk = false
-        if (tokenStore.token.txid == authhead) {
-          authheadAuthOk = true
-        } else {
-          $q.dialog({
-            title: 'Authhead Authentication Failed!',
-            message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
-            class: 'q-pa-md text-justify'
-          }).onDismiss(() => {
-            router.back()
-          })
+        if (tokenStore.token.txid != authhead) {
+          progress.value = false
+          return await displayAuthheadAuthFailureDialog()
         }
-
-        if (!authheadAuthOk) return
-
         progress.value = 'Retrieving last published registry, please wait...'
         const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
         if (pubInfo && pubInfo[0]) {
           if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
               const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
-              console.log("🚀 ~ onMounted ~ downloadedRegistry:", downloadedRegistry)
               if (downloadedRegistry) {
                 initBcmr(downloadedRegistry)
               }
-
-
             } catch (error) {
               console.log("🚀 ~ onMounted ~ error:", error)
               $q.dialog({
@@ -1538,7 +1537,6 @@ onMounted(async () => {
       router.back()
     })
   }
-
 })
 
 
