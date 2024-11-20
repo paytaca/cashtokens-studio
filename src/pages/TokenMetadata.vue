@@ -554,7 +554,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch, onBeforeMount, computed, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { useUI } from 'src/stores/ui'
 import { Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
@@ -579,7 +579,8 @@ import { upload as uploadToIPFS } from 'src/app/ipfs'
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
-const authhead = useAuthhead()
+const route = useRoute()
+// const authhead = useAuthhead()
 const user = useUser()
 const localForage = useLocalForage()
 const tokenStore = useTokenStore()
@@ -602,7 +603,7 @@ const bcmrNewRevision = ref<Date>()
 
 const status = ref<'burned' | 'active' | 'unguarded'>('active')
 const iconFileRef = ref()
-const newTokenIconFilePicker = ref()
+// const newTokenIconFilePicker = ref()
 const newTokenIconFile = ref()
 const newTokenIconPreview = ref()
 const newTokenIconUploading = ref<boolean>(false)
@@ -611,6 +612,7 @@ const newTokenIconUploadArtifact = ref<IconStorageArtifact>()
 const expansionItemOne = ref<boolean>(false)
 const expansionItemTwo = ref<boolean>(false)
 const expansionItemThree = ref<boolean>(false)
+
 
 const authbase = ref<string>()
 const uploadArtifact = ref<BcmrStorageArtifact>({
@@ -1329,10 +1331,101 @@ const initBcmr = (r: any) => {
 }
 
 
+/**
+ * Test if domain is valid. This would allow 
+ * us to filter published ipfs cid (without the ipfs:// prefix)
+ */
+const isValidDomain = (domain: string) => {
+  const regex = /^((https?|ftp):\/\/)?(?!-)(?!.*-$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
+  return regex.test(domain);
+}
+
+/**
+ * Add scheme to the published URI.
+ * BCMR spec doesn't require scheme for non ipfs protocol. 
+ * E.g. example.com becomes https://example.com
+ */
+const addSchemeToDomain = (domain: string) => {
+  // Check if the domain already has a scheme (http:// or https://)
+  let url = domain
+  if (!/^https?:\/\//i.test(domain)) {
+    // If no scheme, prepend 'http://' by default
+    url = 'https://' + domain;
+  }
+  return url
+}
+
+/**
+ * Assume path if url path is not available.
+ * https://example.com/ is assumed to serve BCMR at 
+ * https://example.com/.well-known/bitcoin-cash-metadata-registry.json
+ */
+const addDefaultBcmrPath = (url: string) => {
+  let _url = new URL(url)
+  let urlString = _url.origin
+  if (_url.pathname == '/') {
+    urlString = urlString + '/.well-known/bitcoin-cash-metadata-registry.json'
+  }
+  return urlString
+}
+
+/**
+ * Collect URIs, add schemes to URIs if missing and use ipfs gateway for ipfs.
+ */
+const publishedUrisToBcmrDownloadSourceURLs = (uris: string[]) => {
+  const urls = uris.reduce((valuesWeWant: string[], currentUriItem: string) => {
+    let url = currentUriItem
+    if (isValidDomain(url)) {
+      url = addSchemeToDomain(url)
+      url = addDefaultBcmrPath(url)
+    } else {
+      const ipfsGatewayUrl = ipfsToGatewayUrl(url)
+      if (ipfsGatewayUrl) {
+        url = ipfsGatewayUrl
+      }
+    }
+    valuesWeWant.push(url)
+    return valuesWeWant
+  }, [])
+  return urls
+}
+
+/**
+ * Download registry from available URIs
+ */
+const downloadRegistryFromPublishedUris = async (publishedUris: string[]) => {
+  const downloadSourceUrls = publishedUrisToBcmrDownloadSourceURLs(publishedUris)
+  const downloadPromises = downloadSourceUrls.map(url => {
+    return fetch(url).then(response => {
+      if (!response.ok) {
+        throw new Error(`Failed to fetch from ${url}`);
+      }
+      return response.json();
+    })
+  });
+
+  const downloadResponse = await Promise.race(downloadPromises)
+  return downloadResponse
+}
+
+const displayAuthheadAuthFailureDialog = async () => {
+  await new Promise((resolve, reject) => {
+    $q.dialog({
+      title: 'Authhead Authentication Failed!',
+      message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+      class: 'q-pa-md text-justify'
+    }).onDismiss(() => {
+      router.back()
+      resolve(null)
+    })
+  })
+}
 
 onBeforeMount(async () => {
   try {
-    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) return
+    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
+      return console.log('🚀 ~ onBeforeMount ~ is returning')
+    }
     progress.value = 'Loading registry, please wait...'
     let r
     try {
@@ -1354,22 +1447,20 @@ onBeforeMount(async () => {
         progress.value = `Trying other methods please wait...`
         await delay(1000)
         progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token.token.tokenId)
+        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token.token?.tokenId)
         if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl) {
+          if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
-              const r = await fetch(pubInfo[0].httpsUrl)
-              if (r.status == 200) {
-                const rj = await r.json()
-                if (rj) {
-                  initBcmr(rj)
-                }
-
+              const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
+              console.log("🚀 ~ onBeforeMounted ~ downloadedRegistry:", downloadedRegistry)
+              if (downloadedRegistry) {
+                initBcmr(downloadedRegistry)
               }
             } catch (error) {
-              $q.dialog({
-                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              })
+              console.log("🚀 ~ onBeforeMount ~ error:", error)
+              // $q.dialog({
+              //   message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+              // })
             }
           }
         } else {
@@ -1410,36 +1501,21 @@ onMounted(async () => {
         progress.value = 'Authenticating authhead, please wait...'
         const cg = new ChainGraph()
         const authhead = await cg.fetchAuthheadTxid(authbase)
-        let authheadAuthOk = false
-        if (tokenStore.token.txid == authhead) {
-          authheadAuthOk = true
-        } else {
-          $q.dialog({
-            title: 'Authhead Authentication Failed!',
-            message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
-            class: 'q-pa-md text-justify'
-          }).onDismiss(() => {
-            router.back()
-          })
+        if (tokenStore.token.txid != authhead) {
+          progress.value = false
+          return await displayAuthheadAuthFailureDialog()
         }
-
-        if (!authheadAuthOk) return
-
         progress.value = 'Retrieving last published registry, please wait...'
         const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
         if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl) {
+          if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
-              // TODO: use pubInfo URIs
-              const r = await fetch(pubInfo[0].httpsUrl)
-              if (r.status == 200) {
-                const rj = await r.json()
-                if (rj) {
-                  initBcmr(rj)
-                }
-
+              const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
+              if (downloadedRegistry) {
+                initBcmr(downloadedRegistry)
               }
             } catch (error) {
+              console.log("🚀 ~ onMounted ~ error:", error)
               $q.dialog({
                 message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
               })
@@ -1461,8 +1537,8 @@ onMounted(async () => {
       router.back()
     })
   }
-
 })
+
 
 
 </script>
