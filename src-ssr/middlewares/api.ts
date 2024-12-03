@@ -265,10 +265,12 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
       options
     );
     console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
+    console.log('🚀 ~ pinataPinningResponse:', req.ipfs.filename);
     return res.send({
       uris: {
         ipfs: `ipfs://${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
-        https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
+        // https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
+        https: `https://ipfs.paytaca.com/ipfs/${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
       },
       originalFilename: req.file.originalname,
       h: req.query.h,
@@ -319,7 +321,8 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     return res.send({
       uris: {
         ipfs: `ipfs://${pinataPinningResponse.IpfsHash}`,
-        https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}`,
+        // https: `https://cashtokens-studio.mypinata.cloud/ipfs/${pinataPinningResponse.IpfsHash}`,
+        https: `https://ipfs.paytaca.com/ipfs/${pinataPinningResponse.IpfsHash}`,
       },
       contentHash: req.ipfs.artifact.contentHash,
       ipfsCid: pinataPinningResponse.IpfsHash,
@@ -356,7 +359,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
 
       const metadata = await nftStorageClient().store({
         name: 'CTStudio',
-        description: 'Test',
+        description: 'CashTokens Studio',
         image: new File([req.file.buffer], `${req.query.tokenId}.${ext}`, {
           type: req.file.mimetype,
         }),
