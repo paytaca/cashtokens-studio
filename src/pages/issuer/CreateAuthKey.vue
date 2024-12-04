@@ -137,6 +137,12 @@ const createAuthKey = async () => {
       signer: user.transactionSigner!,
       decodedTx: genesisTransaction.decoded, sourceOutputs: genesisTransaction.sourceOutputs,
       prompt: 'Create AuthKey'
+    }).catch((error) => {
+      if (error?.reason) {
+        $q.dialog({
+          message: 'Response: ' + error?.reason
+        })
+      }
     })
     if (signingResult?.signedTransaction) {
       progress.value = 'Submitting transaction, please wait...'
