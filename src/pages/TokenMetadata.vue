@@ -312,7 +312,9 @@
                     style="overflow-x:scroll; margin-bottom: 5rem;">
                     <q-tabs v-model="nftTypesShown" active-color="warning">
                       <q-tab name="published" label="Published" />
-                      <q-tab name="unpublished" label="Unpublished" />
+                      <q-tab name="unpublished" label="Unpublished"
+                        :alert="nftTypesUnpublished?.length > 0 ? 'warning' : ''"
+                        :alert-icon="nftTypesUnpublished?.length > 0 ? 'priority_high' : ''" />
                       <q-tab name="minted" label="Minted" />
                     </q-tabs>
                     <div v-if="nftTypesSelectedForPublication.length > 0" class="text-center q-my-sm">
@@ -431,6 +433,8 @@
             'vm-number',
             'decimal')}` :
           value.row._meta?.commitment || value.row.commitment }}
+                                  <sup v-if="value.row?._meta?.modified"><q-badge outline color="warning"><q-icon
+                                        name="priority_high" color="warning"></q-icon>Modified</q-badge> </sup>
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                                   {{ `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
@@ -623,6 +627,9 @@ const uploadArtifact = ref<BcmrStorageArtifact>({
   contentHash: ''
 })
 
+/**
+ * Table data source
+ */
 const nftTypes = ref<PaginatedData>({
   count: 0,
   limit: 10,
@@ -637,6 +644,7 @@ const nftTypesShown = ref<'published' | 'unpublished' | 'minted'>('published')
 const nftTypesSelected = ref<any[]>([])
 const nftTypesSelectedKeys = ref<Set<string>>(new Set()) // commitments
 const nftTypesSelectedForPublication = ref<any[]>([])
+const nftTypesUnpublished = ref() // Just a temporary storage to check that there are unpublished nfts on load
 const showMintersInMintedNfts = ref<boolean>(false)
 
 const nftTypesPagination = ref<{
@@ -804,7 +812,6 @@ const publish = async (revisionOptions: RevisionOption) => {
   bcmr.value.appendAuthGuardTokenStandardExtension(tokenStore.token?.authKey?.token?.tokenId)
   progress.value = 'Uploading registry to IPFS, please wait...'
   const tokenSymbol = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.symbol
-
   bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.decimals = Number(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token?.decimals || 0)
   let tx = ''
   try {
@@ -941,7 +948,7 @@ const deleteSelectedUnpublishedNfts = async () => {
   }
   nftTypesSelected.value = []
   nftTypesSelectedKeys.value?.clear()
-  populateNftsTable()
+  await populateNftsTable()
 }
 
 /**
@@ -1150,6 +1157,7 @@ const reset = async () => {
 
 const loadNftTypes = async () => {
   delete nftTypesPagination.value.rowsNumber
+  nftTypes.value.results = []
   if (bcmr.value && bcmrSelectedAuthbase.value && bcmrSelectedIdentityHistory.value) {
     // // Push to webworker
     nftTypes.value.count = Object.keys(bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.nfts?.parse?.types || {}).length
@@ -1158,12 +1166,27 @@ const loadNftTypes = async () => {
     nftTypes.value.limit = nftTypesPagination.value.rowsPerPage
     const types = bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()]
       .token?.nfts?.parse?.types || {}
-    nftTypes.value.results = Object.keys(types).map((k) => ({ [k]: types[k], _meta: { commitment: k } })).slice()
+    const category = bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.category
+
+    const typesList = []
+    if (category) {
+      for (const nftTypeKey of Object.keys(types)) {
+        const storageKey = `${category}-${nftTypeKey}`
+        const savedUnpublishedNftMetadata = await localForage.nftTypesStore.getItem(storageKey)
+        if (savedUnpublishedNftMetadata) {
+          // use the saved unpublished version
+          typesList.push({ ...savedUnpublishedNftMetadata, _meta: { commitment: nftTypeKey, modified: true } })
+          continue
+        }
+        typesList.push({ [nftTypeKey]: types[nftTypeKey], _meta: { commitment: nftTypeKey } })
+      }
+    }
+    nftTypes.value.results = typesList
+    // nftTypes.value.results = Object.keys(types).map((k) => ({ [k]: types[k], _meta: { commitment: k } })).slice()
   }
 }
 
-const loadUnpublishedNftTypes = async () => {
-  delete nftTypesPagination.value.rowsNumber
+const getUnpublishedNftTypesFromStorage = async () => {
   const results: any = []
 
   for (const [index, key] of (await localForage.nftTypesStore.keys()).entries()) {
@@ -1184,6 +1207,13 @@ const loadUnpublishedNftTypes = async () => {
       results.push(item)
     }
   }
+  return results
+}
+
+const loadUnpublishedNftTypes = async () => {
+  delete nftTypesPagination.value.rowsNumber
+  const results = await getUnpublishedNftTypesFromStorage()
+  nftTypesUnpublished.value = results
   nftTypes.value = {
     count: results.length,
     offset: 0,
@@ -1195,6 +1225,7 @@ const loadUnpublishedNftTypes = async () => {
 }
 
 type MintedtokenItemType = {
+  category: string,
   capability?: string,
   commitment?: string,
   amount?: number,
@@ -1223,16 +1254,37 @@ const loadMintedNftTypes = async () => {
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(bcmrSelectedAuthbase.value!, query)
   if (fntResp && fntResp.results) {
     nftTypesPagination.value.rowsNumber = fntResp.count
-
-    fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
-      // Transform
-      const { metadata, ...rest } = item
-      if (item.metadata?.nft) {
-        return { ...rest, ...item.metadata.nft }
+    // Transform data for display. Attach previously saved but unpublished NftType metadata if any
+    const transformedResults = []
+    for (const mintedToken of fntResp.results) {
+      const { metadata, ...token } = mintedToken as MintedtokenItemType
+      if (metadata?.nft) {
+        transformedResults.push({ ...token, ...metadata.nft })
+        continue
       }
-      return { ...rest, ...{ [item.commitment as string]: {} } }
-    })
+      const storageKey = `${token.category}-${token.commitment}`
+      const savedUnpublishedNftMetadata = await localForage.nftTypesStore.getItem(storageKey)
+      if (savedUnpublishedNftMetadata) {
+
+        transformedResults.push({ ...token, ...savedUnpublishedNftMetadata, _meta: { modified: true } })
+        continue
+      }
+      // default empty
+      transformedResults.push({ ...token, ...{ [token.commitment as string]: {} } })
+    }
+
+
+    fntResp.results = transformedResults
+    // fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
+    //   // Transform
+    //   const { metadata, ...token } = item
+    //   if (metadata?.nft) {
+    //     return { ...token, ...metadata.nft }
+    //   }
+    //   return { ...token, ...{ [token.commitment as string]: {} } }
+    // })
     nftTypes.value = fntResp
+
   }
   progress.value = false
 }
@@ -1452,7 +1504,6 @@ onBeforeMount(async () => {
           if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
               const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
-              console.log("🚀 ~ onBeforeMounted ~ downloadedRegistry:", downloadedRegistry)
               if (downloadedRegistry) {
                 initBcmr(downloadedRegistry)
               }
@@ -1537,6 +1588,7 @@ onMounted(async () => {
       router.back()
     })
   }
+  nftTypesUnpublished.value = await getUnpublishedNftTypesFromStorage()
 })
 
 
