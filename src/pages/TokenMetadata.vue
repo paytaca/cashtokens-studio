@@ -313,7 +313,8 @@
                     <q-tabs v-model="nftTypesShown" active-color="warning">
                       <q-tab name="published" label="Published" />
                       <q-tab name="unpublished" label="Unpublished"
-                        :alert="nftTypesUnpublished?.length > 0 ? 'warning' : ''" alert-icon="priority_high" />
+                        :alert="nftTypesUnpublished?.length > 0 ? 'warning' : ''"
+                        :alert-icon="nftTypesUnpublished?.length > 0 ? 'priority_high' : ''" />
                       <q-tab name="minted" label="Minted" />
                     </q-tabs>
                     <div v-if="nftTypesSelectedForPublication.length > 0" class="text-center q-my-sm">
@@ -947,7 +948,7 @@ const deleteSelectedUnpublishedNfts = async () => {
   }
   nftTypesSelected.value = []
   nftTypesSelectedKeys.value?.clear()
-  populateNftsTable()
+  await populateNftsTable()
 }
 
 /**
@@ -1019,7 +1020,6 @@ const openAddUriDialog = (uri: any) => {
 }
 
 const openNftTypeDialog = async (token: { amount: number, category: string, commitment?: string, capability?: NFTCapability } & { [type: string]: NftType } & { _meta: { commitment: string, authbase: string, category: string } }) => {
-  console.log('ROW', token)
   // Load from the unpublished list, in case user already added metadata and wants to edit
   let defaultNftType = nftTypesSelectedForPublication.value.find((v: { [key: string]: NftType }) => !!v[token.commitment!])
 
@@ -1157,6 +1157,7 @@ const reset = async () => {
 
 const loadNftTypes = async () => {
   delete nftTypesPagination.value.rowsNumber
+  nftTypes.value.results = []
   if (bcmr.value && bcmrSelectedAuthbase.value && bcmrSelectedIdentityHistory.value) {
     // // Push to webworker
     nftTypes.value.count = Object.keys(bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.nfts?.parse?.types || {}).length
@@ -1503,7 +1504,6 @@ onBeforeMount(async () => {
           if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
               const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
-              console.log("🚀 ~ onBeforeMounted ~ downloadedRegistry:", downloadedRegistry)
               if (downloadedRegistry) {
                 initBcmr(downloadedRegistry)
               }
