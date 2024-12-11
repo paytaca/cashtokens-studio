@@ -1013,6 +1013,7 @@ const openAddUriDialog = (uri: any) => {
 }
 
 const openNftTypeDialog = async (token: { amount: number, category: string, commitment?: string, capability?: NFTCapability } & { [type: string]: NftType } & { _meta: { commitment: string, authbase: string, category: string } }) => {
+  console.log('ROW', token)
   // Load from the unpublished list, in case user already added metadata and wants to edit
   let defaultNftType = nftTypesSelectedForPublication.value.find((v: { [key: string]: NftType }) => !!v[token.commitment!])
 
@@ -1195,6 +1196,7 @@ const loadUnpublishedNftTypes = async () => {
 }
 
 type MintedtokenItemType = {
+  category: string,
   capability?: string,
   commitment?: string,
   amount?: number,
@@ -1223,16 +1225,37 @@ const loadMintedNftTypes = async () => {
   const fntResp = await (new BcmrIndexer()).fetchMintedNftTypes(bcmrSelectedAuthbase.value!, query)
   if (fntResp && fntResp.results) {
     nftTypesPagination.value.rowsNumber = fntResp.count
-
-    fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
-      // Transform
-      const { metadata, ...rest } = item
-      if (item.metadata?.nft) {
-        return { ...rest, ...item.metadata.nft }
+    // Transform data for display. Attach previously saved but unpublished NftType metadata if any
+    const transformedResults = []
+    for (const mintedToken of fntResp.results) {
+      const { metadata, ...token } = mintedToken as MintedtokenItemType
+      if (metadata?.nft) {
+        transformedResults.push({ ...token, ...metadata.nft })
+        continue
       }
-      return { ...rest, ...{ [item.commitment as string]: {} } }
-    })
+      const storageKey = `${token.category}-${token.commitment}`
+      const savedUnpublishedNftMetadata = await localForage.nftTypesStore.getItem(storageKey)
+      if (savedUnpublishedNftMetadata) {
+
+        transformedResults.push({ ...token, ...savedUnpublishedNftMetadata })
+        continue
+      }
+      // default empty
+      transformedResults.push({ ...token, ...{ [token.commitment as string]: {} } })
+    }
+
+
+    fntResp.results = transformedResults
+    // fntResp.results = fntResp.results.map((item: MintedtokenItemType) => {
+    //   // Transform
+    //   const { metadata, ...token } = item
+    //   if (metadata?.nft) {
+    //     return { ...token, ...metadata.nft }
+    //   }
+    //   return { ...token, ...{ [token.commitment as string]: {} } }
+    // })
     nftTypes.value = fntResp
+
   }
   progress.value = false
 }
