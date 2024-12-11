@@ -165,8 +165,7 @@
         </q-tab-panels>
 
         <div class="row justify-end q-gutter-x-lg q-my-lg q-mr-sm ">
-          <q-btn @click.stop="onDialogHide()" text-color="negative" size="lg"
-            :disable="iconFileUploading || assetFileUploading">Cancel</q-btn>
+          <q-btn @click.stop="() => onCancel()" text-color="negative" size="lg">Cancel</q-btn>
           <q-btn v-if="editor == 'form'" @click.stop="(e) => form.submit(e)" color="primary" size="lg" type="submit"
             :disable="iconFileUploading || assetFileUploading">{{ ok || 'Ok' }}</q-btn>
           <q-btn v-if="editor == 'json'" @click.stop="(e) => onOk()" color="primary" size="lg"
@@ -322,7 +321,7 @@ const uploadIconToIpfs = async () => {
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.token.category || props.token.tokenId, commitment: props.token.commitment })
       nftType.value.uris!.icon = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
@@ -340,7 +339,7 @@ const uploadAssetToIpfs = async () => {
       }
       assetPreviewUrl.value = URL.createObjectURL(assetFile.value)
       assetFileUploading.value = true
-      const artifact = await uploadToIPFS(assetFile.value, { tokenId: props.token.tokenId, commitment: props.token.commitment })
+      const artifact = await uploadToIPFS(assetFile.value, { tokenId: props.token.category || props.token.tokenId, commitment: props.token.commitment })
       nftType.value.uris!.asset = artifact?.uris?.ipfs || ''
     } catch (error) {
       console.log(error)
@@ -356,6 +355,26 @@ const openAttributeDialog = () => {
   }).onOk((attribute) => {
     nftTypeAttributes.value = { ...nftTypeAttributes.value, [attribute.name]: attribute.value }
   })
+}
+
+const onCancel = async () => {
+  if (iconFileUploading.value || assetFileUploading.value) {
+    $q.dialog({
+      message: 'File uploading, cancel and discard upload?',
+      ok: {
+        label: 'Yes',
+        color: 'primary',
+        flat: true
+      },
+      cancel: {
+        label: 'No',
+        color: 'negative',
+        flat: true
+      }
+    }).onOk(() => {
+      onDialogHide()
+    })
+  }
 }
 
 const onOk = async () => {
