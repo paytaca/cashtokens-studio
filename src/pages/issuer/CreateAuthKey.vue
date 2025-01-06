@@ -77,7 +77,16 @@ const generateGenesisInput = async () => {
       signer: user.transactionSigner!,
       decodedTx: decoded, sourceOutputs: sourceOutputs,
       prompt: 'Create genesis input'
+    }).catch(error => {
+      const msg = error?.reason ? error.reason : error.toString()
+      $q.dialog({
+        message: `Signature request: ${msg}`,
+        ok: true,
+        focus: 'ok',
+        class: 'q-pa-lg'
+      })
     })
+
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
@@ -104,9 +113,10 @@ const generateGenesisInput = async () => {
         })
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    const msg = error?.reason ? error.reason : error.toString()
     $q.dialog({
-      message: error?.toString(),
+      message: msg,
       ok: true,
       focus: 'ok',
       class: 'q-pa-lg'
@@ -140,7 +150,7 @@ const createAuthKey = async () => {
     }).catch((error) => {
       if (error?.reason) {
         $q.dialog({
-          message: 'Response: ' + error?.reason
+          message: 'Signature request: ' + error?.reason
         })
       }
     })
@@ -188,7 +198,6 @@ const createAuthKey = async () => {
       }
     }
   } catch (error: any) {
-    console.log(error)
     $q.dialog({
       message: 'Error:' + error
     })
