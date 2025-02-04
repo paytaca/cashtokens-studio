@@ -761,10 +761,12 @@ const publish = async (revisionOptions: RevisionOption) => {
   try {
     const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
     progress.value = false
+    console.log(`🚀 Tracked Authhead = ${trackedAuthhead}, Authhead being used = ${tokenStore.token.txid}`)
+
     if (trackedAuthhead != tokenStore.token.txid) {
       await new Promise(res => {
         $q.dialog({
-          message: `This UTXO is not authorized to publish metadata for token ${shortenTokenId(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)}`,
+          message: `Output being spent (${tokenStore.token.txid}) does not match authhead (${trackedAuthhead}). Unauthorized to publish metadata for token ${shortenTokenId(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)}.`,
           ok: true,
           focus: 'ok',
           class: 'q-pa-lg'
