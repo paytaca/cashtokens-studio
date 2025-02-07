@@ -667,6 +667,8 @@ const nftTypesRowsPerPage = computed(() => {
 
 const progress = ref<boolean | string>()
 
+const isURI = /^(?:[a-zA-Z][a-zA-Z\d+\-.]*:\/\/)?[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+(?:[^\s]*)$/
+
 const bcmrApiHost = computed(() => {
   return process.env.BCMR_API
 })
@@ -1385,78 +1387,81 @@ const initBcmr = (r: any) => {
 }
 
 
-/**
- * Test if domain is valid. This would allow 
- * us to filter published ipfs cid (without the ipfs:// prefix)
- */
-const isValidDomain = (domain: string) => {
-  const regex = /^((https?|ftp):\/\/)?(?!-)(?!.*-$)([a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$/;
-  return regex.test(domain);
+
+
+const ipfsToGatewayUrls = (uris: string[]): string[] => {
+
+  const gateways = [
+    'https://w3s.link',
+    'https://nftstorage.link'
+  ]
+
+  const arr = []
+  for (let uri of uris) {
+    if (uri.startsWith('ipfs://')) {
+      const pathname = uri.replace('ipfs://', '')
+      const urls = gateways.map((g: string) => {
+        return `${g}/ipfs/${pathname}`
+      })
+      arr.push(...urls)
+      continue
+    }
+
+    arr.push(uri)
+  }
+  return arr
 }
 
-/**
- * Add scheme to the published URI.
- * BCMR spec doesn't require scheme for non ipfs protocol. 
- * E.g. example.com becomes https://example.com
- */
-const addSchemeToDomain = (domain: string) => {
-  // Check if the domain already has a scheme (http:// or https://)
-  let url = domain
-  if (!/^https?:\/\//i.test(domain)) {
-    // If no scheme, prepend 'http://' by default
-    url = 'https://' + domain;
-  }
-  return url
+const addSchemeToUris = (uris: string[]): string[] => {
+  return uris.map((uri: string) => {
+    if (isURI.test(uri) && !URL.canParse(uri) && !uri.startsWith('http')) {
+      return 'https://' + uri
+    }
+    return uri
+  })
 }
 
-/**
- * Assume path if url path is not available.
- * https://example.com/ is assumed to serve BCMR at 
- * https://example.com/.well-known/bitcoin-cash-metadata-registry.json
- */
-const addDefaultBcmrPath = (url: string) => {
-  let _url = new URL(url)
-  let urlString = _url.origin
-  if (_url.pathname == '/') {
-    urlString = urlString + '/.well-known/bitcoin-cash-metadata-registry.json'
-  }
-  return urlString
+const addDefaultBcmrPathToUris = (uris: string[]): string[] => {
+  return uris.map((uri: string) => {
+    if (isURI.test(uri) && URL.canParse(uri)) {
+      const url = new URL(uri)
+      if (url.pathname == '/') {
+        url.pathname = '/.well-known/bitcoin-cash-metadata-registry.json'
+      }
+      return url.toString()
+    }
+    return uri
+  })
 }
+
 
 /**
  * Collect URIs, add schemes to URIs if missing and use ipfs gateway for ipfs.
  */
 const publishedUrisToBcmrDownloadSourceURLs = (uris: string[]) => {
-  const urls = uris.reduce((valuesWeWant: string[], currentUriItem: string) => {
-    let url = currentUriItem
-    if (isValidDomain(url)) {
-      url = addSchemeToDomain(url)
-      url = addDefaultBcmrPath(url)
-    } else {
-      const ipfsGatewayUrl = ipfsToGatewayUrl(url)
-      if (ipfsGatewayUrl) {
-        url = ipfsGatewayUrl
-      }
-    }
-    valuesWeWant.push(url)
-    return valuesWeWant
-  }, [])
+  let cleanUrls = uris
+  cleanUrls = ipfsToGatewayUrls(cleanUrls)
+  cleanUrls = addSchemeToUris(cleanUrls)
+  cleanUrls = addDefaultBcmrPathToUris(cleanUrls)
 
-  const problematicPublicIpfsGateway = urls.find((url) => {
-    return url.includes('dweb.link')
+  const problematicPublicIpfsGateway = uris.find((url) => {
+    if (URL.canParse(url)) {
+      const u = new URL(url)
+      return u.host.includes('dweb.link')
+    }
+    return false
   })
 
   if (problematicPublicIpfsGateway) {
     // add w3s.link gateway when one of the urls uses dweb.link public ipfs gateway
     let additionalUrl = problematicPublicIpfsGateway.replace('dweb.link', 'w3s.link')
-    if (URL.canParse(additionalUrl)) {
-      urls.push(additionalUrl)
-    }
-
+    cleanUrls.push(additionalUrl)
   }
 
-  return urls
+  cleanUrls = Array.from(new Set(cleanUrls))
+  return cleanUrls
 }
+
 
 /**
  * Download registry from available URIs
