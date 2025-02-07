@@ -1441,6 +1441,20 @@ const publishedUrisToBcmrDownloadSourceURLs = (uris: string[]) => {
     valuesWeWant.push(url)
     return valuesWeWant
   }, [])
+
+  const problematicPublicIpfsGateway = urls.find((url) => {
+    return url.includes('dweb.link')
+  })
+
+  if (problematicPublicIpfsGateway) {
+    // add w3s.link gateway when one of the urls uses dweb.link public ipfs gateway
+    let additionalUrl = problematicPublicIpfsGateway.replace('dweb.link', 'w3s.link')
+    if (URL.canParse(additionalUrl)) {
+      urls.push(additionalUrl)
+    }
+    
+  }
+  
   return urls
 }
 
