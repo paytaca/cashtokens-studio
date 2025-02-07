@@ -1452,9 +1452,9 @@ const publishedUrisToBcmrDownloadSourceURLs = (uris: string[]) => {
     if (URL.canParse(additionalUrl)) {
       urls.push(additionalUrl)
     }
-    
+
   }
-  
+
   return urls
 }
 
@@ -1472,7 +1472,7 @@ const downloadRegistryFromPublishedUris = async (publishedUris: string[]) => {
     })
   });
 
-  const downloadResponse = await Promise.race(downloadPromises)
+  const downloadResponse = await Promise.any(downloadPromises)
   return downloadResponse
 }
 
