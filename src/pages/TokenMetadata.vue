@@ -423,6 +423,12 @@
                                   <q-img
                                     :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.asset)" />
                                 </q-avatar>
+                                <q-avatar
+                                  v-else-if="value.row[value.row._meta?.commitment || value.row.commitment]?.uris?.web"
+                                  rounded>
+                                  <q-img
+                                    :src="ipfsToGatewayUrl(value.row[value.row._meta?.commitment || value.row.commitment].uris.web)" />
+                                </q-avatar>
                                 <q-icon v-else name="broken_image" size="xl" color="grey-8" round></q-icon>
                               </div>
                               <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
@@ -672,6 +678,7 @@ const isURI = /^(?:[a-zA-Z][a-zA-Z\d+\-.]*:\/\/)?[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+(?
 const bcmrApiHost = computed(() => {
   return process.env.BCMR_API
 })
+
 
 const newRevision = () => {
   if (bcmrSelectedAuthbase.value) {
@@ -1496,17 +1503,17 @@ const displayAuthheadAuthFailureDialog = async () => {
 
 onBeforeMount(async () => {
   try {
-    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
-      return console.log('🚀 ~ onBeforeMount ~ is returning')
-    }
-    progress.value = 'Loading registry, please wait...'
-    let r
-    try {
-      r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
-    } catch (error) {
-      console.log("🚀 ~ locateRegistry ~ error:", error)
-    }
-
+    // if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
+    //   return console.log('🚀 ~ onBeforeMount ~ is returning')
+    // }
+    // progress.value = 'Loading registry, please wait...'
+    // let r
+    // try {
+    //   r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
+    // } catch (error) {
+    //   console.log("🚀 ~ locateRegistry ~ error:", error)
+    // }
+    const r = await (new BcmrIndexer()).fetchRegistry('3b632682ad7fc09ff7cd334a88416711e39a2c5087906c94f6b54771be9fbe40', true)
     if (!r || r == 'undefined') {
       r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
     }
