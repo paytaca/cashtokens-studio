@@ -20,11 +20,11 @@
       </div>
       <div v-if="!user.walletAddress" class="row justify-center items-center q-px-lg q-pt-lg">
         <q-list bordered separator>
-          <q-item v-if="!isMobileBrowser" class="col-xs-12 text-center" clickable v-ripple>
+          <!-- <q-item v-if="!isMobileBrowser" class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
               <paytaca-connect size="3em" />
             </q-item-section>
-          </q-item>
+          </q-item> -->
           <q-item class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
               <wallet-connect size="3em" />
