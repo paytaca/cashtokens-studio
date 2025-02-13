@@ -374,7 +374,10 @@ const onCancel = async () => {
     }).onOk(() => {
       onDialogHide()
     })
+  } else {
+    onDialogHide()
   }
+
 }
 
 const onOk = async () => {
