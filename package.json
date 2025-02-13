@@ -2,7 +2,7 @@
   "name": "cashtokenstudio",
   "version": "0.0.1",
   "description": "BCH Cashtoken creation tool",
-  "productName": "Cashtoken Studio",
+  "productName": "Cashtokens Studio",
   "author": "hantyrram <rongrammer@hotmail.com>",
   "private": true,
   "scripts": {
