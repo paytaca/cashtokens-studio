@@ -254,8 +254,8 @@ module.exports = configure(function (ctx) {
       // chainWebpackCustomSW (/* chain */) {},
 
       manifest: {
-        name: 'Cashtoken Studio',
-        short_name: 'Cashtoken Studio',
+        name: 'Cashtokens Studio',
+        short_name: 'Cashtokens Studio',
         description: '',
         display: 'standalone',
         orientation: 'portrait',
