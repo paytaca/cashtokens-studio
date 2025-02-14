@@ -433,18 +433,22 @@
                               </div>
                               <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                                 <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
-                                  {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
-          value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-          `#${formatCommitment(value.row._meta?.commitment || value.row.commitment || '',
-            'vm-number',
-            'decimal')}` :
-          value.row._meta?.commitment || value.row.commitment }}
+                                  {{
+          isSequentialNftCollection(value.row.identitySnapshot?.nfts?.parse?.bytecode) ?
+            `#${computedNftSequenceNumber(value.row._meta?.commitment || value.row.commitment ||
+              '')}` :
+            value.row._meta?.commitment || value.row.commitment
+        }} {{
+            computedNftNameForSequentialNft(value.row.identitySnapshot?.nfts?.parse?.bytecode,
+              value.row._meta?.commitment || value.row.commitment ||
+              '') }}
                                   <sup v-if="value.row?._meta?.modified"><q-badge outline color="warning"><q-icon
                                         name="priority_high" color="warning"></q-icon>Modified</q-badge> </sup>
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
-                                  {{ `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
-                                  }}
+                                  {{
+          `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
+        }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -679,6 +683,51 @@ const bcmrApiHost = computed(() => {
   return process.env.BCMR_API
 })
 
+const isSequentialNftCollection = computed(() => {
+  return (byteCode: string | undefined) => {
+    if (!byteCode) return true
+    if (byteCode != '00d26b') return true
+    return false
+  }
+})
+
+const computedTokenSymbol = computed(() => {
+  if (bcmr.value?.identities && bcmrSelectedAuthbase.value) {
+    if (bcmrNewRevision.value) {
+      return bcmr.value.identities[bcmrSelectedAuthbase.value][bcmrNewRevision.value.toISOString()].token?.symbol || ''
+    }
+    if (bcmrSelectedIdentityHistory.value) {
+      return bcmr.value.identities[bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.symbol || ''
+    }
+  }
+  return ''
+})
+
+/**
+ * For Sequential Nft Collection
+ */
+const computedNftSequenceNumber = computed(() => {
+  return (commitment: string) => {
+    if (commitment == '80') return '-0'
+    if (commitment == '') return '0'
+    return formatCommitment(commitment, 'vm-number', 'decimal')
+  }
+})
+
+/**
+ * Use ticker symbol if commitment decodes to negative or
+ * invalid number per BCMR spec.
+ */
+const computedNftNameForSequentialNft = computed(() => {
+  return (parseBytecode: string | undefined, commitment: string) => {
+    if (!isSequentialNftCollection.value(parseBytecode)) return
+    const sequenceNumber = computedNftSequenceNumber.value(commitment)
+    if (sequenceNumber == '-0' || BigInt(sequenceNumber) < 0) {
+      return `${computedTokenSymbol.value}-X${commitment}`
+    }
+    return ''
+  }
+})
 
 const newRevision = () => {
   if (bcmrSelectedAuthbase.value) {
@@ -1503,17 +1552,17 @@ const displayAuthheadAuthFailureDialog = async () => {
 
 onBeforeMount(async () => {
   try {
-    // if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
-    //   return console.log('🚀 ~ onBeforeMount ~ is returning')
-    // }
-    // progress.value = 'Loading registry, please wait...'
-    // let r
-    // try {
-    //   r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
-    // } catch (error) {
-    //   console.log("🚀 ~ locateRegistry ~ error:", error)
-    // }
-    const r = await (new BcmrIndexer()).fetchRegistry('3b632682ad7fc09ff7cd334a88416711e39a2c5087906c94f6b54771be9fbe40', true)
+    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
+      return console.log('🚀 ~ onBeforeMount ~ is returning')
+    }
+    progress.value = 'Loading registry, please wait...'
+    let r
+    try {
+      r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
+    } catch (error) {
+      console.log("🚀 ~ locateRegistry ~ error:", error)
+    }
+
     if (!r || r == 'undefined') {
       r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
     }
