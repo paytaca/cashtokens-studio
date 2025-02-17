@@ -1226,6 +1226,7 @@ const loadNftTypes = async () => {
     const types = bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()]
       .token?.nfts?.parse?.types || {}
     const category = bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.category
+    const parseByteCode = bcmr.value.identities![bcmrSelectedAuthbase.value][bcmrSelectedIdentityHistory.value.toISOString()].token?.nfts?.parse?.bytecode
 
     const typesList = []
     if (category) {
@@ -1240,7 +1241,13 @@ const loadNftTypes = async () => {
         typesList.push({ [nftTypeKey]: types[nftTypeKey], _meta: { commitment: nftTypeKey } })
       }
     }
-    nftTypes.value.results = typesList.sort(sortNftTypesASC)
+
+    nftTypes.value.results = typesList
+
+    if (isSequentialNftCollection.value(parseByteCode)) {
+      nftTypes.value.results = typesList.sort(sortNftTypesASC)
+    }
+
     // nftTypes.value.results = Object.keys(types).map((k) => ({ [k]: types[k], _meta: { commitment: k } })).slice()
   }
 }
