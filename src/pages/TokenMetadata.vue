@@ -576,14 +576,13 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublishFromFileDialog.vue';
 import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
 import { useTokenStore } from 'src/stores/token'
-import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage, sortNftTypesASC, openTxInExplorer } from 'src/app/utils'
 import { NFTCapability, NftType, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
 import AuthbasePromptDialog from 'src/components/dialogs/AuthbasePromptDialog.vue';
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
-import { openTxInExplorer } from 'src/app/utils';
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
@@ -1241,7 +1240,7 @@ const loadNftTypes = async () => {
         typesList.push({ [nftTypeKey]: types[nftTypeKey], _meta: { commitment: nftTypeKey } })
       }
     }
-    nftTypes.value.results = typesList
+    nftTypes.value.results = typesList.sort(sortNftTypesASC)
     // nftTypes.value.results = Object.keys(types).map((k) => ({ [k]: types[k], _meta: { commitment: k } })).slice()
   }
 }
@@ -1566,7 +1565,6 @@ onBeforeMount(async () => {
     if (!r || r == 'undefined') {
       r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
     }
-
     if (r) {
       initBcmr(r)
     } else {
