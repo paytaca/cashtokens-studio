@@ -15,7 +15,7 @@ export default (address: string): string => {
     }
 
     const testAddress = encodeCashAddress(
-      decoded.prefix as CashAddressNetworkPrefix.testnet,
+      decoded.prefix as CashAddressNetworkPrefix,
       decoded.type,
       decoded.payload
     );
