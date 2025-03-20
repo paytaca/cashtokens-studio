@@ -813,33 +813,35 @@ const publish = async (revisionOptions: RevisionOption) => {
   let { newVersion, revisionOption } = revisionOptions
   bcmrSelectedIdentityHistory.value = bcmrNewRevision.value
   bcmr.value.versionString = newVersion
-  progress.value = 'Authenticating authhead, please wait...'
+  // progress.value = 'Authenticating authhead, please wait...'
 
-  try {
-    const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
-    progress.value = false
-    console.log(`🚀 Tracked Authhead = ${trackedAuthhead}, Authhead being used = ${tokenStore.token.txid}`)
+  // try {
+  //   const trackedAuthhead = await (new ChainGraph()).fetchAuthheadTxid(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)
+  //   progress.value = false
+  // console.log(`🚀 Tracked Authhead = ${trackedAuthhead}, Authhead being used = ${tokenStore.token.txid}`)
 
-    if (trackedAuthhead != tokenStore.token.txid) {
-      await new Promise(res => {
-        $q.dialog({
-          message: `Output being spent (${tokenStore.token.txid}) does not match authhead (${trackedAuthhead}). Unauthorized to publish metadata for token ${shortenTokenId(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)}.`,
-          ok: true,
-          focus: 'ok',
-          class: 'q-pa-lg'
-        }).onDismiss(() => res(null))
-      })
-      return
-    }
+  //   if (trackedAuthhead != tokenStore.token.txid) {
+  //     await new Promise(res => {
+  //       $q.dialog({
+  //         message: `Output being spent (${tokenStore.token.txid}) does not match authhead (${trackedAuthhead}). Unauthorized to publish metadata for token ${shortenTokenId(bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevision.value!.toISOString()].token!.category)}.`,
+  //         ok: true,
+  //         focus: 'ok',
+  //         class: 'q-pa-lg'
+  //       }).onDismiss(() => res(null))
+  //     })
+  //     return
+  //   }
 
-  } catch (error) {
-    $q.dialog({
-      message: `Error authenticating authhead, please try again later...`,
-      ok: true,
-      focus: 'ok',
-      class: 'q-pa-lg'
-    })
-  }
+  // } catch (error) {
+  //   $q.dialog({
+  //     message: `Error authenticating authhead, please try again later...`,
+  //     ok: true,
+  //     focus: 'ok',
+  //     class: 'q-pa-lg'
+  //   })
+  // }
+  console.log(`🚀 Authhead being used = ${tokenStore.token.txid}`)
+  progress.value = `Processing request. Authhead: ${tokenStore.token.txid}`
   const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
   const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
   if (revisionOption == 'update') {
@@ -1543,11 +1545,14 @@ const downloadRegistryFromPublishedUris = async (publishedUris: string[]) => {
   return downloadResponse
 }
 
-const displayAuthheadAuthFailureDialog = async () => {
+const displayAuthheadAuthFailureDialog = async (authhead: string) => {
   await new Promise((resolve, reject) => {
     $q.dialog({
       title: 'Authhead Authentication Failed!',
-      message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+      // message: 'This UTXO that you are using is not authorized to publish metadata for the provided authbase/Token ID',
+      message: `It looks like Cashtokens Studio is trying to use the wrong authhead (${authhead}) for your token. 
+        Don't worry it's either you entered the wrong tokenId/authbase or there's just a delay in the server and 
+        CashStokens Studio is still using the old authhead. You may try again later or contact admin in telegram.`,
       class: 'q-pa-md text-justify'
     }).onDismiss(() => {
       router.back()
@@ -1636,7 +1641,7 @@ onMounted(async () => {
         const authhead = await cg.fetchAuthheadTxid(authbase)
         if (tokenStore.token.txid != authhead) {
           progress.value = false
-          return await displayAuthheadAuthFailureDialog()
+          return await displayAuthheadAuthFailureDialog(tokenStore.token.txid)
         }
         progress.value = 'Retrieving last published registry, please wait...'
         const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
