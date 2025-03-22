@@ -215,6 +215,20 @@ export class Watchtower {
     return b;
   }
 
+  async isAuthhead(
+    txid: string,
+    authbase: string
+  ): Promise<boolean | undefined> {
+    try {
+      const response = await this.fetchAuthhead(authbase);
+      return txid === response.authhead.txid;
+    } catch (error) {
+      this.error = error;
+    } finally {
+      delete this.processing;
+    }
+  }
+
   /**
    * Get the address' BCH balance from watchtower
    * @param {string} tx Raw transaction hash
