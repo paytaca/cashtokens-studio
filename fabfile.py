@@ -136,7 +136,7 @@ def up(c,environment,confirm_first=True):
 
 
 @task(hosts=hosts)
-def down(c,environment,confirm_first=True):
+def down(c, environment,confirm_first=True):
     attach_ssh_key(c)
     if not environment or environment not in ['staging', 'prod']:
         raise Exception('Invalid environment.')
@@ -174,6 +174,11 @@ def down(c,environment,confirm_first=True):
             c.run(f'sudo docker compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml rm --stop --force')
 
 @task(hosts=hosts)
+def prune(c):
+    attach_ssh_key(c)
+    c.run('docker system prune --all -f')
+
+@task(hosts=hosts)
 def deploy(c, environment):
     attach_ssh_key(c)
     if not environment or environment not in ['staging', 'prod']:
@@ -185,6 +190,7 @@ def deploy(c, environment):
             build(c,environment, False)
             down(c,environment, False)
             up(c,environment, False)
+            prune(c)
             print('Deployment of cashtokens-studio/prod done!!!')
         else:
             print("Not deployed. Type 'yes-to-prod' to deploy")
@@ -197,6 +203,7 @@ def deploy(c, environment):
             build(c,environment,False)
             down(c,environment,False)
             up(c,environment,False)
+            prune(c)
             print('Deployment of cashtokens-studio/staging done!!!')
         else:
             print('Not deployed')
