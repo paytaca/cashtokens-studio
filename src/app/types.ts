@@ -87,11 +87,13 @@ export type CashTokenTransactionType =
   | 'GenesisInput.generate';
 
 export declare interface CashTokenTransaction {
-  txid: string;
+  txid?: string;
+  txidIsUnsignedHash?: boolean; // true if the txid is an unsigned hash, false if it's a signed transaction
   txType: CashTokenTransactionType;
   timestamp: number;
   successMsg?: string;
   errorMsg?: string;
+  statusUrl?: string
 }
 
 export type HexString = string & { __hexStringBrand: never };

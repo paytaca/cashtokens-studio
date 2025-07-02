@@ -89,6 +89,33 @@ const generateGenesisInput = async () => {
     })
     console.log('Signing result:', signingResult)
 
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.txid,
+        txidIsUnsignedHash: signingResult.txidIsUnsignedHash,
+        txType: 'generate-genesis-input',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        status: 'pending',
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => resolve(true))
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
+
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
@@ -103,7 +130,7 @@ const generateGenesisInput = async () => {
           txid: tx,
           txType: 'generate-genesis-input',
           timestamp: new Date().getTime(),
-          successMsg: `Genesis input created!`
+          successMsg: `Genesis input created!`,
         })
         $q.dialog({
           component: TransactionStatusDialog,
