@@ -51,6 +51,7 @@
 
 import { ref, onBeforeMount, toRaw } from 'vue'
 import { NFTCapability, UtxoI, Wallet } from 'mainnet-js';
+import { cashAddressToLockingBytecode, decodeCashAddress, lockingBytecodeToCashAddress } from '@bitauth/libauth';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useUser } from 'src/stores/user';
@@ -86,6 +87,7 @@ const generateGenesisInput = async () => {
         class: 'q-pa-lg'
       })
     })
+    console.log('Signing result:', signingResult)
 
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
@@ -130,6 +132,10 @@ const createAuthKey = async () => {
   progress.value = 'Processing, please wait...'
   const authKeyId = genesisInput.value!.txid!
   try {
+    const lockingBytecode: any = cashAddressToLockingBytecode(user.wallet!.getDepositAddress())
+    const tokenDepositAddress = lockingBytecodeToCashAddress(
+      lockingBytecode.bytecode, lockingBytecode.prefix, { tokenSupport: true }
+    ) as string
     const genesisTransaction = await buildGenesisTx({
       input: toRaw(genesisInput.value!),
       token: {
@@ -139,7 +145,7 @@ const createAuthKey = async () => {
         amount: BigInt(0),
       },
       wallet: user.wallet as Wallet,
-      recipient: await user.wallet!.getTokenDepositAddress()
+      recipient: tokenDepositAddress
     })
 
     progress.value = 'Waiting for signature. Pls check your wallet!'
