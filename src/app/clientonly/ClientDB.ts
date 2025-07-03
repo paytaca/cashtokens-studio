@@ -49,9 +49,35 @@ export default class ClientDB {
   /**
    * Log a CashToken Transaction
    */
-  newCtsTransaction(txn: object) {
+  async newCtsTransaction(txn: object) {
     if (!this.transactionsStore) throw new Error('Transaction store does not exist')
-    this.transactionsStore?.add(txn)
+    // this.transactionsStore?.add(txn)
+    return new Promise((resolve, reject) => {
+      const request = this.transactionsStore!.add(txn)
+      request.onsuccess = () => {
+        resolve(true)
+      }
+      request.onerror = (event) => {
+        console.error("Add failed", event)
+        reject(false)
+      }
+    })
+  }
+
+  async deleteCtsTransaction(txid: string): Promise<boolean> {
+  
+    if (!this.transactionsStore) throw new Error('Transaction store does not exist')
+    
+    return new Promise((resolve, reject) => {
+      const request = this.transactionsStore!.delete(txid)
+      request.onsuccess = () => {
+        resolve(true)
+      }
+      request.onerror = (event) => {
+        console.error("Delete failed", event)
+        reject(false)
+      }
+    })
   }
 
   /**
