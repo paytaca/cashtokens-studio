@@ -11,7 +11,8 @@ export type SigningResult = {
   },
   statusUrl: string,
   txid?: string,
-  txidIsUnsignedHash?: boolean
+  txidIsUnsignedHash?: boolean,
+  unsignedHash?: string
 }
 export interface TransactionSigner {
   type: 'paytaca' | 'walletconnect',
