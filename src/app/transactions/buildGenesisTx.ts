@@ -1,9 +1,11 @@
 import {
   NFTCapability,
   OpReturnData,
+  SendRequest,
   TestNetWallet,
   TokenI,
   TokenSendRequest,
+  UnitEnum,
   UtxoI,
   Wallet,
   hexToBin,
@@ -13,7 +15,11 @@ import { DEFAULT_TOKEN_VALUE } from '../constants';
 import { calcMinerFee } from '../utils';
 import { getInstance } from '../contracts';
 import { Utxo } from 'cashscript';
-import { decodeTransaction } from '@bitauth/libauth';
+import {
+  CashAddressType,
+  decodeCashAddress,
+  decodeTransaction,
+} from '@bitauth/libauth';
 import { toCashScript } from '@mainnet-cash/contract';
 
 export type GenesisOptions = {
@@ -46,11 +52,21 @@ export type GenesisTransaction = {
   sourceOutputs: any;
 };
 
-export const genesisCost =
-  calcMinerFee({ P2PKH: 3 }, { P2WSH: 1, P2PKH: 2 }) +
-  DEFAULT_TOKEN_VALUE * 2 +
-  400;
+// export const genesisCost =
+//   calcMinerFee({ P2PKH: 3 }, { P2WSH: 1, P2PKH: 2 }) +
+//   DEFAULT_TOKEN_VALUE * 2 +
+//   400;
 
+export const genesisCost = (walletAddressType?: CashAddressType) => {
+  let cost =
+    calcMinerFee({ P2PKH: 3 }, { P2WSH: 1, P2PKH: 2 }) + DEFAULT_TOKEN_VALUE;
+  if (walletAddressType && walletAddressType === CashAddressType.p2sh) {
+    cost =
+      calcMinerFee({ 'MULTISIG-P2SH:5-6': 1 }, { P2SH: 3 }) +
+      DEFAULT_TOKEN_VALUE;
+  }
+  return cost;
+};
 /**
  * If opt.authKey is present the created token will be locked in an AuthGuard contract.
  * If opt.authKey isn't a token or it doesn't conform to the AuthGuard spec, genesis tx
@@ -68,9 +84,65 @@ export const buildGenesisTx = async (
     throw new Error('Genesis input for authKey requires v-out 0');
   }
 
-  const funds = (await opt.wallet.getAddressUtxos()).filter((u: UtxoI) => {
-    return Boolean(!u.token) && u.satoshis > genesisCost && u.vout != 0;
+  let tokenRecipient = opt.recipient;
+
+  const requests: any[] = [
+    new TokenSendRequest({
+      cashaddr: tokenRecipient as string,
+      value: DEFAULT_TOKEN_VALUE,
+      tokenId: opt.token.tokenId,
+      amount: opt.token.amount,
+      capability: opt.token.capability,
+      commitment: opt.token.commitment,
+    }),
+  ];
+
+  let cost = genesisCost();
+  console.log('🚀 ~ cost p2pkh:', cost);
+  let discardChange = false;
+
+  let funds = (await opt.wallet.getAddressUtxos()).filter((u: UtxoI) => {
+    return Boolean(!u.token) && u.satoshis > cost && u.vout != 0;
   })[0];
+
+  const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
+  let change = funds.satoshis - cost;
+  if (
+    typeof decodedCashAddress !== 'string' &&
+    decodedCashAddress.type === CashAddressType.p2sh
+  ) {
+    cost = genesisCost(decodedCashAddress.type);
+    if (cost > 100000) {
+      throw new Error('Fee too high.');
+    }
+
+    console.log('🚀 ~ cost multisig:', cost);
+
+    funds = (await opt.wallet.getAddressUtxos()).filter(
+      (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost
+    )[0];
+
+    if (!funds) {
+      throw new Error(
+        'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.'
+      );
+    }
+
+    discardChange = true;
+    // console.log('🚀 ~ cost:', cost);
+    change = funds.satoshis - cost;
+    // console.log('🚀 ~ change:', change);
+    // mainnet-js incorrectly calculates relay fee if wallet is multisig
+    // handle change ourself
+    // if (change > 546) {
+    //   const changeSendRequest = new SendRequest({
+    //     cashaddr: opt.wallet!.getDepositAddress(),
+    //     value: change,
+    //     unit: UnitEnum.SATOSHIS,
+    //   });
+    //   requests.push(changeSendRequest);
+    // }
+  }
 
   if (!funds) {
     throw new Error('Insufficient balance to fund the transaction');
@@ -78,7 +150,7 @@ export const buildGenesisTx = async (
 
   let authKeyTokenId;
   let authKeyGenesisRequest = null;
-  let tokenRecipient = opt.recipient;
+  // let tokenRecipient = opt.recipient;
   if (opt.authKey) {
     // we are using authguard
     if (opt.authKey.token?.tokenId) {
@@ -109,16 +181,16 @@ export const buildGenesisTx = async (
     tokenRecipient = authGuard?.getTokenDepositAddress();
   }
 
-  const requests: any[] = [
-    new TokenSendRequest({
-      cashaddr: tokenRecipient as string,
-      value: DEFAULT_TOKEN_VALUE,
-      tokenId: opt.token.tokenId,
-      amount: opt.token.amount,
-      capability: opt.token.capability,
-      commitment: opt.token.commitment,
-    }),
-  ];
+  // const requests: any[] = [
+  //   new TokenSendRequest({
+  //     cashaddr: tokenRecipient as string,
+  //     value: DEFAULT_TOKEN_VALUE,
+  //     tokenId: opt.token.tokenId,
+  //     amount: opt.token.amount,
+  //     capability: opt.token.capability,
+  //     commitment: opt.token.commitment,
+  //   }),
+  // ];
 
   if (authKeyGenesisRequest) {
     requests.push(authKeyGenesisRequest);
@@ -134,6 +206,15 @@ export const buildGenesisTx = async (
     );
   }
 
+  if (discardChange && change > 546) {
+    const changeSendRequest = new SendRequest({
+      cashaddr: opt.wallet!.getDepositAddress(),
+      value: change,
+      unit: UnitEnum.SATOSHIS,
+    });
+    requests.push(changeSendRequest);
+  }
+
   const expenses: UtxoI[] = [opt.input];
   if (opt.authKey && !opt.authKey?.token?.tokenId) {
     // only spend authkey during genesis
@@ -143,7 +224,7 @@ export const buildGenesisTx = async (
   expenses.push(funds);
 
   const { encodedTransaction, sourceOutputs } =
-    await opt.wallet.encodeTransaction(requests, false, {
+    await opt.wallet.encodeTransaction(requests, discardChange, {
       tokenOperation: 'genesis',
       checkTokenQuantities: false,
       buildUnsigned: true,

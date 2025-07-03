@@ -47,8 +47,8 @@ module.exports = configure(function (ctx) {
         : 'https://',
     TX_EXPLORER_BASE_URL:
       process.env.APP_ENV === 'development'
-        ? 'https://chipnet.imaginary.cash/'
-        : 'https://explorer.bitcoinunlimited.info/',
+        ? 'https://chipnet.bch.ninja/'
+        : 'https://explorer.bch.ninja/',
     WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
     WALLET_CONNECT_VERIFIED_URL: process.env.URL || 'http://localhost:8000',
   };
