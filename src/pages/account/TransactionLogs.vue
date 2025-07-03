@@ -24,25 +24,13 @@
               <tr v-for="t, i in transactions?.slice(0, 20)" :key="i">
                 <td>{{ i + 1 }}</td>
                 <td>
-                  <!-- <TransactionId :txid="t.txid" :to="explore(t.txid)" target="_blank" /> -->
-                  <!-- <a :href="explore(t.txid)" target="_blank"> -->
-                  <!-- {{ shortenTx(t.txid) }} -->
-                  <!-- <q-btn :label="shortenTx(t.txid)" flat dense color="secondary" :to="explore(t.txid)"></q-btn> -->
-                  <!-- </a> -->
-                  <q-btn v-if="t.txid && !t.txidIsUnsignedHash" :href="explore(t.txid)" target="_blank" flat dense
+                  <q-btn :href="explore(t.txid)" :disable="t.broadcastStatus !== 'done'" target="_blank" flat dense
                     color="secondary" size="sm">
                     <template v-slot:default>
                       <code>
                         {{ shortenTx(t.txid) }}
-                        <q-tooltip>View in explorer</q-tooltip>
-                      </code>
-                    </template>
-                  </q-btn>
-                  <q-btn v-else flat dense color="secondary" size="sm">
-                    <template v-slot:default>
-                      <code>
-                        {{ t.txid ? shortenTx(t.txid) : '...' }}
-                        <div>Unsigned Hash</div>
+                        <div v-if="t.broadcastStatus !== 'done'">Temporary</div>
+                        <q-tooltip v-if="t.broadcastStatus === 'done'">View in explorer</q-tooltip>
                       </code>
                     </template>
                   </q-btn>
@@ -50,9 +38,9 @@
                 <td>{{ new Date(t.timestamp) }}</td>
                 <td>{{ t.txType }}</td>
                 <td>
-                  <div v-if="t.txid">{{ t.successMsg || t.errorMsg }}</div>
-                  <MultisigTransactionStatus v-if="t.statusUrl" :statusUrl="t.statusUrl"
-                    @status-fetched="onStatusFetched" />
+                  <div>{{ t.successMsg || t.errorMsg }}</div>
+                  <MultisigTransactionStatus v-if="t.statusUrl" :statusUrl="t.statusUrl" :unsignedHash="t.unsignedHash"
+                    :transaction="t" @status-fetched="onStatusFetched" />
                 </td>
               </tr>
             </tbody>
@@ -65,7 +53,7 @@
 <script setup lang="ts">
 import ClientDB from 'src/app/clientonly/ClientDB';
 import { computed, onMounted, ref } from 'vue';
-import { CashTokenTransaction } from 'src/app/types';
+import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/app/types';
 import { shortenTx } from 'src/app/utils';
 import MultisigTransactionStatus from 'src/components/MultisigTransactionStatus.vue';
 
@@ -76,9 +64,31 @@ const explore = computed(() => {
   }
 })
 
-const onStatusFetched = (status: { signingProgress?: string, broadcastStatus?: string, txid?: string }) => {
-  console.log('Status fetched:', status);
-  // You can handle the status update here if needed
+// Define the type for the status event, adjust as needed
+interface StatusFetchedEvent {
+  status: TransactionProposalStatus; // or the actual type of status
+  transaction: CashTokenTransaction; // or the actual type of transaction
+}
+
+const onStatusFetched = (data: StatusFetchedEvent) => {
+  if (data.status.txid) {
+    const db = ClientDB.getInstance()
+    Promise.all([
+      // replace the old transaction log
+      db.deleteCtsTransaction(data.transaction.txid),
+      db.newCtsTransaction({
+        ...data.transaction,
+        ...data.status
+      })
+    ])
+      .then(async () => {
+        transactions.value = await db.getCtsTransactions();
+      })
+      .catch(error => {
+        console.error('Error updating transaction:', error);
+      });
+
+  }
 }
 
 onMounted(async () => {

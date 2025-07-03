@@ -91,8 +91,8 @@ const generateGenesisInput = async () => {
 
     if (signingResult && signingResult.walletType === 'p2shMultisig') {
       $ebus?.emit('transaction', {
-        txid: signingResult.txid,
-        txidIsUnsignedHash: signingResult.txidIsUnsignedHash,
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
         txType: 'generate-genesis-input',
         timestamp: new Date().getTime(),
         successMsg: signingResult.message,
@@ -194,8 +194,8 @@ const createAuthKey = async () => {
 
     if (signingResult && signingResult.walletType === 'p2shMultisig') {
       $ebus?.emit('transaction', {
-        txid: signingResult.txid,
-        txidIsUnsignedHash: signingResult.txidIsUnsignedHash,
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
         txType: 'create-authkey',
         timestamp: new Date().getTime(),
         successMsg: signingResult.message,

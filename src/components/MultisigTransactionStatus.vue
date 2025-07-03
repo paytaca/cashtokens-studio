@@ -2,23 +2,24 @@
   <div>
     <q-skeleton v-if="loading" type="rect"></q-skeleton>
     <div v-else>
-      <q-btn :label="statusText" :loading="loading" @click="refreshStatus" no-caps flat>
+      <q-btn :label="statusText" :loading="loading" icon-right="refresh" @click="refreshStatus" no-caps flat>
       </q-btn>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
+import type { CashTokenTransaction, TransactionProposalStatus } from 'src/app/types';
 import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{
-  statusUrl: string
+  statusUrl: string,
+  transaction: CashTokenTransaction // copy of the CashTokenTransaction object
 }>();
 
 const emit = defineEmits<{
-  (e: 'statusFetched', status: { signingProgress?: string, broadcastStatus?: string, txid?: string }): void
+  (e: 'statusFetched', data: { status: TransactionProposalStatus, transaction: CashTokenTransaction }): void
 }>()
-
 
 const status = ref<{
   signingProgress?: string,
@@ -51,7 +52,7 @@ const refreshStatus = () => {
     .then(response => response.json())
     .then(data => {
       status.value = data;
-      emit('statusFetched', data);
+      emit('statusFetched', { status: data, transaction: props.transaction });
     })
     .catch(error => {
       console.error('Error fetching status:', error);
