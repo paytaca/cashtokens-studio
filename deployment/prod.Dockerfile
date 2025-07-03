@@ -3,9 +3,13 @@ FROM nikolaik/python-nodejs:python3.11-nodejs18
 RUN apt-get update && apt-get install postgresql -y
 RUN mkdir -p /cashtoken-studio
 WORKDIR /cashtoken-studio
-COPY . .
+COPY packag*.json .
+COPY yarn.lock .
 RUN yarn --ignore-engines
 RUN yarn add source-map && yarn global add pm2
+COPY . .
+# RUN yarn --ignore-engines
+# RUN yarn add source-map &&    yarn global add pm2
 ENV NODE_ENV=production
 # ENV PORT=3000
 RUN yarn run build -m ssr

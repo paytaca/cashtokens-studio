@@ -2,7 +2,8 @@
   <div>
     <q-skeleton v-if="loading" type="rect"></q-skeleton>
     <div v-else>
-      <q-btn :label="statusText" :loading="loading" icon-right="refresh" @click="refreshStatus" no-caps flat>
+      <q-btn :label="statusText" :loading="loading" :icon-right="!isBroadcasted ? 'refresh' : ''"
+        :color="!isBroadcasted ? 'warning' : ''" @click="refreshStatus" no-caps flat>
       </q-btn>
     </div>
   </div>
@@ -43,6 +44,10 @@ const statusText = computed(() => {
   }
   return message
 })
+
+const isBroadcasted = computed(() => {
+  return status.value?.broadcastStatus === 'done'
+});
 
 const loading = ref<boolean>(true);
 
