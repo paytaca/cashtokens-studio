@@ -1,3 +1,4 @@
+import localforage from "localforage"
 /**
  * Local client-only database
  */
@@ -49,9 +50,35 @@ export default class ClientDB {
   /**
    * Log a CashToken Transaction
    */
-  newCtsTransaction(txn: object) {
+  async newCtsTransaction(txn: object) {
     if (!this.transactionsStore) throw new Error('Transaction store does not exist')
-    this.transactionsStore?.add(txn)
+    // this.transactionsStore?.add(txn)
+    return new Promise((resolve, reject) => {
+      const request = this.transactionsStore!.add(txn)
+      request.onsuccess = () => {
+        resolve(true)
+      }
+      request.onerror = (event) => {
+        console.error("Add failed", event)
+        reject(false)
+      }
+    })
+  }
+
+  async deleteCtsTransaction(txid: string): Promise<boolean> {
+  
+    if (!this.transactionsStore) throw new Error('Transaction store does not exist')
+    
+    return new Promise((resolve, reject) => {
+      const request = this.transactionsStore!.delete(txid)
+      request.onsuccess = () => {
+        resolve(true)
+      }
+      request.onerror = (event) => {
+        console.error("Delete failed", event)
+        reject(false)
+      }
+    })
   }
 
   /**
@@ -82,13 +109,6 @@ export default class ClientDB {
         }
       }
     })
-    
-
-
-
-
-
-
   }
 
   async clearCtsTransactions():Promise<boolean> {
@@ -109,5 +129,30 @@ export default class ClientDB {
     })
   }
 
+  async getPendingTransactions(): Promise<any> {
+    const ts = this.transactionsStore
+    return await new Promise((res, rej) => { 
+      const index = ts?.index('timestamp')
+      const openCursor = index?.openCursor(null, 'prev')
+      const txns:any = []
+      if (openCursor) {
+        openCursor!.onsuccess = (event:any) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            if (cursor.value.broadcastStatus === 'pending') {
+              txns.push(cursor.value);
+            }
+            cursor.continue();
+          } else {
+            res(txns)
+          }
+  
+        };
+        openCursor!.onerror = (event:any) => {
+          rej(event.target?.error)
+        }
+      }
+    })
+  }
 
 }

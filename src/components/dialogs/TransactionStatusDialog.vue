@@ -10,10 +10,11 @@
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
             {{ statusText }}
           </div>
-          <div class="col-12 text-center text-wrap q-py-sm" style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
-            <q-btn :href="openTxInExplorer(txid)" target="_blank" flat dense color="secondary"
-              label="View Tx in Explorer" />
-            <div>Tx: {{ shortenTx(txid) }} <q-btn dense icon="content_copy" size="xs"
+          <div class="col-12 text-center text-wrap q-py-sm"
+            style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
+            <q-btn v-if="statusType !== 'pending'" :href="openTxInExplorer(txid)" target="_blank" flat dense
+              color="secondary" label="View Tx in Explorer" />
+            <div v-if="statusType !== 'pending'">Tx: {{ shortenTx(txid) }} <q-btn dense icon="content_copy" size="xs"
                 @click.stop="copyText(txid)"></q-btn>
             </div>
           </div>
@@ -32,7 +33,7 @@ import { computed, ref } from 'vue';
 import { openTxInExplorer, shortenTx, copyText } from 'src/app/utils';
 
 const props = defineProps<{
-  statusType: 'error' | 'info' | 'success'
+  statusType: 'error' | 'info' | 'success' | 'pending'
   statusText: string,
   txid: string
 }>()
@@ -43,6 +44,9 @@ const icon = computed<{ name: string, color: string }>(() => {
   }
   if (props.statusType === 'success') {
     return { name: 'done_all', color: 'positive' }
+  }
+  if (props.statusType === 'pending') {
+    return { name: 'pending', color: 'orange' }
   }
   return { name: 'info', color: 'info' }
 })

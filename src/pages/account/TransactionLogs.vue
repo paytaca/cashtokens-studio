@@ -3,7 +3,8 @@
     <div class="row justify-center q-mx-sm">
       <div class="col-xs-12">
         <h5 class="text-center text-bold">Recent CashTokens Studio Transactions <q-icon name="receipt"></q-icon></h5>
-        <p class="text-center">List of recent CashTokens Studio transactions you made on this device. Note: Currently this
+        <p class="text-center">List of recent CashTokens Studio transactions you made on this device. Note: Currently
+          this
           logs
           are only
           saved locally in the browser.</p>
@@ -23,23 +24,24 @@
               <tr v-for="t, i in transactions?.slice(0, 20)" :key="i">
                 <td>{{ i + 1 }}</td>
                 <td>
-                  <!-- <TransactionId :txid="t.txid" :to="explore(t.txid)" target="_blank" /> -->
-                  <!-- <a :href="explore(t.txid)" target="_blank"> -->
-                  <!-- {{ shortenTx(t.txid) }} -->
-                  <!-- <q-btn :label="shortenTx(t.txid)" flat dense color="secondary" :to="explore(t.txid)"></q-btn> -->
-                  <!-- </a> -->
-                  <q-btn :href="explore(t.txid)" target="_blank" flat dense color="secondary" size="sm">
+                  <q-btn :href="explore(t.txid)" :disable="t.broadcastStatus !== 'done'" target="_blank" flat dense
+                    color="secondary" size="sm">
                     <template v-slot:default>
                       <code>
-                                                    {{ shortenTx(t.txid) }}
-                                                    <q-tooltip>View in explorer</q-tooltip>
-                                                  </code>
+                        {{ shortenTx(t.txid) }}
+                        <div v-if="t.broadcastStatus !== 'done'">Temporary</div>
+                        <q-tooltip v-if="t.broadcastStatus === 'done'">View in explorer</q-tooltip>
+                      </code>
                     </template>
                   </q-btn>
                 </td>
                 <td>{{ new Date(t.timestamp) }}</td>
                 <td>{{ t.txType }}</td>
-                <td>{{ t.successMsg || t.errorMsg }}</td>
+                <td>
+                  <div>{{ t.successMsg || t.errorMsg }}</div>
+                  <MultisigTransactionStatus v-if="t.statusUrl" :statusUrl="t.statusUrl" :unsignedHash="t.unsignedHash"
+                    :transaction="t" @status-fetched="onStatusFetched" />
+                </td>
               </tr>
             </tbody>
           </q-markup-table>
@@ -50,9 +52,10 @@
 </template>
 <script setup lang="ts">
 import ClientDB from 'src/app/clientonly/ClientDB';
-import { CashTokenTransaction } from 'src/app/types';
 import { computed, onMounted, ref } from 'vue';
+import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/app/types';
 import { shortenTx } from 'src/app/utils';
+import MultisigTransactionStatus from 'src/components/MultisigTransactionStatus.vue';
 
 const transactions = ref<CashTokenTransaction[]>()
 const explore = computed(() => {
@@ -60,10 +63,37 @@ const explore = computed(() => {
     return `${process.env.TX_EXPLORER_BASE_URL}tx/${txid}`
   }
 })
+
+// Define the type for the status event, adjust as needed
+interface StatusFetchedEvent {
+  status: TransactionProposalStatus; // or the actual type of status
+  transaction: CashTokenTransaction; // or the actual type of transaction
+}
+
+const onStatusFetched = (data: StatusFetchedEvent) => {
+  if (data.status.txid) {
+    const db = ClientDB.getInstance()
+    Promise.all([
+      // replace the old transaction log
+      db.deleteCtsTransaction(data.transaction.txid),
+      db.newCtsTransaction({
+        ...data.transaction,
+        ...data.status
+      })
+    ])
+      .then(async () => {
+        transactions.value = await db.getCtsTransactions();
+      })
+      .catch(error => {
+        console.error('Error updating transaction:', error);
+      });
+
+  }
+}
+
 onMounted(async () => {
   const db = ClientDB.getInstance()
   transactions.value = await db.getCtsTransactions()
-  console.log('ENV APP', process.env.APP_ENV)
 })
 
 </script>

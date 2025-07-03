@@ -51,6 +51,7 @@
 
 import { ref, onBeforeMount, toRaw } from 'vue'
 import { NFTCapability, UtxoI, Wallet } from 'mainnet-js';
+import { cashAddressToLockingBytecode, decodeCashAddress, lockingBytecodeToCashAddress } from '@bitauth/libauth';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useUser } from 'src/stores/user';
@@ -86,6 +87,38 @@ const generateGenesisInput = async () => {
         class: 'q-pa-lg'
       })
     })
+    console.log('Signing result:', signingResult)
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
+        txType: 'generate-genesis-input',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
 
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
@@ -101,7 +134,7 @@ const generateGenesisInput = async () => {
           txid: tx,
           txType: 'generate-genesis-input',
           timestamp: new Date().getTime(),
-          successMsg: `Genesis input created!`
+          successMsg: `Genesis input created!`,
         })
         $q.dialog({
           component: TransactionStatusDialog,
@@ -130,6 +163,10 @@ const createAuthKey = async () => {
   progress.value = 'Processing, please wait...'
   const authKeyId = genesisInput.value!.txid!
   try {
+    const lockingBytecode: any = cashAddressToLockingBytecode(user.wallet!.getDepositAddress())
+    const tokenDepositAddress = lockingBytecodeToCashAddress(
+      lockingBytecode.bytecode, lockingBytecode.prefix, { tokenSupport: true }
+    ) as string
     const genesisTransaction = await buildGenesisTx({
       input: toRaw(genesisInput.value!),
       token: {
@@ -139,7 +176,7 @@ const createAuthKey = async () => {
         amount: BigInt(0),
       },
       wallet: user.wallet as Wallet,
-      recipient: await user.wallet!.getTokenDepositAddress()
+      recipient: tokenDepositAddress
     })
 
     progress.value = 'Waiting for signature. Pls check your wallet!'
@@ -154,6 +191,37 @@ const createAuthKey = async () => {
         })
       }
     })
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
+        txType: 'create-authkey',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
     if (signingResult?.signedTransaction) {
       progress.value = 'Submitting transaction, please wait...'
 

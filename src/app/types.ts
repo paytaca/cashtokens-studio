@@ -86,12 +86,33 @@ export type CashTokenTransactionType =
   | 'Cashtoken.createGenesis'
   | 'GenesisInput.generate';
 
-export declare interface CashTokenTransaction {
-  txid: string;
+export type BroadcastStatus = 'pending' | 'broadcasted' | 'cancelled' | 'failed' | 'done';
+  /**
+ * @property signingProgress      Progress of a transaction signing
+ * @property broadcastStatus 
+ * @property txid                 Broadcast txid
+ * @property wallet               The multisig wallet id
+ * @property transactionProposal  The transaction proposal id
+ */
+export interface TransactionProposalStatus {
+  signingProgress?: 'fully-signed' | 'partially-signed' | 'unsigned';
+  broadcastStatus?: BroadcastStatus;
+  transactionProposal?: number;
+  wallet?: number
+  txid?: string;
+}
+
+/**
+ * Used for logging transactions in the CTS
+ */
+export declare interface CashTokenTransaction extends TransactionProposalStatus {
+  txid: string; // unsignedHash is used as temporary txid for multisig transactions
+  unsignedHash?: string; 
   txType: CashTokenTransactionType;
   timestamp: number;
   successMsg?: string;
   errorMsg?: string;
+  statusUrl?: string
 }
 
 export type HexString = string & { __hexStringBrand: never };
@@ -131,3 +152,4 @@ export enum TokenType {
   nft = 'nft',
   hybrid = 'hybrid',
 }
+

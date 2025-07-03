@@ -11,8 +11,8 @@
           <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         <div v-if="user.walletAddress" class="q-mx-sm">
-          <q-btn-group class="text-right">
-            <q-btn-dropdown auto-close rounded size="lg"
+          <q-btn-group class="text-right" style="position:relative">
+            <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow"
               style="color: rgb(20,20,20);padding: 10px; border-radius: 10px;background-color:#282829d4; border: 2px solid #484854d4">
               <template v-slot:label>
                 <q-avatar v-if="user.walletType == 'paytaca'" rounded size="md">
@@ -47,7 +47,13 @@
                   <q-avatar class="q-mr-xs" icon="receipt">
                   </q-avatar>
                   <q-item-section>
-                    <q-item-label>Recent Transactions</q-item-label>
+                    <q-item-label>
+                      <span style="position: relative;">
+                        Recent Transactions
+                        <q-badge v-if="pendingTransactions?.length > 0" color="orange" label="!" floating
+                          rounded></q-badge>
+                      </span>
+                    </q-item-label>
                   </q-item-section>
                 </q-item>
                 <q-separator inset class="q-my-md" />
@@ -85,6 +91,7 @@
                 </q-item>
               </q-list>
             </q-btn-dropdown>
+            <q-badge v-if="pendingTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
         <!-- <light-switch /> -->
@@ -125,7 +132,9 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue';
+import { onBeforeMount, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router'
+import ClientDB from 'src/app/clientonly/ClientDB';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import WalletConnect from 'components/WalletConnect.vue';
@@ -133,7 +142,6 @@ import { useUser } from 'src/stores/user'
 import { useUI } from 'src/stores/ui';
 import TransactionLogger from 'src/components/TransactionLogger.vue'
 import getAppEnv from 'src/app/utils/getAppEnv'
-import { useRoute, useRouter } from 'vue-router'
 import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useInit } from 'src/composables/useInit';
 import { shortenAddress, copyText } from 'src/app/utils'
@@ -143,8 +151,19 @@ const ui = useUI()
 const route = useRoute()
 const router = useRouter()
 const messageDialog = ref<boolean>(false)
+const pendingTransactions = ref([])
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
+}
+
+// Add a stub for onBeforeMenuShow to fix the error
+const onBeforeMenuShow = () => {
+  // You can add logic here if needed before the menu shows
+  const db = ClientDB.getInstance()
+  db.getPendingTransactions().then((v) => {
+    pendingTransactions.value = v
+    console.log('PENDING TRANSACTIONS', pendingTransactions.value)
+  })
 }
 
 useInit()
@@ -159,12 +178,15 @@ watch(() => ui.statusMessage, (value) => {
   }
 })
 
-onMounted(async () => {
+onBeforeMount(async () => {
+  const db = ClientDB.getInstance()
+  pendingTransactions.value = await db.getPendingTransactions()
+})
 
+onMounted(async () => {
   if (!user.walletAddress) {
     router.push('/')
   }
-
 })
 
 

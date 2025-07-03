@@ -27,6 +27,7 @@ type UIState = {
   statusMessageSubjectTokenSymbol: string,
   statusMessageSentFTAmount: string,
   statusMessageRecipient: string,
+  statusUrl: string,
   transactionLogs?: any[],
   /**
    * The token that will loaded in Token Page
@@ -57,6 +58,7 @@ export const useUI = defineStore('ui', {
     statusMessageSentFTAmount: '',
     statusMessageSubjectTokenSymbol: '',
     statusMessageRecipient: '',
+    statusUrl: '',
     tokenBasicMetadataCache: [],
     tokenIconCache: {},
     tokenSymbolCache: {},
@@ -75,6 +77,7 @@ export const useUI = defineStore('ui', {
       this.statusMessageSentFTAmount = '',
       this.statusMessageSubjectTokenSymbol = '',
       this.statusMessageRecipient = ''
+      this.statusUrl = ''
     },
     setStatusMessage(m: {
         statusMessage:string,
@@ -86,6 +89,7 @@ export const useUI = defineStore('ui', {
         statusMessageSubjectTokenSymbol?: string,
         statusMessageSentFTAmount?: string,
         statusMessageRecipient?: string,
+        statusUrl?: string
     }) {
       this.statusMessage = m.statusMessage
       this.statusMessageType = m.statusMessageType || ''
@@ -96,6 +100,7 @@ export const useUI = defineStore('ui', {
       this.statusMessageSubjectTokenSymbol= m.statusMessageSubjectTokenSymbol || ''
       this.statusMessageSentFTAmount = m.statusMessageSentFTAmount || ''
       this.statusMessageRecipient = m.statusMessageRecipient || ''
+      this.statusUrl = m.statusUrl || ''
     }
   }
 });
