@@ -1,3 +1,4 @@
+import localforage from "localforage"
 /**
  * Local client-only database
  */
@@ -108,13 +109,6 @@ export default class ClientDB {
         }
       }
     })
-    
-
-
-
-
-
-
   }
 
   async clearCtsTransactions():Promise<boolean> {
@@ -135,5 +129,30 @@ export default class ClientDB {
     })
   }
 
+  async getPendingTransactions(): Promise<any> {
+    const ts = this.transactionsStore
+    return await new Promise((res, rej) => { 
+      const index = ts?.index('timestamp')
+      const openCursor = index?.openCursor(null, 'prev')
+      const txns:any = []
+      if (openCursor) {
+        openCursor!.onsuccess = (event:any) => {
+          const cursor = event.target.result;
+          if (cursor) {
+            if (cursor.value.broadcastStatus === 'pending') {
+              txns.push(cursor.value);
+            }
+            cursor.continue();
+          } else {
+            res(txns)
+          }
+  
+        };
+        openCursor!.onerror = (event:any) => {
+          rej(event.target?.error)
+        }
+      }
+    })
+  }
 
 }
