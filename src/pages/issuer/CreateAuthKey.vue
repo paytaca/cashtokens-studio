@@ -96,7 +96,6 @@ const generateGenesisInput = async () => {
         txType: 'generate-genesis-input',
         timestamp: new Date().getTime(),
         successMsg: signingResult.message,
-        status: 'pending',
         statusUrl: signingResult.statusUrl
       })
 
@@ -110,7 +109,12 @@ const generateGenesisInput = async () => {
             txid: null,
 
           }
-        }).onOk(() => resolve(true))
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
       })
       return router.push({ name: 'recent-transactions' })
     }
@@ -187,6 +191,37 @@ const createAuthKey = async () => {
         })
       }
     })
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.txid,
+        txidIsUnsignedHash: signingResult.txidIsUnsignedHash,
+        txType: 'create-authkey',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
     if (signingResult?.signedTransaction) {
       progress.value = 'Submitting transaction, please wait...'
 

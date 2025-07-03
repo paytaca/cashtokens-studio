@@ -2,15 +2,14 @@
   <div>
     <q-skeleton v-if="loading" type="rect"></q-skeleton>
     <div v-else>
-      <q-btn :label="`${status?.signingProgress}|${status?.broadcastStatus === 'done' ? 'broadcasted' : 'pending'}`"
-        icon-right="refresh" @click="refreshStatus" no-caps flat>
+      <q-btn :label="statusText" :loading="loading" @click="refreshStatus" no-caps flat>
       </q-btn>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{
   statusUrl: string
@@ -20,11 +19,29 @@ const emit = defineEmits<{
   (e: 'statusFetched', status: { signingProgress?: string, broadcastStatus?: string, txid?: string }): void
 }>()
 
+
 const status = ref<{
   signingProgress?: string,
   broadcastStatus?: string,
   txid?: string
 }>()
+
+const statusText = computed(() => {
+  let message = ''
+  if (status?.value?.signingProgress === 'unsigned') {
+    message = 'Unsigned, waiting for signatures'
+  }
+  if (status?.value?.signingProgress === 'partially-signed') {
+    message = 'Partially signed, waiting for more signatures'
+  }
+  if (status?.value?.signingProgress === 'fully-signed') {
+    message = 'Fully signed, waiting for broadcast'
+  }
+  if (status?.value?.broadcastStatus === 'done') {
+    message = 'Multisig transaction completed. Broadcasted successfully.'
+  }
+  return message
+})
 
 const loading = ref<boolean>(true);
 
