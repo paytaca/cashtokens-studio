@@ -17,6 +17,7 @@
   "dependencies": {
     "@bitauth/libauth": "^2.0.0-alpha.8",
     "@cashscript/utils": "^0.8.0",
+    "@electrum-cash/network": "^4.1.1",
     "@mainnet-cash/contract": "^2.3.0",
     "@pinata/sdk": "^2.1.0",
     "@quasar/extras": "^1.16.4",
