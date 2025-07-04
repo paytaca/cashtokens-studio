@@ -2,6 +2,12 @@ import { Wallet, TestNetWallet, DefaultProvider } from 'mainnet-js';
 // DefaultProvider.servers.testnet = ["wss://chipnet.imaginary.cash:50004"];
 // DefaultProvider.servers.mainnet = ["wss://fulcrum.pat.mn:50004"];
 // DefaultProvider.servers.testnet = ['wss://blackie.c3-soft.com:64004'];
+DefaultProvider.servers.mainnet = [
+  'wss://electrum.imaginary.cash:50004'
+  // 'wss://bch.imaginary.cash:50004',
+  // 'wss://electrum.imaginary.cash:50004',
+  // 'wss://fulcrum.pat.mn:50004'
+]
 DefaultProvider.servers.testnet = [
   'wss://chipnet.c3-soft.com:64004',
   // 'wss://chipnet.imaginary.cash:50004',
