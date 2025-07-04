@@ -24,13 +24,13 @@
               <tr v-for="t, i in transactions?.slice(0, 20)" :key="i">
                 <td>{{ i + 1 }}</td>
                 <td>
-                  <q-btn :href="explore(t.txid)" :disable="t.broadcastStatus !== 'done'" target="_blank" flat dense
-                    color="secondary" size="sm">
+                  <q-btn :href="explore(t.txid)" :disable="t.broadcastStatus && t.broadcastStatus !== 'done'"
+                    target="_blank" flat dense color="secondary" size="sm">
                     <template v-slot:default>
                       <code>
                         {{ shortenTx(t.txid) }}
-                        <div v-if="t.broadcastStatus !== 'done'">Temporary</div>
-                        <q-tooltip v-if="t.broadcastStatus === 'done'">View in explorer</q-tooltip>
+                        <div v-if="t.broadcastStatus && t.broadcastStatus !== 'done'">Temporary</div>
+                        <q-tooltip v-if="t.broadcastStatus && t.broadcastStatus === 'done'">View in explorer</q-tooltip>
                       </code>
                     </template>
                   </q-btn>
