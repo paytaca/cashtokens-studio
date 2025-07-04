@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { AuthchainIdentity, CashToken } from 'src/app';
+import { AuthchainIdentity, CashToken } from 'src/apps';
 
 
 export const useMinter = defineStore('minter', {

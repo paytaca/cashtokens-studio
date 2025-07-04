@@ -55,12 +55,12 @@ import { cashAddressToLockingBytecode, decodeCashAddress, lockingBytecodeToCashA
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useUser } from 'src/stores/user';
-import { DEFAULT_TOKEN_VALUE, Watchtower, AuthKey } from 'src/app'
-import { broadcastTx, buildGenesisInputTx, buildGenesisTx, signTx } from 'src/app/transactions';
+import { DEFAULT_TOKEN_VALUE, Watchtower, AuthKey } from 'src/apps'
+import { broadcastTx, buildGenesisInputTx, buildGenesisTx, signTx } from 'src/apps/transactions';
 import { useEventBus } from 'src/composables';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
-import { getInstance as getContractInstance } from 'src/app/contracts';
+import { getInstance as getContractInstance } from 'src/apps/contracts';
 
 const $q = useQuasar()
 const { $ebus } = useEventBus()

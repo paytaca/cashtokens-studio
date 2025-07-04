@@ -14,11 +14,13 @@
         </q-toolbar-title>
       </q-toolbar>
       <q-card-section>
-        <div class="q-mt-sm" style="max-width: 100%;overflow-x: auto;">
-          <q-form id="ft-issuer-form" ref="issuerForm" @submit.prevent="() => confirmSend()">
+        <div class="q-mt-sm">
+          <q-form id="ft-issuer-form" ref="issuerForm" @submit.prevent="() => confirmSend()" style="justify-items: initial !important;">
+            
+              <div class="q-gutter-md">
             <Token v-if="tokenCopy" v-bind:token="tokenCopy" :hide="['capability', 'commitment']" :readonly="['amount']"
               :labels="{ amount: 'Current Balance' }" />
-            <div class="q-gutter-lg">
+           
               <q-input :model-value="identitySnapshot?.token?.decimals || 0" label="Decimals" outlined
                 readonly></q-input>
               <q-input v-if="Number(issuedAmount) > 0" :model-value="newBalance" label="New Balance After Send" outlined
@@ -36,7 +38,7 @@
                 label="Recipient" placeholder="Paste recipient's token address"
                 :rules="[(v: string) => v && isTokenAddress(v) || 'Value should be a cashtoken address']" outlined>
               </q-input>
-            </div>
+              </div>
           </q-form>
         </div>
       </q-card-section>
@@ -55,7 +57,7 @@ import { TokenI, type IdentitySnapshot } from 'mainnet-js'
 import { computed, onBeforeMount, onMounted, ref, toRaw } from 'vue';
 import BigNumber from 'bignumber.js'
 import Token from '../../components/Token.vue'
-import { ipfsToGatewayUrl, isTokenAddress } from '../../app/utils';
+import { ipfsToGatewayUrl, isTokenAddress } from '../../apps/utils';
 
 const props = defineProps<{ token: Omit<TokenI, 'amount'> & { amount: string }, identitySnapshot?: IdentitySnapshot }>()
 const tokenCopy = ref<Omit<TokenI, 'amount'> & { amount: string }>()

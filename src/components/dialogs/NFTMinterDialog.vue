@@ -7,7 +7,8 @@
           <q-avatar class="q-mx-sm" v-if="minter.tokenUris?.icon">
             <img :src="minter.tokenUris?.icon" alt="">
           </q-avatar>
-          <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT' }}</span>
+          <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT'
+          }}</span>
 
         </q-toolbar-title>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
@@ -53,7 +54,7 @@
                 <q-tooltip>
                   {{
                     form.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                    : 'Click to convert value to a number'
+                      : 'Click to convert value to a number'
                   }}
                 </q-tooltip>
               </q-btn>
@@ -94,7 +95,8 @@
             </q-icon>
           </div>
           <div class="row justify-center">
-            <q-uploader v-if="form.uploadNftAsset" ref="nftAssetUploader" @uploaded="onNftAssetUploaded" field-name="icon"
+            <q-uploader v-if="form.uploadNftAsset" ref="nftAssetUploader" @uploaded="onNftAssetUploaded"
+              field-name="icon"
               :label="nftAssetUploader?.uploadProgressLabel === '100.00%' ? 'Asset Uploaded' : 'Upload NFT Asset'" flat
               :url="`api/tokens/nft/asset-upload?tokenId=${minter.token!.tokenId}&commitment=${nftCommitment}`" dense
               size="sm" style="width:100%;max-width: 100%;" />
@@ -113,14 +115,14 @@
 import { ref, computed, watch, onMounted } from 'vue';
 import { NFTCapability } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { CashToken } from 'src/app';
+import { CashToken } from 'src/apps';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
-import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
-import { NftCollectionType } from 'src/app/types';
-import { shortenTokenId } from 'src/app/utils';
-import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
+import convertHexLEtoBigInt from 'src/apps/utils/convertHexLEtoBigInt';
+import { NftCollectionType } from 'src/apps/types';
+import { shortenTokenId } from 'src/apps/utils';
+import convertBigIntToHexLE from "src/apps/utils/convertBigIntToHexLE"
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 

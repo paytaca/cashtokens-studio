@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { useUI } from 'src/stores/ui';
 import { computed, ref, watch } from 'vue';
-import { shortenTx, copyText } from 'src/app/utils';
+import { shortenTx, copyText } from 'src/apps/utils';
 const ui = useUI()
 
 const messageDialog = ref()

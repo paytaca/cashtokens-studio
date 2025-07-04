@@ -31,14 +31,14 @@
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import { AuthKey } from 'src/app';
+import { AuthKey } from 'src/apps';
 import { ref } from 'vue';
 import BusyButton from 'src/components/BusyButton.vue'
 import { useUser } from 'src/stores/user';
 import { Wallet, fromUtxoId } from 'mainnet-js';
-import shortenTokenId from 'src/app/utils/shortenTokenId';
+import shortenTokenId from 'src/apps/utils/shortenTokenId';
 import { useEventBus } from 'src/composables';
-import { shortenAddress } from 'src/app/utils';
+import { shortenAddress } from 'src/apps/utils';
 import { useUI } from 'src/stores/ui';
 
 defineOptions({ name: 'FungibleTokenIssuerDialog' })

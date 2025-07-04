@@ -10,7 +10,7 @@
 </template>
 
 <script setup lang="ts">
-import type { CashTokenTransaction, TransactionProposalStatus } from 'src/app/types';
+import type { CashTokenTransaction, TransactionProposalStatus } from 'src/apps/types';
 import { computed, onMounted, ref } from 'vue';
 
 const props = defineProps<{

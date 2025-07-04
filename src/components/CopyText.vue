@@ -4,7 +4,7 @@
 </template>
 <script setup lang="ts">
 import { delay } from 'mainnet-js';
-import copyText from 'src/app/utils/copyText'
+import copyText from 'src/apps/utils/copyText'
 import { ref } from 'vue';
 defineProps<{ text: string }>()
 const copied = ref<string>('')

@@ -74,9 +74,9 @@
 
 <script setup lang="ts">
 import { URIs } from 'mainnet-js'
-import { IconStorageArtifact, uploadIcon, upload as uploadToIPFS } from 'src/app/ipfs';
+import { IconStorageArtifact, uploadIcon, upload as uploadToIPFS } from 'src/apps/ipfs';
 import { defineComponent, defineModel, ref, watch } from 'vue'
-import { ipfsToGatewayUrl, isSquareImage } from 'src/app/utils'
+import { ipfsToGatewayUrl, isSquareImage } from 'src/apps/utils'
 import { useQuasar } from 'quasar';
 
 const $q = useQuasar()

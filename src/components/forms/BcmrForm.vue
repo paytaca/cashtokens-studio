@@ -68,7 +68,8 @@
           <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityName(v)"
             :model-value="bcmr?.identitySnapshot?.name" label="Token identity name" filled dense></q-input>
           <q-input class="registry-field" @update:model-value="(v: any) => bcmr?.setTokenIdentityDescription(v)"
-            :model-value="bcmr?.identitySnapshot?.description" label="Token identity description" filled dense></q-input>
+            :model-value="bcmr?.identitySnapshot?.description" label="Token identity description" filled
+            dense></q-input>
         </div>
       </q-expansion-item>
       <!-- <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
@@ -81,7 +82,7 @@
       </q-expansion-item> -->
       <q-expansion-item label="Token Identity URIs (Links)" class="q-px-md q-pt-sm q-my-sm" icon="public">
         <div class="q-mx-md q-gutter-sm q-my-md">
-          <div v-for=" uriName, i  in  Object.keys(bcmr?.identitySnapshot?.uris || {}) " :key="i">
+          <div v-for="uriName, i in Object.keys(bcmr?.identitySnapshot?.uris || {})" :key="i">
             <q-input input-class="registry-field" @update:model-value="(v: any) => bcmr?.setUri(uriName, v)"
               :model-value="bcmr?.identitySnapshot?.uris?.[uriName]" :label="uriName" filled dense />
           </div>
@@ -102,7 +103,8 @@
             :model-value="bcmr?.identitySnapshot?.token?.symbol" label="Token category symbol" filled dense></q-input>
           <q-input class="registry-field" v-if="Number(bcmr?.authchainIdentity?.token?.amount) > 0"
             @update:model-value="(v: any) => bcmr?.setTokenDecimals(v)"
-            :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled dense></q-input>
+            :model-value="bcmr?.identitySnapshot?.token?.decimals" label="Token category decimals" filled
+            dense></q-input>
         </div>
       </q-expansion-item>
 
@@ -161,7 +163,7 @@
 
 <script setup lang="ts">
 import { useQuasar } from 'quasar'
-import { AuthchainIdentity, Bcmr } from 'src/app'
+import { AuthchainIdentity, Bcmr } from 'src/apps'
 import { NftType, URIs } from 'mainnet-js'
 import { useDialogs } from 'src/composables';
 import { onMounted, ref, computed, onBeforeUnmount, watch, readonly } from 'vue';

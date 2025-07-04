@@ -1,11 +1,11 @@
 import { inject, onMounted, ref, unref, watch } from 'vue';
-import { getWalletClass } from 'src/app/utils';
+import { getWalletClass } from 'src/apps/utils';
 import { useUser } from 'src/stores/user';
 import {
   ADDRESS_WATCHER_TRIGGERED,
   DEFAULT_TOKEN_VALUE,
   Watchtower,
-} from 'src/app';
+} from 'src/apps';
 import { UtxoI, delay } from 'mainnet-js';
 import { useRouter } from 'vue-router';
 import { EventBus } from 'quasar';

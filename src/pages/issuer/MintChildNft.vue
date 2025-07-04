@@ -20,7 +20,7 @@
               <div class="col-xs-5 col-sm-4 text-caption">Symbol</div>
               <div class="col-xs-7 col-sm-auto text-caption text-primary" style="letter-spacing: 2px;"><strong>{{
                 minter.value.identitySnapshot.token.symbol
-              }}</strong></div>
+                  }}</strong></div>
             </div>
 
             <div class="row">
@@ -29,7 +29,8 @@
             </div>
             <div v-if="minter.value?.nftCollectionType == 'ParsableNftCollection'" class="row">
               <div class="col-xs-5 col-sm-4 text-caption">Parsing Bytecode</div>
-              <div class="col-xs-7 col-sm-auto text-caption">{{ minter.value.identitySnapshot.token.nfts.parse.bytecode }}
+              <div class="col-xs-7 col-sm-auto text-caption">{{ minter.value.identitySnapshot.token.nfts.parse.bytecode
+              }}
               </div>
             </div>
             <div class="row">
@@ -53,8 +54,8 @@
         </div>
       </div>
       <div class="col-xs-12 col-sm-10 col-lg-9">
-        <q-stepper v-model="state.step" active-color="warning" done-icon="done_all" done-color="primary" vertical animated
-          flat class="bg-transparent">
+        <q-stepper v-model="state.step" active-color="warning" done-icon="done_all" done-color="primary" vertical
+          animated flat class="bg-transparent">
           <q-step :name="1" :title="!state.mintTx ? 'Mint the token' : '🎉 NFT Minted!'" icon="token"
             :done="state.step > 1">
             <q-chip v-if="state.mintTx" square>
@@ -95,7 +96,7 @@
                     <q-tooltip>
                       {{
                         state.options.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                        : 'Click to convert value to a number'
+                          : 'Click to convert value to a number'
                       }}
                     </q-tooltip>
                   </q-btn>
@@ -114,7 +115,8 @@
               </q-input>
               <q-input v-if="state.options.quantity > 1 && state.options.mintOption !== MINT_SUPPLY_FOR_A_COMMITMENT"
                 :model-value="commitmentLast" :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']"
-                :outlined="!state.mintTx" :disable="!!state.mintTx" :readonly="!!state.mintTx" label="Commitment (last)">
+                :outlined="!state.mintTx" :disable="!!state.mintTx" :readonly="!!state.mintTx"
+                label="Commitment (last)">
                 <template v-slot:prepend>
                   <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
                     no-caps :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
@@ -126,7 +128,7 @@
                     <q-tooltip>
                       {{
                         state.options.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                        : 'Click to convert value to a number'
+                          : 'Click to convert value to a number'
                       }}
                     </q-tooltip>
                   </q-btn>
@@ -160,8 +162,9 @@
                     :rules="[(v) => /^[0-9A-Fa-f\s]+$/.test(v) || !v || 'Invalid value']" :outlined="!state.mintTx"
                     label="Minter's new commitment after mint" :bottom-slot="!!state.token.commitment">
                     <template v-slot:prepend>
-                      <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense size="sm"
-                        no-caps :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
+                      <q-btn :label="state.options.commitmentFormat === 'decimal' ? undefined : '0x'" flat dense
+                        size="sm" no-caps
+                        :icon-right="state.options.commitmentFormat === 'decimal' ? 'pin' : undefined" />
                     </template>
                     <template v-slot:append>
                       <q-btn @click="convertCommitment" color="warning" dense :flat="$q.dark.isActive ? true : false"
@@ -170,7 +173,7 @@
                         <q-tooltip>
                           {{
                             state.options.commitmentFormat === 'decimal' ? 'Click to value to hex'
-                            : 'Click to convert value to a number'
+                              : 'Click to convert value to a number'
                           }}
                         </q-tooltip>
                       </q-btn>
@@ -223,8 +226,8 @@
               This could be an image, pdf, music, etc... To upload an icon, drop a file with name 'icon', e.g.
               icon.png
             </p>
-            <q-uploader ref="fileUploader" @uploaded="onFileUploaded" @added="onFileAdded" :factory="fileUploaderFactory"
-              field-name="file" :label="'Upload'"
+            <q-uploader ref="fileUploader" @uploaded="onFileUploaded" @added="onFileAdded"
+              :factory="fileUploaderFactory" field-name="file" :label="'Upload'"
               :url="`/api/tokens/nft/asset-upload?tokenId=${state.token.tokenId}&commitment=${state.token.commitment}`"
               flat dense size="sm" style="width:100%;max-width: 100%; border: 2px dashed rgb(129 123 123 / 80%); "
               color="dark" class="q-my-md" multiple square bordered no-thumbnails auto-upload />
@@ -251,11 +254,11 @@
               <div class="text-h6 q-mt-md">NFT Attributes<q-btn flat color="primary" icon="add" size="md"
                   @click="openAttributeDialog" type="button" /></div>
               <div class="row q-gutter-md">
-                <q-input v-for="attrKey, i in Object.keys(nftAttributes)" v-model="nftAttributes[attrKey]" outlined dense
-                  :label="attrKey" :key="i">
+                <q-input v-for="attrKey, i in Object.keys(nftAttributes)" v-model="nftAttributes[attrKey]" outlined
+                  dense :label="attrKey" :key="i">
                   <template v-slot:after>
-                    <q-icon v-if="!nftType.saved" name="delete_forever" @click.stop="() => delete nftAttributes[attrKey]"
-                      color="negative" class="cursor-pointer">
+                    <q-icon v-if="!nftType.saved" name="delete_forever"
+                      @click.stop="() => delete nftAttributes[attrKey]" color="negative" class="cursor-pointer">
                     </q-icon>
                   </template>
                 </q-input>
@@ -266,8 +269,8 @@
                   label="Continue" class="q-ml-sm" size="lg" :disable="!nftType.saved" />
                 <q-btn name="stepper-nav" flat @click.stop="state.step = 4" color="primary" label="Skip" class="q-ml-sm"
                   size="lg" />
-                <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm" size="lg"
-                  :disable="!nftType.name" :icon-right="nftType.saved ? 'done_all' : undefined" />
+                <q-btn name="stepper-nav" @click.stop="saveNftType" color="primary" label="Save" class="q-ml-sm"
+                  size="lg" :disable="!nftType.name" :icon-right="nftType.saved ? 'done_all' : undefined" />
               </q-stepper-navigation>
             </q-form>
           </q-step>
@@ -321,13 +324,13 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { NFTCapability, TestNetWallet, TokenI, Wallet, binToHex } from 'mainnet-js'
 import { useQuasar } from 'quasar'
-import { AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/app'
+import { AuthKey, AuthchainIdentity, Bcmr, ChainGraph } from 'src/apps'
 import { useUser } from 'src/stores/user'
-import { BcmrStorageArtifact } from 'src/app/types'
-import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/app/utils'
+import { BcmrStorageArtifact } from 'src/apps/types'
+import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/apps/utils'
 import { useEventBus } from 'src/composables'
 import { useUI } from 'src/stores/ui'
-import { RegistryNftType } from 'src/app'
+import { RegistryNftType } from 'src/apps'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { bigIntToVmNumber, sha1 } from '@bitauth/libauth'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'

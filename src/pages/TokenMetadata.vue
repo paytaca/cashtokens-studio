@@ -158,8 +158,8 @@
                                 </q-avatar>
                                 <span style="letter-spacing: 5px;">
                                   {{
-          bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
-        }}
+                                    bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].token?.symbol
+                                  }}
                                 </span>
                               </q-chip>
                             </div>
@@ -281,7 +281,7 @@
                           </q-input>
                         </div>
                         <div
-                          v-for="[k], i  in  Object.entries(bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris || {})"
+                          v-for="[k], i in Object.entries(bcmr.identities![bcmrSelectedAuthbase][bcmrSelectedIdentityHistory.toISOString()].uris || {})"
                           :key="i" class="q-gutter-sm">
 
                           <template v-if="k.toLowerCase() !== 'icon' && k.toLowerCase() !== 'web'">
@@ -386,20 +386,20 @@
                         :selection="nftTypesShown == 'unpublished' ? 'multiple' : 'none'" :loading="nftTypesIsLoading"
                         color="warning" @request="onTableRequest" style="background:unset;margin-bottom: 3rem;"
                         :columns="[
-          {
-            name: 'nfttype', label: 'Nft Type',
-            field: r => '',
-            align: 'left',
-            headerStyle: 'padding: 1.5em',
-          },
-          {
-            name: 'actions', label: '',
-            field: r => '',
-            align: 'center',
-            headerStyle: 'padding: 1.5em',
-          },
-        ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id" :visible-columns="['nfttype', 'actions']"
-                        bordered>
+                          {
+                            name: 'nfttype', label: 'Nft Type',
+                            field: r => '',
+                            align: 'left',
+                            headerStyle: 'padding: 1.5em',
+                          },
+                          {
+                            name: 'actions', label: '',
+                            field: r => '',
+                            align: 'center',
+                            headerStyle: 'padding: 1.5em',
+                          },
+                        ]" :rows-per-page-options="nftTypesRowsPerPage" row-key="id"
+                        :visible-columns="['nfttype', 'actions']" bordered>
 
                         <template v-slot:body-cell-nfttype="value">
                           <td>
@@ -434,21 +434,21 @@
                               <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                                 <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                                   {{
-          isSequentialNftCollection(value.row.identitySnapshot?.nfts?.parse?.bytecode) ?
-            `#${computedNftSequenceNumber(value.row._meta?.commitment || value.row.commitment ||
-              '')}` :
-            value.row._meta?.commitment || value.row.commitment
-        }} {{
-            computedNftNameForSequentialNft(value.row.identitySnapshot?.nfts?.parse?.bytecode,
-              value.row._meta?.commitment || value.row.commitment ||
-              '') }}
+                                    isSequentialNftCollection(value.row.identitySnapshot?.nfts?.parse?.bytecode) ?
+                                      `#${computedNftSequenceNumber(value.row._meta?.commitment || value.row.commitment ||
+                                        '')}` :
+                                      value.row._meta?.commitment || value.row.commitment
+                                  }} {{
+                                    computedNftNameForSequentialNft(value.row.identitySnapshot?.nfts?.parse?.bytecode,
+                                      value.row._meta?.commitment || value.row.commitment ||
+                                      '') }}
                                   <sup v-if="value.row?._meta?.modified"><q-badge outline color="warning"><q-icon
                                         name="priority_high" color="warning"></q-icon>Modified</q-badge> </sup>
                                 </div>
                                 <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                                   {{
-          `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
-        }}
+                                    `(${value.row[value.row._meta?.commitment || value.row.commitment || '']?.name})`
+                                  }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -456,10 +456,10 @@
                                   :style="$q.screen.xs ? 'text-wrap:wrap;width:20ch;max-width:20ch' : 'text-wrap:wrap;width:60ch;max-width:80ch'">
                                   Description:
                                   {{
-          value.row[value.row._meta?.commitment ||
-            value.row.commitment || '']?.description ||
-          '<no description>'
-        }}
+                                    value.row[value.row._meta?.commitment ||
+                                      value.row.commitment || '']?.description ||
+                                    '<no description>'
+                                  }}
                                 </div>
                               </div>
                               <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -570,13 +570,13 @@
 import { onMounted, ref, watch, onBeforeMount, computed, onBeforeUnmount } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useUI } from 'src/stores/ui'
-import { Bcmr, BcmrIndexer, ChainGraph } from 'src/app';
+import { Bcmr, BcmrIndexer, ChainGraph } from 'src/apps';
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublishFromFileDialog.vue';
-import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/app/types';
+import { BcmrStorageArtifact, IconStorageArtifact, PaginatedData } from 'src/apps/types';
 import { useTokenStore } from 'src/stores/token'
-import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage, sortNftTypesASC, openTxInExplorer } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId, formatCommitment, isSquareImage, sortNftTypesASC, openTxInExplorer } from 'src/apps/utils'
 import { NFTCapability, NftType, delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useLocalForage } from 'src/composables/useLocalForage';
@@ -586,7 +586,7 @@ import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
 import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
-import { upload as uploadToIPFS } from 'src/app/ipfs'
+import { upload as uploadToIPFS } from 'src/apps/ipfs'
 
 
 const $q = useQuasar()

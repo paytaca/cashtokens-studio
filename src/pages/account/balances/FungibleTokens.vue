@@ -93,7 +93,7 @@
                         <div class="text-weight-thin text-caption text-grey-8">
                           Decimals: <span
                             :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-              value.row.identitySnapshot?.token?.decimals }}</span>
+                              value.row.identitySnapshot?.token?.decimals }}</span>
                         </div>
                       </div>
                       <div v-else class="text-grey-8">
@@ -133,14 +133,14 @@
 import { ref, computed, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { BcmrIndexer, Watchtower } from 'src/app'
-import { FungibleTokenBalance, PaginatedData } from 'src/app/types';
-import { FetchUtxoQueryParams } from 'src/app/Watchtower'
+import { BcmrIndexer, Watchtower } from 'src/apps'
+import { FungibleTokenBalance, PaginatedData } from 'src/apps/types';
+import { FetchUtxoQueryParams } from 'src/apps/Watchtower'
 import FTBalanceTransferDialog from 'src/components/dialogs/FTBalanceTransferDialog.vue';
 import { IdentitySnapshot, UtxoI, Wallet } from 'mainnet-js';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenTokenId } from 'src/apps/utils';
 import { useQuasar } from 'quasar';
-import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
+import ftAmountFormatter from 'src/apps/utils/ftAmountFormatter'
 defineOptions({ name: 'NonFungibleTokens' })
 const $q = useQuasar()
 const user = useUser()

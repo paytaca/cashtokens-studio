@@ -10,8 +10,8 @@
       </q-toolbar>
       <q-card-section class="q-gutter-sm">
         <q-form class="q-gutter-sm">
-          <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance.tokenId" label="Token ID/Category" filled dense
-            disable></q-input>
+          <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance.tokenId" label="Token ID/Category" filled
+            dense disable></q-input>
           <q-input v-if="tokenBalance.tokenId" :model-value="tokenBalance?.identitySnapshot?.token?.decimals"
             label="Decimals" filled dense disable></q-input>
           <q-input :model-value="newBalanceWithDecimal"
@@ -26,8 +26,8 @@
             :disable="Boolean(processingMessage?.processing)"
             :rules="[tokenAmountHonorsDecimalPlaces, tokenAmountIsLessThanSupply]" autofocus>
             <template v-slot:append>
-              <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
-                dense
+              <q-btn color="warning" :flat="$q.dark.isActive ? true : false"
+                :class="$q.dark.isActive ? '' : 'text-black'" dense
                 @click="form.amount = ftAmtFormatter.toDecimal(tokenBalance.balance.toString(), props.tokenBalance.identitySnapshot?.token?.decimals)">Send
                 all</q-btn>
             </template>
@@ -38,7 +38,8 @@
             </template>
           </q-input>
           <div v-if="!tokenBalance.identitySnapshot?.token?.decimals && form.amount.includes('.')" class="text-italic">
-            <q-icon name="warning" color="warning" size="xs" /> Token has 0 or no `decimals` metadata. Value after decimal
+            <q-icon name="warning" color="warning" size="xs" /> Token has 0 or no `decimals` metadata. Value after
+            decimal
             point
             will be
             ignored.
@@ -52,8 +53,9 @@
           <q-input v-model="form.to" label="Recipient's Address" filled dense
             :disable="Boolean(processingMessage?.processing)">
             <template v-slot:append>
-              <q-btn color="warning" :flat="$q.dark.isActive ? true : false" :class="$q.dark.isActive ? '' : 'text-black'"
-                dense @click="form.to = (user.wallet?.getTokenDepositAddress() as string)"
+              <q-btn color="warning" :flat="$q.dark.isActive ? true : false"
+                :class="$q.dark.isActive ? '' : 'text-black'" dense
+                @click="form.to = (user.wallet?.getTokenDepositAddress() as string)"
                 :disable="Boolean(processingMessage?.processing)">Send
                 to
                 self</q-btn>
@@ -71,18 +73,18 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
-import { FungibleTokenBalance } from 'src/app/types';
+import { FungibleTokenBalance } from 'src/apps/types';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { CashToken } from 'src/app';
+import { CashToken } from 'src/apps';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { shortenAddress, shortenTx } from 'src/app/utils';
-import { ProcessingMessage } from 'src/app'
+import { shortenAddress, shortenTx } from 'src/apps/utils';
+import { ProcessingMessage } from 'src/apps'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui'
-import ftAmtFormatter from 'src/app/utils/ftAmountFormatter'
+import ftAmtFormatter from 'src/apps/utils/ftAmountFormatter'
 const props = defineProps<{
   tokenBalance: FungibleTokenBalance
 }>()

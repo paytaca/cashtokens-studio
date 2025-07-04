@@ -94,7 +94,8 @@
                 <q-checkbox v-model="showAdvancedFields" label="Show Advanced Fields"></q-checkbox>
               </div> -->
               <template v-if="authKey && tokenType">
-                <q-form ref="form" @submit.prevent="createToken" class="q-my-lg">
+                <q-form ref="form" @submit.prevent="createToken" class="q-my-lg"
+                  style="justify-items: initial !important;">
                   <Token v-if="tokenType && tokenType.value == TokenType.ft" v-model:token="token"
                     :hide="['commitment', 'capability']" :labels="{ amount: 'Max Supply' }" title="Details"
                     enable-max-amount-setter :symbol="symbol" />
@@ -111,7 +112,7 @@
                     v-if="tokenType.value != TokenType.nft && typeof (registry?.registryIdentity) == 'string' && registry.latestRevision && registry.identities && registry.identities[registry.registryIdentity][registry.latestRevision].token"
                     :model-value="registry.identities[registry.registryIdentity][registry.latestRevision].token!.decimals"
                     @update:model-value="(v) => updateDecimals(String(v || ''))" label="Decimals" :rules="decimalsRules"
-                    outlined style="width:max-content" :disable="!token.amount" hide-bottom-space>
+                    outlined :disable="!token.amount" hide-bottom-space>
                   </q-input>
                   <IdentitySnapshotComponent
                     v-if="registry?.registryIdentity && registry.latestRevision && registry.identities && typeof (registry.registryIdentity) == 'string'"
@@ -145,7 +146,7 @@
         <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
           <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
           <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-            }}</span>
+          }}</span>
         </q-inner-loading>
       </q-page>
     </q-page-container>
@@ -158,16 +159,16 @@ import { computed, onBeforeMount, onMounted, ref, toRaw, watch } from 'vue'
 import { NFTCapability, type Registry, type IdentitySnapshot, type TokenI, type UtxoI, type Wallet } from 'mainnet-js'
 import { useRoute, useRouter } from 'vue-router'
 import { Draft07 } from 'json-schema-library'
-import { DEFAULT_TOKEN_VALUE, TokenType, Watchtower } from 'src/app'
-import { buildGenesisInputTx } from 'src/app/transactions/buildGenesisInputTx'
-import { signTx } from 'src/app/transactions/signTx'
-import { broadcastTx, buildGenesisTx } from 'src/app/transactions'
+import { DEFAULT_TOKEN_VALUE, TokenType, Watchtower } from 'src/apps'
+import { buildGenesisInputTx } from 'src/apps/transactions/buildGenesisInputTx'
+import { signTx } from 'src/apps/transactions/signTx'
+import { broadcastTx, buildGenesisTx } from 'src/apps/transactions'
 import { useUser } from 'src/stores/user'
 import { useQuasar } from 'quasar'
-import { shortenTx } from 'src/app/utils'
-import { createRegistryTemplate } from 'src/app/bcmr'
-import { getInstance as getAuthguardInstance } from 'src/app/contracts'
-import bcmrSchema from 'src/app/bcmr/bcmr-v2.schema.json'
+import { shortenTx } from 'src/apps/utils'
+import { createRegistryTemplate } from 'src/apps/bcmr'
+import { getInstance as getAuthguardInstance } from 'src/apps/contracts'
+import bcmrSchema from 'src/apps/bcmr/bcmr-v2.schema.json'
 import { useEventBus } from 'src/composables'
 import Token from 'src/components/Token.vue'
 import TokenCategoryComponent from 'src/components/bcmr/TokenCategory.vue'
@@ -176,7 +177,8 @@ import IdentitySnapshotComponent from 'src/components/bcmr/IdentitySnapshot.vue'
 import NftCategoryComponent from 'src/components/bcmr/NftCategory.vue'
 import Uris from 'src/components/bcmr/Uris.vue'
 import CopyText from 'src/components/CopyText.vue'
-import { upload as uploadToIPFS } from 'src/app/ipfs'
+import { upload as uploadToIPFS } from 'src/apps/ipfs'
+import { cashAddressToLockingBytecode, lockingBytecodeToCashAddress } from '@bitauth/libauth'
 
 const route = useRoute()
 const router = useRouter()
@@ -421,6 +423,7 @@ const createToken = async () => {
       delete aKey.token
     }
     amount = String(amount).replace('.', '')
+
     const genesisTransaction = await buildGenesisTx({
       input: toRaw(genesisInput.value!),
       token: {
@@ -502,6 +505,7 @@ watch(() => tokenId.value, (v) => {
 })
 
 watch(() => useExistingAuthKey.value, async (yes) => {
+  console.log('user wallet', user.wallet)
   if (yes) {
     authKeyOptionsLoading.value = true
     progress.value = 'Checking your wallet for AuthKeys...'
@@ -579,7 +583,7 @@ onBeforeMount(async () => {
   progress.value = false
 })
 
-onMounted(() => {
+onMounted(async () => {
 
   showAdvancedFields.value = false
   let label
@@ -597,12 +601,16 @@ onMounted(() => {
     tokenType.value = { value: route.query.tokenType as TokenType, label }
   }
 
-  (async () => {
-    authKeyOptions.value = await getAuthKeyOptions()
-    if ((authKeyOptions.value?.length ?? 0) > 0) {
-      useExistingAuthKey.value = true
-    }
-  })()
+  // (async () => {
+  //   authKeyOptions.value = await getAuthKeyOptions()
+  //   if ((authKeyOptions.value?.length ?? 0) > 0) {
+  //     useExistingAuthKey.value = true
+  //   }
+  // })()
 
+  authKeyOptions.value = await getAuthKeyOptions()
+  if ((authKeyOptions.value?.length ?? 0) > 0) {
+    useExistingAuthKey.value = true
+  }
 })
 </script>

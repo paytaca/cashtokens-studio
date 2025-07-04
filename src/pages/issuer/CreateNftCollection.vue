@@ -60,11 +60,11 @@
                   style="width:100%">
                   Capability <sup><code class="text-caption">{{ token.capability }}</code></sup>
                   <q-option-group name="preferred_genre" v-model="token.capability" :options="[
-              { value: NFTCapability.minting, label: 'Minting' },
-              { value: NFTCapability.mutable, label: 'Mutable' },
-              { value: NFTCapability.none, label: 'None' }
-            ]
-              " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+                    { value: NFTCapability.minting, label: 'Minting' },
+                    { value: NFTCapability.mutable, label: 'Mutable' },
+                    { value: NFTCapability.none, label: 'None' }
+                  ]
+                    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
                 </div>
               </div>
 
@@ -102,16 +102,16 @@ import { TokenCategory as TokenCategoryType, Registry, IdentitySnapshot, URIs, T
 import { NFTCapability, UtxoI, Wallet, delay } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { useUser } from 'src/stores/user'
-import { AuthKey, CashToken, GenesisInput, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
+import { AuthKey, CashToken, GenesisInput, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/apps'
 import BusyButton from 'src/components/BusyButton.vue'
 import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
-import { Bcmr } from 'src/app/bcmr/Bcmr'
-import { BcmrStorageArtifact, NftCollectionType, TransactionSigner } from 'src/app/types'
+import { Bcmr } from 'src/apps/bcmr/Bcmr'
+import { BcmrStorageArtifact, NftCollectionType, TransactionSigner } from 'src/apps/types'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs, useEventBus } from 'src/composables'
-import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
-import { buildAuthchain } from 'src/app/globalfunctions'
-import { shortenTx } from 'src/app/utils'
+import convertBigIntToHexLE from "src/apps/utils/convertBigIntToHexLE"
+import { buildAuthchain } from 'src/apps/globalfunctions'
+import { shortenTx } from 'src/apps/utils'
 import { useUI } from 'src/stores/ui'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import { ref, watch, onMounted, computed } from 'vue'

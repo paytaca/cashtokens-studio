@@ -1,6 +1,6 @@
 import { UtxoI, Wallet, NetworkType } from 'mainnet-js'
 import { Contract } from "@mainnet-cash/contract"
-import getWalletClass from 'src/app/utils/getWalletClass'
+import getWalletClass from 'src/apps/utils/getWalletClass'
 
 export class AuthGuard {
   tokenId: string

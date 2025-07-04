@@ -30,7 +30,7 @@
 import { defineComponent, defineModel, onMounted } from 'vue'
 import { NFTCapability, TokenI } from 'mainnet-js'
 import CopyText from './CopyText.vue'
-import { MAX_FUNGIBLE_AMOUNT } from 'src/app/constants';
+import { MAX_FUNGIBLE_AMOUNT } from 'src/apps/constants';
 defineComponent({ name: 'TokenComponent' })
 export type TokenProps = {
   hide?: string[],

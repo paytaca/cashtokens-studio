@@ -11,19 +11,19 @@
       <q-card-section>
         <q-table v-model:pagination="nftTypesPagination" flat :rows="nftsTypes" color="warning"
           style="background:unset;margin-bottom: 3rem;" :columns="[
-    {
-      name: 'nfttype', label: 'Nft Type',
-      field: r => '',
-      align: 'left',
-      headerStyle: 'padding: 1.5em',
-    },
-    {
-      name: 'actions', label: '',
-      field: r => '',
-      align: 'center',
-      headerStyle: 'padding: 1.5em',
-    },
-  ]" :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']" bordered>
+            {
+              name: 'nfttype', label: 'Nft Type',
+              field: r => '',
+              align: 'left',
+              headerStyle: 'padding: 1.5em',
+            },
+            {
+              name: 'actions', label: '',
+              field: r => '',
+              align: 'center',
+              headerStyle: 'padding: 1.5em',
+            },
+          ]" :rows-per-page-options="[12, 24, 36]" row-key="id" :visible-columns="['nfttype', 'actions']" bordered>
           <template v-slot:body-cell-nfttype="value">
             <td>
               <div class="row justify-left items-center flex wrap q-gutter-sm">
@@ -42,10 +42,10 @@
                 <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                   <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                     {{ !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
-    value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-    `#${formatCommitment(Object.keys(value.row)[0], 'vm-number',
-      'decimal')}` :
-    Object.keys(value.row)[0] }}
+                      value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
+                      `#${formatCommitment(Object.keys(value.row)[0], 'vm-number',
+                        'decimal')}` :
+                      Object.keys(value.row)[0] }}
                   </div>
                   <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                     {{ `(${value.row[Object.keys(value.row)[0]]?.name})` }}
@@ -54,8 +54,8 @@
                 <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                   <div class="text-grey-6 ellipsis-2-lines">
                     Description: {{
-    value.row[Object.keys(value.row)[0]].description
-    || '<no description>' }}
+                      value.row[Object.keys(value.row)[0]].description
+                      || '<no description>' }}
                   </div>
                 </div>
                 <!-- <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
@@ -97,11 +97,11 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { NftType } from 'mainnet-js'
-import { ipfsToGatewayUrl } from 'src/app/utils'
+import { ipfsToGatewayUrl } from 'src/apps/utils'
 import { useLocalForage } from 'src/composables/useLocalForage'
-import { formatCommitment } from 'src/app/utils'
-import { AuthchainIdentity } from 'src/app'
-import { PaginatedData } from 'src/app/types'
+import { formatCommitment } from 'src/apps/utils'
+import { AuthchainIdentity } from 'src/apps'
+import { PaginatedData } from 'src/apps/types'
 
 const $q = useQuasar()
 const localForage = useLocalForage()

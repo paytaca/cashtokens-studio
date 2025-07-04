@@ -16,7 +16,7 @@
               <q-separator />
               <q-list ref=" scrollTargetRef" class="scroll" style="max-height: 30em;">
                 <q-infinite-scroll @load="onLoadMenu" :offset="250" :scroll-target="scrollTargetRef">
-                  <q-item v-for="(item, index) in  collections.results " :key="index" clickable
+                  <q-item v-for="(item, index) in collections.results" :key="index" clickable
                     @click="(e) => { selectedCollection = item; collectionMenu = !collectionMenu }">
                     <q-item-section>
                       <q-banner v-ripple class="rounded-borders text-grey-4 q-pa-sm"
@@ -145,11 +145,11 @@
                           <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                             <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                               {{
-        !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
-          value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
-          `#${formatCommitment(value.row.commitment, 'vm-number', 'decimal')} ` :
-          value.row._meta?.commitment
-      }}
+                                !value.row.identitySnapshot?.nfts?.parse?.bytecode &&
+                                  value.row.identitySnapshot?.nfts?.parse?.bytecode !== '00d26b' ?
+                                  `#${formatCommitment(value.row.commitment, 'vm-number', 'decimal')} ` :
+                                  value.row._meta?.commitment
+                              }}
                             </div>
                             <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
                               <span
@@ -168,13 +168,13 @@
                           </div>
                           <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                             <div class="text-grey-8 flex wrap">
-                              <span v-for=" k, i  in  Object.keys(value.row[value.row.commitment]?.extensions || {}) "
+                              <span v-for="k, i in Object.keys(value.row[value.row.commitment]?.extensions || {})"
                                 :key="'extensions' + i">
                                 <q-chip v-if="typeof (value.row[value.row.commitment]?.extensions[k]) == 'string'"
                                   :label="value.row[value.row.commitment]?.extensions[k]"></q-chip>
                                 <span v-else-if="typeof (value.row[value.row.commitment]?.extensions[k]) == 'object'">
                                   <span
-                                    v-for=" kk, ii  in  Object.keys(value.row[value.row.commitment]?.extensions[k] || {}) "
+                                    v-for="kk, ii in Object.keys(value.row[value.row.commitment]?.extensions[k] || {})"
                                     :key="kk + ii" class="flex wrap">
                                     <q-chip
                                       v-if="typeof (value.row[value.row.commitment]?.extensions[k][kk]) == 'string'"
@@ -221,8 +221,8 @@
 <script setup lang="ts">
 import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount, nextTick, toRaw, capitalize } from 'vue';
 import { useUser } from 'src/stores/user'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, CashToken, ChainGraph, Watchtower } from 'src/app'
-import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Bcmr, BcmrIndexer, CashToken, ChainGraph, Watchtower } from 'src/apps'
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { UtxoI, Wallet, NFTCapability, NftType, TokenI, delay, IdentitySnapshot } from 'mainnet-js';
 import CopyText from 'src/components/CopyText.vue'
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
@@ -234,16 +234,16 @@ import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useLocalForage } from 'src/composables/useLocalForage';
 import { useUI } from 'src/stores/ui';
-import { ipfsToGatewayUrl, formatCommitment } from 'src/app/utils';
+import { ipfsToGatewayUrl, formatCommitment } from 'src/apps/utils';
 import { useAuthhead } from 'src/stores/authhead';
-import { shortenTokenId } from 'src/app/utils'
+import { shortenTokenId } from 'src/apps/utils'
 import NftTypeForPublicationDialog from 'src/components/dialogs/NftTypeForPublicationDialog.vue';
 import NftViewDialog from 'src/components/dialogs/NftViewDialog.vue'
 import { useEventBus } from 'src/composables';
-import { locateRegistry } from 'src/app/bcmr/locateRegistry';
-import { BcmrIndexerNftsResponse, NFTCollectionType } from 'src/app/bcmr/types';
-import { buildMintTx } from 'src/app/transactions/buildMintTx';
-import { broadcastTx, signTx } from 'src/app/transactions';
+import { locateRegistry } from 'src/apps/bcmr/locateRegistry';
+import { BcmrIndexerNftsResponse, NFTCollectionType } from 'src/apps/bcmr/types';
+import { buildMintTx } from 'src/apps/transactions/buildMintTx';
+import { broadcastTx, signTx } from 'src/apps/transactions';
 import { bigIntToVmNumber, binToHex, vmNumberToBigInt } from '@bitauth/libauth';
 import { useMinter } from 'src/stores/minter';
 import TokenCategory from 'src/components/TokenCategory.vue';
@@ -859,4 +859,4 @@ onBeforeUnmount(() => {
 .selected {
   background: linear-gradient(95.6deg, rgb(5, 58, 127) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);
 }
-</style>src/app/modules
+</style>src/apps/modules

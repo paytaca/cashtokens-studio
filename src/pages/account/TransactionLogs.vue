@@ -51,10 +51,10 @@
   </q-page>
 </template>
 <script setup lang="ts">
-import ClientDB from 'src/app/clientonly/ClientDB';
+import ClientDB from 'src/apps/clientonly/ClientDB';
 import { computed, onMounted, ref } from 'vue';
-import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/app/types';
-import { shortenTx } from 'src/app/utils';
+import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/apps/types';
+import { shortenTx } from 'src/apps/utils';
 import MultisigTransactionStatus from 'src/components/MultisigTransactionStatus.vue';
 
 const transactions = ref<CashTokenTransaction[]>()

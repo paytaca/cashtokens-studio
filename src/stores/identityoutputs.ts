@@ -1,7 +1,7 @@
 import { TestNetWallet, Wallet } from 'mainnet-js';
 import { defineStore } from 'pinia'
-import { AuthKey, AuthchainIdentity, Watchtower } from 'src/app';
-import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { AuthKey, AuthchainIdentity, Watchtower } from 'src/apps';
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { UserState } from './user';
 
 type Paginator = {

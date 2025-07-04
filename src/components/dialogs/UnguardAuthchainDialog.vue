@@ -28,20 +28,20 @@
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => unguardAuthchain()" :busyLabel="authchainIdentity.processing" label="Unguard Authchain"
-          color="primary" />
+        <BusyButton @click="() => unguardAuthchain()" :busyLabel="authchainIdentity.processing"
+          label="Unguard Authchain" color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 <script setup lang="ts">
 import { Ref, ref } from 'vue';
-import { AuthchainIdentity } from 'src/app'
+import { AuthchainIdentity } from 'src/apps'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useQuasar } from 'quasar';
-import shortenTx from 'src/app/utils/shortenTx';
+import shortenTx from 'src/apps/utils/shortenTx';
 import { useEventBus } from 'src/composables';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenTokenId } from 'src/apps/utils';
 import { useUI } from 'src/stores/ui';
 import TokenCategory from 'src/components/TokenCategory.vue'
 

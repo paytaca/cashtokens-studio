@@ -6,7 +6,8 @@
         <p class="text-justify">
           If you created a token in Cashonize, you can import the AuthUtxo by transferring it to one of your AuthGuard
           Contract Addresses here-below. (To create an AuthGuard/AuthKey Pair <q-btn to="/issuer/tokens/create/authkey"
-            flat color="secondary" dense no-caps class="q-pl-0" label="Click Here" style="text-indent:0px !important" />)
+            flat color="secondary" dense no-caps class="q-pl-0" label="Click Here"
+            style="text-indent:0px !important" />)
         </p>
         <p class="text-justify">Once transferred, it will be locked on the AuthGuard contract that you've
           selected. Click on "Refresh Locked Tokens" to refresh the list of locked tokens on the AuthGuard contract. Now
@@ -100,14 +101,14 @@ import { Wallet, delay } from 'mainnet-js';
 import { useUser } from 'src/stores/user';
 import { inject, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthGuard, AuthKey, Watchtower } from 'src/app'
+import { ADDRESS_WATCHER_TRIGGERED, AuthGuard, AuthKey, Watchtower } from 'src/apps'
 import TokenCategory from 'src/components/TokenCategory.vue';
 import TableBodySkeleton from 'src/components/TableBodySkeleton.vue';
 import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
 import AuthKeyCreateTokenDialog from 'src/components/dialogs/AuthKeyCreateTokenDialog.vue'
 import CashAddress from 'src/components/CashAddress.vue';
-import { PaginatedData } from 'src/app/types';
-import { getWalletClass } from 'src/app/utils';
+import { PaginatedData } from 'src/apps/types';
+import { getWalletClass } from 'src/apps/utils';
 import { EventBus } from 'quasar';
 import AuthGuardTokenListDialog from 'src/components/dialogs/AuthGuardTokenListDialog.vue';
 import { useUI } from 'src/stores/ui';

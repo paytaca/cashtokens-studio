@@ -26,7 +26,7 @@ import { defineComponent, defineModel } from 'vue'
 import type { TokenCategory } from 'mainnet-js'
 import NftCategoryComponent from './NftCategory.vue';
 import CopyText from '../CopyText.vue';
-import { default as reservedCryptoSymbols } from 'src/app/bcmr/reserved-token-symbols-cryptocurrencies.json'
+import { default as reservedCryptoSymbols } from 'src/apps/bcmr/reserved-token-symbols-cryptocurrencies.json'
 
 export type TokenCategoryProps = {
   title?: string,

@@ -9,18 +9,18 @@
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
             :rows="ownedAuthHeads.results" color="warning" :loading="populatingTable"
             loading-label="Loading, please wait..." :columns="[
-    {
-      name: 'balance', label: 'Balance',
-      field: r => r.token?.amount || 0,
-      align: 'left',
-      headerClasses: 'text-h5 text-bold'
-    },
-    {
-      name: 'actions', label: '',
-      field: r => '',
-      align: 'center',
-    }
-  ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
+              {
+                name: 'balance', label: 'Balance',
+                field: r => r.token?.amount || 0,
+                align: 'left',
+                headerClasses: 'text-h5 text-bold'
+              },
+              {
+                name: 'actions', label: '',
+                field: r => '',
+                align: 'center',
+              }
+            ]" :rows-per-page-options="rowsPerPageOptions" row-key="name" :visible-columns="visibleColumns"
             :dense="$q.screen.lt.sm">
             <template v-slot:body-cell-balance="value">
               <q-td>
@@ -58,7 +58,7 @@
                         <div class="text-weight-thin text-caption text-grey-8">
                           Decimals: <span
                             :class="value.row.identitySnapshot?.token?.decimals ? 'text-warning' : 'text-grey-8'">{{
-    value.row.identitySnapshot?.token?.decimals }}</span>
+                              value.row.identitySnapshot?.token?.decimals }}</span>
                         </div>
                       </div>
                       <div v-else class="text-grey-8">
@@ -101,19 +101,19 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, inject, onBeforeUnmount, watch } from 'vue';
 import { useUser } from 'src/stores/user'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/app'
-import { PaginatedData, TransactionSigner } from 'src/app/types';
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/apps'
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { IdentitySnapshot, UtxoI, Wallet } from 'mainnet-js';
 import { EventBus, useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useEventBus } from 'src/composables'
-import ftAmountFormatter from 'src/app/utils/ftAmountFormatter'
-import { ipfsToGatewayUrl, shortenAddress, shortenTokenId } from 'src/app/utils'
+import ftAmountFormatter from 'src/apps/utils/ftAmountFormatter'
+import { ipfsToGatewayUrl, shortenAddress, shortenTokenId } from 'src/apps/utils'
 import CopyText from 'src/components/CopyText.vue';
 import FTBurnDialog from 'src/components/dialogs/FTBurnDialog.vue'
 import FTIssuerDialog from 'src/components/dialogs/FTIssuerDialog.vue'
-import { buildBurnFtReserveTx, buildIssueFtReserveTx, signTx } from 'src/app/transactions'
-import { broadcastTx } from 'src/app/transactions/broadcastTx'
+import { buildBurnFtReserveTx, buildIssueFtReserveTx, signTx } from 'src/apps/transactions'
+import { broadcastTx } from 'src/apps/transactions/broadcastTx'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import BigNumber from 'bignumber.js';
 import { nextTick } from 'process';

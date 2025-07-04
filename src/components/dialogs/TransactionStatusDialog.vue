@@ -30,7 +30,7 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
 import { computed, ref } from 'vue';
-import { openTxInExplorer, shortenTx, copyText } from 'src/app/utils';
+import { openTxInExplorer, shortenTx, copyText } from 'src/apps/utils';
 
 const props = defineProps<{
   statusType: 'error' | 'info' | 'success' | 'pending'

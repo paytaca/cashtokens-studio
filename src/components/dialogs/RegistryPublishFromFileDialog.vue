@@ -70,17 +70,17 @@
 <script setup lang="ts">
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { ref, watch, nextTick } from 'vue'
-import { AuthchainIdentity, ChainGraph } from 'src/app'
-import { shortenTokenId } from 'src/app/utils'
-import { BcmrStorageArtifact } from 'src/app/types'
-import { copyText } from 'src/app/utils'
+import { AuthchainIdentity, ChainGraph } from 'src/apps'
+import { shortenTokenId } from 'src/apps/utils'
+import { BcmrStorageArtifact } from 'src/apps/types'
+import { copyText } from 'src/apps/utils'
 import { useEventBus } from 'src/composables'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { Registry } from 'mainnet-js'
 import { Draft07 } from 'json-schema-library'
-import bcmrSchema from 'src/app/bcmr/bcmr-schema.json'
-import { upload as uploadToIPFS } from 'src/app/ipfs'
+import bcmrSchema from 'src/apps/bcmr/bcmr-schema.json'
+import { upload as uploadToIPFS } from 'src/apps/ipfs'
 
 defineEmits([
   ...useDialogPluginComponent.emits,

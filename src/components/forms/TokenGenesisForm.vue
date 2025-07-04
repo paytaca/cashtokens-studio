@@ -8,10 +8,10 @@
     <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
       Select a token type: <sup><code class="text-caption">{{ tType }}</code></sup>
       <q-option-group name="preferred_genre" v-model="tType" :options="[
-    { value: 'ft', label: 'Fungible Token(FT)' },
-    { value: 'nft', label: 'Non Fungible Token(NFT)' },
-  ]
-    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+        { value: 'ft', label: 'Fungible Token(FT)' },
+        { value: 'nft', label: 'Non Fungible Token(NFT)' },
+      ]
+        " color="primary" inline :disable="Boolean(cashToken?.processing)" />
     </div>
     <template v-if="genesisInput">
       <q-input :model-value="genesisInput.txid" label="Token ID(Category)" filled disable dense />
@@ -72,11 +72,11 @@
         <div class="q-pa-sm rounded-borders" :class="$q.dark.isActive ? 'bg-grey-10' : 'bg-grey-2'">
           Capability <sup><code class="text-caption">{{ genesisToken.capability }}</code></sup>
           <q-option-group name="preferred_genre" v-model="genesisToken.capability" :options="[
-    { value: NFTCapability.minting, label: 'Minting' },
-    { value: NFTCapability.mutable, label: 'Mutable' },
-    { value: NFTCapability.none, label: 'None' }
-  ]
-    " color="primary" inline :disable="Boolean(cashToken?.processing)" />
+            { value: NFTCapability.minting, label: 'Minting' },
+            { value: NFTCapability.mutable, label: 'Mutable' },
+            { value: NFTCapability.none, label: 'None' }
+          ]
+            " color="primary" inline :disable="Boolean(cashToken?.processing)" />
         </div>
         <q-input v-if="genesisToken.capability === 'none'" v-model="genesisToken.commitment" label="Token Commitment"
           filled :placeholder="tokenCommmitmentPlaceholderText"
@@ -92,9 +92,9 @@
               :label="genesisToken.commitmentFormat === 'decimal' ? 'To Hex' : 'To Number'" no-caps>
               <q-tooltip>
                 {{
-    genesisToken.commitmentFormat === 'decimal' ? 'Click to value to hex'
-      : 'Click to convert value to a number'
-  }}
+                  genesisToken.commitmentFormat === 'decimal' ? 'Click to value to hex'
+                    : 'Click to convert value to a number'
+                }}
               </q-tooltip>
             </q-btn>
           </template>
@@ -173,21 +173,21 @@
     <div class="row justify-end q-my-lg">
       <BusyButton v-if="genesisInput" @click="createToken" :busy-label="busyButtonLabel" label="Create Token"
         :force-disable="(
-    !user.wallet ||
-    !genesisInput ||
-    Boolean(busyButtonLabel) ||
-    !isValidTokenAmount ||
-    !genesisTokenMetadata.name ||
-    !genesisTokenMetadata.symbol ||
-    iconUploader?.isUploading
-  )
-    " color="primary" size="lg" />
+          !user.wallet ||
+          !genesisInput ||
+          Boolean(busyButtonLabel) ||
+          !isValidTokenAmount ||
+          !genesisTokenMetadata.name ||
+          !genesisTokenMetadata.symbol ||
+          iconUploader?.isUploading
+        )
+          " color="primary" size="lg" />
     </div>
     <AddBcmrLinkDialog v-if="Boolean(bcmrLinkAdderDialog)"
       :model-value="bcmrLinkAdderDialog == AddBcmrLinkDialog.__name" @close="hideBcmrLinkAdderDialog" @confirm="(links) => {
-    genesisTokenMetadata.links = links;
-    hideBcmrLinkAdderDialog()
-  }" :links="genesisTokenMetadata.links" persistent />
+        genesisTokenMetadata.links = links;
+        hideBcmrLinkAdderDialog()
+      }" :links="genesisTokenMetadata.links" persistent />
   </q-form>
 </template>
 <script setup lang="ts">
@@ -195,16 +195,16 @@ import { NFTCapability, UtxoI, Wallet, NftType, URIs } from 'mainnet-js'
 import { useQuasar } from 'quasar'
 import { watch, onMounted, ref, computed, Ref } from 'vue'
 import { useUser } from 'src/stores/user'
-import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/app'
+import { AuthKey, CashToken, MAX_FUNGIBLE_AMOUNT, Watchtower } from 'src/apps'
 import BusyButton from 'src/components/BusyButton.vue'
 import AddBcmrLinkDialog from 'src/components/dialogs/AddBcmrLinkDialog.vue'
-import { Bcmr } from 'src/app/bcmr/Bcmr'
-import { BcmrStorageArtifact, NftCollectionType } from 'src/app/types'
+import { Bcmr } from 'src/apps/bcmr/Bcmr'
+import { BcmrStorageArtifact, NftCollectionType } from 'src/apps/types'
 import { useStatusBar } from 'src/composables/useStatusBar'
 import { useDialogs, useEventBus } from 'src/composables'
-import convertBigIntToHexLE from "src/app/utils/convertBigIntToHexLE"
-import { buildAuthchain } from 'src/app/globalfunctions'
-import { shortenTx } from 'src/app/utils'
+import convertBigIntToHexLE from "src/apps/utils/convertBigIntToHexLE"
+import { buildAuthchain } from 'src/apps/globalfunctions'
+import { shortenTx } from 'src/apps/utils'
 import { useUI } from 'src/stores/ui'
 
 const props = defineProps<{

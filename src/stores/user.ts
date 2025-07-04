@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { UtxoI, Wallet } from 'mainnet-js';
-import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { CashToken } from 'src/app';
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
+import { CashToken } from 'src/apps';
 
 export type UserState = {
   connectedPaytacaAddress?: string,
