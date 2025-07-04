@@ -87,30 +87,12 @@ export const buildGenesisTx = async (
     throw new Error('Genesis input for authKey requires v-out 0');
   }
 
-  // let tokenRecipient = opt.recipient;
-
-  
-  // const requests: any[] = [
-  //   new TokenSendRequest({
-  //     cashaddr: tokenRecipient as string,
-  //     value: DEFAULT_TOKEN_VALUE,
-  //     tokenId: opt.token.tokenId,
-  //     amount: opt.token.amount,
-  //     capability: opt.token.capability,
-  //     commitment: opt.token.commitment,
-  //   }),
-  // ];
-
   let cost = genesisCost();
-  console.log('🚀 ~ cost p2pkh:', cost);
   let discardChange = false;
-  const utxos = await opt.wallet.getAddressUtxos()
-  console.log('UTXOS', utxos, opt.wallet)
+
   let funds = (await opt.wallet.getAddressUtxos()).filter((u: UtxoI) => {
     return Boolean(!u.token) && u.satoshis > cost && u.vout !== 0;
   })[0];
-  console.log('FUNDs ', funds)
-
   const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
   
   if (
@@ -118,9 +100,6 @@ export const buildGenesisTx = async (
     decodedCashAddress.type === CashAddressType.p2sh
   ) {
     cost = genesisCost(decodedCashAddress.type);
-    if (cost > 100000) {
-      throw new Error(`suspiciously high fee of ${cost} sats. Please contact admin.`);
-    }
 
     console.log('🚀 ~ cost multisig:', cost);
 
@@ -147,6 +126,10 @@ export const buildGenesisTx = async (
     //   });
     //   requests.push(changeSendRequest);
     // }
+  }
+
+  if (cost > 100000) {
+    throw new Error(`suspiciously high fee of ${cost} sats. Please contact admin.`);
   }
 
   if (!funds) {
@@ -229,7 +212,6 @@ export const buildGenesisTx = async (
     requests.push(changeSendRequest);
   }
 
-  console.log('REQUESTS', requests)
   const expenses: UtxoI[] = [opt.input];
   if (opt.authKey && !opt.authKey?.token?.tokenId) {
     // only spend authkey during genesis
