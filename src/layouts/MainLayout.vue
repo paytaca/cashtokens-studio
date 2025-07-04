@@ -134,17 +134,17 @@
 <script setup lang="ts">
 import { onBeforeMount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
-import ClientDB from 'src/app/clientonly/ClientDB';
+import ClientDB from 'src/apps/clientonly/ClientDB';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
 import WalletConnect from 'components/WalletConnect.vue';
 import { useUser } from 'src/stores/user'
 import { useUI } from 'src/stores/ui';
 import TransactionLogger from 'src/components/TransactionLogger.vue'
-import getAppEnv from 'src/app/utils/getAppEnv'
+import getAppEnv from 'src/apps/utils/getAppEnv'
 import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useInit } from 'src/composables/useInit';
-import { shortenAddress, copyText } from 'src/app/utils'
+import { shortenAddress, copyText } from 'src/apps/utils'
 const leftDrawerOpen = ref(false)
 const user = useUser()
 const ui = useUI()

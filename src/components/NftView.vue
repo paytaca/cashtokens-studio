@@ -57,7 +57,7 @@
 
 <script setup lang="ts">
 import { NftType, TokenCategory, UtxoI } from 'mainnet-js'
-import { ipfsToGatewayUrl, isTokenAddress } from 'src/app/utils'
+import { ipfsToGatewayUrl, isTokenAddress } from 'src/apps/utils'
 
 defineProps<{
   tokenSymbol: string,

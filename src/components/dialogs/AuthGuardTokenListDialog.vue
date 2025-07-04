@@ -62,7 +62,7 @@
 </template>
 <script setup lang="ts">
 import { UtxoI } from 'mainnet-js';
-import { AuthGuard, AuthKey, CashToken } from 'src/app';
+import { AuthGuard, AuthKey, CashToken } from 'src/apps';
 import { onUpdated, ref, onMounted } from 'vue';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import CashAddress from '../CashAddress.vue';

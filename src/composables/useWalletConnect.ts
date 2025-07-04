@@ -1,11 +1,11 @@
 import SignClient from '@walletconnect/sign-client';
 import { onMounted, ref } from "vue"
-import { formatAddress, getWalletClass } from "src/app/utils"
+import { formatAddress, getWalletClass } from "src/apps/utils"
 import { useUser } from "src/stores/user";
-import { Watchtower } from 'src/app';
+import { Watchtower } from 'src/apps';
 import { delay } from 'mainnet-js';
 import  { stringify } from '@bitauth/libauth'
-import { TransactionSigner } from 'src/app/types';
+import { TransactionSigner } from 'src/apps/types';
 
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()

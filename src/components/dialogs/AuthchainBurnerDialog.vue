@@ -39,9 +39,9 @@
 </template>
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
-import { AuthchainIdentity } from 'src/app';
-import { shortenTokenId } from 'src/app/utils';
-import shortenTx from 'src/app/utils/shortenTx';
+import { AuthchainIdentity } from 'src/apps';
+import { shortenTokenId } from 'src/apps/utils';
+import shortenTx from 'src/apps/utils/shortenTx';
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';

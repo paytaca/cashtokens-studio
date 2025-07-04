@@ -1,7 +1,7 @@
 import { onMounted, ref } from "vue"
-import { formatAddress, getWalletClass } from "src/app/utils"
+import { formatAddress, getWalletClass } from "src/apps/utils"
 import { useUser } from "src/stores/user";
-import { TransactionSigner } from 'src/app/types';
+import { TransactionSigner } from 'src/apps/types';
 
 export const usePaytacaConnect = () => {
   const paytacaWalletAddress = ref('')

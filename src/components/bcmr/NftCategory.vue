@@ -33,7 +33,7 @@
 <script setup lang="ts">
 import { computed, defineComponent, defineModel } from 'vue'
 import type { NftCategory } from 'mainnet-js'
-import { NFTCollectionType } from 'src/app/bcmr/types';
+import { NFTCollectionType } from 'src/apps/bcmr/types';
 import NftTypeComponent from './NftType.vue'
 
 export type NftCategoryProps = {

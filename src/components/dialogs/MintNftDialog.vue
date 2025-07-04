@@ -141,7 +141,7 @@
 import { NftType } from 'mainnet-js';
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { onMounted, ref, watch } from 'vue';
-import { ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils'
+import { ipfsToGatewayUrl, shortenTokenId } from 'src/apps/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
 

@@ -94,7 +94,7 @@
                       <q-input v-model="mintOptions.nftType" outlined bottom-slots disable>
                         <template v-slot:hint>
                           <i>Commitment (VM Number = <code>{{ formatCommitment(String(mintOptions.nftType), 'decimal',
-        'vm-number') }}</code>)
+                            'vm-number') }}</code>)
                           </i>
                         </template>
                       </q-input>
@@ -106,7 +106,7 @@
 
                         <template v-slot:hint>
                           <i>Commitment (VM Number = <code>{{ formatCommitment(String(Number(mintOptions.nftType) + Number(mintOptions.mintQuantity - 1)), 'decimal',
-        'vm-number') }}</code>)
+                            'vm-number') }}</code>)
                           </i>
                         </template>
                       </q-input>
@@ -165,21 +165,21 @@
             <div v-else class="row justify-center">
               <div class="col-xs-12 q-gutter-md">
                 <q-table v-model:pagination="nftsPagination" flat :rows="nfts" style="background:unset" :columns="[
-        {
-          name: 'nfttype', label: 'Minted NFT(s)',
-          field: r => '',
-          align: 'left',
-          headerStyle: 'padding: 1.5em',
-        },
-        {
-          name: 'actions', label: '',
-          field: r => '',
-          align: 'center',
-          headerStyle: 'padding: 1.5em',
-        },
-      ]
-        " :rows-per-page-options="nftsPaginationRowsPerPageOpts" row-key="id" :visible-columns="['nfttype', 'actions']"
-                  bordered>
+                  {
+                    name: 'nfttype', label: 'Minted NFT(s)',
+                    field: r => '',
+                    align: 'left',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                  {
+                    name: 'actions', label: '',
+                    field: r => '',
+                    align: 'center',
+                    headerStyle: 'padding: 1.5em',
+                  },
+                ]
+                  " :rows-per-page-options="nftsPaginationRowsPerPageOpts" row-key="id"
+                  :visible-columns="['nfttype', 'actions']" bordered>
 
                   <template v-slot:header>
                     <div class="q-ma-md" col-span="2" style="border-bottom: inherit">
@@ -203,10 +203,10 @@
                         <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
                           <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
                             {{ minter.value.nftCollectionType == 'SequentialNftCollection' ?
-        `#${formatCommitment(value.row.commitment, 'vm-number',
-          'decimal')
-        } ` :
-        value.row.commitment
+                              `#${formatCommitment(value.row.commitment, 'vm-number',
+                                'decimal')
+                              } ` :
+                              value.row.commitment
                             }}
                             <span
                               v-if="nftsTypes[value.row.commitment] && nftsTypes[value.row.commitment].saved && !nftsTypes[value.row.commitment].published"
@@ -229,22 +229,22 @@
                         <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-6 ellipsis-2-lines">
                             Description: {{
-        nftsTypes[value.row.commitment]?.description
-        || '<no description>' }}
+                              nftsTypes[value.row.commitment]?.description
+                              || '<no description>' }}
                           </div>
                         </div>
                         <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-8">
                             Raw Commitment: {{
-        value.row.commitment
-      }}
+                              value.row.commitment
+                            }}
                           </div>
                         </div>
                         <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
                           <div class="text-grey-8">
                             NFT Capability: {{
-        value.row.capability
-      }}
+                              value.row.capability
+                            }}
                           </div>
                         </div>
                       </div>
@@ -309,8 +309,8 @@ import {
   NftType, TokenI,
   delay
 } from 'mainnet-js'
-import { AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/app'
-import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/app/utils'
+import { AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/apps'
+import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/apps/utils'
 import { useLocalForage } from 'src/composables/useLocalForage'
 import { useEventBus } from 'src/composables'
 import { useMinter } from 'src/stores/minter'

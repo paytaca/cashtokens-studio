@@ -48,13 +48,13 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { GenesisInput, AuthKey, DEFAULT_TOKEN_VALUE } from 'src/app'
+import { GenesisInput, AuthKey, DEFAULT_TOKEN_VALUE } from 'src/apps'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { usePaytacaConnect } from 'src/composables/usePaytacaConnect';
-import { TransactionSigner } from 'src/app/types';
+import { TransactionSigner } from 'src/apps/types';
 
 const $q = useQuasar()
 const user = useUser()

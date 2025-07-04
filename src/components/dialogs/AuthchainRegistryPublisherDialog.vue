@@ -43,13 +43,13 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { onMounted, ref } from 'vue';
-import { AuthchainIdentity } from 'src/app';
-import { fetchBcmrContentHash } from 'src/app/bcmr'
-import shortenTx from 'src/app/utils/shortenTx';
+import { AuthchainIdentity } from 'src/apps';
+import { fetchBcmrContentHash } from 'src/apps/bcmr'
+import shortenTx from 'src/apps/utils/shortenTx';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
-import { shortenTokenId } from 'src/app/utils';
+import { shortenTokenId } from 'src/apps/utils';
 import { useUI } from 'src/stores/ui';
 import { watch } from 'fs';
 

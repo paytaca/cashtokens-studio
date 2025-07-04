@@ -9,7 +9,8 @@
           <p>
             These are the identity-output UTXOs locked with an AuthGuard contract. These are the same UTXOs you're using
             to manage the FT
-            reserves, NFT Reserves and Metadata. You can release this UTXO from the AuthGuard if you don't want CashTokens
+            reserves, NFT Reserves and Metadata. You can release this UTXO from the AuthGuard if you don't want
+            CashTokens
             Studio
             to manage this UTXOs. See <a class="text-secondary" target="_blank"
               href="https://github.com/mr-zwets/MBC-Token-Standard">Authguard
@@ -17,8 +18,9 @@
           </p>
         </q-expansion-item>
         <div>
-          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered :rows="ownedAuthHeads.results"
-            color="warning" loading-label="Loading, please wait..." :loading="populatingTable" :columns="[
+          <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
+            :rows="ownedAuthHeads.results" color="warning" loading-label="Loading, please wait..."
+            :loading="populatingTable" :columns="[
 
               {
                 name: 'icon', label: 'Icon',
@@ -134,7 +136,8 @@
                           @click.stop="openDialog(UnguardAuthchainDialog.__name, value.row)">
                           Unguard Utxo
                         </q-item>
-                        <q-item clickable v-close-popup @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
+                        <q-item clickable v-close-popup
+                          @click.stop="openDialog(AuthchainBurnerDialog.__name, value.row)">
                           Burn Utxo
                         </q-item>
                         <!-- <q-item clickable @click.stop="refreshTokenBasicMeta(identity)"> Refresh </q-item> -->
@@ -162,15 +165,15 @@
 import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/app'
-import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { FetchUtxoQueryParams } from 'src/app/Watchtower'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, CashToken, Watchtower } from 'src/apps'
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
+import { FetchUtxoQueryParams } from 'src/apps/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { UtxoI, Wallet } from 'mainnet-js';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import TokenSymbol from 'src/components/TokenSymbol.vue'
 import CashAddress from 'src/components/CashAddress.vue'
-import { copyText, formatCommitment, ipfsToGatewayUrl, shortenTokenId, shortenTx } from 'src/app/utils';
+import { copyText, formatCommitment, ipfsToGatewayUrl, shortenTokenId, shortenTx } from 'src/apps/utils';
 import { EventBus, useQuasar } from 'quasar';
 import AuthchainRegistryPublisherDialog from 'src/components/dialogs/AuthchainRegistryPublisherDialog.vue'
 import UnguardAuthchainDialog from 'src/components/dialogs/UnguardAuthchainDialog.vue'

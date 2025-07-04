@@ -43,11 +43,11 @@
                                     <div class="absolute-bottom text-left">
                                         <div class="text-subtitle1">
                                             {{
-                            i.row.token?.commitment ? (i.row.nftCollectionType ==
-                                'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
-                                    'vm-number',
-                                    'decimal') : i.row.token.commitment) : ''
-                        }}
+                                                i.row.token?.commitment ? (i.row.nftCollectionType ==
+                                                    'SequentialNftCollection' ? '#' + formatCommitment(i.row.token.commitment,
+                                                        'vm-number',
+                                                        'decimal') : i.row.token.commitment) : ''
+                                            }}
                                         </div>
                                     </div>
                                 </q-img>
@@ -88,12 +88,12 @@
 import { onMounted, ref, watch, computed, inject, onBeforeUnmount, onBeforeMount } from 'vue';
 import { useUser } from 'src/stores/user'
 import { useDialogs } from 'src/composables'
-import { ADDRESS_WATCHER_TRIGGERED, AuthKey, CashToken, Watchtower } from 'src/app'
-import { PaginatedData, TransactionSigner } from 'src/app/types';
-import { FetchUtxoQueryParams } from 'src/app/Watchtower'
+import { ADDRESS_WATCHER_TRIGGERED, AuthKey, CashToken, Watchtower } from 'src/apps'
+import { PaginatedData, TransactionSigner } from 'src/apps/types';
+import { FetchUtxoQueryParams } from 'src/apps/Watchtower'
 import NFTOwnershipTransferDialog from 'src/components/dialogs/NFTOwnershipTransferDialog.vue'
 import { UtxoI, Wallet } from 'mainnet-js';
-import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/app/utils';
+import { formatCommitment, ipfsToGatewayUrl, shortenTokenId } from 'src/apps/utils';
 import { EventBus, useQuasar } from 'quasar';
 import NftViewDialog from 'src/components/dialogs/NftViewDialog.vue'
 defineOptions({ name: 'NonFungibleTokens' })

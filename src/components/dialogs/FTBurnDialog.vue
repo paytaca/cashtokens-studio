@@ -51,7 +51,7 @@ import { TokenI, type IdentitySnapshot } from 'mainnet-js'
 import Token from 'src/components/Token.vue'
 import { computed, onBeforeMount, onMounted, ref, toRaw } from 'vue';
 import BigNumber from 'bignumber.js'
-import { ipfsToGatewayUrl } from 'src/app/utils';
+import { ipfsToGatewayUrl } from 'src/apps/utils';
 
 const props = defineProps<{ token: Omit<TokenI, 'amount'> & { amount: string }, identitySnapshot?: IdentitySnapshot }>()
 const tokenCopy = ref<Omit<TokenI, 'amount'> & { amount: string }>()

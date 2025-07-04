@@ -1,8 +1,8 @@
 import SignClient from '@walletconnect/sign-client';
 import { onMounted, ref } from "vue"
-import { formatAddress, getWalletClass } from "src/app/utils"
+import { formatAddress, getWalletClass } from "src/apps/utils"
 import { useUser } from "src/stores/user";
-import { Watchtower } from 'src/app';
+import { Watchtower } from 'src/apps';
 
 export const useUserWallet = () => {
   const paytacaWalletAddress = ref('')

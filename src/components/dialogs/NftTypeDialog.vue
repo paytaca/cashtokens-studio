@@ -180,13 +180,13 @@
 import { onMounted, ref, watch } from 'vue'
 import { useDialogPluginComponent, useQuasar } from 'quasar'
 import { IdentitySnapshot, NftType } from 'mainnet-js'
-import { ipfsToGatewayUrl, isSquareImage, isTokenAddress } from 'src/app/utils'
+import { ipfsToGatewayUrl, isSquareImage, isTokenAddress } from 'src/apps/utils'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 import CopyText from 'src/components/CopyText.vue'
 import JsonEditor from 'json-editor-vue'
 import { Draft07 } from 'json-schema-library'
 import { hexToBin, vmNumberToBigInt } from '@bitauth/libauth'
-import { upload as uploadToIPFS } from 'src/app/ipfs'
+import { upload as uploadToIPFS } from 'src/apps/ipfs'
 
 
 const nftTypeSchema = {

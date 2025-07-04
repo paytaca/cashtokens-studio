@@ -58,15 +58,15 @@
 import { ref, onUpdated } from 'vue';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { AuthGuard, AuthKey, CashToken } from 'src/app';
+import { AuthGuard, AuthKey, CashToken } from 'src/apps';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import { useQuasar } from 'quasar';
 import { useEventBus } from 'src/composables';
-import { shortenAddress, shortenTokenId, shortenTx } from 'src/app/utils';
+import { shortenAddress, shortenTokenId, shortenTx } from 'src/apps/utils';
 import { useUI } from 'src/stores/ui'
 import { UtxoI, Wallet, delay, NftType } from 'mainnet-js';
 import { useDialogs } from 'src/composables'
-import convertHexLEtoBigInt from 'src/app/utils/convertHexLEtoBigInt';
+import convertHexLEtoBigInt from 'src/apps/utils/convertHexLEtoBigInt';
 import AuthGuardTokenListDialog from './AuthGuardTokenListDialog.vue';
 const props = defineProps<{
   decimals?: string,

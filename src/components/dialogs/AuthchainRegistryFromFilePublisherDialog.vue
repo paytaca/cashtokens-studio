@@ -63,7 +63,8 @@
 
       <q-card-actions class="row justify-end">
         <div v-if="uploading" class="row items-end text-warning">
-          <i class="q-mr-xs">Storing file in IPFS. This may take a while, please wait</i><q-spinner-dots></q-spinner-dots>
+          <i class="q-mr-xs">Storing file in IPFS. This may take a while, please
+            wait</i><q-spinner-dots></q-spinner-dots>
         </div>
         <BusyButton v-if="uploaded" :busy-label="authchainIdentity?.processing" label="Publish" color="primary"
           @click="publish" :disable="!uploaded || Boolean(authchainIdentity?.processing)" />
@@ -75,14 +76,14 @@
 <script setup lang="ts">
 import { useQuasar } from 'quasar';
 import { onMounted, ref } from 'vue';
-import { AuthchainIdentity } from 'src/app';
-import shortenTx from 'src/app/utils/shortenTx';
+import { AuthchainIdentity } from 'src/apps';
+import shortenTx from 'src/apps/utils/shortenTx';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
 import { useEventBus } from 'src/composables';
-import { shortenTokenId } from 'src/app/utils';
-import { BcmrStorageArtifact } from 'src/app/types';
-import { copyText } from 'src/app/utils';
+import { shortenTokenId } from 'src/apps/utils';
+import { BcmrStorageArtifact } from 'src/apps/types';
+import { copyText } from 'src/apps/utils';
 import { useUI } from 'src/stores/ui';
 
 const $q = useQuasar()

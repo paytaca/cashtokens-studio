@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { DialogChainObject } from 'quasar'
-import { AuthchainIdentity, CashToken } from 'src/app'
+import { AuthchainIdentity, CashToken } from 'src/apps'
 import { TokenCategory, URIs } from 'mainnet-js'
 
 type TokenIdCache = {

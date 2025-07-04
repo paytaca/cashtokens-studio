@@ -1,6 +1,6 @@
 import { UtxoI, Wallet, NetworkType, NFTCapability, TokenMintRequest, TokenSendRequest } from 'mainnet-js'
 import { Contract } from "@mainnet-cash/contract"
-import getWalletClass from 'src/app/utils/getWalletClass'
+import getWalletClass from 'src/apps/utils/getWalletClass'
 import { DEFAULT_TOKEN_VALUE } from '../constants'
 import { bigIntToVmNumber, binToHex } from '@bitauth/libauth'
 import { calcMinerFee, requestPaytacaSignature, submitTransaction } from '../utils'

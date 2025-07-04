@@ -35,8 +35,8 @@
             placeholder="The date when the mint goes live on CashTokens Studio" type="date" :rules="[mintDateRules]"
             bottom-slots filled></q-input>
           <q-input ref="mintTimeRef" v-if="form.mintDate && !mintDateRef.hasError" v-model="form.mintTime"
-            label="At (Time)" :rules="[mintTimeRules]" placeholder="The date when the mint goes live on CashTokens Studio"
-            type="time" filled></q-input>
+            label="At (Time)" :rules="[mintTimeRules]"
+            placeholder="The date when the mint goes live on CashTokens Studio" type="time" filled></q-input>
           <q-input ref="mintBannerMessageRef" v-if="form.mintDate && !mintDateRef.hasError"
             v-model="form.mintBannerMessage" label="Banner Message (optional)"
             :rules="[(v) => v.length <= 240 || '240 Characters Max']"
@@ -59,15 +59,15 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import { NFTCapability, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { CashToken } from 'src/app';
+import { CashToken } from 'src/apps';
 import { useUser } from 'src/stores/user'
 import TokenCategory from 'src/components/TokenCategory.vue'
 import BusyButton from 'src/components/BusyButton.vue'
-import { shortenTokenId } from 'src/app/utils';
+import { shortenTokenId } from 'src/apps/utils';
 import { useEventBus } from 'src/composables';
 import { useUI } from 'src/stores/ui';
-import { MultiThreadedMinter } from 'src/app/mintingcontracts/MultiThreadedMinter';
-import { CTSBackend } from 'src/app/CTSBackend';
+import { MultiThreadedMinter } from 'src/apps/mintingcontracts/MultiThreadedMinter';
+import { CTSBackend } from 'src/apps/CTSBackend';
 
 const props = defineProps<{
   minter: CashToken, // A minting NFT on owner's token wallet address

@@ -30,8 +30,8 @@
         </template>
 
         <template v-else>
-          <TokenGenesisForm :token-type="(tokenType as ('ft' | 'nft'))" :genesis-input="genesisInput" :auth-key="authKey"
-            :owner-wallet="(user.wallet! as Wallet)" :create-auth-key="false"
+          <TokenGenesisForm :token-type="(tokenType as ('ft' | 'nft'))" :genesis-input="genesisInput"
+            :auth-key="authKey" :owner-wallet="(user.wallet! as Wallet)" :create-auth-key="false"
             @genesis-result="(r) => emit('genesisResult', r)" />
         </template>
       </q-card-section>
@@ -47,7 +47,7 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import BusyButton from 'src/components/BusyButton.vue'
-import { GenesisInput, AuthKey } from 'src/app'
+import { GenesisInput, AuthKey } from 'src/apps'
 import TokenGenesisForm from 'src/components/forms/TokenGenesisForm.vue'
 import { useEventBus } from 'src/composables';
 
@@ -98,4 +98,3 @@ const generateGenesisInputs = async () => {
 
 }
 </script>
-
