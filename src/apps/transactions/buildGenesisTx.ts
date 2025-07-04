@@ -14,7 +14,6 @@ import {
 import { DEFAULT_TOKEN_VALUE } from '../constants'; 
 import { calcMinerFee } from '../utils';
 import { getInstance } from '../contracts';
-import { Utxo } from 'cashscript';
 import {
   cashAddressToLockingBytecode,
   CashAddressType,
@@ -22,7 +21,6 @@ import {
   decodeTransaction,
   lockingBytecodeToCashAddress,
 } from '@bitauth/libauth';
-import { toCashScript } from '@mainnet-cash/contract';
 
 export type GenesisOptions = {
   /**
