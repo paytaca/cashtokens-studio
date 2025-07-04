@@ -178,7 +178,7 @@ import NftCategoryComponent from 'src/components/bcmr/NftCategory.vue'
 import Uris from 'src/components/bcmr/Uris.vue'
 import CopyText from 'src/components/CopyText.vue'
 import { upload as uploadToIPFS } from 'src/apps/ipfs'
-import { cashAddressToLockingBytecode, lockingBytecodeToCashAddress } from '@bitauth/libauth'
+import txIsInMempool from 'src/apps/utils/txIsInMempool'
 
 const route = useRoute()
 const router = useRouter()
@@ -268,8 +268,11 @@ const generateGenesisInput = async () => {
       const tx = await broadcastTx(signingResult)
       if (tx) {
         progress.value = 'Transaction submitted, awaiting propagation...'
-        await user.wallet?.waitForTransaction({ txHash: tx })
-        genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
+        await Promise.race([
+          txIsInMempool({ txHash: tx, address: user.wallet!.getDepositAddress() }),
+          user.wallet?.waitForTransaction({ txHash: tx })
+        ])
+        genesisInput.value = (await user.wallet!.getAddressUtxos())?.filter((u: UtxoI) =>
           !u.token &&
           u.vout == 0 &&
           u.satoshis >= DEFAULT_TOKEN_VALUE
@@ -453,7 +456,11 @@ const createToken = async () => {
       await (new Watchtower()).subscribe(authGuard!.getTokenDepositAddress())
       if (tx) {
         progress.value = 'Transaction submitted, awaiting propagation...'
-        await user.wallet?.waitForTransaction({ txHash: tx })
+        // await user.wallet?.waitForTransaction({ txHash: tx })
+        await Promise.race([
+          txIsInMempool({ txHash: tx, address: user.wallet!.getDepositAddress() }),
+          user.wallet?.waitForTransaction({ txHash: tx })
+        ])
         // genesisInput.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
         //   !u.token &&
         //   u.vout == 0 &&
