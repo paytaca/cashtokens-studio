@@ -13,7 +13,7 @@ export const useWalletConnect = () => {
   const walletConnectWallet = ref()
   const walletConnectSignerClient = ref()
   const walletConnectModal = ref()
-  const walletConnectRequiredNamespaces = ref()
+  // const walletConnectRequiredNamespaces = ref()
   const walletConnectSession = ref()
   const walletConnectSessions = ref()
   const user = useUser()
@@ -33,15 +33,15 @@ export const useWalletConnect = () => {
         },
         explorerExcludedWalletIds: 'ALL',
       })
-      const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+      // const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
 
-      walletConnectRequiredNamespaces.value = {
-        bch: {
-          chains: [connectedChain],
-          methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
-          events: ['addressesChanged'],
-        },
-      }
+      // walletConnectRequiredNamespaces.value = {
+      //   bch: {
+      //     chains: [connectedChain],
+      //     methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
+      //     events: ['addressesChanged']
+      //   },
+      // }
 
     if (user.walletConnectSession) {
       walletConnectSession.value = user.walletConnectSession
@@ -116,7 +116,28 @@ export const useWalletConnect = () => {
 
   const walletConnectConnect = async () => {
     try {
-      const { uri, approval } = await walletConnectSignerClient.value?.connect({ requiredNamespaces: walletConnectRequiredNamespaces.value });
+      const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
+
+      const requiredNamespaces = {
+        bch: {
+          chains: [connectedChain],
+          methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
+          events: ['addressesChanged']
+        },
+      }
+
+      const optionalNamespaces = {
+        bch: {
+          chains: [connectedChain],
+          methods: ['bch_signTransactionP2SHMultisig'],
+          events: []
+        },
+      }
+
+      const { uri, approval } = await walletConnectSignerClient.value?.connect({
+        requiredNamespaces, 
+        optionalNamespaces
+      });
       const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
 
       await walletConnectModal.value.openModal({ uri });
@@ -156,7 +177,7 @@ export const useWalletConnect = () => {
           walletConnectWallet.value = undefined
           walletConnectSignerClient.value = undefined
           walletConnectModal.value = undefined
-          walletConnectRequiredNamespaces.value = undefined
+          // walletConnectRequiredNamespaces.value = undefined
           walletConnectSession.value = undefined
           walletConnectSessions.value = undefined
           user.wallet = undefined
@@ -241,7 +262,7 @@ export const useWalletConnect = () => {
     walletConnectWallet,
     walletConnectSignerClient,
     walletConnectModal,
-    walletConnectRequiredNamespaces,
+    // walletConnectRequiredNamespaces,
     walletConnectSession,
     walletConnectSessions,
     walletConnectConnect,
