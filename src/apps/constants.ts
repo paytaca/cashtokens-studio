@@ -8,6 +8,7 @@ export const CTS_MINTING_TOKEN_DEFAULT_DUMMY_COMMITMENT = 'ctsfeed782974771942$%
 export const ADDRESS_WATCHER_TRIGGERED = 1
 export const TOKEN_CATEGORY_CACHE_MAX_KEYS = 1000
 export const TOKEN_URIS_CACHE_MAX_KEYS = 1000
+export const BURN_ADDRESS = 'r0lxr93av56s6ja253zmg6tjgwclfryeardw6v427e74uv6nfkrlc2s5qtune'
 export const AUTHGUARD_CONTRACT_SCRIPT = `
 pragma cashscript ^0.8.0;
 
