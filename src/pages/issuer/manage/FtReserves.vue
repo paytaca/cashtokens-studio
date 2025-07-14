@@ -94,7 +94,7 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-        }}</span>
+      }}</span>
     </q-inner-loading>
   </q-page>
 </template>
@@ -117,6 +117,7 @@ import { broadcastTx } from 'src/apps/transactions/broadcastTx'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import BigNumber from 'bignumber.js';
 import { nextTick } from 'process';
+import txIsInMempool from 'src/apps/utils/txIsInMempool';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
@@ -235,7 +236,11 @@ const openBurnFtDialog = (v: AuthchainIdentity, identitySnapshot: IdentitySnapsh
         const tx = await broadcastTx(signingResult)
         if (tx) {
           progress.value = 'Transaction submitted, awaiting propagation...'
-          await user.wallet?.waitForTransaction({ txHash: tx })
+          // await user.wallet?.waitForTransaction({ txHash: tx })
+          await Promise.race([
+            txIsInMempool({ txHash: tx, address: user.wallet!.getDepositAddress() }),
+            user.wallet?.waitForTransaction({ txHash: tx })
+          ])
           $ebus?.emit('transaction', {
             txid: tx,
             txType: 'ft-burn',

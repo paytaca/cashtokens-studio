@@ -14,11 +14,12 @@
         </q-toolbar-title>
       </q-toolbar>
       <q-card-section>
-        <div class="q-mt-sm" style="max-width: 100%;overflow-x: auto;">
-          <q-form id="ft-burn-form" ref="burnForm" @submit.prevent="() => confirmBurn()">
+        <div class="q-mt-sm">
+          <q-form id="ft-burn-form" ref="burnForm" @submit.prevent="() => confirmBurn()"
+            style="justify-items: initial !important;">
             <Token v-if="tokenCopy" v-bind:token="tokenCopy" :hide="['capability', 'commitment']" :readonly="['amount']"
               :labels="{ amount: 'Current Balance' }" />
-            <div class="q-gutter-lg">
+            <div class="q-gutter-lg q-mt-lg">
               <q-input :model-value="identitySnapshot?.token?.decimals || 0" label="Decimals" outlined
                 readonly></q-input>
               <q-input v-if="Number(burnAmount) > 0" :model-value="newBalance" label="New Balance After Burn" outlined

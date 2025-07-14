@@ -1,6 +1,6 @@
 import { TestNetWallet, UtxoI, Wallet } from 'mainnet-js';
 import { calcMinerFee } from '../utils';
-import { DEFAULT_TOKEN_VALUE } from '../constants';
+import { BURN_ADDRESS, DEFAULT_TOKEN_VALUE } from '../constants';
 import { toCashScript } from '@mainnet-cash/contract';
 import { Artifact, Recipient, SignatureTemplate } from 'cashscript';
 import { getInstance as getContractInstance } from '../contracts';
@@ -51,19 +51,19 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
   }
 
   const funds = (await opt.wallet.getAddressUtxos()).filter((u: UtxoI) => {
-    return Boolean(!u.token) && u.satoshis > burnCost;
+    return Boolean(!u.token) && u.satoshis > burnCost + 546;
   })[0];
 
   if (!funds) {
     throw new Error('Insufficient balance to fund the transaction');
   }
 
-  opt.authUtxo.token.amount =
+  const newReserveSupply: bigint = 
     BigInt(opt.authUtxo.token.amount || 0) - BigInt(opt.amount);
-  if (opt.authUtxo.token.amount < 0) {
+  if (newReserveSupply < 0) {
     throw new Error('Amount too high.');
   }
-
+  
   const [authUtxo, authKey, funderInput] = [
     opt.authUtxo!,
     opt.authKey!,
@@ -77,6 +77,12 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
     network: opt.wallet.network,
   });
 
+  const walletAddress = opt.wallet.getDepositAddress()
+  
+  const decodedAddress = decodeCashAddress(walletAddress) as any
+  
+  const burnAddress = `${decodedAddress.prefix}:${BURN_ADDRESS}`
+
   let transaction = authGuard!
     .getContractFunction('unlockWithNft')(true)
     .from(authUtxo) // contract
@@ -85,8 +91,12 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
     .to([
       {
         to: authGuard!.getTokenDepositAddress(),
-        amount: BigInt(opt.authKey!.satoshis),
-        token: authUtxo.token,
+        amount: BigInt(authUtxo.satoshis),
+        token: {
+          ...authUtxo.token,
+          category: authUtxo.token!.category,
+          amount: newReserveSupply
+        }
       },
     ])
     .to([
@@ -95,12 +105,20 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
         amount: BigInt(opt.authKey!.satoshis),
         token: authKey.token,
       },
-    ]);
-
+    ])
+    .to([
+      {
+        to: burnAddress,
+        amount: BigInt(687),
+        token: {
+          category: authUtxo.token!.category,
+          amount: BigInt(opt.amount)
+        }
+      }
+    ])
   transaction = transaction
-
     .to(
-      funderInput.satoshis - BigInt(burnCost) > 546
+      funderInput.satoshis - BigInt(burnCost) > 687
         ? [
             {
               // change
