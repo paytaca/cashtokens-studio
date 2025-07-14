@@ -13,6 +13,8 @@ import { Artifact, Recipient, SignatureTemplate } from 'cashscript';
 import { getInstance as getContractInstance } from '../contracts';
 import {
   cashAddressToLockingBytecode,
+  CashAddressType,
+  decodeCashAddress,
   decodeTransaction,
   hexToBin,
 } from '@bitauth/libauth';
@@ -48,6 +50,13 @@ export const mintCost = (numberOfTokens: number) => {
 export const buildMintFromAuthGuardTx = async (
   o: MintOptions
 ): Promise<MintTransaction> => {
+  const decodedCashAddress = decodeCashAddress(o.wallet.getDepositAddress());
+  if (
+      typeof decodedCashAddress !== 'string' &&
+      decodedCashAddress.type === CashAddressType.p2sh
+    ) {
+      throw new Error('This operation is not yet supported using multisig wallet.');
+  }
   if (!o.authKey || o.authKey.token?.commitment != '00') {
     throw new Error(
       'AuthKey utxo required. Make sure it conforms to the AuthGuard standard.'

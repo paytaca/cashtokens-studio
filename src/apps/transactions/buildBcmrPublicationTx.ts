@@ -5,6 +5,8 @@ import { Artifact, Recipient, SignatureTemplate } from 'cashscript';
 import { getInstance as getContractInstance } from '../contracts';
 import {
   cashAddressToLockingBytecode,
+  CashAddressType,
+  decodeCashAddress,
   decodeTransaction,
   hexToBin,
 } from '@bitauth/libauth';
@@ -32,6 +34,13 @@ export const publicationCost = calcMinerFee(
 export const buildBcmrPublicationTx = async (
   o: PublicationOptions
 ): Promise<PublicationTransaction> => {
+  const decodedCashAddress = decodeCashAddress(o.wallet.getDepositAddress());
+  if (
+      typeof decodedCashAddress !== 'string' &&
+      decodedCashAddress.type === CashAddressType.p2sh
+    ) {
+      throw new Error('This operation is not yet supported using multisig wallet.');
+  }
   if (!o.authHead) {
     throw new Error('Missing authHead utxo');
   }
