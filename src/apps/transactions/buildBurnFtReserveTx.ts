@@ -6,6 +6,8 @@ import { Artifact, Recipient, SignatureTemplate } from 'cashscript';
 import { getInstance as getContractInstance } from '../contracts';
 import {
   cashAddressToLockingBytecode,
+  CashAddressType,
+  decodeCashAddress,
   decodeTransaction,
   hexToBin,
 } from '@bitauth/libauth';
@@ -33,6 +35,13 @@ const minerFee = calcMinerFee(
 export const burnCost = minerFee + DEFAULT_TOKEN_VALUE + 400;
 
 export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
+  const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
+  if (
+      typeof decodedCashAddress !== 'string' &&
+      decodedCashAddress.type === CashAddressType.p2sh
+    ) {
+      throw new Error('This operation is not yet supported using multisig wallet.');
+  }
   if (
     !opt.authUtxo?.token ||
     !opt.authKey ||
