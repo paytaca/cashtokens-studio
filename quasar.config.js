@@ -129,6 +129,7 @@ module.exports = configure(function (ctx) {
         '@quasar/ssr-helpers',
         '@walletconnect/modal',
         '@walletconnect/sign-client',
+        'bitauth-libauth-v3'
       ],
 
       // rtl: true, // https://quasar.dev/options/rtl-support
