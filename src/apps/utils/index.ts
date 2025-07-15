@@ -17,3 +17,4 @@ export { default as isTokenAddress } from './isTokenAddress';
 export { default as isSquareImage } from './isSquareImage';
 export { default as sortNftTypesASC } from './sortNftTypesASC';
 export { default as estimateFees } from './estimateFees';
+export * from './deriveTokenAddressFromCashAddress'
