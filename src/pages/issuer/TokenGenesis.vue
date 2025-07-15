@@ -264,6 +264,37 @@ const generateGenesisInput = async () => {
       decodedTx: decoded, sourceOutputs: sourceOutputs,
       prompt: 'Create genesis input'
     })
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
+        txType: 'generate-genesis-input',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
@@ -293,13 +324,15 @@ const generateGenesisInput = async () => {
         })
       }
     }
-  } catch (error) {
+  } catch (error: any) {
+    const msg = error?.reason ? error.reason : error.toString()
     $q.dialog({
-      message: error?.toString(),
+      message: `Error: ${msg}`,
       ok: true,
       focus: 'ok',
       class: 'q-pa-lg'
     })
+
   } finally {
     progress.value = false
   }
@@ -314,10 +347,45 @@ const generateAuthKeyGenesisInput = async () => {
       decodedTx: decoded, sourceOutputs: sourceOutputs,
       prompt: 'Create AuthKey genesis input'
     })
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
+        txType: 'generate-genesis-input',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
     if (signingResult?.signedTransaction) {
       const tx = await broadcastTx(signingResult)
       if (tx) {
-        await user.wallet?.waitForTransaction({ txHash: tx })
+        // await user.wallet?.waitForTransaction({ txHash: tx })
+        await Promise.race([
+          txIsInMempool({ txHash: tx, address: user.wallet!.getDepositAddress() }),
+          user.wallet?.waitForTransaction({ txHash: tx })
+        ])
         authKey.value = (await user.wallet?.getAddressUtxos())?.filter((u: UtxoI) =>
           !u.token &&
           u.vout == 0 &&
@@ -344,9 +412,10 @@ const generateAuthKeyGenesisInput = async () => {
       }
     }
 
-  } catch (error) {
+  } catch (error: any) {
+    const msg = error?.reason ? error.reason : error.toString()
     $q.dialog({
-      message: error?.toString(),
+      message: `Signature request: ${msg}`,
       ok: true,
       focus: 'ok',
       class: 'q-pa-lg'
@@ -448,6 +517,37 @@ const createToken = async () => {
       decodedTx: genesisTransaction.decoded, sourceOutputs: genesisTransaction.sourceOutputs,
       prompt: 'Token genesis'
     })
+
+    if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      $ebus?.emit('transaction', {
+        txid: signingResult.unsignedHash,
+        unsignedHash: signingResult.unsignedHash,
+        txType: 'generate-genesis-input',
+        timestamp: new Date().getTime(),
+        successMsg: signingResult.message,
+        statusUrl: signingResult.statusUrl
+      })
+
+      await new Promise((resolve) => {
+        $q.dialog({
+          component: TransactionStatusDialog,
+          componentProps: {
+            statusType: 'pending',
+            statusText: signingResult.message,
+            statusUrl: signingResult.statusUrl,
+            txid: null,
+
+          }
+        }).onOk(() => {
+          resolve(true)
+
+        }).onDismiss(() => {
+          resolve(true)
+        })
+      })
+      return router.push({ name: 'recent-transactions' })
+    }
+
     if (signingResult?.signedTransaction) {
       progress.value = 'Submitting transaction, please wait...'
       const authGuard = getAuthguardInstance('authguard-contract', { authKeyTokenId: authKey.value?.token?.tokenId || authKey.value!.txid as string, network: user.wallet!.network })
@@ -491,8 +591,12 @@ const createToken = async () => {
       }
     }
   } catch (error: any) {
+    const msg = error?.reason ? error.reason : error.toString()
     $q.dialog({
-      message: 'Error:' + error
+      message: `Signature request: ${msg}`,
+      ok: true,
+      focus: 'ok',
+      class: 'q-pa-lg'
     })
   } finally {
     progress.value = false
@@ -607,13 +711,6 @@ onMounted(async () => {
   if (label) {
     tokenType.value = { value: route.query.tokenType as TokenType, label }
   }
-
-  // (async () => {
-  //   authKeyOptions.value = await getAuthKeyOptions()
-  //   if ((authKeyOptions.value?.length ?? 0) > 0) {
-  //     useExistingAuthKey.value = true
-  //   }
-  // })()
 
   authKeyOptions.value = await getAuthKeyOptions()
   if ((authKeyOptions.value?.length ?? 0) > 0) {
