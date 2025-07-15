@@ -23,6 +23,7 @@ export type UserState = {
   walletConnectSigner: any,
   walletConnectSession:any,
   walletType: 'paytaca' | 'walletconnect' | undefined
+  walletLockingType: 'standard' | 'p2shMultisig'
   transactionSigner: TransactionSigner | undefined,
   tokens: CashToken[]
 }
@@ -38,6 +39,7 @@ export const useUser = defineStore('user', {
     walletConnectSigner: undefined,
     walletConnectSession: undefined,
     walletType: 'paytaca',
+    walletLockingType: 'standard',
     transactionSigner: undefined,
     tokens: []
   }),
