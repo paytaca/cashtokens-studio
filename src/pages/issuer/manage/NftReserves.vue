@@ -131,6 +131,7 @@ import { useRouter } from 'vue-router';
 import { useMinter } from 'src/stores/minter';
 import { useUI } from 'src/stores/ui';
 import { ipfsToGatewayUrl } from 'src/apps/utils';
+import { deriveTokenAddressFromCashAddress } from 'src/apps/utils';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -199,7 +200,8 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       token_amount__eq: 0,
       token_is_nft: true
     }
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const tokenAddress = deriveTokenAddressFromCashAddress(wallet.getTokenDepositAddress())
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(tokenAddress, query)
     populatingTable.value = false
     // $q.loading.hide()
     if (resp?.count > 0) {

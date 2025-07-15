@@ -94,7 +94,7 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-      }}</span>
+        }}</span>
     </q-inner-loading>
   </q-page>
 </template>
@@ -118,6 +118,7 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import BigNumber from 'bignumber.js';
 import { nextTick } from 'process';
 import txIsInMempool from 'src/apps/utils/txIsInMempool';
+import { deriveTokenAddressFromCashAddress } from 'src/apps/utils';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
@@ -178,7 +179,8 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
       token_amount__gte: 1
     }
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const tokenAddress = deriveTokenAddressFromCashAddress(wallet.getTokenDepositAddress())
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(tokenAddress, query)
     populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
