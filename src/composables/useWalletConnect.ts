@@ -12,36 +12,11 @@ export const useWalletConnect = () => {
   const walletConnectWalletTokenAddress = ref()
   const walletConnectWallet = ref()
   const walletConnectSignerClient = ref()
-  const walletConnectModal = ref()
-  // const walletConnectRequiredNamespaces = ref()
   const walletConnectSession = ref()
-  const walletConnectSessions = ref()
   const user = useUser()
 
 
   onMounted(async () => {
-
-    const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
-
-    const { WalletConnectModal } = await import('@walletconnect/modal')
-      walletConnectModal.value = new WalletConnectModal({
-        projectId: projectId,
-        themeMode: 'dark',
-        themeVariables: {
-          '--wcm-background-color': '#20c997',
-          '--wcm-accent-color': '#20c997',
-        },
-        explorerExcludedWalletIds: 'ALL',
-      })
-      // const connectedChain = user.walletNetworkType == "mainnet" ? "bch:bitcoincash" : "bch:bchtest";
-
-      // walletConnectRequiredNamespaces.value = {
-      //   bch: {
-      //     chains: [connectedChain],
-      //     methods: ['bch_getAddresses', 'bch_signTransaction', 'bch_signMessage'],
-      //     events: ['addressesChanged']
-      //   },
-      // }
 
     if (user.walletConnectSession) {
       walletConnectSession.value = user.walletConnectSession
@@ -49,7 +24,7 @@ export const useWalletConnect = () => {
       return
     }
     walletConnectSignerClient.value = new SignClient({
-      projectId,
+      projectId: process.env.WALLET_CONNECT_PROJECT_ID!,
       // optional parameters
       relayUrl: 'wss://relay.walletconnect.com',
       metadata: {
@@ -59,13 +34,14 @@ export const useWalletConnect = () => {
         icons: ['https://cashtokens.studio/images/cts_icon.png']
       }
     })
-
+    
     await walletConnectSignerClient.value.initialize()
-    walletConnectSessions.value = walletConnectSignerClient.value.session.getAll()
-    if (walletConnectSessions.value.length > 0) {
-      const lastSession = walletConnectSessions.value.length - 1
-      walletConnectSession.value = walletConnectSessions.value[lastSession]
-      walletConnectWalletAddress.value = walletConnectSessions.value[0].namespaces?.bch?.accounts[0]
+    const existingSessions = walletConnectSignerClient.value.session.getAll()
+    console.log('WALELTCONNECTSESSIONS', existingSessions)
+    if (existingSessions.length > 0) {
+      const lastSession = existingSessions.length - 1
+      walletConnectSession.value = existingSessions[lastSession]
+      walletConnectWalletAddress.value = existingSessions[0].namespaces?.bch?.accounts[0]
       if (walletConnectWalletAddress.value) {
         const address = walletConnectWalletAddress.value.replace('bch:','')
         walletConnectWalletAddress.value = formatAddress(address)
@@ -138,13 +114,23 @@ export const useWalletConnect = () => {
         requiredNamespaces, 
         optionalNamespaces
       });
-      const projectId = process.env.WALLET_CONNECT_PROJECT_ID!
 
-      await walletConnectModal.value.openModal({ uri });
+      const { WalletConnectModal } = await import('@walletconnect/modal')
+
+      const modal = new WalletConnectModal({
+        projectId: process.env.WALLET_CONNECT_PROJECT_ID!,
+        themeMode: 'dark',
+        themeVariables: {
+          '--wcm-background-color': '#20c997',
+          '--wcm-accent-color': '#20c997',
+        },
+        explorerExcludedWalletIds: 'ALL',
+      })
+
+      await modal.openModal({ uri });
       // Await session approval from the wallet.
       walletConnectSession.value = await approval();
-      walletConnectSessions.value = walletConnectSignerClient.value.sessions?.getAll()
-      walletConnectModal.value.closeModal();
+      modal.closeModal();
 
       let address
       if (walletConnectSession.value) {
@@ -176,10 +162,7 @@ export const useWalletConnect = () => {
           walletConnectWalletTokenAddress.value = ''
           walletConnectWallet.value = undefined
           walletConnectSignerClient.value = undefined
-          walletConnectModal.value = undefined
-          // walletConnectRequiredNamespaces.value = undefined
           walletConnectSession.value = undefined
-          walletConnectSessions.value = undefined
           user.wallet = undefined
           user.walletAddress = ''
           user.walletTokenAddress = ''
@@ -261,10 +244,7 @@ export const useWalletConnect = () => {
     walletConnectWalletTokenAddress,
     walletConnectWallet,
     walletConnectSignerClient,
-    walletConnectModal,
-    // walletConnectRequiredNamespaces,
     walletConnectSession,
-    walletConnectSessions,
     walletConnectConnect,
     walletConnectDisconnect,
     walletConnectSignTransaction,
