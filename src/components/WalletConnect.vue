@@ -41,20 +41,10 @@ const user = useUser()
 const walletConnect = useWalletConnect()
 
 const connectDisconnect = async () => {
-  if (user.walletAddress && user.walletType === 'walletconnect') {
+  if (user.wallet && user.walletType === 'walletconnect') {
     await walletConnect.walletConnectDisconnect()
-    user.walletType = undefined
-    user.walletAddress = ''
-    user.wallet = undefined
-    user.walletConnectSession = undefined
-    user.transactionSigner = undefined
   } else {
     await walletConnect.walletConnectConnect()
-    user.walletType = 'walletconnect'
-    user.walletAddress = walletConnect.walletConnectWalletAddress.value
-    user.wallet = walletConnect.walletConnectWallet.value
-    user.walletConnectSession = walletConnect.walletConnectSession.value
-    user.transactionSigner = walletConnect.walletConnectTransactionSigner
   }
 
 }

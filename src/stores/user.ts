@@ -9,7 +9,7 @@ export type UserState = {
   connectedPaytacaAddress?: string,
   connectedPaytacaWalletBchBalance?: string | number,
   walletBchBalance: string | number | undefined
-  walletAddress: string,
+  // walletAddress: string,
   wallet: Wallet | undefined,
   /**
    * True if wallet is being watched
@@ -22,7 +22,7 @@ export type UserState = {
   updatingBalances?: boolean,
   paginatedAuthKeys: PaginatedData,
   walletConnectSigner: any,
-  walletConnectSession:any,
+  // walletConnectSession:any,
   walletType: 'paytaca' | 'walletconnect' | undefined
   transactionSigner: TransactionSigner | undefined,
   tokens: CashToken[]
@@ -33,10 +33,10 @@ export const useUser = defineStore('user', {
     genesisInputs: [],
     paginatedAuthKeys: {count: 0,limit: 0,offset: 0,next: null,previous: null,results: []},
     walletBchBalance: '',
-    walletAddress: '',
+    // walletAddress: '',
     wallet: undefined,
     walletConnectSigner: undefined,
-    walletConnectSession: undefined,
+    // walletConnectSession: undefined,
     walletType: 'paytaca',
     transactionSigner: undefined,
     tokens: []
@@ -47,6 +47,9 @@ export const useUser = defineStore('user', {
         return 'chipnet'
       }
       return 'mainnet'
+    },
+    walletAddress(): string {
+      return this.wallet?.getDepositAddress() || ''
     }
   }
 });

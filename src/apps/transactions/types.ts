@@ -4,6 +4,7 @@ export type SigningResult = {
   signedTransaction?: string,
   message?: string,
   walletType?: 'p2pkh' | 'p2shMultisig',
+  walletLockingType?: 'p2pkh' | 'p2shMultisig',
   p2shMultisigSpec?: {
     m: number,
     n: number,

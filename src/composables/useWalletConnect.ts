@@ -7,48 +7,49 @@ import { delay } from 'mainnet-js';
 import  { stringify } from '@bitauth/libauth'
 import { TransactionSigner } from 'src/apps/types';
 
+const walletConnectSignerClient = ref()
+
 export const useWalletConnect = () => {
-  const walletConnectWalletAddress = ref()
   const walletConnectWallet = ref()
-  const walletConnectSignerClient = ref()
   const walletConnectSession = ref()
   const user = useUser()
 
 
   onMounted(async () => {
-
-    if (user.walletConnectSession) {
-      walletConnectSession.value = user.walletConnectSession
-      walletConnectSignerClient.value = user.walletConnectSigner
-      return
-    }
-    walletConnectSignerClient.value = new SignClient({
-      projectId: process.env.WALLET_CONNECT_PROJECT_ID!,
-      // optional parameters
-      relayUrl: 'wss://relay.walletconnect.com',
-      metadata: {
-        name: 'Cash-Tokens-Studio',
-        description: 'Cash Tokens Studio',
-        url: process.env.WALLET_CONNECT_VERIFIED_URL!,
-        icons: ['https://cashtokens.studio/images/cts_icon.png']
-      }
-    })
     
-    await walletConnectSignerClient.value.initialize()
+    if (!walletConnectSignerClient.value) {
+      walletConnectSignerClient.value = new SignClient({
+        projectId: process.env.WALLET_CONNECT_PROJECT_ID!,
+        // optional parameters
+        relayUrl: 'wss://relay.walletconnect.com',
+        metadata: {
+          name: 'Cash-Tokens-Studio',
+          description: 'Cash Tokens Studio',
+          url: process.env.WALLET_CONNECT_VERIFIED_URL!,
+          icons: ['https://cashtokens.studio/images/cts_icon.png']
+        }
+      })
+    }
+  
+    if(!walletConnectSignerClient.value?.pairing?.initialized) {
+      await walletConnectSignerClient.value.initialize()
+    }
+    
     const existingSessions = walletConnectSignerClient.value.session.getAll()
     if (existingSessions.length > 0) {
       const lastSession = existingSessions.length - 1
       walletConnectSession.value = existingSessions[lastSession]
-      walletConnectWalletAddress.value = existingSessions[0].namespaces?.bch?.accounts[0]
-      if (walletConnectWalletAddress.value) {
-        const address = walletConnectWalletAddress.value.replace('bch:','')
-        walletConnectWalletAddress.value = formatAddress(address)
-        walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
+      let address =  existingSessions[0].namespaces?.bch?.accounts[0]
+      if (address) {
+        address = address.replace('bch:','')
+        address = formatAddress(address)
+        walletConnectWallet.value = await getWalletClass().watchOnly(address)
         if (localStorage.getItem('user.walletType') === 'walletconnect') {
           user.walletType = 'walletconnect'
-          user.walletAddress = walletConnectWalletAddress.value
           user.wallet = walletConnectWallet.value
-          user.walletConnectSession = walletConnectSession.value
+          if (user.wallet) {
+            user.wallet.walletConnectSession = walletConnectSession.value
+          }
           user.transactionSigner = walletConnectTransactionSigner
         }
       }
@@ -64,11 +65,6 @@ export const useWalletConnect = () => {
     walletConnectSignerClient.value.on('session_delete', (s:any)=>{
       if (walletConnectSession.value?.topic == s.topic) {
         walletConnectSession.value = undefined
-        walletConnectWalletAddress.value = ''
-        if (user.walletType == 'walletconnect') {
-          user.walletConnectSession.value = undefined
-          user.walletAddress = ''
-        }
       }
     })
 
@@ -80,7 +76,6 @@ export const useWalletConnect = () => {
       console.log('PROPOSAL EXPIRE', s)
     })
 
-    user.walletConnectSession = walletConnectSession.value
     user.walletConnectSigner = walletConnectSignerClient.value
 
   })
@@ -132,8 +127,14 @@ export const useWalletConnect = () => {
       if (walletConnectSession.value) {
         if (walletConnectSession.value?.namespaces?.bch?.accounts) {
           address = walletConnectSession.value.namespaces.bch.accounts[0].replace('bch:','')
-          walletConnectWalletAddress.value = formatAddress(address)
-          walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
+          address = formatAddress(address)
+          walletConnectWallet.value = await getWalletClass().watchOnly(address)
+          user.walletType = 'walletconnect'
+          user.wallet = walletConnectWallet.value
+          if (user.wallet) {
+            user.wallet.walletConnectSession = walletConnectSession.value
+          }
+          user.transactionSigner = walletConnectTransactionSigner
         }
       }
       if (address) {
@@ -150,16 +151,12 @@ export const useWalletConnect = () => {
 
   const walletConnectDisconnect = async () => {
     if (walletConnectSession.value?.topic) {
-      console.log('Disconnecting')
       try {
         await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value.topic, reason: 'Disconnecting'})
         if (user.walletType === 'walletconnect') {
           walletConnectWallet.value = undefined
           walletConnectSignerClient.value = undefined
-          walletConnectSession.value = undefined
           user.wallet = undefined
-          user.walletAddress = ''
-          user.walletConnectSession = undefined
           user.walletConnectSigner = undefined
           if (localStorage.getItem('user.walletType') === 'walletconnect') {
             localStorage.removeItem('user.walletType')
@@ -184,7 +181,6 @@ export const useWalletConnect = () => {
     }
 
     const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
-    console.log(chainId)
     let result
     try {
       result = await walletConnectSignerClient.value.request({
@@ -232,10 +228,7 @@ export const useWalletConnect = () => {
   }
 
   return {
-    walletConnectWalletAddress,
-    walletConnectWallet,
     walletConnectSignerClient,
-    walletConnectSession,
     walletConnectConnect,
     walletConnectDisconnect,
     walletConnectSignTransaction,
