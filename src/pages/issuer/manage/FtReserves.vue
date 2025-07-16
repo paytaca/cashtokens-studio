@@ -118,7 +118,6 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import BigNumber from 'bignumber.js';
 import { nextTick } from 'process';
 import txIsInMempool from 'src/apps/utils/txIsInMempool';
-import { deriveTokenAddressFromCashAddress } from 'src/apps/utils';
 const $q = useQuasar()
 const router = useRouter()
 const user = useUser()
@@ -179,8 +178,8 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
       token_amount__gte: 1
     }
-    const tokenAddress = deriveTokenAddressFromCashAddress(wallet.getTokenDepositAddress())
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(tokenAddress, query)
+
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
     populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp
