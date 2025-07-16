@@ -13,7 +13,8 @@
     <q-btn v-else-if="variant === 'button'" @click.stop="paytacaConnectDisconnect" class="full-width"
       text-color="negative" size="lg">
       <span v-if="user.walletAddress" class="q-ma-sm">
-        <q-badge floating :color="user.walletAddress && user.walletType == 'paytaca' ? 'green' : 'red'" rounded></q-badge>
+        <q-badge floating :color="user.walletAddress && user.walletType == 'paytaca' ? 'green' : 'red'"
+          rounded></q-badge>
         <q-avatar rounded size="md">
 
           <q-img src="images/paytaca_icon.png"></q-img>
@@ -61,7 +62,6 @@ const paytacaConnectDisconnect = async () => {
     user.$patch({
       walletType: undefined,
       walletAddress: '',
-      walletTokenAddress: '',
       wallet: undefined,
       transactionSigner: undefined
     })
@@ -73,7 +73,6 @@ const paytacaConnectDisconnect = async () => {
 
     user.$patch({
       walletType: 'paytaca',
-      walletTokenAddress: paytacaConnect.paytacaWalletTokenAddress.value,
       walletAddress: paytacaConnect.paytacaWalletAddress.value,
       wallet: paytacaConnect.paytacaWallet.value,
       transactionSigner: paytacaConnect.paytacaTransactionSigner,

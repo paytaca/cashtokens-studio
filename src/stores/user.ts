@@ -10,7 +10,6 @@ export type UserState = {
   connectedPaytacaWalletBchBalance?: string | number,
   walletBchBalance: string | number | undefined
   walletAddress: string,
-  walletTokenAddress: string,
   wallet: Wallet | undefined,
   /**
    * True if wallet is being watched
@@ -35,7 +34,6 @@ export const useUser = defineStore('user', {
     paginatedAuthKeys: {count: 0,limit: 0,offset: 0,next: null,previous: null,results: []},
     walletBchBalance: '',
     walletAddress: '',
-    walletTokenAddress: '',
     wallet: undefined,
     walletConnectSigner: undefined,
     walletConnectSession: undefined,

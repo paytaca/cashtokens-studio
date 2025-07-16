@@ -153,7 +153,7 @@
                 <template v-slot:append>
                   <q-btn v-if="!state.options.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
                     color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
-                    @click="state.options.recipient = user.walletTokenAddress!" />
+                    @click="state.options.recipient = user.wallet!.getTokenDepositAddress()" />
                 </template>
               </q-input>
               <q-expansion-item label="Advanced">
@@ -1139,7 +1139,7 @@ onMounted(async () => {
 
 
   initCommitment()
-  state.value.options.recipient = user.walletTokenAddress
+  state.value.options.recipient = user.wallet!.getTokenDepositAddress()
   state.value.token.tokenId = route.query!.tokenId! as string
   window.onbeforeunload = (e) => {
     return true

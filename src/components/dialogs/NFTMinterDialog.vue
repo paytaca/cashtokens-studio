@@ -8,7 +8,7 @@
             <img :src="minter.tokenUris?.icon" alt="">
           </q-avatar>
           <span class="q-mx-sm text-bold">{{ minter.tokenCategory?.symbol ? minter.tokenCategory.symbol : 'NFT'
-          }}</span>
+            }}</span>
 
         </q-toolbar-title>
         <TokenCategory v-if="minter.token?.tokenId" :token-id="minter.token.tokenId" />
@@ -83,7 +83,8 @@
           <q-input v-model="form.recipient" label="Recipient's Address" filled dense>
             <template v-slot:append>
               <q-btn dense :flat="$q.dark.isActive ? true : false" label="Self" color="warning"
-                :class="$q.dark.isActive ? '' : 'text-black'" @click="form.recipient = user.walletTokenAddress!" />
+                :class="$q.dark.isActive ? '' : 'text-black'"
+                @click="form.recipient = user.wallet!.getTokenDepositAddress()" />
             </template>
           </q-input>
           <div class="text-right">
