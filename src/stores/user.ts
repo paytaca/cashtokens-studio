@@ -2,6 +2,8 @@ import { defineStore } from 'pinia'
 import { UtxoI, Wallet } from 'mainnet-js';
 import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { CashToken } from 'src/apps';
+import { createTemplate } from 'src/apps/utils/createMultisigWalletTemplate';
+import { walletTemplateP2pkh } from 'bitauth-libauth-v3';
 
 export type UserState = {
   connectedPaytacaAddress?: string,
@@ -23,7 +25,6 @@ export type UserState = {
   walletConnectSigner: any,
   walletConnectSession:any,
   walletType: 'paytaca' | 'walletconnect' | undefined
-  walletLockingType: 'standard' | 'p2shMultisig'
   transactionSigner: TransactionSigner | undefined,
   tokens: CashToken[]
 }
@@ -39,7 +40,6 @@ export const useUser = defineStore('user', {
     walletConnectSigner: undefined,
     walletConnectSession: undefined,
     walletType: 'paytaca',
-    walletLockingType: 'standard',
     transactionSigner: undefined,
     tokens: []
   }),
