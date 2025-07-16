@@ -27,7 +27,7 @@
           </q-item> -->
           <q-item class="col-xs-12 text-center" clickable v-ripple>
             <q-item-section>
-              <wallet-connect size="3em" />
+              <WalletConnect size="3em" />
             </q-item-section>
           </q-item>
         </q-list>
@@ -37,9 +37,8 @@
 </template>
 
 <script setup lang="ts">
-import PaytacaConnect from 'components/PaytacaConnect.vue';
 import WalletConnect from 'components/WalletConnect.vue';
-import { BCMR, delay } from 'mainnet-js';
+import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useUser } from 'src/stores/user';
 import { computed, onMounted, ref } from 'vue';
