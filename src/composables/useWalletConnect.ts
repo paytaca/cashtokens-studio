@@ -9,7 +9,6 @@ import { TransactionSigner } from 'src/apps/types';
 
 export const useWalletConnect = () => {
   const walletConnectWalletAddress = ref()
-  const walletConnectWalletTokenAddress = ref()
   const walletConnectWallet = ref()
   const walletConnectSignerClient = ref()
   const walletConnectSession = ref()
@@ -37,7 +36,6 @@ export const useWalletConnect = () => {
     
     await walletConnectSignerClient.value.initialize()
     const existingSessions = walletConnectSignerClient.value.session.getAll()
-    console.log('WALELTCONNECTSESSIONS', existingSessions)
     if (existingSessions.length > 0) {
       const lastSession = existingSessions.length - 1
       walletConnectSession.value = existingSessions[lastSession]
@@ -46,10 +44,8 @@ export const useWalletConnect = () => {
         const address = walletConnectWalletAddress.value.replace('bch:','')
         walletConnectWalletAddress.value = formatAddress(address)
         walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
-        walletConnectWalletTokenAddress.value = walletConnectWallet.value.getTokenDepositAddress()
         if (localStorage.getItem('user.walletType') === 'walletconnect') {
           user.walletType = 'walletconnect'
-          user.walletTokenAddress = walletConnectWalletTokenAddress.value
           user.walletAddress = walletConnectWalletAddress.value
           user.wallet = walletConnectWallet.value
           user.walletConnectSession = walletConnectSession.value
@@ -138,7 +134,6 @@ export const useWalletConnect = () => {
           address = walletConnectSession.value.namespaces.bch.accounts[0].replace('bch:','')
           walletConnectWalletAddress.value = formatAddress(address)
           walletConnectWallet.value = await getWalletClass().watchOnly(walletConnectWalletAddress.value)
-          walletConnectWalletTokenAddress.value = walletConnectWallet.value.getTokenDepositAddress()
         }
       }
       if (address) {
@@ -159,13 +154,11 @@ export const useWalletConnect = () => {
       try {
         await walletConnectSignerClient.value?.disconnect({topic: walletConnectSession.value.topic, reason: 'Disconnecting'})
         if (user.walletType === 'walletconnect') {
-          walletConnectWalletTokenAddress.value = ''
           walletConnectWallet.value = undefined
           walletConnectSignerClient.value = undefined
           walletConnectSession.value = undefined
           user.wallet = undefined
           user.walletAddress = ''
-          user.walletTokenAddress = ''
           user.walletConnectSession = undefined
           user.walletConnectSigner = undefined
           if (localStorage.getItem('user.walletType') === 'walletconnect') {
@@ -216,7 +209,6 @@ export const useWalletConnect = () => {
     }
 
     const chainId = process.env.APP_ENV == 'development' || process.env.APP_ENV == 'development-build'? 'bch:bchtest': 'bch:bitcoincash'
-    console.log(chainId)
     let result
     try {
       result = await walletConnectSignerClient.value.request({
@@ -241,7 +233,6 @@ export const useWalletConnect = () => {
 
   return {
     walletConnectWalletAddress,
-    walletConnectWalletTokenAddress,
     walletConnectWallet,
     walletConnectSignerClient,
     walletConnectSession,

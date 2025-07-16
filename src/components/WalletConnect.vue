@@ -45,14 +45,12 @@ const connectDisconnect = async () => {
     await walletConnect.walletConnectDisconnect()
     user.walletType = undefined
     user.walletAddress = ''
-    user.walletTokenAddress = ''
     user.wallet = undefined
     user.walletConnectSession = undefined
     user.transactionSigner = undefined
   } else {
     await walletConnect.walletConnectConnect()
     user.walletType = 'walletconnect'
-    user.walletTokenAddress = walletConnect.walletConnectWalletTokenAddress.value
     user.walletAddress = walletConnect.walletConnectWalletAddress.value
     user.wallet = walletConnect.walletConnectWallet.value
     user.walletConnectSession = walletConnect.walletConnectSession.value

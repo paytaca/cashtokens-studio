@@ -31,7 +31,7 @@
                             <q-icon v-else name="broken_image" color="grey-8"></q-icon>
                           </q-avatar>
                           <span style="letter-spacing: 5px;">{{ minter.value.identitySnapshot?.token?.symbol
-                            }}</span>
+                          }}</span>
                         </q-chip>
                       </div>
                     </div>
@@ -149,7 +149,7 @@
                       <template v-slot:append>
                         <q-btn v-if="!mintOptions.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
                           color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
-                          @click="mintOptions.recipient = user.walletTokenAddress!" />
+                          @click="mintOptions.recipient = user.wallet!.getTokenDepositAddress()" />
                       </template>
                     </q-input>
                   </div>

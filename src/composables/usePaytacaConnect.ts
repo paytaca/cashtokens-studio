@@ -5,7 +5,6 @@ import { TransactionSigner } from 'src/apps/types';
 
 export const usePaytacaConnect = () => {
   const paytacaWalletAddress = ref('')
-  const paytacaWalletTokenAddress = ref('')
   const paytacaWallet = ref()
   const user = useUser()
 
@@ -17,10 +16,8 @@ export const usePaytacaConnect = () => {
         if (address) {
           paytacaWalletAddress.value = formatAddress(address)
           paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
-          paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
           if (localStorage.getItem('user.walletType') === 'paytaca') {
             user.walletType = 'paytaca'
-            user.walletTokenAddress = paytacaWalletTokenAddress.value
             user.walletAddress = paytacaWalletAddress.value
             user.wallet = paytacaWallet.value
             user.transactionSigner = paytacaTransactionSigner
@@ -53,7 +50,6 @@ export const usePaytacaConnect = () => {
       if (address) {
         paytacaWalletAddress.value = formatAddress(address)
         paytacaWallet.value = await getWalletClass().watchOnly(paytacaWalletAddress.value)
-        paytacaWalletTokenAddress.value = paytacaWallet.value.getTokenDepositAddress()
         user.transactionSigner = paytacaTransactionSigner
       }
 
@@ -65,7 +61,6 @@ export const usePaytacaConnect = () => {
 
     paytacaWalletAddress.value = ''
     paytacaWallet.value = undefined
-    paytacaWalletTokenAddress.value = ''
     try {
       await window.paytaca?.disconnect()
       if (localStorage.getItem('user.walletType') === 'paytaca') {
@@ -115,7 +110,6 @@ export const usePaytacaConnect = () => {
 
   return {
     paytacaWalletAddress,
-    paytacaWalletTokenAddress,
     paytacaWallet,
     paytacaConnect,
     paytacaDisconnect,
