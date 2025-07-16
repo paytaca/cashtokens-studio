@@ -183,7 +183,6 @@ import { Token } from 'nft.storage';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
-import { deriveTokenAddressFromCashAddress } from 'src/apps/utils';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -225,8 +224,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
   if (wallet) {
     populatingTable.value = true
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
-    const tokenAddress = deriveTokenAddressFromCashAddress(wallet.getDepositAddress())
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(tokenAddress, query)
+    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
     populatingTable.value = false
     if (resp?.count > 0) {
       ownedAuthHeads.value = resp

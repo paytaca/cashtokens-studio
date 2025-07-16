@@ -1,4 +1,5 @@
 import { Wallet, TestNetWallet, DefaultProvider } from 'mainnet-js';
+import { cashAddressToTokenAddress } from './cashAddressToTokenAddress';
 // DefaultProvider.servers.testnet = ["wss://chipnet.imaginary.cash:50004"];
 // DefaultProvider.servers.mainnet = ["wss://fulcrum.pat.mn:50004"];
 // DefaultProvider.servers.testnet = ['wss://blackie.c3-soft.com:64004'];
@@ -20,6 +21,12 @@ export default () => {
     process.env.APP_ENV === 'development-build'
   ) {
     WalletClass = TestNetWallet;
+  }
+  WalletClass.prototype.getTokenDepositAddress = function () {
+    if (this.cashaddr) {
+      return cashAddressToTokenAddress(this.cashaddr)
+    }
+    return ''
   }
   return WalletClass;
 };

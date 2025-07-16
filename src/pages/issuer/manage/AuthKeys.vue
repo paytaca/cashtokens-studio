@@ -120,7 +120,6 @@ import { getWalletClass } from 'src/apps/utils';
 import { EventBus } from 'quasar';
 import AuthGuardTokenListDialog from 'src/components/dialogs/AuthGuardTokenListDialog.vue';
 import { useUI } from 'src/stores/ui';
-import { deriveTokenAddressFromCashAddress } from 'src/apps/utils';
 
 const user = useUser()
 const ui = useUI()
@@ -261,9 +260,9 @@ watch(() => pagination.value.currentPage, async (pageNumber, oldPageNumber) => {
         pagination.value.offset += pagination.value.maxRowsPerPage
       }
     }
-    const tokenAddress = deriveTokenAddressFromCashAddress(user.wallet.getDepositAddress())
+
     paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(
-      tokenAddress, { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+      user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
     // populate 
     populateAuthKeys(paginatedAuthKeys.value)
@@ -283,9 +282,8 @@ const initPagination = () => {
 
 const refreshData = async () => {
   if (user.wallet) {
-    const tokenAddress = deriveTokenAddressFromCashAddress(user.wallet.getDepositAddress())
     paginatedAuthKeys.value = await watchtower.value.fetchAuthKeys(
-      tokenAddress, { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
+      user.wallet.getTokenDepositAddress(), { limit: pagination.value.maxRowsPerPage, offset: pagination.value.offset }
     )
     user.paginatedAuthKeys = paginatedAuthKeys.value
     initPagination()
