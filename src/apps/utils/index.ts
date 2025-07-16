@@ -3,7 +3,6 @@ export { default as copyText } from './copyText';
 export { default as formatAddress } from './formatAddress';
 export { default as getAppEnv } from './getAppEnv';
 export { default as getByteCount } from './getByteCount';
-export { default as getWalletClass } from './getWalletClass';
 export { default as requestPaytacaSignature } from './requestPaytacaSignature';
 export { default as shortenAddress } from './shortenAddress';
 export { default as shortenTokenId } from './shortenTokenId';
@@ -16,5 +15,5 @@ export { default as ipfsToGatewayUrl } from './ipfsToGatewayUrl';
 export { default as isTokenAddress } from './isTokenAddress';
 export { default as isSquareImage } from './isSquareImage';
 export { default as sortNftTypesASC } from './sortNftTypesASC';
-export { default as estimateFees } from './estimateFees';
 export * from './cashAddressToTokenAddress'
+export * from './wallet'

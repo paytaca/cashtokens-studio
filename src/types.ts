@@ -7,12 +7,10 @@ declare global {
   }
 }
 
+import { WalletTemplate } from 'bitauth-libauth-v3'
 import 'mainnet-js'
-import { WalletTemplate  } from 'bitauth-libauth-v3';
-
 declare module 'mainnet-js' {
   interface Wallet {
-    template?: WalletTemplate,
-    walletConnectSession?: any
+    walletConnectSession?: any & { sessionProperties: { wallet:  { template: WalletTemplate } } }
   }
 }
