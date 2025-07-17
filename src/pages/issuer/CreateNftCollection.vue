@@ -362,8 +362,8 @@ const createToken = async () => {
         commitment: token.value.commitment,
         commitmentFormat: tokenCommitmentFormat.value,
         includeAuthKeyGenesis: createAuthKey.value === false ? false : true,
-        walletType: user.walletType,
-        walletConnectSession: user.walletConnectSession
+        walletType: user.walletType
+        // walletConnectSession: user.walletConnectSession
       })
       new Watchtower().subscribe(cashToken.value.authKey!.authGuard.contract!.getTokenDepositAddress())
       if (tx) {
