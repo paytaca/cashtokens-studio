@@ -1,4 +1,4 @@
-import { WalletTemplateEntity, WalletTemplateScript } from "bitauth-libauth-v3"
+import { AuthenticationVirtualMachineIdentifier, WalletTemplate, WalletTemplateEntity, WalletTemplateScript } from "bitauth-libauth-v3"
 
 type MultisigSpec = { m: number, n: number }
 type SignatureAlgo = 'ecdsa' | 'schnorr'
@@ -159,19 +159,19 @@ export const generateEntities = ({
 export const createTemplate = ({
   name,
   m, n,
-  signatureAlgo,
+  signatureAlgo = 'schnorr',
   signerNames
-}: MultisigSpec & { name?: string, signatureAlgo: SignatureAlgo, signerNames?: Record<SignerEntityKey, string> }) => {
+}: MultisigSpec & { name?: string, signatureAlgo?: SignatureAlgo, signerNames?: Record<SignerEntityKey, string> }): WalletTemplate => {
   const template = {
     name: '',
     $schema: 'https://libauth.org/schemas/wallet-template-v0.schema.json',
     entities: { /* generate */ },
     scripts: { /* generate */ },
-    supported: ['BCH_2021_05', 'BCH_2022_05', 'BCH_2023_05'],
-    version: 0
+    supported: ['BCH_2021_05', 'BCH_2022_05', 'BCH_2023_05'] as AuthenticationVirtualMachineIdentifier[]
   }
   template.name = name || `${m}-of-${n} Multisig`
   template.scripts = generateScripts({ m, n, signatureAlgo: signatureAlgo || 'schnorr' })
   template.entities = generateEntities({ n, scripts: template.scripts, signerNames })
+  
   return template
 }
