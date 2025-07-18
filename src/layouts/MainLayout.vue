@@ -144,8 +144,9 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeMount, onMounted, ref, watch } from 'vue';
+import { inject, onBeforeMount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router'
+import { EventBus } from 'quasar';
 import ClientDB from 'src/apps/clientonly/ClientDB';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import PaytacaConnect from 'components/PaytacaConnect.vue';
@@ -164,6 +165,11 @@ const route = useRoute()
 const router = useRouter()
 const messageDialog = ref<boolean>(false)
 const pendingMultisigTransactions = ref([])
+const eventBus = inject<EventBus>('eventBus')
+
+eventBus?.on('updatedPendingMultisigTransactions', async () => {
+  pendingMultisigTransactions.value = await user.getPendingMultisigTransactions()
+})
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
@@ -191,9 +197,12 @@ watch(() => ui.statusMessage, (value) => {
 
 watch(() => user.wallet, async (wallet) => {
   if (wallet !== undefined && typeof wallet.isMultisig === 'function') {
-    const db = ClientDB.getInstance()
-    pendingMultisigTransactions.value = await db.getPendingMultisigTransactions()
+    pendingMultisigTransactions.value = await user.getPendingMultisigTransactions()
   }
+})
+
+watch(() => route.name, (name) => {
+  console.log('route changed', name)
 })
 
 onMounted(async () => {
@@ -201,7 +210,7 @@ onMounted(async () => {
     router.push('/')
   }
   const db = ClientDB.getInstance()
-  pendingMultisigTransactions.value = await db.getPendingMultisigTransactions()
+  pendingMultisigTransactions.value = await user.getPendingMultisigTransactions()
 
 })
 
