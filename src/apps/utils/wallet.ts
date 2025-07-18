@@ -29,6 +29,12 @@ export const getWalletClass = () => {
     }
     return ''
   }
+  WalletClass.prototype.isMultisig = function () {
+    if (this.walletConnectSession?.sessionProperties?.wallet?.template) {
+      return isMultisigWallet(this.walletConnectSession.sessionProperties.wallet.template)
+    }
+    return false
+  }
   return WalletClass;
 };
 
