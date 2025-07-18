@@ -21,7 +21,7 @@
               </tr>
             </thead>
             <tbody class="text-center">
-              <tr v-for="t, i in transactions?.slice(0, 20)" :key="i">
+              <tr v-for="t, i in transactions?.slice(0, 50)" :key="i">
                 <td>{{ i + 1 }}</td>
                 <td>
                   <q-btn :href="explore(t.txid)" :disable="Boolean(t.unsignedHash) && t.broadcastStatus !== 'done'"
