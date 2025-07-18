@@ -12,5 +12,6 @@ import 'mainnet-js'
 declare module 'mainnet-js' {
   interface Wallet {
     walletConnectSession?: any & { sessionProperties: { wallet:  { template: WalletTemplate } } }
+    isMultisig: () => boolean
   }
 }
