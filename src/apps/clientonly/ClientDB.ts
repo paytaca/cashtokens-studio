@@ -139,7 +139,8 @@ export default class ClientDB {
         openCursor!.onsuccess = (event:any) => {
           const cursor = event.target.result;
           if (cursor) {
-            if (cursor.value.broadcastStatus === 'pending') {
+            const isMultisigTransaction = Boolean(cursor.value.unsignedHash)
+            if (isMultisigTransaction && !cursor.value.broadcastStatus || cursor.value.broadcastStatus === 'pending') {
               txns.push(cursor.value);
             }
             cursor.continue();
@@ -154,5 +155,4 @@ export default class ClientDB {
       }
     })
   }
-
 }
