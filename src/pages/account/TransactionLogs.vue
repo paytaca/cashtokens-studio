@@ -52,10 +52,12 @@
 </template>
 <script setup lang="ts">
 import ClientDB from 'src/apps/clientonly/ClientDB';
-import { computed, onMounted, ref } from 'vue';
+import { EventBus } from 'quasar';
+import { computed, onMounted, ref, inject } from 'vue';
 import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/apps/types';
 import { shortenTx } from 'src/apps/utils';
 import MultisigTransactionStatus from 'src/components/MultisigTransactionStatus.vue';
+const eventBus = inject<EventBus>('eventBus')
 
 const transactions = ref<CashTokenTransaction[]>()
 const explore = computed(() => {
@@ -83,11 +85,12 @@ const onStatusFetched = (data: StatusFetchedEvent) => {
     ])
       .then(async () => {
         transactions.value = await db.getCtsTransactions();
+        eventBus?.emit('updatedPendingMultisigTransactions');
       })
       .catch(error => {
         console.error('Error updating transaction:', error);
+        eventBus?.emit('updatedPendingMultisigTransactions');
       });
-
   }
 }
 
