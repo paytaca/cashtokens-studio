@@ -4,6 +4,8 @@ import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { CashToken } from 'src/apps';
 import { createTemplate } from 'src/apps/utils/createMultisigWalletTemplate';
 import { walletTemplateP2pkh } from 'bitauth-libauth-v3';
+import { isMultisigWallet } from 'src/apps/utils';
+import ClientDB from 'src/apps/clientonly/ClientDB';
 
 export type UserState = {
   connectedPaytacaAddress?: string,
@@ -11,6 +13,8 @@ export type UserState = {
   walletBchBalance: string | number | undefined
   // walletAddress: string,
   wallet: Wallet | undefined,
+  isMultisig?: boolean,
+  pendingMultisigTransactions?: any[],
   /**
    * True if wallet is being watched
    */
@@ -41,6 +45,15 @@ export const useUser = defineStore('user', {
     transactionSigner: undefined,
     tokens: []
   }),
+  actions: {
+    async getPendingMultisigTransactions() {
+      if (this.wallet && typeof this.wallet.isMultisig === 'function' && this.wallet.isMultisig()) {
+        const db = ClientDB.getInstance()
+        return db.getPendingMultisigTransactions()
+      }
+      return []
+    }
+  },
   getters: {
     walletNetworkType():('mainnet' | 'testnet' | 'chipnet'){
       if (process.env.APP_ENV === 'development' || process.env.APP_ENV === 'development-build') {
@@ -50,6 +63,6 @@ export const useUser = defineStore('user', {
     },
     walletAddress(): string {
       return this.wallet?.getDepositAddress() || ''
-    }
+    },
   }
 });

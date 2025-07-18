@@ -129,7 +129,7 @@ export default class ClientDB {
     })
   }
 
-  async getPendingTransactions(): Promise<any> {
+  async getPendingMultisigTransactions(): Promise<any> {
     const ts = this.transactionsStore
     return await new Promise((res, rej) => { 
       const index = ts?.index('timestamp')
@@ -155,4 +155,5 @@ export default class ClientDB {
       }
     })
   }
+  
 }
