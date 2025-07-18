@@ -126,8 +126,8 @@
         <template v-if="user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0">
           <div class="q-pa-md q-gutter-sm">
             <q-banner inline-actions rounded class="bg-orange-400 text-warning">
-              It looks like you still have pending multisig transaction. Please make sure to finalized and broadcast it
-              first before creating a new transaction in Cashtokens Studio to avoid any issues.
+              It looks like you still have a pending multisig transaction. Please make sure to finalize and broadcast it
+              first, before creating a new transaction in Cashtokens Studio, to avoid any issues.
               <template v-slot:action>
                 <q-btn v-if="route.name !== 'recent-transactions'" color="warning" icon="launch" label="Check it out"
                   text-color="black" :to="{ name: 'recent-transactions' }" no-caps />
