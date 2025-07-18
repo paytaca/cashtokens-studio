@@ -50,7 +50,7 @@
                     <q-item-label>
                       <span style="position: relative;">
                         Recent Transactions
-                        <q-badge v-if="pendingTransactions?.length > 0" color="orange" label="!" floating
+                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
                           rounded></q-badge>
                       </span>
                     </q-item-label>
@@ -91,7 +91,7 @@
                 </q-item>
               </q-list>
             </q-btn-dropdown>
-            <q-badge v-if="pendingTransactions?.length > 0" color="orange" label="!" floating></q-badge>
+            <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
         <!-- <light-switch /> -->
@@ -123,6 +123,18 @@
           <!-- <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" /> -->
           <q-toolbar-title class="text-h6">{{ ui.pageTitle || $route.meta?.pageTitle }}</q-toolbar-title>
         </q-toolbar>
+        <template v-if="user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0">
+          <div class="q-pa-md q-gutter-sm">
+            <q-banner inline-actions rounded class="bg-orange-400 text-warning">
+              It looks like you still have pending multisig transaction. Please make sure to finalized and broadcast it
+              first before creating a new transaction in Cashtokens Studio to avoid any issues.
+              <template v-slot:action>
+                <q-btn v-if="route.name !== 'recent-transactions'" color="warning" icon="launch" label="Check it out"
+                  text-color="black" :to="{ name: 'recent-transactions' }" no-caps />
+              </template>
+            </q-banner>
+          </div>
+        </template>
         <router-view />
         <q-ajax-bar />
       </q-page-container>
@@ -151,18 +163,17 @@ const ui = useUI()
 const route = useRoute()
 const router = useRouter()
 const messageDialog = ref<boolean>(false)
-const pendingTransactions = ref([])
+const pendingMultisigTransactions = ref([])
+
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
-// Add a stub for onBeforeMenuShow to fix the error
+
 const onBeforeMenuShow = () => {
-  // You can add logic here if needed before the menu shows
   const db = ClientDB.getInstance()
-  db.getPendingTransactions().then((v) => {
-    pendingTransactions.value = v
-    console.log('PENDING TRANSACTIONS', pendingTransactions.value)
+  db.getPendingMultisigTransactions().then((v) => {
+    pendingMultisigTransactions.value = v
   })
 }
 
@@ -178,15 +189,20 @@ watch(() => ui.statusMessage, (value) => {
   }
 })
 
-onBeforeMount(async () => {
-  const db = ClientDB.getInstance()
-  pendingTransactions.value = await db.getPendingTransactions()
+watch(() => user.wallet, async (wallet) => {
+  if (wallet !== undefined && typeof wallet.isMultisig === 'function') {
+    const db = ClientDB.getInstance()
+    pendingMultisigTransactions.value = await db.getPendingMultisigTransactions()
+  }
 })
 
 onMounted(async () => {
   if (!user.walletAddress) {
     router.push('/')
   }
+  const db = ClientDB.getInstance()
+  pendingMultisigTransactions.value = await db.getPendingMultisigTransactions()
+
 })
 
 
