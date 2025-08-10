@@ -32,7 +32,7 @@ const minerFee = calcMinerFee(
   { 'P2SH-P2WPKH': 1, P2PKH: 2 },
   { P2SH: 1, P2PKH: 2 }
 );
-export const burnCost = minerFee + DEFAULT_TOKEN_VALUE + 400;
+export const burnCost = minerFee + DEFAULT_TOKEN_VALUE + 400; 
 
 export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
   const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
@@ -49,6 +49,7 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
   ) {
     throw new Error('AuthUtxo and AuthKey required.');
   }
+
 
   const funds = (await opt.wallet.getAddressUtxos()).filter((u: UtxoI) => {
     return Boolean(!u.token) && u.satoshis > burnCost + 546;
@@ -109,7 +110,7 @@ export const buildBurnFtReserveTx = async (opt: BurnFtReserveOptions) => {
     .to([
       {
         to: burnAddress,
-        amount: BigInt(687),
+        amount: BigInt(1000),
         token: {
           category: authUtxo.token!.category,
           amount: BigInt(opt.amount)
