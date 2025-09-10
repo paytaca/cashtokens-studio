@@ -1,6 +1,6 @@
 <template>
-  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" title="Issue">
-    <q-card class="q-px-sm q-py-lg full-width">
+  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" title="Issue" full-width>
+    <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
           <div class="flex items-center col justify-between">
@@ -15,12 +15,13 @@
       </q-toolbar>
       <q-card-section>
         <div class="q-mt-sm">
-          <q-form id="ft-issuer-form" ref="issuerForm" @submit.prevent="() => confirmSend()" style="justify-items: initial !important;">
-            
-              <div class="q-gutter-md">
-            <Token v-if="tokenCopy" v-bind:token="tokenCopy" :hide="['capability', 'commitment']" :readonly="['amount']"
-              :labels="{ amount: 'Current Balance' }" />
-           
+          <q-form id="ft-issuer-form" ref="issuerForm" @submit.prevent="() => confirmSend()"
+            style="justify-items: initial !important;">
+
+            <div class="q-gutter-md">
+              <Token v-if="tokenCopy" v-bind:token="tokenCopy" :hide="['capability', 'commitment']"
+                :readonly="['amount']" :labels="{ amount: 'Current Balance' }" />
+
               <q-input :model-value="identitySnapshot?.token?.decimals || 0" label="Decimals" outlined
                 readonly></q-input>
               <q-input v-if="Number(issuedAmount) > 0" :model-value="newBalance" label="New Balance After Send" outlined
@@ -35,10 +36,13 @@
                 </template>
               </q-input>
               <q-input v-if="issuedAmount && BigInt(issuedAmount.replace('.', '')) > 0" v-model="recipient"
-                label="Recipient" placeholder="Paste recipient's token address"
+                ref="recipientInputElement" label="Recipient" placeholder="Paste recipient's token address"
                 :rules="[(v: string) => v && isTokenAddress(v) || 'Value should be a cashtoken address']" outlined>
+                <template v-slot:append>
+                  <q-btn @click="sendToSelf" text-color="primary" no-caps>Self</q-btn>
+                </template>
               </q-input>
-              </div>
+            </div>
           </q-form>
         </div>
       </q-card-section>
@@ -54,14 +58,19 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
 import { TokenI, type IdentitySnapshot } from 'mainnet-js'
-import { computed, onBeforeMount, onMounted, ref, toRaw } from 'vue';
+import { computed, nextTick, onBeforeMount, onMounted, ref, toRaw } from 'vue';
 import BigNumber from 'bignumber.js'
 import Token from '../../components/Token.vue'
 import { ipfsToGatewayUrl, isTokenAddress } from '../../apps/utils';
 
-const props = defineProps<{ token: Omit<TokenI, 'amount'> & { amount: string }, identitySnapshot?: IdentitySnapshot }>()
+const props = defineProps<{
+  token: Omit<TokenI, 'amount'> & { amount: string },
+  identitySnapshot?: IdentitySnapshot,
+  wallet: any
+}>()
 const tokenCopy = ref<Omit<TokenI, 'amount'> & { amount: string }>()
 const recipient = ref<string>()
+const recipientInputElement = ref()
 const issuerForm = ref()
 const issuedAmount = ref<string>('0')
 const issuedAmountRules = [
@@ -99,6 +108,21 @@ const confirmSend = () => {
 
   onDialogOK({ amountToSend: issuedAmount.value, newBalance: newBalance.value, decimals, recipient: recipient.value })
   issuerDialogRef.value = undefined
+}
+
+const sendToSelf = () => {
+  if (props.wallet?.tokenaddr) {
+    recipient.value = props.wallet?.tokenaddr
+    nextTick(() => {
+      const inputEl = recipientInputElement.value.$el.querySelector('input')
+      if (inputEl) {
+        inputEl.focus()
+        // Move cursor to the end
+        const len = inputEl.value.length
+        inputEl.setSelectionRange(len, len)
+      }
+    })
+  }
 }
 
 onBeforeMount(() => {
