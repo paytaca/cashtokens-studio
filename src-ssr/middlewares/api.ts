@@ -346,7 +346,7 @@ const handleIpfsError = (req: any, res: any) => {
 export default ssrMiddleware(async ({ app, resolve }) => {
   app.use(throttle(1024 * 128));
 
-  app.get('/api/testx11', async (req: any, res: any) => {
+  app.get('/api/testx113', async (req: any, res: any) => {
     res.send({ test: 'test' });
   });
 
@@ -583,6 +583,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
     }
   );
+  
 
   app.post(
     '/api/ipfs',
@@ -596,4 +597,76 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     pinJsonFileToPinata,
     handleIpfsError
   );
+
+  /**
+   * Proxy endpoint for IPFS images
+   * GET /api/ipfs-image?url=<ipfs-url>
+   * Fetches images from IPFS gateway using server-side gateway token
+   */
+  app.get('/api/ipfs-image', async (req: any, res: any) => {
+    const ipfsUrl = req.query.url;
+    
+    if (!ipfsUrl) {
+      return res.status(400).json({
+        error: 'Missing url query parameter',
+      });
+    }
+
+    try {
+      let gatewayUrl = ipfsUrl;
+      const pinataGatewayToken = process.env.PINATA_GATEWAY_TOKEN;
+      if (ipfsUrl.startsWith('ipfs://')) {
+        const path = ipfsUrl.replace('ipfs://', '');
+        const parts = path.split('/');
+        const cid = parts[0];
+        const filename = parts.slice(1).join('/');
+        
+        if (filename) {
+          gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}/${filename}`;
+        } else {
+          gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}`;
+        }
+      } else if (ipfsUrl.includes('ipfs.nftstorage.link')) {
+        const u = new URL(ipfsUrl);
+        const hostParts = u.hostname.split('.');
+        const cid = hostParts[0];
+        const filename = u.pathname.replace(/^\//, '');
+        gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}/${filename}`;
+      }
+
+      if (pinataGatewayToken) {
+        const separator = gatewayUrl.includes('?') ? '&' : '?';
+        gatewayUrl = `${gatewayUrl}${separator}pinataGatewayToken=${pinataGatewayToken}`;
+      }
+
+      const response = await fetch(gatewayUrl);
+      
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: `Failed to fetch image: ${response.statusText}`,
+        });
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      if (!contentType.startsWith('image/')) {
+        return res.status(400).json({
+          error: 'Resource is not an image',
+          contentType,
+        });
+      }
+
+      const imageBuffer = await response.arrayBuffer();
+      
+      res.setHeader('Content-Type', contentType);
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+      
+      res.send(Buffer.from(imageBuffer));
+    } catch (error: any) {
+      console.error('Error proxying IPFS image:', error);
+      res.status(500).json({
+        error: error.message || 'Failed to proxy image',
+      });
+    }
+  });
 });
