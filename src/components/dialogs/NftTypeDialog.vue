@@ -2,7 +2,7 @@
 
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide" persistent>
-    <q-card class="q-px-sm full-width">
+    <q-card class="q-px-md full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-center q-py-md">
           {{ title || 'NFT Metadata' }}
@@ -48,8 +48,8 @@
                 <div class="text-h6 q-mb-md q-mt-lg text-bold">
                   Details
                 </div>
-                <q-form ref="form" class="q-gutter-md" @submit.prevent="onOk">
-                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
+                <q-form ref="form" class="row" @submit.prevent="onOk">
+                  <div class="q-my-md q-gutter-y-sm items-center">
                     <label>
                       {{ identitySnapshot?.token?.nfts?.parse?.bytecode ? 'Bottom Alt Stack Hex' : 'Sequence Number' }}
                     </label>
@@ -58,20 +58,20 @@
                       :rules="nftTypeKeyRules" outlined required autofocus disable>
                     </q-input>
                   </div>
-                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
+                  <div class="col-xs-12 q-my-md q-gutter-y-sm items-center">
                     <label>Name *</label>
                     <q-input class="registry-field" v-model="nftType.name"
                       placeholder="E.g. `Art - 1`, `ACME Stadium Tickets`" :rules="[v => v?.length > 0 || 'Required']"
                       outlined required autofocus>
                     </q-input>
                   </div>
-                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center">
+                  <div class="col-xs-12 q-my-md q-gutter-y-sm items-center">
                     <label>Description</label>
                     <q-input class="registry-field" v-model="nftType.description" placeholder="Describe this NFT"
                       outlined autogrow>
                     </q-input>
                   </div>
-                  <div class="col-xs-12 col-md-8 q-my-md q-gutter-y-sm items-center"
+                  <div class="col-xs-12 q-my-md q-gutter-y-sm items-center"
                     :style="$q.screen.xs ? 'margin-bottom: 2rem' : ''">
                     <label>NFT Asset {{ assetFileUploading ? 'Uploading' : '' }}<q-spinner-dots
                         v-if="assetFileUploading" color="warning" class="q-mr-sm"></q-spinner-dots></label>
@@ -82,15 +82,21 @@
                       </q-file>
                       <q-input class="registry-field" v-model="nftType.uris!.asset" outlined autogrow bottom-slots
                         placeholder="Click upload icon to upload or paste URL">
-                        <template v-slot:prepend>
+                        <!-- <template v-slot:prepend>
                           <div @click.stop="assetFileRef.pickFiles()">
                             <q-spinner-box v-if="assetFileUploading" color="warning"></q-spinner-box>
                             <span v-else>
                               <q-avatar v-if="nftType.uris!.asset">
-                                <q-img :src="ipfsToGatewayUrl(nftType.uris!.asset)"></q-img>
+                                <q-img :src="ipfsToGatewayUrl(nftType.uris!.icon)"></q-img>
                               </q-avatar>
                               <q-btn v-else icon="upload_file" class="cursor-pointer" text-color="warning" dense />
                             </span>
+                          </div>
+                        </template> -->
+                        <template v-slot:append>
+                          <div @click.stop="assetFileRef.pickFiles()">
+                            <q-spinner-box v-if="assetFileUploading" color="warning"></q-spinner-box>
+                            <q-btn v-else icon="upload_file" class="cursor-pointer" text-color="warning" size="lg" />
                           </div>
                         </template>
 
@@ -102,7 +108,7 @@
                       </q-input>
                     </div>
                   </div>
-                  <div class="col-xs-12 col-md-8 q-my-lg q-gutter-y-sm items-center"
+                  <div class="col-xs-12 q-my-lg q-gutter-y-sm items-center"
                     :style="$q.screen.xs ? 'margin-bottom: 4rem' : 'margin-bottom: 2rem'">
                     <label>NFT Icon {{ iconFileUploading ? 'Uploading' : '' }}<q-spinner-dots v-if="iconFileUploading"
                         color="warning" class="q-mr-sm"></q-spinner-dots></label>
@@ -115,14 +121,20 @@
                         placeholder="Click upload icon to upload or paste URL">
 
                         <template v-slot:prepend>
-                          <div @click.stop=" iconFileRef.pickFiles()">
+                          <div @click.stop="iconFileRef.pickFiles()">
                             <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
                             <span v-else>
                               <q-avatar v-if="nftType.uris!.icon">
-                                <q-img :src="ipfsToGatewayUrl(nftType.uris!.icon)"></q-img>
+                                <q-img :src="ipfsToGatewayUrl(nftType.uris!.icon) || ''"></q-img>
                               </q-avatar>
                               <q-btn v-else icon="upload_file" class="cursor-pointer" text-color="warning" dense />
                             </span>
+                          </div>
+                        </template>
+                        <template v-slot:append>
+                          <div @click.stop="iconFileRef.pickFiles()">
+                            <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
+                            <q-btn v-else icon="upload_file" class="cursor-pointer" text-color="warning" size="lg" />
                           </div>
                         </template>
 
