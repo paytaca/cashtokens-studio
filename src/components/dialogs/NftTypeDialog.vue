@@ -101,7 +101,7 @@
                         </template>
 
                         <template v-slot:hint>
-                          <span style="line-height: 1rem;">
+                          <span style="line-height: 1.3rem;">
                             This is the real-world asset tokenized by this NFT. E.g. a digital artwork, music etc...
                           </span>
                         </template>
@@ -139,7 +139,7 @@
                         </template>
 
                         <template v-slot:hint>
-                          <span style="line-height: 1.2rem;">
+                          <span style="line-height: 1.3rem;">
                             It's recommended to provide an image as icon for this NFT so it'll show up nicely on user
                             interfaces.
                             Recommended max size is 400x400.
@@ -148,7 +148,7 @@
                       </q-input>
                     </div>
                   </div>
-                  <div class="col-xs-12 col-sm-8 col-lg-5">
+                  <div class="col-xs-12 col-sm-8 col-lg-5 q-mt-lg">
                     <div class="text-h6 ">Attributes<q-btn flat color="primary" icon="add" size="md"
                         @click="openAttributeDialog" type="button" />
                     </div>
