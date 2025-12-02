@@ -86,7 +86,7 @@
                 </div>
               </div>
               <q-form id="bcmr-form" ref="bcmrForm" disabled>
-                <div class="col-xs-12 col-sm-10">
+                <div class="col-12">
                   <div v-if="publicationTx" class="q-px-lg text-center">
                     🎉 Registry published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
                       color="secondary" label="View Tx in Explorer" />
@@ -1686,5 +1686,15 @@ onMounted(async () => {
 .disabled,
 [disabled] {
   opacity: 0.8 !important;
+}
+
+/* Ensure form takes full width of container */
+#bcmr-form {
+  width: 100%;
+  display: block;
+}
+
+#bcmr-form>div {
+  width: 100%;
 }
 </style>
