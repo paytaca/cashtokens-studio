@@ -61,14 +61,11 @@ export class ChainGraph {
           query: `{transaction(where:{hash:{_eq:\"\\\\x${tokenId}\"}}){hash authchains{authhead{hash}, authchain_length migrations(where:{transaction:{outputs:{locking_bytecode_pattern:{_like:\"6a04%\"}}}},order_by:{migration_index:desc}limit:1){transaction{hash inputs(where:{outpoint_index:{_eq:\"0\"}}){outpoint_index}outputs(where:{locking_bytecode_pattern:{_like:\"6a04%\"}}){output_index locking_bytecode}}}}}}`,
         }),
       });
-      console.log('tokenId', tokenId);
-      console.log('RESPONSE', response);
       if (response.status >= 400) {
         throw response.statusText;
       }
 
       response = await response.json();
-      console.log('JSONRE', response);
 
       const result: any = [];
 
