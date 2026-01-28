@@ -588,7 +588,6 @@ import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
 import { upload as uploadToIPFS } from 'src/apps/ipfs'
 
-
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
@@ -598,6 +597,7 @@ const user = useUser()
 const localForage = useLocalForage()
 const tokenStore = useTokenStore()
 const { $ebus } = useEventBus()
+
 const publicationTx = ref<string>()
 const bcmr = ref<Bcmr>(new Bcmr({
   $schema: '',
@@ -961,6 +961,13 @@ const openDeleteUnpublishNftsDialog = () => {
 }
 
 const openPublishRegistryFromFileDialog = () => {
+  if (Number(user.walletBchBalance || 0) < 0.00003) {
+    $q.dialog({
+      message: 'You do not have enough balance to publish a registry.',
+      ok: 'OK'
+    })
+    return
+  }
   $q.dialog({
     component: RegistryPublishFromFileDialog,
     componentProps: {
@@ -971,6 +978,7 @@ const openPublishRegistryFromFileDialog = () => {
       publicationTx.value = param.tx
       progress.value = 'Loading update...'
       const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(param.authbase)
+
       if (pubInfo && pubInfo[0]) {
         if (pubInfo[0].httpsUrl) {
           try {
@@ -1629,6 +1637,7 @@ onBeforeUnmount(async () => {
 })
 
 onMounted(async () => {
+
   ui.routeBack = `registries`
   if (!tokenStore.token.token?.tokenId) {
     $q.dialog({
