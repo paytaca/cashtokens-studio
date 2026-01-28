@@ -82,6 +82,7 @@ import { Draft07 } from 'json-schema-library'
 import bcmrSchema from 'src/apps/bcmr/bcmr-schema.json'
 import { upload as uploadToIPFS } from 'src/apps/ipfs'
 
+
 defineEmits([
   ...useDialogPluginComponent.emits,
 ])
@@ -171,6 +172,7 @@ const authenticate = async (authhead: AuthchainIdentity, registry: Registry) => 
 }
 
 const publish = async () => {
+
   progress.value = 'Verifying authhead'
   const authenticated = await authenticate(props.authchainIdentity, JSON.parse(await bcmrFile.value.text()))
   progress.value = ''
@@ -200,16 +202,14 @@ const publish = async () => {
             txid: tx
           }
         }).onDismiss(() => {
-
           onDialogOK({ authbase: props.authchainIdentity.identitySnapshot?.token?.category, tx: tx })
         })
       })
 
     }
   } catch (error: any) {
-    console.log(error)
     $q.dialog({
-      message: 'Error publishing registry.',
+      message: error?.toString() || 'Error publishing registry.',
       progress: false,
       class: 'q-pa-lg'
     }).onDismiss(() => onDialogOK(null))
