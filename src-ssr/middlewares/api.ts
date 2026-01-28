@@ -278,8 +278,7 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
     });
   } catch (error) {
     req.ipfs.error = {
-      ...req.ipfs.error,
-      pinata: error,
+      message: 'Error pinning file to pinata'
     };
     console.log('🚀 ~ pinMediaFileToPinata ~ req.ipfs.error:', req.ipfs.error);
   }
@@ -299,9 +298,11 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     },
   };
 
+  console.log('OPTIONS', options)
+
   try {
-    const fileStream = new Readable();
-    fileStream.push(req.file.buffer);
+    const fileStream = Readable.from(req.file.buffer);
+    // fileStream.push(req.file.buffer);
     // if (req.file?.buffer) {
     //   fileStream.push(req.file.buffer); // Push buffer data to the stream
     // }
@@ -310,7 +311,9 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     //   fileStream.push(Buffer.from(jsonString));
     // }
 
-    fileStream.push(null);
+    // fileStream.push(null);
+
+    (fileStream as any).path = req.ipfs.filename || 'upload.json'; 
 
     const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
       fileStream,
@@ -329,8 +332,7 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     });
   } catch (error) {
     req.ipfs.error = {
-      ...req.ipfs.error,
-      pinata: error,
+      message: 'Error pinning file to pinata'
     };
     console.log('🚀 ~ pinJsonFileToPinata ~ error:', req.ipfs.error);
   }
