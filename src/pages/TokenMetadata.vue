@@ -587,6 +587,7 @@ import { useAuthhead } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
 import { upload as uploadToIPFS } from 'src/apps/ipfs'
+import { locateRegistry } from 'src/apps/bcmr';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -977,26 +978,15 @@ const openPublishRegistryFromFileDialog = () => {
     if (param.authbase && param.tx) {
       publicationTx.value = param.tx
       progress.value = 'Loading update...'
-      const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(param.authbase)
-
-      if (pubInfo && pubInfo[0]) {
-        if (pubInfo[0].httpsUrl) {
-          try {
-            // TODO: use pubInfo URIs
-            const r = await fetch(pubInfo[0].httpsUrl)
-            if (r.status == 200) {
-              const rj = await r.json()
-              if (rj) {
-                initBcmr(rj)
-              }
-
-            }
-          } catch (error) {
-            $q.dialog({
-              message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-            })
-          }
+      try {
+        const r = await locateRegistry(param.authbase)
+        if (r) {
+          initBcmr(r)
         }
+      } catch (error) {
+        $q.dialog({
+          message: error?.toString() || 'Unable to load registry'
+        })
       }
       progress.value = 'Updating authhead'
       await tokenStore.token.updateUtxo()
