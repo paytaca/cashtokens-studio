@@ -665,8 +665,66 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     } catch (error: any) {
       console.error('Error proxying IPFS image:', error);
       res.status(500).json({
-        error: error.message || 'Failed to proxy image',
+        error: error?.message || 'Failed to proxy image',
       });
     }
   });
+
+
+  /**
+   /**
+    * Proxy endpoint for IPFS files
+    * GET /api/ipfs/:cid[?filePath=<path>]
+    * Fetches files from IPFS gateway using server-side gateway token
+    */
+  app.get('/api/ipfs/:cid', async (req: any, res: any) => {
+
+    const cid = req.params.cid;
+    const filePath = decodeURIComponent(req.query.filePath ?? '').replace(/\/+/g, '/').replace(/^\/+/, '');
+    let gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}` 
+    if (filePath) {
+      gatewayUrl = `${gatewayUrl}/${filePath}`;
+    }
+    gatewayUrl = `${gatewayUrl}?pinataGatewayToken=${process.env.PINATA_GATEWAY_TOKEN}`;
+
+    try {
+      const response = await fetch(gatewayUrl);
+        
+      if (!response.ok) {
+        return res.status(response.status).json({
+          error: `Failed to fetch resource from ipfs!`,
+        });
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      
+      if (contentType.startsWith('image/')) {
+        const imageBuffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        res.send(Buffer.from(imageBuffer));    
+      }
+      // Handle case when content is JSON (such as bitcoin-cash-metadata-registry.json)
+      else if (contentType.includes('application/json') || filePath.endsWith('.json')) {
+        const jsonData = await response.json();
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+        res.json(jsonData);
+      } else {
+        // For other mime types, just stream the data as octet-stream
+        const buffer = await response.arrayBuffer();
+        res.setHeader('Content-Type', contentType || 'application/octet-stream');
+        res.setHeader('Cache-Control', 'public, max-age=86400');
+        res.send(Buffer.from(buffer));
+      }
+
+    } catch (error: any) {
+      console.log('ERROR', error);
+      res.status(500).json({
+        error: error?.message || 'Internal Server Error',
+      });
+    }
+    
+  });
+
 });
