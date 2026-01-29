@@ -227,6 +227,13 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
   }
 }
 
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
+})
+
+
 onBeforeMount(async () => {
   if (user.wallet) {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
