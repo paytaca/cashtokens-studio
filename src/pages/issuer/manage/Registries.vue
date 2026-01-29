@@ -278,6 +278,12 @@ const onTableRequest = async (props: any) => {
   await populateAuthheads()
 }
 
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateAuthheads()
+  }
+})
+
 onMounted(() => {
   ui.routeBack = ''
 })
