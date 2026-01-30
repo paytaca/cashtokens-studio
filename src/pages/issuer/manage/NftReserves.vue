@@ -183,21 +183,25 @@ const openMintNftPage = (identity: AuthchainIdentity) => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    // $q.loading.show()
+
     populatingTable.value = true
+
     const query = {
       limit: pagination.value.rowsPerPage,
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
       token_amount__eq: 0,
       token_is_nft: true
     }
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      wallet.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
 
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
     populatingTable.value = false
-    // $q.loading.hide()
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })

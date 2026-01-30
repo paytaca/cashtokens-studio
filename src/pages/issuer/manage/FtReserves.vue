@@ -94,7 +94,7 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-      }}</span>
+        }}</span>
     </q-inner-loading>
   </q-page>
 </template>
@@ -181,11 +181,16 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       token_amount__gte: 1
     }
 
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      wallet.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
+
     populatingTable.value = false
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
