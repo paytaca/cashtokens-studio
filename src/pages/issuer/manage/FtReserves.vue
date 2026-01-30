@@ -100,6 +100,7 @@
 </template>
 <script setup lang="ts">
 import { onMounted, ref, computed, inject, onBeforeUnmount, watch } from 'vue';
+import { useMetadataStore } from 'src/stores/metadata'
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/apps'
 import { PaginatedData, TransactionSigner } from 'src/apps/types';
@@ -120,6 +121,7 @@ import { nextTick } from 'process';
 import txIsInMempool from 'src/apps/utils/txIsInMempool';
 const $q = useQuasar()
 const router = useRouter()
+const metadataStore = useMetadataStore()
 const user = useUser()
 const { $ebus } = useEventBus()
 const eventBus = inject<EventBus>('eventBus')
@@ -197,7 +199,12 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
 
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
@@ -207,7 +214,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
 
 
 const openBurnFtDialog = (v: AuthchainIdentity, identitySnapshot: IdentitySnapshot) => {
-  const originalBalance = v.token.amount
+  const originalBalance = v.token?.amount
   $q.dialog({
     component: FTBurnDialog,
     componentProps: {

@@ -132,6 +132,7 @@ import { useMinter } from 'src/stores/minter';
 import { useUI } from 'src/stores/ui';
 import { ipfsToGatewayUrl } from 'src/apps/utils';
 import { cashAddressToTokenAddress } from 'src/apps/utils';
+import { useMetadataStore } from 'src/stores/metadata';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -140,6 +141,7 @@ const user = useUser()
 const minter = useMinter()
 const eventBus = inject<EventBus>('eventBus')
 const populatingTable = ref<boolean>()
+const metadataStore = useMetadataStore()
 
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
@@ -219,7 +221,12 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           token
         } = cashtoken
         ownedAuthHeads.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
