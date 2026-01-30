@@ -249,8 +249,6 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
   }
 }
 
-
-
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
@@ -264,12 +262,20 @@ const onBurn = async () => {
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
 
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
+})
+
 onBeforeMount(async () => {
   if (user.wallet) {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
 
 })
+
+
 
 onMounted(() => {
   ui.routeBack = ''
