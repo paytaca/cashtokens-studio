@@ -172,17 +172,6 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'commitment', 'capability', 'actions']
 })
 
-/**
- * @deprecated in favor of openMintNftPage
- */
-const openMintChildNftPage = (identity: AuthchainIdentity) => {
-  const ct = new CashToken({ ...identity }, user.transactionSigner)
-  ct.tokenCategory = identity.tokenCategory
-  ct.tokenUris = identity.tokenUris
-  ct.identitySnapshot = identity.identitySnapshot
-  minter.value = ct
-  router.push({ name: 'mint-child-nft', query: { tokenId: identity.token!.tokenId } })
-}
 
 const openMintNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
