@@ -23,7 +23,7 @@
             </tr>
           </tbody>
         </q-markup-table>
-        <q-markup-table v-if="lockedCashTokens.length > 0" flat bordered separator="cell" class="q-my-md">
+        <q-markup-table v-if="lockedIdentityOutputs.length > 0" flat bordered separator="cell" class="q-my-md">
           <thead class="text-left">
             <tr>
               <th>#</th>
@@ -33,19 +33,23 @@
             </tr>
           </thead>
           <tbody class="text-left">
-            <tr v-for="identity, i in lockedCashTokens" :key="'ai-rec-' + i">
+            <tr v-for="lockedIdentityOutput, i in lockedIdentityOutputs" :key="'ai-rec-' + i">
               <td>{{ i + 1 }}</td>
               <td>
-                <q-avatar v-if="identity.tokenUris?.icon">
-                  <img :src="identity.tokenUris?.icon" alt="na">
-                </q-avatar>
-                <q-icon v-else name="token" size="xl" color="disabled" />
+                <q-skeleton v-if="lockedIdentityOutput?.processing" type="circle"></q-skeleton>
+                <template v-else>
+                  <q-avatar v-if="lockedIdentityOutput.identitySnapshot?.uris?.icon">
+                    <img :src="ipfsToGatewayUrl(lockedIdentityOutput.identitySnapshot?.uris?.icon)" alt="na">
+                  </q-avatar>
+                  <q-icon v-else name="token" size="xl" color="disabled" />
+                </template>
               </td>
               <td>
-                {{ identity.tokenCategory?.symbol }}
+                <q-skeleton v-if="lockedIdentityOutput?.processing" bordered square></q-skeleton>
+                <span v-else>{{ lockedIdentityOutput.identitySnapshot?.token?.symbol }}</span>
               </td>
               <td>
-                <TokenCategory :token-id="identity.token?.tokenId" />
+                <TokenCategory :token-id="lockedIdentityOutput.token?.tokenId" />
               </td>
             </tr>
           </tbody>
@@ -63,12 +67,15 @@
 <script setup lang="ts">
 import { UtxoI } from 'mainnet-js';
 import { AuthGuard, AuthKey, CashToken } from 'src/apps';
-import { onUpdated, ref, onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import TokenCategory from 'src/components/TokenCategory.vue'
 import CashAddress from '../CashAddress.vue';
+import { ipfsToGatewayUrl } from 'src/apps/utils';
+import { useMetadataStore } from 'src/stores/metadata';
 const props = defineProps<{ authGuard: AuthGuard, authKey: AuthKey }>()
-const lockedCashTokens = ref<CashToken[]>([])
+const lockedIdentityOutputs = ref<CashToken[]>([])
 const lockedTokens = ref<UtxoI[]>([])
+const metadataStore = useMetadataStore()
 
 onMounted(async () => {
   if (props.authGuard) {
@@ -77,11 +84,13 @@ onMounted(async () => {
       lockedTokens.value = await props.authGuard.getLockedTokenIdentities()
       console.log(lockedTokens.value)
       lockedTokens.value.forEach((u: UtxoI) => {
-        lockedCashTokens.value.push(new CashToken({ ...u }))
+        lockedIdentityOutputs.value.push(new CashToken({ ...u }))
       })
-      lockedCashTokens.value.forEach(async (a) => {
-        await a.resolveTokenCategory()
-        await a.resolveTokenUris()
+      lockedIdentityOutputs.value.forEach(async (a) => {
+        if (!a.token?.tokenId) return;
+        a.processing = 'Resolving token category'
+        a.identitySnapshot = await metadataStore.resolveIdentitySnapshot(a.token.tokenId)
+        a.processing = ''
       })
     } catch (error) {
       console.log(error)

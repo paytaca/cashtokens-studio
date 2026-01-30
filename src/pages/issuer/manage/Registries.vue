@@ -151,6 +151,7 @@ import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
 import { useAuthhead } from 'src/stores/authhead';
 import { ipfsToGatewayUrl, shortenTx } from 'src/apps/utils';
+import { useMetadataStore } from 'src/stores/metadata';
 
 defineComponent({ name: 'RegistryList' })
 const $q = useQuasar()
@@ -159,6 +160,7 @@ const router = useRouter()
 const user = useUser()
 const authhead = useAuthhead()
 const tokenStore = useTokenStore()
+const metadataStore = useMetadataStore()
 const eventBus = inject<EventBus>('eventBus')
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const populatingTable = ref<boolean>()
@@ -202,11 +204,16 @@ const populateAuthheads = async () => {
   if (user.wallet) {
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
     populatingTable.value = true
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(user.wallet!.getTokenDepositAddress(), query)
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(user.wallet!.getTokenDepositAddress(), query)
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      user.wallet!.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
+
     populatingTable.value = false
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -220,7 +227,12 @@ const populateAuthheads = async () => {
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: user.wallet as Wallet }, user.transactionSigner)
 
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
