@@ -1561,19 +1561,22 @@ const displayAuthheadAuthFailureDialog = async (authhead: string) => {
 
 onBeforeMount(async () => {
   try {
-    if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
-      return console.log('🚀 ~ onBeforeMount ~ is returning')
-    }
+
+    let tokenId = route.params.identifier || tokenStore.token?.token?.tokenId || tokenStore.token?.identitySnapshot?.token?.category
+    // if (!tokenStore.token?.token?.tokenId && !tokenStore.token?.identitySnapshot?.token?.category) {
+    //   return console.log('🚀 ~ onBeforeMount ~ is returning')
+    // }
+    if (!tokenId) return router.back()
     progress.value = 'Loading registry, please wait...'
     let r
     try {
-      r = await localForage.registryTempStore.getItem(`registry:${tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId}`)
+      r = await localForage.registryTempStore.getItem(`registry:${tokenId}`)
     } catch (error) {
       console.log("🚀 ~ locateRegistry ~ error:", error)
     }
 
     if (!r || r == 'undefined') {
-      r = await (new BcmrIndexer()).fetchRegistry(tokenStore.token?.identitySnapshot?.token?.category || tokenStore.token.token?.tokenId, true)
+      r = await (new BcmrIndexer()).fetchRegistry(tokenId, true)
     }
     if (r) {
       initBcmr(r)
@@ -1584,7 +1587,7 @@ onBeforeMount(async () => {
         progress.value = `Trying other methods please wait...`
         await delay(1000)
         progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenStore.token.token?.tokenId)
+        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenId)
         if (pubInfo && pubInfo[0]) {
           if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
             try {
@@ -1605,7 +1608,7 @@ onBeforeMount(async () => {
         }
 
         if (!bcmrSelectedAuthbase.value) {
-          bcmrSelectedAuthbase.value = tokenStore.token.token.tokenId
+          bcmrSelectedAuthbase.value = tokenId
           newRevision()
         }
       }
@@ -1629,6 +1632,7 @@ onBeforeUnmount(async () => {
 onMounted(async () => {
 
   ui.routeBack = `registries`
+
   if (!tokenStore.token.token?.tokenId) {
     $q.dialog({
       component: AuthbasePromptDialog

@@ -157,7 +157,9 @@ import TransactionLogger from 'src/components/TransactionLogger.vue'
 import getAppEnv from 'src/apps/utils/getAppEnv'
 import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useInit } from 'src/composables/useInit';
+import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { shortenAddress, copyText } from 'src/apps/utils'
+
 const leftDrawerOpen = ref(false)
 const user = useUser()
 const ui = useUI()
@@ -166,6 +168,7 @@ const router = useRouter()
 const messageDialog = ref<boolean>(false)
 const pendingMultisigTransactions = ref([])
 const eventBus = inject<EventBus>('eventBus')
+useWalletConnect()
 
 eventBus?.on('updatedPendingMultisigTransactions', async () => {
   pendingMultisigTransactions.value = await user.getPendingMultisigTransactions()
@@ -201,14 +204,7 @@ watch(() => user.wallet, async (wallet) => {
   }
 })
 
-watch(() => route.name, (name) => {
-  console.log('route changed', name)
-})
-
 onMounted(async () => {
-  if (!user.walletAddress) {
-    router.push('/')
-  }
   const db = ClientDB.getInstance()
   pendingMultisigTransactions.value = await user.getPendingMultisigTransactions()
 

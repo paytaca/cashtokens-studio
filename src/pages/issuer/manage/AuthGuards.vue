@@ -70,7 +70,7 @@
                 <q-skeleton v-if="!!value.row.processing" type="circle" bordered></q-skeleton>
                 <div v-else>
                   <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                    <q-img :src="value.row.identitySnapshot.uris.icon" />
+                    <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
                   </q-avatar>
                   <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                 </div>
@@ -183,13 +183,15 @@ import { Token } from 'nft.storage';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
-
+import { useMetadataStore } from 'src/stores/metadata';
 const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
 const user = useUser()
 const tokenStore = useTokenStore()
+const metadataStore = useMetadataStore()
 const eventBus = inject<EventBus>('eventBus')
+
 const { dialog, dialogData, openDialog, onHide, hideDialog } = useDialogs()
 const populatingTable = ref<boolean>()
 const ownedAuthHeads = ref<PaginatedData>({
@@ -224,11 +226,17 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
   if (wallet) {
     populatingTable.value = true
     const query: FetchUtxoQueryParams = { limit: pagination.value.rowsPerPage, offset: (pagination.value.page - 1) * pagination.value.rowsPerPage }
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      wallet.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
+
     populatingTable.value = false
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -241,15 +249,18 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           token
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
 
   }
 }
-
-
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
@@ -264,12 +275,20 @@ const onBurn = async () => {
   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
 }
 
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
+})
+
 onBeforeMount(async () => {
   if (user.wallet) {
     await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
   }
 
 })
+
+
 
 onMounted(() => {
   ui.routeBack = ''

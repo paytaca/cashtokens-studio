@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { UtxoI, Wallet } from 'mainnet-js';
 import { PaginatedData, TransactionSigner } from 'src/apps/types';
-import { CashToken } from 'src/apps';
+import { CashToken, Watchtower } from 'src/apps';
 import { createTemplate } from 'src/apps/utils/createMultisigWalletTemplate';
 import { walletTemplateP2pkh } from 'bitauth-libauth-v3';
 import { isMultisigWallet } from 'src/apps/utils';
@@ -29,7 +29,8 @@ export type UserState = {
   // walletConnectSession:any,
   walletType: 'paytaca' | 'walletconnect' | undefined
   transactionSigner: TransactionSigner | undefined,
-  tokens: CashToken[]
+  tokens: CashToken[],
+  authchainIdentities?: PaginatedData
 }
 
 export const useUser = defineStore('user', {
@@ -46,12 +47,21 @@ export const useUser = defineStore('user', {
     tokens: []
   }),
   actions: {
+    
     async getPendingMultisigTransactions() {
       if (this.wallet && typeof this.wallet.isMultisig === 'function' && this.wallet.isMultisig()) {
         const db = ClientDB.getInstance()
         return db.getPendingMultisigTransactions()
       }
       return []
+    },
+
+    async fetchAuthchainIdentities(address: string, query?: any, force?: false) {
+      if (this.authchainIdentities && !force) {
+        return this.authchainIdentities
+      }
+      this.authchainIdentities = await (new Watchtower()).fetchAuthchainIdentities(address, query)
+      return this.authchainIdentities
     }
   },
   getters: {

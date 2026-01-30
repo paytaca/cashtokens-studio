@@ -1,11 +1,10 @@
 <template>
   <q-page>
     <div class="row justify-center">
-
-      <div class="col-xs-12 col-sm-11 col-lg-10" :class="$q.screen.xs ? 'q-mx-auto' : ''">
-        <div v-if="!mintTx" class="text-center text-h5 text-bold q-py-md">
-          Mint
-        </div>
+      <div v-if="!mintTx" class="col-xs-12 col-sm-11 col-lg-10 q-px-sm text-center text-h3 text-bold q-mb-lg">
+        Mint
+      </div>
+      <div class="col-xs-12 col-sm-11 col-lg-10 q-px-sm q-gutter-y-lg q-mb-lg">
         <div v-if="mintTx" class="q-px-lg q-pb-lg text-center">
           🎉 NFT(s) minted <q-btn :href="openTxInExplorer(mintTx)" target="_blank" flat dense color="secondary"
             label="View Tx in Explorer" />
@@ -14,55 +13,277 @@
           🎉 Metadata published <q-btn :href="openTxInExplorer(publicationTx)" target="_blank" flat dense
             color="secondary" label="View Tx in Explorer" />
         </div>
-        <div class="row justify-center q-gutter-lg">
+        <q-banner class="rounded-borders text-grey-4 q-pa-md"
+          style="border: 3px solid rgb(73, 72, 72);border-radius: 15px; line-height: 1.3em;background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
+          <div class="flex flex-wrap items-center q-gutter-md justify-center"
+            :class="$q.screen.xs ? 'flex-column' : 'q-gutter-md q-gutter-x-xl'">
+            <q-avatar size="10rem" rounded>
+              <q-img v-if="minter.value?.identitySnapshot?.uris?.icon"
+                :src="ipfsToGatewayUrl(minter.value?.identitySnapshot?.uris?.icon || '')" fit="cover" :ratio="1 / 1"
+                style="max-height: 10rem; max-width: 10rem;" class="rounded-borders" />
+              <q-icon v-else name="broken_image" color="grey-8"></q-icon>
+            </q-avatar>
+            <div>
+              <div class="text-subtitle1 q-gutter-x-md">
+                <div class="text-bold text-h3" :class="$q.screen.xs ? 'text-center text-h5' : 'text-left'"
+                  style="letter-spacing: 2px;">
+                  {{ minter.value?.identitySnapshot?.token?.symbol }}
+                </div>
+                <div class="flex no-wrap items-center q-gutter-x-md">
+                  <q-icon name="help" class="cursor-pointer" @click.stop="openNftTypeHelpDialog"></q-icon>
+                  <span>Type:</span> <span>{{
+                    minter.value?.nftCollectionType
+                    }}</span>
+                </div>
+                <div v-if="minter.value?.nftCollectionType == 'SequentialNftCollection'"
+                  class="flex no-wrap items-center q-gutter-x-md">
+                  <q-icon name="help" class="cursor-pointer" @click.stop="openLastMintedHelpDialog"></q-icon>
+                  <span>
+                    Last minted seq. #:
+                  </span>
+                  <span>
+                    <q-badge size="md">
+                      {{ formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal') }}
+                    </q-badge>
+                  </span>
+
+                </div>
+                <div class="flex no-wrap items-center q-gutter-x-md">
+                  <q-icon name="help" class="cursor-pointer" @click.stop="openViewMetadataHelpDialog"></q-icon>
+                  <span>View Metadata:</span>
+                  <q-btn icon="open_in_new" :href="`${bcmrApiHost}bcmr/${minter?.value?.token?.tokenId}/`"
+                    target="_blank" dense flat no-caps></q-btn>
+
+                </div>
+              </div>
+            </div>
+          </div>
+        </q-banner>
+        <q-form v-if="!mintTx" class="q-gutter-y-lg" ref="form" :disabled="disableForm" @submit.prevent="mint">
+
+          <div class="q-gutter-sm">
+            <label class="q-mb-sm">Choose Mint Option</label>
+            <q-select
+              :options="minter.value?.nftCollectionType == 'SequentialNftCollection' ? sequentialOpts : parsableOpts"
+              v-model="mintStrategy" class="q-mb-xs" label="I want to" stack-label outlined>
+              <template v-slot:hint>
+                <span
+                  v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value?.nftCollectionType == 'SequentialNftCollection'">
+                  The minter's commitment value will not change. i.e., for SequentialNftCollection,
+                  last-minted sequence# value will not be updated.</span>
+              </template>
+            </q-select>
+            <span class="text-wrap "
+              v-if="mintStrategy?.value != MINT_NEXT_SEQUENCE && minter.value?.nftCollectionType == 'SequentialNftCollection'">
+              The minter's commitment value will not change. i.e., for SequentialNftCollection,
+              last-minted sequence# value will not be updated.
+            </span>
+          </div>
+
+          <div class="q-gutter-sm">
+            <label class="q-mt-lg">Number of NFT(s) to mint</label>
+            <q-input v-model="mintOptions.mintQuantity" type="number" :min="1" autofocus outlined
+              class="q-mb-sm"></q-input>
+          </div>
+
+          <template v-if="mintStrategy?.value == MINT_NEXT_SEQUENCE">
+            <div class="q-gutter-sm">
+              <label>{{ nftTypeLabel }} </label>
+              <q-input v-model="mintOptions.nftType" outlined bottom-slots disable>
+                <template v-slot:hint>
+                  <i>Commitment (VM Number = <code>{{ formatCommitment(String(mintOptions.nftType), 'decimal',
+                    'vm-number') }}</code>)
+                  </i>
+                </template>
+              </q-input>
+            </div>
+            <div v-if="mintOptions.mintQuantity > 1" class="q-gutter-sm">
+              <label> Sequence # (last) </label>
+              <q-input :model-value="Number(mintOptions.nftType) + Number(mintOptions.mintQuantity) - 1" outlined
+                disable readonly bottom-slots>
+
+                <template v-slot:hint>
+                  <i>Commitment (VM Number = <code>{{ formatCommitment(String(Number(mintOptions.nftType) + Number(mintOptions.mintQuantity - 1)), 'decimal',
+                    'vm-number') }}</code>)
+                  </i>
+                </template>
+              </q-input>
+            </div>
+          </template>
+
+          <template v-else-if="mintStrategy?.value == MINT_A_TYPE || mintStrategy?.value == MINT_A_MUTABLE_NFT">
+            <div v-if="minter.value.nftCollectionType == 'SequentialNftCollection'" class="q-gutter-sm">
+              <label> Sequence #</label>
+              <q-input v-model="mintOptions.nftType" placeholder="Enter sequence number" outlined bottom-slots>
+                <template v-slot:hint>
+                  <q-icon name="warning" color="warning" class="q-mr-xs"></q-icon>This'll affect the
+                  uniqueness of each NFT(s) in this collection if you'll mint an already minted type.
+                </template>
+              </q-input>
+            </div>
+            <div v-else-if="minter.value.nftCollectionType == 'ParsableNftCollection'"
+              class="q-gutter-y-sm items-center">
+              <label> NFT Type (Hex) </label>
+              <q-input v-model="mintOptions.nftType" placeholder="Enter bottom altstack hex"
+                :rules="[v => !v || /^[0-9a-fA-F]+$/.test(v) || 'Should be a hex value']" outlined>
+              </q-input>
+            </div>
+          </template>
+
+          <div class="q-gutter-sm">
+            <label>Capability</label>
+            <q-input :model-value="mintOptions.capability" outlined disable readonly>
+              <template v-slot:append>
+                <q-icon name="edit_off" color="grey-8"></q-icon>
+              </template>
+            </q-input>
+          </div>
+
+          <div class="q-gutter-sm">
+            <label>Recipient</label>
+            <q-input v-model="mintOptions.recipient" clearable :outlined="!mintTx" :disable="!!mintTx"
+              :rules="[(v) => /^((bitcoincash:|bchtest:)?(z)[a-zA-Z0-9]{1,64})$/.test(v) || 'Enter a valid token addresss']">
+
+              <template v-slot:append>
+                <q-btn v-if="!mintOptions.recipient" dense :flat="$q.dark.isActive ? true : false" label="Self"
+                  color="warning" :class="$q.dark.isActive ? '' : 'text-black'"
+                  @click="mintOptions.recipient = user.wallet!.getTokenDepositAddress()" />
+              </template>
+            </q-input>
+          </div>
+          <div class="row justify-end">
+            <div class="flex justify-end q-gutter-md" :class="$q.screen.lt.sm ? 'justify-center' : 'justify-end'">
+              <q-btn icon="chevron_left" @click.stop="() => router.back()" size="lg" outline>
+                Back
+              </q-btn>
+              <q-btn icon="construction" @click.stop="mint" size="lg" color="primary"> Mint </q-btn>
+            </div>
+          </div>
+        </q-form>
+        <div v-else class="row justify-end">
+          <div class="col-xs-12 q-gutter-md">
+            <q-table v-model:pagination="nftsPagination" flat :rows="nfts" style="background:unset" :columns="[
+              {
+                name: 'nfttype', label: 'Minted NFT(s)',
+                field: r => '',
+                align: 'left',
+                headerStyle: 'padding: 1.5em',
+              },
+              {
+                name: 'actions', label: '',
+                field: r => '',
+                align: 'center',
+                headerStyle: 'padding: 1.5em',
+              },
+            ]
+              " :rows-per-page-options="nftsPaginationRowsPerPageOpts" row-key="id"
+              :visible-columns="['nfttype', 'actions']" bordered>
+
+              <template v-slot:header>
+                <div class="q-ma-md" col-span="2" style="border-bottom: inherit">
+                  <div class="text-h6">({{ nfts?.length || 0 }}) NFT(s) Minted</div>
+                  <div>You can now add the metadata of this minted NFT(s).</div>
+                  <div v-if="mintStrategy.value == MINT_A_TYPE">
+                    You've minted {{ nfts?.length }} NFT(s) of the same type, so they'll share the same
+                    metadata.
+                  </div>
+                </div>
+              </template>
+
+              <template v-slot:body-cell-nfttype="value">
+                <td>
+                  <div class="row justify-left items-center flex wrap q-gutter-sm">
+                    <div class="col-auto">
+                      <q-avatar v-if="nftsTypes[value.row.commitment]?.uris?.icon" rounded>
+                        <q-img :src="ipfsToGatewayUrl(nftsTypes[value.row.commitment]?.uris?.icon || '')" />
+                      </q-avatar>
+                      <q-icon v-else name="broken_image" size="xl" color="grey-8"></q-icon>
+                    </div>
+                    <div class="col text-wrap text-left" style="font-size: 1.5em; letter-spacing: 2px;">
+                      <div style="font-variant-numeric: tabular-nums;" class="text-grey-4 text-bold">
+                        {{ minter.value.nftCollectionType == 'SequentialNftCollection' ?
+                          `#${formatCommitment(value.row.commitment, 'vm-number',
+                            'decimal')
+                          } ` :
+                          value.row.commitment
+                        }}
+                        <span
+                          v-if="nftsTypes[value.row.commitment] && nftsTypes[value.row.commitment].saved && !nftsTypes[value.row.commitment].published"
+                          class="text-grey-8">
+                          (<q-icon name="done" size="xs" color="primary"></q-icon>saved)
+                          <q-tooltip>Saved on browser's local storage</q-tooltip>
+                        </span>
+                        <span v-if="nftsTypes[value.row.commitment] && nftsTypes[value.row.commitment].published"
+                          class="text-grey-8">
+                          (<q-icon name="done" size="xs" color="primary"></q-icon>published)
+                          <q-tooltip>Published</q-tooltip>
+                        </span>
+
+
+                      </div>
+                      <div class="text-bold text-grey-4" style="letter-spacing: 3px; font-variant:unicase">
+                        {{ `(${nftsTypes[value.row.commitment]?.name || '<name undefined>'})` }}
+                      </div>
+                    </div>
+                    <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                      <div class="text-grey-6 ellipsis-2-lines">
+                        Description: {{
+                          nftsTypes[value.row.commitment]?.description
+                          || '<no description>' }}
+                      </div>
+                    </div>
+                    <div class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                      <div class="text-grey-8">
+                        Raw Commitment: {{
+                          value.row.commitment
+                        }}
+                      </div>
+                    </div>
+                    <div v-if="value.row.capability" class="col-12 text-bold q-pl-sm" style="letter-spacing: 2px;">
+                      <div class="text-grey-8">
+                        NFT Capability: {{
+                          value.row.capability
+                        }}
+                      </div>
+                    </div>
+                  </div>
+                </td>
+              </template>
+
+              <template v-slot:body-cell-actions="value">
+                <q-td class="text-center">
+                  <div>
+                    <q-btn label="Metadata" text-color="primary" @click.stop="openNftTypeDialog(value.row as TokenI)"
+                      dense>
+                      <!-- <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon> -->
+                      <template v-slot:default>
+                        <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon>
+                      </template>
+                    </q-btn>
+                  </div>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+          <div class="flex justify-end q-gutter-md" :class="$q.screen.lt.sm ? 'justify-center' : 'justify-end'">
+            <q-btn @click.stop="() => onDone()" size="lg" outline>
+              Done
+            </q-btn>
+            <q-btn icon="save" @click.stop="saveNftsTypes" size="lg" text-color="primary" outline>
+              <q-tooltip>Save changes in the browser</q-tooltip>
+              Save Metadata
+            </q-btn>
+            <q-btn icon="publish" @click.stop="() => publish()" size="lg" color="primary"> Publish Metadata
+            </q-btn>
+          </div>
+        </div>
+
+        <!-- <div class=" row justify-center q-gutter-lg">
           <div class="col-xs-12 col-sm-10 col-lg-9">
             <div v-if="!mintTx" class="row justify-center">
               <div class="col-xs-12 q-gutter-md">
                 <q-form ref="form" class="q-gutter-md" :disabled="disableForm" @submit.prevent="mint">
-                  <q-banner class="rounded-borders text-grey-4 q-pa-md"
-                    style="border: 3px solid rgb(73, 72, 72);border-radius: 15px; line-height: 1.3em;background: linear-gradient(109.6deg, rgb(0, 37, 84) 11.2%, rgba(0, 37, 84, 0.32) 100.2%);">
-                    <div class="row items-center q-p-sm">
-                      <div class="col-xs-4">Collection</div>
-                      <div class="col">
-                        <q-chip size="1.5em" class="bg-transparent">
-                          <q-avatar>
-                            <q-img v-if="minter.value.identitySnapshot.uris.icon"
-                              :src="ipfsToGatewayUrl(minter.value.identitySnapshot.uris.icon || '')" />
-                            <q-icon v-else name="broken_image" color="grey-8"></q-icon>
-                          </q-avatar>
-                          <span style="letter-spacing: 5px;">{{ minter.value.identitySnapshot?.token?.symbol
-                          }}</span>
-                        </q-chip>
-                      </div>
-                    </div>
-                    <div class="row items-center q-py-sm">
-                      <div class="col-xs-4">Type</div>
-                      <div class="col">{{ minter.value?.nftCollectionType }}</div>
-                    </div>
-                    <div v-if="minter.value?.nftCollectionType == 'SequentialNftCollection'"
-                      class="row items-center q-py-sm">
-                      <div class="col-xs-4">Last minted sequence #
-                        <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="openLastMintedHelpDialog">
-                        </q-icon>
-                      </div>
 
-                      <div class="col text-bold">
-                        {{ formatCommitment(minter.value.token?.commitment, 'vm-number', 'decimal') }}
-                      </div>
-                    </div>
-                    <div class="row items-center q-py-sm">
-                      <div class="col-xs-4">View Metadata
-                        <q-icon name="help" size="xs" class="cursor-pointer" @click.stop="openViewMetadataHelpDialog">
-                        </q-icon>
-                      </div>
-                      <div class="col">
-                        <q-btn icon="open_in_new" :href="`${bcmrApiHost}bcmr/${minter?.value?.token?.tokenId}/`"
-                          target="_blank" dense>
-                        </q-btn>
-                      </div>
-                    </div>
-
-                  </q-banner>
                   <div class="q-mb-lg q-gutter-y-sm items-center">
                     <label>Choose Mint Option</label>
                     <q-select
@@ -186,7 +407,8 @@
                       <div class="text-h6">({{ nfts?.length || 0 }}) NFT(s) Minted</div>
                       <div>You can now add the metadata of this minted NFT(s).</div>
                       <div v-if="mintStrategy.value == MINT_A_TYPE">
-                        You've minted {{ nfts?.length }} NFT(s) of the same type, so they'll share the same metadata.
+                        You've minted {{ nfts?.length }} NFT(s) of the same type, so they'll share the same
+                        metadata.
                       </div>
                     </div>
                   </template>
@@ -256,7 +478,6 @@
                       <div>
                         <q-btn label="Metadata" text-color="primary"
                           @click.stop="openNftTypeDialog(value.row as TokenI)" dense>
-                          <!-- <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon> -->
                           <template v-slot:default>
                             <q-icon size="xs" :name="!nftsTypes[value.row.commitment] ? 'add' : 'edit'"></q-icon>
                           </template>
@@ -271,24 +492,17 @@
                 <q-btn @click.stop="() => onDone()" size="lg">
                   Done
                 </q-btn>
-                <!-- <q-btn @click.stop="mintAgain" size="lg" text-color="primary" flat>
-                          Mint Again?
-                        </q-btn> -->
+                
                 <q-btn @click.stop="saveNftsTypes" size="lg" text-color="primary">
                   <q-tooltip>Save changes in the browser</q-tooltip>
                   Save Metadata
                 </q-btn>
                 <q-btn @click.stop="() => publish()" size="lg" color="primary"> Publish Metadata
                 </q-btn>
-
               </div>
-              <!-- <div class="row q-gutter-lg q-my-lg items-center justify-end q-mx-md">
-
-
-                    </div> -->
             </div>
           </div>
-        </div>
+        </div> -->
       </div>
     </div>
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b" class="bg-transparent">
@@ -411,6 +625,24 @@ const openLastMintedHelpDialog = () => {
           The
           responsibility for ensuring sequentiality and uniqueness ultimately lies with the
           issuer.
+        `
+    }
+  })
+}
+
+
+const openNftTypeHelpDialog = () => {
+  $q.dialog({
+    component: HelpDialog,
+    componentProps: {
+      message: `
+          A SequentialNftCollection is a collection in which each NFT includes only a sequential identifier within its on-chain
+          commitment. A ParsableNftCollection uses a parsing bytecode with which to inspect each NFT commitment. 
+          Note that SequentialNftCollection's differ from
+          ParsableNftCollection's in that sequential collections lack a
+          parsing bytecode with which to inspect each NFT commitment: the type of
+          each NFT is indexed by the full contents its commitment (interpreted as a
+          positive integer).
         `
     }
   })
@@ -890,6 +1122,13 @@ watch(() => publisher.value?.processing, (m) => {
 
 
 onMounted(async () => {
+  window.addEventListener('load', () => {
+    const navigationType = performance.getEntriesByType('navigation')[0]?.type;
+    if (navigationType === 'reload') {
+      router.back()
+    }
+  });
+
   ui.routeBack = `nft-reserves`
   if (minter.value?.nftCollectionType == 'SequentialNftCollection') {
     mintStrategy.value = { value: MINT_NEXT_SEQUENCE, label: MINT_NEXT_SEQUENCE }
@@ -906,5 +1145,9 @@ onMounted(async () => {
 <style lang="scss">
 .q-stepper__title {
   font-size: medium;
+}
+
+.q-form>div {
+  width: 100%;
 }
 </style>
