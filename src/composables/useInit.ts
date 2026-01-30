@@ -39,9 +39,9 @@ export const useInit = () => {
     //   await localForage.pageLocalForage.setItem(state.path, stringify(state.state))
     // })
 
-    if (!user.walletAddress) {
-      router.push('/');
-    }
+    // if (!user.walletAddress) {
+    //   router.push('/');
+    // }
   });
 
   const loadWalletBchBalance = async (address: string) => {

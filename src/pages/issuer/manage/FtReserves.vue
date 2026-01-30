@@ -94,12 +94,13 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-      }}</span>
+        }}</span>
     </q-inner-loading>
   </q-page>
 </template>
 <script setup lang="ts">
 import { onMounted, ref, computed, inject, onBeforeUnmount, watch } from 'vue';
+import { useMetadataStore } from 'src/stores/metadata'
 import { useUser } from 'src/stores/user'
 import { ADDRESS_WATCHER_TRIGGERED, AuthKey, AuthchainIdentity, Watchtower } from 'src/apps'
 import { PaginatedData, TransactionSigner } from 'src/apps/types';
@@ -120,6 +121,7 @@ import { nextTick } from 'process';
 import txIsInMempool from 'src/apps/utils/txIsInMempool';
 const $q = useQuasar()
 const router = useRouter()
+const metadataStore = useMetadataStore()
 const user = useUser()
 const { $ebus } = useEventBus()
 const eventBus = inject<EventBus>('eventBus')
@@ -179,11 +181,16 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
       token_amount__gte: 1
     }
 
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      wallet.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
+
     populatingTable.value = false
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -197,7 +204,12 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
         } = cashtoken
         ownedAuthHeads.value.results[i] = new AuthchainIdentity({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
 
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
@@ -207,7 +219,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
 
 
 const openBurnFtDialog = (v: AuthchainIdentity, identitySnapshot: IdentitySnapshot) => {
-  const originalBalance = v.token.amount
+  const originalBalance = v.token?.amount
   $q.dialog({
     component: FTBurnDialog,
     componentProps: {
@@ -360,9 +372,15 @@ watch(() => progress.value, async (v) => {
   }
 })
 
-onMounted(async () => {
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
 })
+
+// onMounted(async () => {
+//   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+// })
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination

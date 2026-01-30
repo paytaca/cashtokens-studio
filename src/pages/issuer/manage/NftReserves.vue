@@ -132,6 +132,7 @@ import { useMinter } from 'src/stores/minter';
 import { useUI } from 'src/stores/ui';
 import { ipfsToGatewayUrl } from 'src/apps/utils';
 import { cashAddressToTokenAddress } from 'src/apps/utils';
+import { useMetadataStore } from 'src/stores/metadata';
 
 const $q = useQuasar()
 const ui = useUI()
@@ -140,6 +141,7 @@ const user = useUser()
 const minter = useMinter()
 const eventBus = inject<EventBus>('eventBus')
 const populatingTable = ref<boolean>()
+const metadataStore = useMetadataStore()
 
 const ownedAuthHeads = ref<PaginatedData>({
   count: 0,
@@ -170,17 +172,6 @@ const visibleColumns = computed(() => {
   return ['icon', 'symbol', 'tokenid', 'commitment', 'capability', 'actions']
 })
 
-/**
- * @deprecated in favor of openMintNftPage
- */
-const openMintChildNftPage = (identity: AuthchainIdentity) => {
-  const ct = new CashToken({ ...identity }, user.transactionSigner)
-  ct.tokenCategory = identity.tokenCategory
-  ct.tokenUris = identity.tokenUris
-  ct.identitySnapshot = identity.identitySnapshot
-  minter.value = ct
-  router.push({ name: 'mint-child-nft', query: { tokenId: identity.token!.tokenId } })
-}
 
 const openMintNftPage = (identity: AuthchainIdentity) => {
   const ct = new CashToken({ ...identity }, user.transactionSigner)
@@ -192,21 +183,25 @@ const openMintNftPage = (identity: AuthchainIdentity) => {
 
 const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: TransactionSigner) => {
   if (wallet) {
-    // $q.loading.show()
+
     populatingTable.value = true
+
     const query = {
       limit: pagination.value.rowsPerPage,
       offset: (pagination.value.page - 1) * pagination.value.rowsPerPage,
       token_amount__eq: 0,
       token_is_nft: true
     }
+    // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    const authchainIdentities = await user.fetchAuthchainIdentities(
+      wallet.getTokenDepositAddress(),
+      query
+    ) as PaginatedData
 
-    const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
     populatingTable.value = false
-    // $q.loading.hide()
-    if (resp?.count > 0) {
-      ownedAuthHeads.value = resp
-      pagination.value.rowsNumber = resp.count
+    if (authchainIdentities?.count > 0) {
+      ownedAuthHeads.value = authchainIdentities
+      pagination.value.rowsNumber = authchainIdentities.count
       ownedAuthHeads.value.results?.forEach(async (cashtoken, i) => {
         const authKeyUtxoClone = Object.assign({}, cashtoken.authKey)
         const authKey = new AuthKey({ ...authKeyUtxoClone, ownerWallet: user.wallet })
@@ -219,13 +214,25 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
           token
         } = cashtoken
         ownedAuthHeads.value.results[i] = new CashToken({ txid, vout, satoshis, height, coinbase, token, authKey: authKey, ownerWallet: wallet as Wallet }, transactionSigner)
-        await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
+        if (token?.tokenId) {
+          ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].processing = ''
+        }
       })
 
     }
 
   }
 }
+
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
+})
+
 
 onBeforeMount(async () => {
   if (user.wallet) {
