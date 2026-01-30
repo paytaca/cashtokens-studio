@@ -360,9 +360,15 @@ watch(() => progress.value, async (v) => {
   }
 })
 
-onMounted(async () => {
-  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+watch(() => user.wallet, async (wallet) => {
+  if (wallet) {
+    await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+  }
 })
+
+// onMounted(async () => {
+//   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+// })
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
