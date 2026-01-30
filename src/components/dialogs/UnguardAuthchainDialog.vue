@@ -8,7 +8,7 @@
       <span v-if="authchainIdentity.tokenCategory?.symbol" class="q-mx-sm text-bold">{{
         authchainIdentity.tokenCategory?.symbol }} </span>
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold" style="text-wrap: wrap;">Release Token From
+        <q-toolbar-title class="text-h5 text-bold" style="text-wrap: wrap;">Release Utxo From
           Authguard</q-toolbar-title>
         <TokenCategory v-if="authchainIdentity.token?.tokenId" :token-id="authchainIdentity.token.tokenId" />
       </q-toolbar>
@@ -22,14 +22,17 @@
           </span>
         </div>
         <q-form class="q-gutter-sm">
-          <q-input :model-value="authchainIdentity.token?.tokenId" label="Token ID/Category" filled dense disable
-            autogrow>
-          </q-input>
+          <span>
+            <q-input :model-value="authchainIdentity.token?.tokenId" label="Token ID/Category" filled dense disable
+              autogrow>
+            </q-input>
+          </span>
+
         </q-form>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => unguardAuthchain()" :busyLabel="authchainIdentity.processing"
-          label="Unguard Authchain" color="primary" />
+        <BusyButton @click="() => unguardAuthchain()" :busyLabel="authchainIdentity.processing" label="Release Utxo"
+          color="primary" />
       </q-card-actions>
     </q-card>
   </q-dialog>
