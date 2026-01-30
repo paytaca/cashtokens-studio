@@ -33,7 +33,7 @@
                   <q-icon name="help" class="cursor-pointer" @click.stop="openNftTypeHelpDialog"></q-icon>
                   <span>Type:</span> <span>{{
                     minter.value?.nftCollectionType
-                  }}</span>
+                    }}</span>
                 </div>
                 <div v-if="minter.value?.nftCollectionType == 'SequentialNftCollection'"
                   class="flex no-wrap items-center q-gutter-x-md">
@@ -1122,6 +1122,13 @@ watch(() => publisher.value?.processing, (m) => {
 
 
 onMounted(async () => {
+  window.addEventListener('load', () => {
+    const navigationType = performance.getEntriesByType('navigation')[0]?.type;
+    if (navigationType === 'reload') {
+      router.back()
+    }
+  });
+
   ui.routeBack = `nft-reserves`
   if (minter.value?.nftCollectionType == 'SequentialNftCollection') {
     mintStrategy.value = { value: MINT_NEXT_SEQUENCE, label: MINT_NEXT_SEQUENCE }
