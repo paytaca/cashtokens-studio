@@ -128,6 +128,7 @@ export const useWalletConnect = () => {
         if (walletConnectSession.value?.namespaces?.bch?.accounts) {
           address = walletConnectSession.value.namespaces.bch.accounts[0].replace('bch:','')
           address = formatAddress(address)
+          
           walletConnectWallet.value = await getWalletClass().watchOnly(address)
           user.walletType = 'walletconnect'
           user.wallet = walletConnectWallet.value
@@ -141,7 +142,7 @@ export const useWalletConnect = () => {
         const watchtower = new Watchtower()
         let counter = 0
         while (counter < 3){
-          watchtower.subscribe(address)
+          await watchtower.subscribe(address)
           counter++
         }
       }
