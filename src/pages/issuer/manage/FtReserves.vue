@@ -182,9 +182,11 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
     }
 
     // const resp = await (new Watchtower()).fetchAuthchainIdentities(wallet.getTokenDepositAddress(), query)
+    // console.log('fetchAuthchainIdentities response', resp)
     const authchainIdentities = await user.fetchAuthchainIdentities(
       wallet.getTokenDepositAddress(),
-      query
+      query,
+      true
     ) as PaginatedData
 
     populatingTable.value = false
@@ -378,9 +380,9 @@ watch(() => user.wallet, async (wallet) => {
   }
 })
 
-// onMounted(async () => {
-//   await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
-// })
+onMounted(async () => {
+  await populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!)
+})
 
 const onTableRequest = async (props: any) => {
   pagination.value = props.pagination
