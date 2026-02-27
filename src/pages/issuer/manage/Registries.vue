@@ -207,7 +207,8 @@ const populateAuthheads = async () => {
     // const resp = await (new Watchtower()).fetchAuthchainIdentities(user.wallet!.getTokenDepositAddress(), query)
     const authchainIdentities = await user.fetchAuthchainIdentities(
       user.wallet!.getTokenDepositAddress(),
-      query
+      query,
+      true
     ) as PaginatedData
 
     populatingTable.value = false

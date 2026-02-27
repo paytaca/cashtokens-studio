@@ -56,10 +56,11 @@ export const useUser = defineStore('user', {
       return []
     },
 
-    async fetchAuthchainIdentities(address: string, query?: any, force?: false) {
+    async fetchAuthchainIdentities(address: string, query?: any, force?: boolean) {
       if (this.authchainIdentities && !force) {
         return this.authchainIdentities
       }
+
       this.authchainIdentities = await (new Watchtower()).fetchAuthchainIdentities(address, query)
       return this.authchainIdentities
     }
