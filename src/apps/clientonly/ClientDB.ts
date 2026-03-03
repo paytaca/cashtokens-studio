@@ -1,97 +1,112 @@
-import localforage from "localforage"
+import localforage from 'localforage';
 /**
  * Local client-only database
  */
 export default class ClientDB {
-  readonly CTS_TRANSACTIONS_STORE = "transactions"
-  version: number
-  private _transactionsStore: any
-  private _db?: IDBDatabase|undefined
-  private _connection: any
-  private static _instance: ClientDB
+  readonly CTS_TRANSACTIONS_STORE = 'transactions';
+  version: number;
+  private _transactionsStore: any;
+  private _db?: IDBDatabase | undefined;
+  private _connection: any;
+  private static _instance: ClientDB;
 
-  private constructor(version?:number) {
-     this.version = version || 1
-  }
-  
-  get connection():any {
-    return this._connection
+  private constructor(version?: number) {
+    this.version = version || 1;
   }
 
-  
-  init() {
-    this._connection = indexedDB.open("cts", this.version)
-    this._connection.onsuccess = (event:any) => {
-      this._db = event.target.result
-    }
-    this._connection.onupgradeneeded = (event:any) => {
-      this._db = event.target.result
-      this._transactionsStore = this._db?.createObjectStore(this.CTS_TRANSACTIONS_STORE, { keyPath: "txid" , autoIncrement:true});
-      this._transactionsStore.createIndex('timestamp', 'timestamp', {unique: false})
-    }
+  get connection(): any {
+    return this._connection;
   }
 
-  static getInstance(version?:number) {
+  init(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+      this._connection = indexedDB.open('cts', this.version);
+      this._connection.onsuccess = (event: any) => {
+        this._db = event.target.result;
+        resolve(this._db!);
+      };
+      this._connection.onupgradeneeded = (event: any) => {
+        this._db = event.target.result;
+        this._transactionsStore = this._db?.createObjectStore(
+          this.CTS_TRANSACTIONS_STORE,
+          { keyPath: 'txid', autoIncrement: true }
+        );
+        this._transactionsStore.createIndex('timestamp', 'timestamp', {
+          unique: false,
+        });
+        resolve(this._db!);
+      };
+      this._connection.onerror = (event: any) => {
+        reject(event.target?.error);
+      };
+    });
+  }
+
+  static getInstance(version?: number) {
     if (!ClientDB._instance) {
-      ClientDB._instance = new ClientDB(version)
+      ClientDB._instance = new ClientDB(version);
     }
-    return ClientDB._instance
+    return ClientDB._instance;
   }
 
-  get db():IDBDatabase|undefined {
-    return this._db
+  get db(): IDBDatabase | undefined {
+    return this._db;
   }
 
   get transactionsStore() {
-     const transaction = this._db?.transaction([this.CTS_TRANSACTIONS_STORE], 'readwrite')
-     return transaction?.objectStore(this.CTS_TRANSACTIONS_STORE)
+    const transaction = this._db?.transaction(
+      [this.CTS_TRANSACTIONS_STORE],
+      'readwrite'
+    );
+    return transaction?.objectStore(this.CTS_TRANSACTIONS_STORE);
   }
 
   /**
    * Log a CashToken Transaction
    */
   async newCtsTransaction(txn: object) {
-    if (!this.transactionsStore) throw new Error('Transaction store does not exist')
+    if (!this.transactionsStore)
+      throw new Error('Transaction store does not exist');
     // this.transactionsStore?.add(txn)
     return new Promise((resolve, reject) => {
-      const request = this.transactionsStore!.add(txn)
+      const request = this.transactionsStore!.add(txn);
       request.onsuccess = () => {
-        resolve(true)
-      }
+        resolve(true);
+      };
       request.onerror = (event) => {
-        console.error("Add failed", event)
-        reject(false)
-      }
-    })
+        console.error('Add failed', event);
+        reject(false);
+      };
+    });
   }
 
   async deleteCtsTransaction(txid: string): Promise<boolean> {
-  
-    if (!this.transactionsStore) throw new Error('Transaction store does not exist')
-    
+    if (!this.transactionsStore)
+      throw new Error('Transaction store does not exist');
+
     return new Promise((resolve, reject) => {
-      const request = this.transactionsStore!.delete(txid)
+      const request = this.transactionsStore!.delete(txid);
       request.onsuccess = () => {
-        resolve(true)
-      }
+        resolve(true);
+      };
       request.onerror = (event) => {
-        console.error("Delete failed", event)
-        reject(false)
-      }
-    })
+        console.error('Delete failed', event);
+        reject(false);
+      };
+    });
   }
 
   /**
    * Retrieve CashToken Transactions
    */
   async getCtsTransactions(): Promise<any> {
-    const ts = this.transactionsStore
-    return await new Promise((res, rej) => { 
-      const index = ts?.index('timestamp')
-      const openCursor = index?.openCursor(null, 'prev')
-      const txns:any = []
+    const ts = this.transactionsStore;
+    return await new Promise((res, rej) => {
+      const index = ts?.index('timestamp');
+      const openCursor = index?.openCursor(null, 'prev');
+      const txns: any = [];
       if (openCursor) {
-        openCursor!.onsuccess = (event:any) => {
+        openCursor!.onsuccess = (event: any) => {
           const cursor = event.target.result;
           if (cursor) {
             // Push the object to the array.
@@ -100,60 +115,65 @@ export default class ClientDB {
             cursor.continue();
           } else {
             // The cursor has reached the end of the object store.
-            res(txns)
+            res(txns);
           }
-  
         };
-        openCursor!.onerror = (event:any) => {
-          rej(event.target?.error)
-        }
+        openCursor!.onerror = (event: any) => {
+          rej(event.target?.error);
+        };
       }
-    })
+    });
   }
 
-  async clearCtsTransactions():Promise<boolean> {
-    const db = this._db
-    const dbTransaction = db?.transaction([this.CTS_TRANSACTIONS_STORE], 'readwrite')
-    const ctsTransactionsStore = dbTransaction?.objectStore(this.CTS_TRANSACTIONS_STORE)
-    return await new Promise((res, rej) => { 
-      const clearRequest = ctsTransactionsStore?.clear()
+  async clearCtsTransactions(): Promise<boolean> {
+    const db = this._db;
+    const dbTransaction = db?.transaction(
+      [this.CTS_TRANSACTIONS_STORE],
+      'readwrite'
+    );
+    const ctsTransactionsStore = dbTransaction?.objectStore(
+      this.CTS_TRANSACTIONS_STORE
+    );
+    return await new Promise((res, rej) => {
+      const clearRequest = ctsTransactionsStore?.clear();
       clearRequest!.onsuccess = () => {
-        res(true)
-      }
+        res(true);
+      };
       clearRequest!.onerror = () => {
-        res(false)
-      }
+        res(false);
+      };
       dbTransaction!.oncomplete = () => {
-        db?.close()
-      }
-    })
+        db?.close();
+      };
+    });
   }
 
   async getPendingMultisigTransactions(): Promise<any> {
-    const ts = this.transactionsStore
-    return await new Promise((res, rej) => { 
-      const index = ts?.index('timestamp')
-      const openCursor = index?.openCursor(null, 'prev')
-      const txns:any = []
+    const ts = this.transactionsStore;
+    return await new Promise((res, rej) => {
+      const index = ts?.index('timestamp');
+      const openCursor = index?.openCursor(null, 'prev');
+      const txns: any = [];
       if (openCursor) {
-        openCursor!.onsuccess = (event:any) => {
+        openCursor!.onsuccess = (event: any) => {
           const cursor = event.target.result;
           if (cursor) {
-            const isMultisigTransaction = Boolean(cursor.value.unsignedHash)
-            if (isMultisigTransaction && !cursor.value.broadcastStatus || cursor.value.broadcastStatus === 'pending') {
+            const isMultisigTransaction = Boolean(cursor.value.unsignedHash);
+            if (
+              (isMultisigTransaction && !cursor.value.broadcastStatus) ||
+              cursor.value.broadcastStatus === 'pending'
+            ) {
               txns.push(cursor.value);
             }
             cursor.continue();
           } else {
-            res(txns)
+            res(txns);
           }
-  
         };
-        openCursor!.onerror = (event:any) => {
-          rej(event.target?.error)
-        }
+        openCursor!.onerror = (event: any) => {
+          rej(event.target?.error);
+        };
       }
-    })
+    });
   }
-  
 }

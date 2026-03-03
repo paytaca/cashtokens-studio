@@ -53,7 +53,7 @@
 <script setup lang="ts">
 import ClientDB from 'src/apps/clientonly/ClientDB';
 import { EventBus } from 'quasar';
-import { computed, onMounted, ref, inject } from 'vue';
+import { computed, onMounted, ref, inject, onBeforeUnmount } from 'vue';
 import type { BroadcastStatus, CashTokenTransaction, TransactionProposalStatus } from 'src/apps/types';
 import { shortenTx } from 'src/apps/utils';
 import MultisigTransactionStatus from 'src/components/MultisigTransactionStatus.vue';
@@ -96,6 +96,7 @@ const onStatusFetched = (data: StatusFetchedEvent) => {
 
 onMounted(async () => {
   const db = ClientDB.getInstance()
+  await db.init()
   transactions.value = await db.getCtsTransactions()
 })
 
