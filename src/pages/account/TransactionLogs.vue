@@ -74,13 +74,15 @@ interface StatusFetchedEvent {
 
 const onStatusFetched = (data: StatusFetchedEvent) => {
   if (data.status.txid) {
+
     const db = ClientDB.getInstance()
     Promise.all([
       // replace the old transaction log
       db.deleteCtsTransaction(data.transaction.txid),
       db.newCtsTransaction({
         ...data.transaction,
-        ...data.status
+        ...data.status,
+        transactionProposal: data.status.transactionProposal || data.status.proposal_id
       })
     ])
       .then(async () => {

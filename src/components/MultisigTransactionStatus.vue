@@ -39,30 +39,29 @@ const statusText = computed(() => {
   if (status?.value?.signingProgress === 'fully-signed') {
     message = 'Fully signed, waiting for broadcast'
   }
-  if (status?.value?.broadcastStatus === 'done' || status?.value?.broadcastStatus === 'broadcasted') {
+  if (status?.value?.broadcastStatus === 'done') {
     message = 'Multisig transaction completed. Broadcasted successfully.'
   }
   return message
 })
 
 const isBroadcasted = computed(() => {
-  return status.value?.broadcastStatus === 'done' || status?.value?.broadcastStatus === 'broadcasted'
+  return status.value?.broadcastStatus === 'done'
 });
 
 const loading = ref<boolean>(true);
 
 const refreshStatus = async () => {
   loading.value = true;
-  // let tempUrl = props.statusUrl
-  // if (tempUrl.includes("/proposals")) {
-  //   tempUrl = tempUrl.replace('https://watchtower.cash', 'http://localhost:8000')
-  // }
   await fetch(props.statusUrl)
     .then(response => response.json())
     .then(data => {
       if (!data.broadcastStatus) {
         // New multisig status url uses 'status' for 'broadcastStatus'
         data.broadcastStatus = data.status
+        if (data.broadcastStatus === 'broadcasted') {
+          data.broadcastStatus = 'done'
+        }
       }
       status.value = {
         // New multisig status url /proposals/<>/status/ api returns different data
@@ -80,17 +79,6 @@ const refreshStatus = async () => {
 }
 
 onMounted(async () => {
-  await fetch(props.statusUrl)
-    .then(response => response.json())
-    .then(data => {
-      status.value = data;
-    })
-    .catch(error => {
-      console.error('Error fetching status:', error);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
-
+  await refreshStatus()
 })
 </script>
