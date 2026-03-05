@@ -96,8 +96,10 @@ export type BroadcastStatus = 'pending' | 'broadcasted' | 'cancelled' | 'failed'
  */
 export interface TransactionProposalStatus {
   signingProgress?: 'fully-signed' | 'partially-signed' | 'unsigned';
-  broadcastStatus?: BroadcastStatus;
-  transactionProposal?: number;
+  broadcastStatus?: BroadcastStatus; // Deprecated By Multisig Status API
+  status?: BroadcastStatus, // Present on the new Multisig Status API 
+  transactionProposal?: number; // Deprecated By Multisig Status API
+  proposal_id?: number; // Present on the new Multisig Status API 
   wallet?: number
   txid?: string;
 }
