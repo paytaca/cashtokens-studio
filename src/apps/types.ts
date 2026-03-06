@@ -86,7 +86,7 @@ export type CashTokenTransactionType =
   | 'Cashtoken.createGenesis'
   | 'GenesisInput.generate';
 
-export type BroadcastStatus = 'pending' | 'broadcasted' | 'cancelled' | 'failed' | 'done';
+export type BroadcastStatus = 'pending' | 'broadcasted' | 'cancelled' | 'failed' | 'done' | 'unknown:not-found' | 'unknown:server-error';
   /**
  * @property signingProgress      Progress of a transaction signing
  * @property broadcastStatus 
@@ -95,7 +95,7 @@ export type BroadcastStatus = 'pending' | 'broadcasted' | 'cancelled' | 'failed'
  * @property transactionProposal  The transaction proposal id
  */
 export interface TransactionProposalStatus {
-  signingProgress?: 'fully-signed' | 'partially-signed' | 'unsigned';
+  signingProgress?: 'fully-signed' | 'partially-signed' | 'unsigned' | 'unknown:not-found' | 'unknown:server-error';
   broadcastStatus?: BroadcastStatus; // Deprecated By Multisig Status API
   status?: BroadcastStatus, // Present on the new Multisig Status API 
   transactionProposal?: number; // Deprecated By Multisig Status API
