@@ -176,4 +176,41 @@ export default class ClientDB {
       }
     });
   }
+
+  async updateCtsTransactionStatus(
+    txid: string,
+    updates: { broadcastStatus?: string; status?: string }
+  ): Promise<boolean> {
+    if (!this.transactionsStore)
+      throw new Error('Transaction store does not exist');
+    return new Promise((resolve, reject) => {
+      const getRequest = this.transactionsStore!.get(txid);
+      getRequest.onsuccess = () => {
+        const existingTxn = getRequest.result;
+        if (!existingTxn) {
+          reject(new Error('Transaction not found'));
+          return;
+        }
+        const updatedTxn = {
+          ...existingTxn,
+          ...(updates.broadcastStatus !== undefined && {
+            broadcastStatus: updates.broadcastStatus,
+          }),
+          ...(updates.status !== undefined && { status: updates.status }),
+        };
+        const putRequest = this.transactionsStore!.put(updatedTxn);
+        putRequest.onsuccess = () => {
+          resolve(true);
+        };
+        putRequest.onerror = (event) => {
+          console.error('Update failed', event);
+          reject(false);
+        };
+      };
+      getRequest.onerror = (event) => {
+        console.error('Get failed', event);
+        reject(false);
+      };
+    });
+  }
 }
