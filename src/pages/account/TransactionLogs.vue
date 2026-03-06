@@ -38,6 +38,9 @@
                 <td>{{ new Date(t.timestamp) }}</td>
                 <td>{{ t.txType }}</td>
                 <td>
+                  <div v-if="t.statusUrl" class="flex justify-start">
+                    <q-chip color="grey" outline class="text-italic text-caption" dense>Multisig</q-chip>
+                  </div>
                   <div>{{ t.successMsg || t.errorMsg }}</div>
                   <MultisigTransactionStatus v-if="t.statusUrl" :statusUrl="t.statusUrl" :unsignedHash="t.unsignedHash"
                     :transaction="t" @status-fetched="onStatusFetched" />
@@ -73,9 +76,8 @@ interface StatusFetchedEvent {
 }
 
 const onStatusFetched = (data: StatusFetchedEvent) => {
+  const db = ClientDB.getInstance()
   if (data.status.txid) {
-
-    const db = ClientDB.getInstance()
     Promise.all([
       // replace the old transaction log
       db.deleteCtsTransaction(data.transaction.txid),
@@ -94,6 +96,20 @@ const onStatusFetched = (data: StatusFetchedEvent) => {
         eventBus?.emit('updatedPendingMultisigTransactions');
       });
   }
+
+  if (data.status.broadcastStatus === 'unknown:not-found') {
+    db.updateCtsTransactionStatus(
+      data.transaction?.unsignedHash || data.transaction.txid,
+      {
+        broadcastStatus: data.status.broadcastStatus,
+        status: data.status.broadcastStatus
+      }
+    ).then(async (r) => {
+      transactions.value = await db.getCtsTransactions();
+      eventBus?.emit('updatedPendingMultisigTransactions');
+    })
+  }
+
 }
 
 onMounted(async () => {
