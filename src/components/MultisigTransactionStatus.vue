@@ -2,7 +2,14 @@
   <div>
     <q-skeleton v-if="loading" type="rect"></q-skeleton>
     <div v-else>
-      <q-btn :label="statusText" :loading="loading" :icon-right="!isBroadcasted ? 'refresh' : ''"
+      <span v-if="status?.broadcastStatus === 'unknown:not-found'" style="color: orange">
+        Failed to retrieve transaction proposal from status URL. It was likely deleted.
+      </span>
+      <span v-if="status?.broadcastStatus === 'unknown:server-error'" style="color: orange">
+        Failed to retrieve transaction proposal from status URL. Server Error.
+      </span>
+      <q-btn :label="statusText" :loading="loading"
+        :icon-right="!isBroadcasted && status?.broadcastStatus !== 'unknown:not-found' ? 'refresh' : ''"
         :color="!isBroadcasted ? 'warning' : ''" @click="refreshStatus" no-caps flat>
       </q-btn>
     </div>
@@ -51,31 +58,73 @@ const isBroadcasted = computed(() => {
 
 const loading = ref<boolean>(true);
 
+/**
+ * Extracts a proposal ID from a URL string.
+ * @param {string} url - The full API URL.
+ * @returns {string|null} - The extracted ID or null if not found.
+ */
+const extractProposalIdentifier = (url: string) => {
+  // Regex Breakdown:
+  // proposals\/  -> Matches literal "proposals/"
+  // ([^/]+)      -> Capturing group: matches 1+ characters that are NOT a slash
+  // \/status     -> Matches literal "/status"
+  const regex = /proposals\/([^/]+)\/status/;
+  const match = url.match(regex);
+
+  return match ? match[1] : null;
+};
+
 const refreshStatus = async () => {
   loading.value = true;
-  await fetch(props.statusUrl)
-    .then(response => response.json())
-    .then(data => {
-      if (!data.broadcastStatus) {
-        // New multisig status url uses 'status' for 'broadcastStatus'
-        data.broadcastStatus = data.status
-        if (data.broadcastStatus === 'broadcasted') {
-          data.broadcastStatus = 'done'
+  try {
+    const response = await fetch(props.statusUrl)
+
+    let statusQueryResult: TransactionProposalStatus = {}
+
+    if (response?.status === 404 || response?.status === 500) {
+      // If proposal was deleted on the server CSStudio already has the previous broadcast txid ignore
+      if (props.transaction.broadcastStatus === 'done' || props.transaction.txid !== props.transaction.unsignedHash) {
+        status.value = {
+          signingProgress: props.transaction.signingProgress,
+          broadcastStatus: props.transaction.broadcastStatus
         }
+        return
       }
-      status.value = {
-        // New multisig status url /proposals/<>/status/ api returns different data
-        transactionProposal: data.transactionProposal || data.proposal_id,
-        ...data
-      };
-      emit('statusFetched', { status: data, transaction: props.transaction });
-    })
-    .catch(error => {
-      console.error('Error fetching status:', error);
-    })
-    .finally(() => {
-      loading.value = false;
-    });
+
+      if (response.status === 404) {
+        statusQueryResult.signingProgress = 'unknown:not-found'
+        statusQueryResult.broadcastStatus = 'unknown:not-found'
+      }
+      if (response.status === 500) {
+        statusQueryResult.signingProgress = 'unknown:server-error'
+        statusQueryResult.broadcastStatus = 'unknown:server-error'
+      }
+    }
+
+    if (response.status === 200) {
+      statusQueryResult = await response.json()
+    }
+
+    if (!statusQueryResult.broadcastStatus) {
+      // New multisig status url uses 'status' for 'broadcastStatus'
+      statusQueryResult.broadcastStatus = statusQueryResult.status
+      if (statusQueryResult.broadcastStatus === 'broadcasted') {
+        statusQueryResult.broadcastStatus = 'done'
+      }
+    }
+    status.value = {
+      // New multisig status url /proposals/<>/status/ api returns different data
+      transactionProposal: statusQueryResult.transactionProposal || statusQueryResult.proposal_id,
+      ...statusQueryResult
+    };
+
+    emit('statusFetched', { status: statusQueryResult, transaction: props.transaction });
+
+  } catch (error) {
+    console.log(`@refreshStatus: `, error)
+  } finally {
+    loading.value = false;
+  }
 }
 
 onMounted(async () => {
