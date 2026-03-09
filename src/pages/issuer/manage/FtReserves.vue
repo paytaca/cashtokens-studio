@@ -2,9 +2,20 @@
   <q-page :class="$q.screen.gt.xs ? 'q-ma-sm' : 'q-ma-xs'">
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">
+        <h5 class="text-center q-mb-sm">
           FT Reserve Supplies
         </h5>
+        <q-banner inline-actions rounded class="bg-grey-10 text-grey-6 q-mb-md"
+          style="border: 1px solid rgba(255,255,255,0.1)">
+          <template v-slot:avatar>
+            <q-icon name="info" color="primary" />
+          </template>
+          <div class="text-body2 text-justify">
+            <strong class="text-primary">FT Reserve Supplies</strong> are unissued tokens held by a contract (AuthGuard
+            contract).
+            Only the wallet with the corresponding contract key (AuthKey) can release/issue this funds.
+          </div>
+        </q-banner>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
             :rows="ownedAuthHeads.results" color="warning" :loading="populatingTable"
@@ -94,7 +105,7 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-        }}</span>
+      }}</span>
     </q-inner-loading>
   </q-page>
 </template>
