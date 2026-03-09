@@ -2,9 +2,22 @@
   <q-page class="q-ma-sm">
     <div class="row justify-center">
       <div class="col-xs-12 col-md-10">
-        <h5 class="text-center">
+        <h5 class="text-center q-mb-sm">
           NFT Reserves
         </h5>
+        <q-banner inline-actions rounded class="bg-grey-10 text-grey-6 q-mb-md"
+          style="border: 1px solid rgba(255,255,255,0.1)">
+          <template v-slot:avatar>
+            <q-icon name="info" color="primary" />
+          </template>
+          <div class="text-body2 text-justify">
+            <strong class="text-primary">NFT Reserves</strong> are NFTs locked in an <strong>AuthGuard contract</strong>
+            to prevent accidental spending of the UTXO used to update token metadata. Only the wallet holding the
+            corresponding <strong>AuthKey</strong> can authorize actions — e.g., updating token metadata, or mint child
+            NFTs if
+            the NFT reserve is a minting NFT.
+          </div>
+        </q-banner>
         <div>
           <q-table v-model:pagination="pagination" @request="onTableRequest" flat bordered
             :rows="ownedAuthHeads.results" color="warning" :loading="populatingTable"
