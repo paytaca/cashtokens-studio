@@ -10,7 +10,8 @@
             <div class="q-mt-sm">
               <WalletConnect />
             </div>
-            <div class="text-caption text-grey">Click here to connect wallet using WalletConnect to get started.</div>
+            <div class="text-caption text-grey">To get started, click here to connect your wallet thru WalletConnect.
+            </div>
           </q-card-section>
         </q-card>
       </div>
