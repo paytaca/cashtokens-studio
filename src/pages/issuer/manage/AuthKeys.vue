@@ -71,14 +71,30 @@
                         @click="wOpenAuthKeyCreateTokenDialog(AuthKeyCreateTokenDialog.__name, { authKey: authKey as AuthKey, tokenType: 'nft' })">
                         Use to create NFT</q-item> -->
                       <q-item clickable v-close-popup
-                        @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">Transfer
-                        AuthKey</q-item>
+                        @click="wOpenAuthKeyTransferDialog(AuthKeyTransferDialog.__name, authKey as AuthKey)">
+                        <q-item-section avatar>
+                          <q-icon name="send"></q-icon>
+                        </q-item-section>
+                        <q-item-section>
+                          Transfer AuthKey
+                        </q-item-section>
+                      </q-item>
                       <q-item clickable v-close-popup
                         @click="wOpenAuthGuardTokenListDialog(AuthGuardTokenListDialog.__name, { authKey: authKey, authGuard: authKey.authGuard })">
-                        View locked tokens
+                        <q-item-section avatar>
+                          <q-icon name="mdi-view-list"></q-icon>
+                        </q-item-section>
+                        <q-item-section>
+                          View Locked Tokens
+                        </q-item-section>
                       </q-item>
                       <q-item clickable v-close-popup @click="() => refreshLockedTokens(authKey)">
-                        Refresh locked tokens
+                        <q-item-section avatar>
+                          <q-icon name="mdi-card-search-outline"></q-icon>
+                        </q-item-section>
+                        <q-item-section>
+                          Scan For Locked Tokens
+                        </q-item-section>
                       </q-item>
                     </q-list>
                   </q-menu>
