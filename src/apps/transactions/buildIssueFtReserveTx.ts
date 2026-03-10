@@ -46,15 +46,6 @@ const minerFee = calcMinerFee(
 export const issuanceCost = minerFee + DEFAULT_TOKEN_VALUE + 400;
 
 export const buildIssueFtReserveTx = async (opt: IssueFtReserveOptions) => {
-  const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
-  if (
-      typeof decodedCashAddress !== 'string' &&
-      decodedCashAddress.type === CashAddressType.p2sh
-    ) {
-      throw new Error('This operation is not yet supported using multisig wallet.');
-  }
-
-  console.log('OPT', opt);
   if (
     !opt.authUtxo?.token ||
     !opt.authKey ||
