@@ -22,6 +22,7 @@ import shortenTokenId from './utils/shortenTokenId';
 import { PartialBcmr } from './interfaces';
 import { NftCollectionType, TransactionSigner } from './types';
 import { submitTransaction } from './utils';
+import { CashAddressType, decodeCashAddress } from 'bitauth-libauth-v3';
 
 export class AuthchainIdentity implements UtxoI, PartialBcmr {
   txid: string;
@@ -363,8 +364,6 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     };
     // Because authhead might be a non-token UTXO
     if (authhead.token && authhead.token?.category) {
-      console.log('!!authhead.token?.category', authhead.token?.category);
-      console.log(authhead.token);
       authheadRecipient.token = authhead.token;
     } else {
       if (authhead.token?.amount && authhead.token?.amount > 0) {
@@ -574,13 +573,24 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     }
 
     this._processing = 'Processing';
-    const issuanceCost = calcMinerFee(
+
+    let transactionCost = calcMinerFee(
       { 'P2SH-P2WPKH': 1 },
       { P2SH: 1, P2PKH: 2 }
     );
+
+    const walletAddress =  this.ownerWallet!.getDepositAddress()
+    const decodedCashAddress = decodeCashAddress(walletAddress)
+    if (typeof decodedCashAddress !== 'string' && decodedCashAddress.type === CashAddressType.p2sh) {
+      transactionCost = calcMinerFee(
+        { 'P2SH-P2WPKH': 1 },
+        { P2SH: 3 }
+      )
+    }
+
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
-        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost
+        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > transactionCost
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -639,19 +649,19 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         ])
         .withOpReturn(opReturn)
         .to(
-          funderInput.satoshis - BigInt(issuanceCost) > 546
+          funderInput.satoshis - BigInt(transactionCost) > 546
             ? [
                 {
                   // change
                   to: tokenOwner,
-                  amount: funderInput.satoshis - BigInt(issuanceCost),
+                  amount: funderInput.satoshis - BigInt(transactionCost),
                 },
               ]
             : []
         )
         .withoutChange()
         .withoutTokenChange()
-        .withHardcodedFee(BigInt(issuanceCost));
+        .withHardcodedFee(BigInt(transactionCost));
 
       decoded = decodeTransaction(hexToBin(await transaction.build()));
 
@@ -720,11 +730,16 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         },
       ];
 
+     let userPrompt = 'Publish token registry update'
+     const tokenName = this.identitySnapshot?.token?.symbol || this.identitySnapshot?.name
+     if (tokenName) {
+       userPrompt = `Publish ${tokenName}'s registry update`
+     }
       signingResult = await this.transactionSigner?.signTransaction(
         decoded,
         sourceOutputs,
         false,
-        'Publish registry update'
+        userPrompt
       );
     } catch (error) {
       console.log(error);
