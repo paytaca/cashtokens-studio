@@ -111,8 +111,8 @@ const confirmSend = () => {
 }
 
 const sendToSelf = () => {
-  if (props.wallet?.tokenaddr) {
-    recipient.value = props.wallet?.tokenaddr
+  if (props.wallet) {
+    recipient.value = props.wallet?.getTokenDepositAddress()
     nextTick(() => {
       const inputEl = recipientInputElement.value.$el.querySelector('input')
       if (inputEl) {
