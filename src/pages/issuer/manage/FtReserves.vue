@@ -105,7 +105,7 @@
     <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color:#0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
       <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius:10px">{{ progress
-      }}</span>
+        }}</span>
     </q-inner-loading>
   </q-page>
 </template>
@@ -389,9 +389,9 @@ const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
         progress.value = false
         v.token.amount = originalBalance
       }
-    } catch (error) {
+    } catch (error: any) {
       $q.dialog({
-        message: error?.toString(),
+        message: error.message?.toString(),
         ok: true,
         focus: 'ok',
         class: 'q-pa-lg'
