@@ -332,6 +332,36 @@ const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
         prompt: `Issue ${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} to ${shortenAddress(value.recipient)}`
       })
 
+      if (signingResult && signingResult.walletType === 'p2shMultisig') {
+        $ebus?.emit('transaction', {
+          txid: signingResult.unsignedHash,
+          unsignedHash: signingResult.unsignedHash,
+          txType: 'ft-issuance',
+          timestamp: new Date().getTime(),
+          successMsg: signingResult.message,
+          statusUrl: signingResult.statusUrl
+        })
+
+        await new Promise((resolve) => {
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'pending',
+              statusText: signingResult.message,
+              statusUrl: signingResult.statusUrl,
+              txid: null,
+
+            }
+          }).onOk(() => {
+            resolve(true)
+
+          }).onDismiss(() => {
+            resolve(true)
+          })
+        })
+        return router.push({ name: 'recent-transactions' })
+      }
+
       if (signingResult?.signedTransaction) {
         progress.value = 'Submitting transaction, please wait...'
         const tx = await broadcastTx(signingResult)
