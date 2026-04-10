@@ -45,8 +45,6 @@ nftStorageApiKeys.forEach((apiKey) => {
   nftStorageClients.push(new NFTStorage({ token: apiKey || '' }));
 });
 
-console.log('🚀 ~ nftStorageApiKeys:', nftStorageApiKeys);
-console.log('🚀 ~ nftStorageClients:', nftStorageClients);
 
 const nftStorageClient = () => {
   return nftStorageClients[
@@ -72,8 +70,6 @@ const pinCidToPinata = async (cid: string) => {
   );
   try {
     const pinningResponse = await pinata.pinByHash(cid);
-    console.log('🚀 ~ pinCidToPinata ~ cid:', cid);
-    console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', pinningResponse);
   } catch (error) {
     console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
   }
@@ -101,8 +97,6 @@ const init = async (req: any, res: any, next: any) => {
     }
   }
 
-  console.log('request is json', req.is('json'));
-
   if (req.ipfs?.fileextension?.toLowerCase() == 'json') {
     const hash = crypto.createHash('sha256');
     let contentHash: string | undefined = undefined;
@@ -114,8 +108,6 @@ const init = async (req: any, res: any, next: any) => {
     req.ipfs.artifact.contentHash = contentHash;
     req.ipfs.filename = `${req.ipfs.filename || 'bcmr.json'}`;
   }
-
-  console.log('🚀 ~ init:', req.ipfs);
 
   const pinata = new PinataSDK(
     process.env.PINATA_API_KEY,
@@ -138,7 +130,6 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
         type: req.file.mimetype,
       }),
     });
-    console.log('METADATA', metadata);
 
     const [metadataCid, metadataFilename] = metadata.url
       .replace('ipfs://', '')
@@ -148,7 +139,6 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
       `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
     );
 
-    console.log('metadataCid', metadataCid);
 
     if (!metadataContentsResp.ok) {
       return next();
@@ -172,10 +162,6 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
       nftstorage: error,
     };
   }
-  console.log(
-    '🚀 ~ pinMediaFileToNftStorage ~ req.ipfs.artifact:',
-    req.ipfs.artifact
-  );
   next();
 };
 
@@ -210,15 +196,10 @@ const pinJsonToNftStorage = async (req: any, res: any, next: any) => {
       ipfsCid: json.value.cid,
     };
   } catch (error) {
-    console.log('🚀 ~ pinJsonToNftStorage ~ error:', error);
     req.ipfs.error = {
       nftstorage: error,
     };
   }
-  console.log(
-    '🚀 ~ pinJsonToNftStorage ~ req.ipfs.artifact:',
-    req.ipfs.artifact
-  );
   next();
 };
 
@@ -229,8 +210,6 @@ const pinIpfsCidToPinata = async (req: any, res: any, next: any) => {
         const pinningResponse = await req.ipfs.pinata.pinByHash(
           req.ipfs.artifact.ipfsCid
         );
-        console.log('🚀 ~ pinCidToPinata ~ cid:', req.ipfs.artifact.ipfsCid);
-        console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', pinningResponse);
       } catch (error) {
         console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
       }
@@ -253,8 +232,6 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
       name: req.ipfs.filename,
     },
   };
-  console.log('FILE', req.file);
-
   const fileStream = new Readable();
   fileStream.push(req.file.buffer);
   fileStream.push(null);
@@ -264,8 +241,6 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
       fileStream,
       options
     );
-    console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
-    console.log('🚀 ~ pinataPinningResponse:', req.ipfs.filename);
     return res.send({
       uris: {
         ipfs: `ipfs://${pinataPinningResponse.IpfsHash}/${req.ipfs.filename}`,
@@ -287,7 +262,6 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
 
 const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
   if (req.ipfs.fileextension?.toLowerCase() != 'json') return next();
-  console.log('Pinning file to pinata');
   let options = {
     pinataOptions: {
       cidVersion: 1 as 0 | 1 | undefined,
@@ -298,28 +272,15 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     },
   };
 
-  console.log('OPTIONS', options)
 
   try {
     const fileStream = Readable.from(req.file.buffer);
-    // fileStream.push(req.file.buffer);
-    // if (req.file?.buffer) {
-    //   fileStream.push(req.file.buffer); // Push buffer data to the stream
-    // }
-    // else if (req.body) {
-    //   const jsonString = JSON.stringify(req.body);
-    //   fileStream.push(Buffer.from(jsonString));
-    // }
-
-    // fileStream.push(null);
-
     (fileStream as any).path = req.ipfs.filename || 'upload.json'; 
 
     const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
       fileStream,
       options
     );
-    console.log('🚀 ~ pinataPinningResponse:', pinataPinningResponse);
 
     return res.send({
       uris: {
@@ -721,7 +682,6 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
 
     } catch (error: any) {
-      console.log('ERROR', error);
       res.status(500).json({
         error: error?.message || 'Internal Server Error',
       });
