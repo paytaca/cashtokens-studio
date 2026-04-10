@@ -565,7 +565,6 @@ const openAddNftDialog = () => {
       ok: 'Mint'
     }
   }).onOk(async ({ type, nftType, owner }) => {
-    console.log('MINT', type, nftType, owner, selectedCollection.value?.identitySnapshot?.token?.category)
     await mint(owner, selectedCollection.value.identitySnapshot.token.category, nftTypeKey, Object.assign({}, nftType))
   })
 }

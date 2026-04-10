@@ -1,4 +1,4 @@
-import { CashToken } from "../CashToken";
+import { CashToken } from '../CashToken';
 
 /**
  * Put any functions that doesn't depend on components here.
@@ -7,7 +7,6 @@ import { CashToken } from "../CashToken";
 /**
  *  @param {CashToken} cashToken instance of CashToken. Pass a clone.
  */
-export const buildAuthchain = async(cashToken: CashToken) => {
-  console.log('BUILDING AUTHCHAIN')
-  await cashToken.buildAuthChainInChainGraph()
-}
+export const buildAuthchain = async (cashToken: CashToken) => {
+  await cashToken.buildAuthChainInChainGraph();
+};

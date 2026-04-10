@@ -40,7 +40,7 @@ export type MintOptions = {
 export const minerFee = (numberOfTokens: number) => {
   return calcMinerFee(
     { 'P2SH-P2WPKH': 1, P2PKH: 2 },
-    { P2SH: 1, P2PKH: 3 + numberOfTokens }
+    { P2SH: 1, P2PKH: 3 + numberOfTokens },
   );
 };
 export const mintCost = (numberOfTokens: number) => {
@@ -48,18 +48,20 @@ export const mintCost = (numberOfTokens: number) => {
 };
 
 export const buildMintFromAuthGuardTx = async (
-  o: MintOptions
+  o: MintOptions,
 ): Promise<MintTransaction> => {
   const decodedCashAddress = decodeCashAddress(o.wallet.getDepositAddress());
   if (
-      typeof decodedCashAddress !== 'string' &&
-      decodedCashAddress.type === CashAddressType.p2sh
-    ) {
-      throw new Error('This operation is not yet supported using multisig wallet.');
+    typeof decodedCashAddress !== 'string' &&
+    decodedCashAddress.type === CashAddressType.p2sh
+  ) {
+    throw new Error(
+      'This operation is not yet supported using multisig wallet.',
+    );
   }
   if (!o.authKey || o.authKey.token?.commitment != '00') {
     throw new Error(
-      'AuthKey utxo required. Make sure it conforms to the AuthGuard standard.'
+      'AuthKey utxo required. Make sure it conforms to the AuthGuard standard.',
     );
   }
   const funds = (await o.wallet.getAddressUtxos()).filter((u: UtxoI) => {
@@ -71,7 +73,7 @@ export const buildMintFromAuthGuardTx = async (
   }
 
   const [minter, authKey, funderInput] = [o.minter!, o.authKey!, funds].map(
-    toCashScript
+    toCashScript,
   );
   const sig = new SignatureTemplate(Uint8Array.from(Array(32)));
   const authGuard = getContractInstance('authguard-contract', {
@@ -126,7 +128,6 @@ export const buildMintFromAuthGuardTx = async (
       contentHash,
       ...o.publish.uris.map((u) => u.replace(/https:\/\/|ipfs:\/\//, '')),
     ];
-    console.log('OP_RETURN VALUE', opReturnData);
     transaction = transaction.withOpReturn(opReturnData);
   }
 
@@ -141,7 +142,7 @@ export const buildMintFromAuthGuardTx = async (
               amount: funderInput.satoshis - BigInt(mintCost(o.tokens.length)),
             },
           ]
-        : []
+        : [],
     )
     .withoutChange()
     .withoutTokenChange()
@@ -235,7 +236,7 @@ export const buildMintTx = async (o: MintOptions): Promise<MintTransaction> => {
         capability: token.capability,
         commitment: token.commitment,
       });
-    })
+    }),
   );
 
   const toSpend = [o.minter, funds];
