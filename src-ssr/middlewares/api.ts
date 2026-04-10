@@ -45,7 +45,6 @@ nftStorageApiKeys.forEach((apiKey) => {
   nftStorageClients.push(new NFTStorage({ token: apiKey || '' }));
 });
 
-
 const nftStorageClient = () => {
   return nftStorageClients[
     Math.floor(Math.random() * nftStorageClients.length)
@@ -66,13 +65,11 @@ const upload = multer(storage);
 const pinCidToPinata = async (cid: string) => {
   const pinata = new PinataSDK(
     process.env.PINATA_API_KEY,
-    process.env.PINATA_API_SECRET
+    process.env.PINATA_API_SECRET,
   );
   try {
-    const pinningResponse = await pinata.pinByHash(cid);
-  } catch (error) {
-    console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
-  }
+    await pinata.pinByHash(cid);
+  } catch (error) {}
 };
 
 const nftStorageStoreName = 'CTStudio';
@@ -111,7 +108,7 @@ const init = async (req: any, res: any, next: any) => {
 
   const pinata = new PinataSDK(
     process.env.PINATA_API_KEY,
-    process.env.PINATA_API_SECRET
+    process.env.PINATA_API_SECRET,
   );
 
   req.ipfs.pinata = pinata;
@@ -136,9 +133,8 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
       .split('/');
 
     const metadataContentsResp = await fetch(
-      `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
+      `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`,
     );
-
 
     if (!metadataContentsResp.ok) {
       return next();
@@ -157,7 +153,6 @@ const pinMediaFileToNftStorage = async (req: any, res: any, next: any) => {
       ipfsCid: cid,
     };
   } catch (error) {
-    console.log('🚀 ~ pinMediaFileToNftStorage ~ error:', error);
     req.ipfs.error = {
       nftstorage: error,
     };
@@ -207,12 +202,8 @@ const pinIpfsCidToPinata = async (req: any, res: any, next: any) => {
   if (req.ipfs?.artifact?.ipfsCid) {
     (async () => {
       try {
-        const pinningResponse = await req.ipfs.pinata.pinByHash(
-          req.ipfs.artifact.ipfsCid
-        );
-      } catch (error) {
-        console.log('🚀 ~ pinCidToPinata ~ pinningResponse:', error);
-      }
+        await req.ipfs.pinata.pinByHash(req.ipfs.artifact.ipfsCid);
+      } catch (error) {}
     })();
 
     return res.send({ ...req.ipfs.artifact });
@@ -239,7 +230,7 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
   try {
     const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
       fileStream,
-      options
+      options,
     );
     return res.send({
       uris: {
@@ -253,9 +244,8 @@ const pinMediaFileToPinata = async (req: any, res: any, next: any) => {
     });
   } catch (error) {
     req.ipfs.error = {
-      message: 'Error pinning file to pinata'
+      message: 'Error pinning file to pinata',
     };
-    console.log('🚀 ~ pinMediaFileToPinata ~ req.ipfs.error:', req.ipfs.error);
   }
   next();
 };
@@ -272,14 +262,13 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     },
   };
 
-
   try {
     const fileStream = Readable.from(req.file.buffer);
-    (fileStream as any).path = req.ipfs.filename || 'upload.json'; 
+    (fileStream as any).path = req.ipfs.filename || 'upload.json';
 
     const pinataPinningResponse = await req.ipfs.pinata.pinFileToIPFS(
       fileStream,
-      options
+      options,
     );
 
     return res.send({
@@ -293,9 +282,8 @@ const pinJsonFileToPinata = async (req: any, res: any, next: any) => {
     });
   } catch (error) {
     req.ipfs.error = {
-      message: 'Error pinning file to pinata'
+      message: 'Error pinning file to pinata',
     };
-    console.log('🚀 ~ pinJsonFileToPinata ~ error:', req.ipfs.error);
   }
   next();
 };
@@ -332,7 +320,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         .split('/');
       try {
         const metadataContents = await fetch(
-          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
+          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`,
         );
         const { /*name, description,*/ image } = await metadataContents.json();
         const [imageCid, imageFilename] = image
@@ -347,10 +335,9 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           },
         });
       } catch (error) {
-        console.log(error);
         res.status(400).send(error);
       }
-    }
+    },
   );
 
   app.post(
@@ -367,7 +354,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           image: new File(
             [req.file.buffer],
             `${req.query.tokenId}-${req.query.commitment}.${ext}`,
-            { type: req.file.mimetype }
+            { type: req.file.mimetype },
           ),
         });
         const [metadataCid, metadataFilename] = metadata.url
@@ -375,7 +362,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           .split('/');
 
         const metadataContents = await fetch(
-          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
+          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`,
         );
         const { /*name, description,*/ image } = await metadataContents.json();
         const [imageCid, imageFilename] = image
@@ -393,10 +380,9 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           h: req.query.h,
         });
       } catch (error) {
-        console.log(error);
         res.status(400).send(error);
       }
-    }
+    },
   );
 
   app.post(
@@ -413,7 +399,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           image: new File(
             [req.file.buffer],
             `${req.query.tokenId}-${req.query.commitment}.${ext}`,
-            { type: req.file.mimetype }
+            { type: req.file.mimetype },
           ),
         });
         const [metadataCid, metadataFilename] = metadata.url
@@ -421,7 +407,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           .split('/');
 
         const metadataContents = await fetch(
-          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`
+          `https://${metadataCid}.ipfs.nftstorage.link/${metadataFilename}`,
         );
         const { /*name, description,*/ image } = await metadataContents.json();
         const [imageCid, imageFilename] = image
@@ -438,10 +424,9 @@ export default ssrMiddleware(async ({ app, resolve }) => {
           h: req.query.h,
         });
       } catch (error) {
-        console.log(error);
         res.status(400).send(error);
       }
-    }
+    },
   );
 
   /**
@@ -490,7 +475,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       } catch (error) {
         res.status(400).send(error);
       }
-    }
+    },
   );
 
   /**
@@ -515,7 +500,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       let registryJsonFile = new File(
         [req.file.buffer],
         `${req.query.tokenId}.json`,
-        { type: 'application/json' }
+        { type: 'application/json' },
       );
       const hash = crypto.createHash('sha256');
       const contentHash = hash
@@ -544,9 +529,8 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       } catch (error) {
         res.status(400).send(error);
       }
-    }
+    },
   );
-  
 
   app.post(
     '/api/ipfs',
@@ -558,7 +542,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     // pinIpfsCidToPinata,
     pinMediaFileToPinata,
     pinJsonFileToPinata,
-    handleIpfsError
+    handleIpfsError,
   );
 
   /**
@@ -568,7 +552,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
    */
   app.get('/api/ipfs-image', async (req: any, res: any) => {
     const ipfsUrl = req.query.url;
-    
+
     if (!ipfsUrl) {
       return res.status(400).json({
         error: 'Missing url query parameter',
@@ -583,7 +567,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
         const parts = path.split('/');
         const cid = parts[0];
         const filename = parts.slice(1).join('/');
-        
+
         if (filename) {
           gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}/${filename}`;
         } else {
@@ -603,7 +587,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
 
       const response = await fetch(gatewayUrl);
-      
+
       if (!response.ok) {
         return res.status(response.status).json({
           error: `Failed to fetch image: ${response.statusText}`,
@@ -611,7 +595,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
 
       const contentType = response.headers.get('content-type') || 'image/jpeg';
-      
+
       if (!contentType.startsWith('image/')) {
         return res.status(400).json({
           error: 'Resource is not an image',
@@ -620,10 +604,10 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
 
       const imageBuffer = await response.arrayBuffer();
-      
+
       res.setHeader('Content-Type', contentType);
       res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
-      
+
       res.send(Buffer.from(imageBuffer));
     } catch (error: any) {
       console.error('Error proxying IPFS image:', error);
@@ -633,7 +617,6 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     }
   });
 
-
   /**
    /**
     * Proxy endpoint for IPFS files
@@ -641,10 +624,11 @@ export default ssrMiddleware(async ({ app, resolve }) => {
     * Fetches files from IPFS gateway using server-side gateway token
     */
   app.get('/api/ipfs/:cid', async (req: any, res: any) => {
-
     const cid = req.params.cid;
-    const filePath = decodeURIComponent(req.query.filePath ?? '').replace(/\/+/g, '/').replace(/^\/+/, '');
-    let gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}` 
+    const filePath = decodeURIComponent(req.query.filePath ?? '')
+      .replace(/\/+/g, '/')
+      .replace(/^\/+/, '');
+    let gatewayUrl = `https://ipfs.paytaca.com/ipfs/${cid}`;
     if (filePath) {
       gatewayUrl = `${gatewayUrl}/${filePath}`;
     }
@@ -652,7 +636,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
 
     try {
       const response = await fetch(gatewayUrl);
-        
+
       if (!response.ok) {
         return res.status(response.status).json({
           error: `Failed to fetch resource from ipfs!`,
@@ -660,15 +644,18 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       }
 
       const contentType = response.headers.get('content-type') || 'image/jpeg';
-      
+
       if (contentType.startsWith('image/')) {
         const imageBuffer = await response.arrayBuffer();
         res.setHeader('Content-Type', contentType);
         res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
-        res.send(Buffer.from(imageBuffer));    
+        res.send(Buffer.from(imageBuffer));
       }
       // Handle case when content is JSON (such as bitcoin-cash-metadata-registry.json)
-      else if (contentType.includes('application/json') || filePath.endsWith('.json')) {
+      else if (
+        contentType.includes('application/json') ||
+        filePath.endsWith('.json')
+      ) {
         const jsonData = await response.json();
         res.setHeader('Content-Type', 'application/json');
         res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
@@ -676,17 +663,17 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       } else {
         // For other mime types, just stream the data as octet-stream
         const buffer = await response.arrayBuffer();
-        res.setHeader('Content-Type', contentType || 'application/octet-stream');
+        res.setHeader(
+          'Content-Type',
+          contentType || 'application/octet-stream',
+        );
         res.setHeader('Cache-Control', 'public, max-age=86400');
         res.send(Buffer.from(buffer));
       }
-
     } catch (error: any) {
       res.status(500).json({
         error: error?.message || 'Internal Server Error',
       });
     }
-    
   });
-
 });
