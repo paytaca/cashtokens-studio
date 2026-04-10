@@ -50,7 +50,7 @@ module.exports = configure(function (ctx) {
         ? 'https://chipnet.bch.ninja/'
         : 'https://explorer.bch.ninja/',
     WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
-    WALLET_CONNECT_VERIFIED_URL: process.env.URL || 'http://localhost:8000',
+    WALLET_CONNECT_VERIFIED_URL: process.env.WALLET_CONNECT_VERIFIED_URL || 'http://localhost:8000',
   };
 
   if (ctx.isServer) {
