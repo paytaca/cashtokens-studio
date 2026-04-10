@@ -138,9 +138,5 @@ const nftTypesPagination = ref<{
 
 const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
 
-onMounted(async () => {
-  console.log('Mounted')
-})
-
 
 </script>

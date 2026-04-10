@@ -85,7 +85,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       authKey?: AuthKey;
       registry?: { uri: string; contentHash: string };
     },
-    transactionSigner?: TransactionSigner
+    transactionSigner?: TransactionSigner,
   ) {
     this.defaultNftCollectionType = 'SequentialNftCollection';
     if (u) {
@@ -253,7 +253,7 @@ export class CashToken implements UtxoI, PartialBcmr {
    */
   protected async buildTokenGenesisTransaction(
     genesisRequests: (TokenSendRequest | OpReturnData | SendRequest)[],
-    includeAuthKeyGenesis?: boolean
+    includeAuthKeyGenesis?: boolean,
   ): Promise<{ encodedTransaction: any; sourceOutputs: any }> {
     // TODO: REFACTOR, allow user to use multiple low denomination utxos as funder
     const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(
@@ -263,7 +263,7 @@ export class CashToken implements UtxoI, PartialBcmr {
           (u.txid !== this.txid || u.txid !== this.authKey!.txid) && // Exclude the utxo that we're using as genesis inputs
           u.satoshis > this.genesisCost
         );
-      }
+      },
     )[0];
 
     if (!funderUtxo) {
@@ -345,7 +345,7 @@ export class CashToken implements UtxoI, PartialBcmr {
               : opt.capability,
           commitment: commitment,
         },
-      })
+      }),
     );
 
     // if true, create 2 genesis, 1 for Token 1 for AuthKey
@@ -356,7 +356,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     const { encodedTransaction, sourceOutputs } =
       await this.buildTokenGenesisTransaction(
         requests,
-        opt.includeAuthKeyGenesis
+        opt.includeAuthKeyGenesis,
       );
     this._processing = 'Waiting for signature';
     let signResult: any;
@@ -370,7 +370,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Create Token'
+        'Create Token',
       );
     } catch (error: any) {
       console.log(error);
@@ -453,7 +453,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decodeTransaction(encodedTransaction),
         sourceOutputs,
         false,
-        'Send Tokens'
+        'Send Tokens',
       );
     } catch (error) {
       console.log(error);
@@ -506,7 +506,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     this._processing = 'Processing';
     const minerFee = calcMinerFee(
       { 'P2SH-P2WPKH': 1, P2PKH: 2 },
-      { P2SH: 1, P2PKH: 3 }
+      { P2SH: 1, P2PKH: 3 },
     );
     const mintCost = minerFee + DEFAULT_TOKEN_VALUE;
     // TODO: use watchtower
@@ -594,7 +594,7 @@ export class CashToken implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(mintCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -634,7 +634,7 @@ export class CashToken implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -669,7 +669,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Mint Child NFT'
+        'Mint Child NFT',
       );
     } catch (error) {
       console.log(error);
@@ -733,7 +733,7 @@ export class CashToken implements UtxoI, PartialBcmr {
     this._processing = 'Processing';
     const minerFee = calcMinerFee(
       { 'P2SH-P2WPKH': 1, P2PKH: 2 },
-      { P2SH: 1, P2PKH: 3 + arg.quantity }
+      { P2SH: 1, P2PKH: 3 + arg.quantity },
     );
     const mintCost = minerFee + DEFAULT_TOKEN_VALUE * arg.quantity;
     // TODO: use watchtower
@@ -820,7 +820,7 @@ export class CashToken implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(mintCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -859,7 +859,7 @@ export class CashToken implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -894,7 +894,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Mint Child NFT'
+        'Mint Child NFT',
       );
     } catch (error) {
       console.log(error);
@@ -1001,7 +1001,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       throw new Error('Insufficient balance to fund the txn');
     }
     const [minter, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(
-      toCashScript
+      toCashScript,
     );
 
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)));
@@ -1054,7 +1054,6 @@ export class CashToken implements UtxoI, PartialBcmr {
           contentHash,
           ...arg.publish.uris.map((u) => u.replace(/https:\/\/|ipfs:\/\//, '')),
         ];
-        console.log('OP_RETURN VALUE', opReturnData);
         transaction = transaction.withOpReturn(opReturnData);
       }
 
@@ -1068,7 +1067,7 @@ export class CashToken implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(mintCost),
                 },
               ]
-            : []
+            : [],
         )
 
         .withoutChange()
@@ -1141,7 +1140,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Mint Child NFT'
+        'Mint Child NFT',
       );
     } catch (error) {
       console.log(error);
@@ -1182,7 +1181,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`
+        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1205,7 +1204,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
 
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`
+        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1225,7 +1224,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await new BcmrIndexer().fetchIdentitySnapshot(
-        this.token!.tokenId
+        this.token!.tokenId,
       );
       this.identitySnapshot = r;
     } catch (error: any) {
@@ -1243,7 +1242,7 @@ export class CashToken implements UtxoI, PartialBcmr {
       }
       const r = await new BcmrIndexer().getNftType(
         this.token!.tokenId,
-        this.token!.commitment!
+        this.token!.commitment!,
       );
       this.nftType = r;
     } catch (error: any) {
@@ -1254,18 +1253,18 @@ export class CashToken implements UtxoI, PartialBcmr {
 
   static async scanWalletForTokens(
     tokenType: 'ft' | 'nft' | 'all',
-    ownerWallet: Wallet
+    ownerWallet: Wallet,
   ): Promise<UtxoI[]> {
     if (tokenType === 'ft') {
       return (
         (await ownerWallet.getAddressUtxos()).filter(
-          (u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability
+          (u: UtxoI) => u.token && u.token?.amount > 0 && !u.token?.capability,
         ) || []
       );
     } else if (tokenType === 'nft') {
       return (
         (await ownerWallet.getAddressUtxos()).filter(
-          (u: UtxoI) => u.token && u.token?.capability
+          (u: UtxoI) => u.token && u.token?.capability,
         ) || []
       );
     }
@@ -1309,7 +1308,7 @@ export class CashToken implements UtxoI, PartialBcmr {
         decodeTransaction(encodedTransaction),
         sourceOutputs,
         false,
-        'Transfer NFT'
+        'Transfer NFT',
       );
     } catch (error) {
       throw error;
@@ -1342,7 +1341,7 @@ export class CashToken implements UtxoI, PartialBcmr {
 
         if (unspentTxId) {
           updatedUtxo = updatedUtxo?.filter(
-            (u) => u.vout === 0 && u.txid === unspentTxId
+            (u) => u.vout === 0 && u.txid === unspentTxId,
           );
         } else {
           // TODO: @deprecate remove this else statement
@@ -1352,7 +1351,7 @@ export class CashToken implements UtxoI, PartialBcmr {
             (u) =>
               u.vout == 0 &&
               u.token?.tokenId == this.utxo.token?.tokenId &&
-              u.token?.capability == this.utxo.token?.capability
+              u.token?.capability == this.utxo.token?.capability,
           );
         }
         if (updatedUtxo) {
@@ -1383,7 +1382,7 @@ export class CashToken implements UtxoI, PartialBcmr {
               u.txid == unspentTxid &&
               u.vout == this.authKey?.utxo.vout &&
               u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-              u.token?.capability == this.authKey?.utxo.token?.capability
+              u.token?.capability == this.authKey?.utxo.token?.capability,
           );
         } else {
           // TODO: @deprecate remove this else statement, we should require unspentTxId
@@ -1395,7 +1394,7 @@ export class CashToken implements UtxoI, PartialBcmr {
             (u) =>
               u.vout == this.authKey?.utxo.vout &&
               u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-              u.token?.capability == this.authKey?.utxo.token?.capability
+              u.token?.capability == this.authKey?.utxo.token?.capability,
           );
         }
 

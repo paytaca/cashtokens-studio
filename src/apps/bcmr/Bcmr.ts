@@ -157,7 +157,7 @@ export class Bcmr implements Registry {
       license?: string | undefined;
       extensions?: Extensions | undefined;
     },
-    authchainIdentity?: AuthchainIdentity
+    authchainIdentity?: AuthchainIdentity,
   ) {
     this.$schema =
       instance.$schema || 'https://cashtokens.org/bcmr-v2.schema.json';
@@ -212,7 +212,6 @@ export class Bcmr implements Registry {
         // since the token category isn't in the registryIdentity where it's supposed to be
         // we'll just assume the key of the identities field is the token category (like Bitcats)
         const registryIdentity = Object.keys(this.identities)[0];
-        console.log(registryIdentity);
         if (
           this.identities &&
           this.identities[registryIdentity] &&
@@ -304,7 +303,7 @@ export class Bcmr implements Registry {
       if (typeof this.registryIdentity === 'string') {
         const copy = Object.assign(
           {},
-          this.identities![this.registryIdentity][this.latestRevision]
+          this.identities![this.registryIdentity][this.latestRevision],
         );
         this.identities![this.registryIdentity][r] = copy;
       }
@@ -409,7 +408,7 @@ export class Bcmr implements Registry {
           if (date1 > date2) return -1;
           if (date1 < date2) return 1;
           return 0;
-        }
+        },
       );
     }
     return [];
@@ -429,7 +428,7 @@ export class Bcmr implements Registry {
   addIdentitySnapshotUri(
     authbase: string,
     identity_history: string,
-    uri: URIs
+    uri: URIs,
   ) {
     if (
       this.identities &&
@@ -449,7 +448,7 @@ export class Bcmr implements Registry {
   setIdentitySnapshotUri(
     authbase: string,
     identity_history: string,
-    uri: URIs
+    uri: URIs,
   ) {
     if (
       this.identities &&
@@ -466,7 +465,7 @@ export class Bcmr implements Registry {
   removeIdentitySnapshotUri(
     authbase: string,
     identity_history: string,
-    uriName: string
+    uriName: string,
   ) {
     if (
       this.identities &&
@@ -571,7 +570,7 @@ export class Bcmr implements Registry {
         } else {
           return value; // Keep the field
         }
-      })
+      }),
     );
   }
 
@@ -585,7 +584,7 @@ export class Bcmr implements Registry {
    */
   getContent(
     authbase?: string,
-    identityHistoryTimestamp?: ISODateString | string
+    identityHistoryTimestamp?: ISODateString | string,
   ) {
     const timestamp = identityHistoryTimestamp || this.latestRevision;
     let identities = this.identities;
@@ -648,18 +647,18 @@ export class Bcmr implements Registry {
    */
   async storeRegistry(
     authbase?: string,
-    identityHistoryTimestamp?: ISODateString | string
+    identityHistoryTimestamp?: ISODateString | string,
   ): Promise<BcmrStorageArtifact | IpfsUploadArtifact | undefined> {
     this._processing = 'Storing in IPFS';
     try {
       const blob = new Blob(
         [this.getContent(authbase, identityHistoryTimestamp)],
-        { type: 'application/json' }
+        { type: 'application/json' },
       );
       const artifact = await uploadToIPFS(
         blob,
         { tokenId: authbase },
-        `${authbase}.json`
+        `${authbase}.json`,
       );
       return artifact;
     } catch (error) {
@@ -686,7 +685,7 @@ export class Bcmr implements Registry {
       values = Object.keys(this.identities[authbase]) as ISODateString[];
     } else if (typeof this.registryIdentity == 'string') {
       values = Object.keys(
-        this.identities[this.registryIdentity]
+        this.identities[this.registryIdentity],
       ) as ISODateString[];
     }
     return values.sort((date1: string, date2: string) => {
@@ -703,7 +702,7 @@ export class Bcmr implements Registry {
    */
   createNewIdentitySnapshot(
     authbase?: string,
-    identityHistoryTimestamp?: ISODateString
+    identityHistoryTimestamp?: ISODateString,
   ) {
     if (
       typeof this.registryIdentity != 'string' &&
@@ -723,7 +722,7 @@ export class Bcmr implements Registry {
     ] = structuredClone(
       this.identities[authbase || (this.registryIdentity as string)][
         this.getIdentityHistoryTimestamps()[0]
-      ]
+      ],
     );
     return this;
   }
@@ -734,7 +733,7 @@ export class Bcmr implements Registry {
   addNftTypes(
     nftTypes: { [key: string]: NftType },
     authbase?: string,
-    identityHistoryTimestamp?: ISODateString
+    identityHistoryTimestamp?: ISODateString,
   ) {
     if (
       typeof this.registryIdentity != 'string' &&

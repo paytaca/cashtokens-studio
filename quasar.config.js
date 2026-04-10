@@ -22,11 +22,7 @@ if (process.env.NODE_ENV == 'production') {
   require('dotenv').config({ path: './.env.prod' });
 }
 
-console.log('PROCESS ENV', process.env);
-
 module.exports = configure(function (ctx) {
-  console.log('Server IsServer', ctx.isServer);
-
   const envs = {
     APP_ENV: process.env.APP_ENV,
     BCMR_API:
@@ -50,7 +46,8 @@ module.exports = configure(function (ctx) {
         ? 'https://chipnet.bch.ninja/'
         : 'https://explorer.bch.ninja/',
     WALLET_CONNECT_PROJECT_ID: process.env.WALLET_CONNECT_PROJECT_ID,
-    WALLET_CONNECT_VERIFIED_URL: process.env.WALLET_CONNECT_VERIFIED_URL || 'http://localhost:8000',
+    WALLET_CONNECT_VERIFIED_URL:
+      process.env.WALLET_CONNECT_VERIFIED_URL || 'http://localhost:8000',
   };
 
   if (ctx.isServer) {
@@ -129,7 +126,7 @@ module.exports = configure(function (ctx) {
         '@quasar/ssr-helpers',
         '@walletconnect/modal',
         '@walletconnect/sign-client',
-        'bitauth-libauth-v3'
+        'bitauth-libauth-v3',
       ],
 
       // rtl: true, // https://quasar.dev/options/rtl-support

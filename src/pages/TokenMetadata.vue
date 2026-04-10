@@ -841,7 +841,6 @@ const publish = async (revisionOptions: RevisionOption) => {
   //     class: 'q-pa-lg'
   //   })
   // }
-  console.log(`🚀 Authhead being used = ${tokenStore.token.txid}`)
   progress.value = `Processing request. Authhead: ${tokenStore.token.txid}`
   const bcmrNewRevisionISOString = bcmrNewRevision.value!.toISOString()
   const tokenId = bcmr.value.identities![bcmrSelectedAuthbase.value!][bcmrNewRevisionISOString].token!.category
