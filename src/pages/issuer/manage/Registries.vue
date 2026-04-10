@@ -252,7 +252,6 @@ const openPublisherDialog = async (type: 'url' | 'file', tokenId: string, authch
   })
 
   const authhead = await (new ChainGraph()).fetchAuthheadTxid(tokenId)
-  console.log('AUTHHEAD', authchainIdentity.txid)
 
   if (authhead != authchainIdentity.txid) {
     d.update({

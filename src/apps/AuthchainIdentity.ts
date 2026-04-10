@@ -60,7 +60,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       authKey: AuthKey;
       ownerWallet?: Wallet | TestNetWallet;
     },
-    transactionSigner?: TransactionSigner
+    transactionSigner?: TransactionSigner,
   ) {
     if (u) {
       this.vout = u.vout;
@@ -163,7 +163,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
         (utxo: UtxoI) =>
-          Boolean(!utxo.token) && utxo.satoshis > this.burningCost
+          Boolean(!utxo.token) && utxo.satoshis > this.burningCost,
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -219,7 +219,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
                     BigInt(this.burningCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -260,7 +260,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -295,7 +295,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Burn authchain of token: ' + shortenTokenId(this.token!.tokenId)
+        'Burn authchain of token: ' + shortenTokenId(this.token!.tokenId),
       );
     } catch (error) {
       delete this._processing;
@@ -332,11 +332,11 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this._processing = 'Processing';
     const issuanceCost = calcMinerFee(
       { 'P2SH-P2WPKH': 1 },
-      { P2SH: 1, P2PKH: 2 }
+      { P2SH: 1, P2PKH: 2 },
     );
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
-        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost
+        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost,
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -344,7 +344,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       throw new Error('Insufficient balance to fund the txn');
     }
     const [authhead, authKeyInput] = [this.utxo, this.authKey!.utxo!].map(
-      toCashScript
+      toCashScript,
     );
     const sig = new SignatureTemplate(Uint8Array.from(Array(32)));
     const contract = this.authKey!.authGuard!.contract!;
@@ -370,7 +370,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         // Just making sure we don't accidentally delete token amount
         throw Error(
           'Anomaly, authhead is non-token but has token amount!Utxo = ' +
-            JSON.stringify(authhead.token || {})
+            JSON.stringify(authhead.token || {}),
         );
       }
       delete authhead.token; // toCashscript has token attribute even if utxo has no tokenId
@@ -419,7 +419,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(issuanceCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -525,7 +525,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Publish registry update'
+        'Publish registry update',
       );
     } catch (error) {
       console.log(error);
@@ -542,7 +542,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       const tx = await submitTransaction(
         signingResult,
-        this.ownerWallet as Wallet
+        this.ownerWallet as Wallet,
       );
       if (tx) {
         this._processing = 'Published';
@@ -576,21 +576,22 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
     let transactionCost = calcMinerFee(
       { 'P2SH-P2WPKH': 1 },
-      { P2SH: 1, P2PKH: 2 }
+      { P2SH: 1, P2PKH: 2 },
     );
 
-    const walletAddress =  this.ownerWallet!.getDepositAddress()
-    const decodedCashAddress = decodeCashAddress(walletAddress)
-    if (typeof decodedCashAddress !== 'string' && decodedCashAddress.type === CashAddressType.p2sh) {
-      transactionCost = calcMinerFee(
-        { 'P2SH-P2WPKH': 1 },
-        { P2SH: 3 }
-      )
+    const walletAddress = this.ownerWallet!.getDepositAddress();
+    const decodedCashAddress = decodeCashAddress(walletAddress);
+    if (
+      typeof decodedCashAddress !== 'string' &&
+      decodedCashAddress.type === CashAddressType.p2sh
+    ) {
+      transactionCost = calcMinerFee({ 'P2SH-P2WPKH': 1 }, { P2SH: 3 });
     }
 
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
-        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > transactionCost
+        (utxo: UtxoI) =>
+          Boolean(!utxo.token) && utxo.satoshis > transactionCost,
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -657,7 +658,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(transactionCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -698,7 +699,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -730,16 +731,17 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         },
       ];
 
-     let userPrompt = 'Publish token registry update'
-     const tokenName = this.identitySnapshot?.token?.symbol || this.identitySnapshot?.name
-     if (tokenName) {
-       userPrompt = `Publish ${tokenName}'s registry update`
-     }
+      let userPrompt = 'Publish token registry update';
+      const tokenName =
+        this.identitySnapshot?.token?.symbol || this.identitySnapshot?.name;
+      if (tokenName) {
+        userPrompt = `Publish ${tokenName}'s registry update`;
+      }
       signingResult = await this.transactionSigner?.signTransaction(
         decoded,
         sourceOutputs,
         false,
-        userPrompt
+        userPrompt,
       );
     } catch (error) {
       console.log(error);
@@ -756,7 +758,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       // const tx = await this.ownerWallet!.submitTransaction(hexToBin(signingResult!.signedTransaction), true);
       const tx = await submitTransaction(
         signingResult,
-        this.ownerWallet as Wallet
+        this.ownerWallet as Wallet,
       );
       if (tx) {
         this._processing = 'Published';
@@ -787,13 +789,13 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     this._processing = 'Processing';
     const minerFee = calcMinerFee(
       { 'P2SH-P2WPKH': 1, P2PKH: 2 },
-      { P2SH: 2, P2PKH: 2 }
+      { P2SH: 2, P2PKH: 2 },
     );
     const issuanceCost = minerFee + DEFAULT_TOKEN_VALUE; // Token value of the issued tokens utxo
 
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
-        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost
+        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > issuanceCost,
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -862,7 +864,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(issuanceCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -901,7 +903,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -936,7 +938,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Issue/Release Tokens'
+        'Issue/Release Tokens',
       );
     } catch (error) {
       delete this._processing;
@@ -974,7 +976,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
     const funderInput = (await this.ownerWallet!.getAddressUtxos())
       .filter(
-        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > unguardingCost
+        (utxo: UtxoI) => Boolean(!utxo.token) && utxo.satoshis > unguardingCost,
       )
       .map(toCashScript)[0];
     if (!funderInput) {
@@ -1029,7 +1031,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
                   amount: funderInput.satoshis - BigInt(unguardingCost),
                 },
               ]
-            : []
+            : [],
         )
         .withoutChange()
         .withoutTokenChange()
@@ -1069,7 +1071,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             nft: authchainIdentityOutput.token.nft && {
               ...authchainIdentityOutput.token.nft,
               commitment: hexToBin(
-                authchainIdentityOutput.token.nft.commitment
+                authchainIdentityOutput.token.nft.commitment,
               ),
             },
           },
@@ -1105,7 +1107,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         decoded,
         sourceOutputs,
         false,
-        'Unguard Token: ' + shortenTokenId(this.token!.tokenId)
+        'Unguard Token: ' + shortenTokenId(this.token!.tokenId),
       );
     } catch (error) {
       delete this._processing;
@@ -1136,7 +1138,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`
+        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1157,7 +1159,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`
+        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1176,7 +1178,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await new BcmrIndexer().fetchIdentitySnapshot(
-        this.token!.tokenId
+        this.token!.tokenId,
       );
       this.identitySnapshot = r;
     } catch (error: any) {
@@ -1192,14 +1194,10 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     for (let i = 0; i < identities.length; i++) {
       try {
         const r = await fetch(
-          `${process.env.BCMR_API}bcmr/${identities[i].token!.tokenId}/token`
+          `${process.env.BCMR_API}bcmr/${identities[i].token!.tokenId}/token`,
         );
         const rj = await r.json();
       } catch (error) {
-        console.log(
-          `Error fetching ${identities[i].token!.tokenId} from indexer`,
-          error
-        );
         continue;
       }
     }
@@ -1207,7 +1205,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
   // statics
   static async scanWalletForAuthchainIdentities(
-    ownerWallet: Wallet
+    ownerWallet: Wallet,
   ): Promise<AuthchainIdentity[]> {
     AuthchainIdentity._processing = 'Scanning wallet for authchain identities';
     const identities: any[] = [];
@@ -1215,7 +1213,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
       (u: UtxoI) => {
         // get AuthNFT/batons
         return u.token && u.token.tokenId && u.token.commitment === '00';
-      }
+      },
     );
     // const identityUtxos = []
     for (let i = 0; i < batonLikeUtxos.length; i++) {
@@ -1230,7 +1228,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             ...identityUtxos[i],
             authKey: key,
             ownerWallet: ownerWallet,
-          })
+          }),
         );
       }
     }
@@ -1254,7 +1252,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
 
         if (unspentTxId) {
           updatedUtxo = updatedUtxo?.filter(
-            (u) => u.vout === 0 && u.txid === unspentTxId
+            (u) => u.vout === 0 && u.txid === unspentTxId,
           );
         } else {
           // TODO: @deprecate remove this else statement
@@ -1264,7 +1262,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             (u) =>
               u.vout == 0 &&
               u.token?.tokenId == this.utxo.token?.tokenId &&
-              u.token?.capability == this.utxo.token?.capability
+              u.token?.capability == this.utxo.token?.capability,
           );
         }
         if (updatedUtxo) {
@@ -1295,7 +1293,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
               u.txid == unspentTxid &&
               u.vout == this.authKey?.utxo.vout &&
               u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-              u.token?.capability == this.authKey?.utxo.token?.capability
+              u.token?.capability == this.authKey?.utxo.token?.capability,
           );
         } else {
           // TODO: @deprecate remove this else statement, we should require unspentTxId
@@ -1307,7 +1305,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
             (u) =>
               u.vout == this.authKey?.utxo.vout &&
               u.token?.tokenId == this.authKey?.utxo.token?.tokenId &&
-              u.token?.capability == this.authKey?.utxo.token?.capability
+              u.token?.capability == this.authKey?.utxo.token?.capability,
           );
         }
 

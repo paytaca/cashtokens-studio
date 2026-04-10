@@ -11,7 +11,7 @@ import {
   hexToBin,
 } from 'mainnet-js';
 
-import { DEFAULT_TOKEN_VALUE } from '../constants'; 
+import { DEFAULT_TOKEN_VALUE } from '../constants';
 import { calcMinerFee } from '../utils';
 import { getInstance } from '../contracts';
 import {
@@ -74,9 +74,8 @@ export const genesisCost = (walletAddressType?: CashAddressType) => {
  * key genesis input.
  */
 export const buildGenesisTx = async (
-  opt: GenesisOptions
+  opt: GenesisOptions,
 ): Promise<GenesisTransaction> => {
-  console.log('OPT', opt)
   if (opt.input.vout != 0) {
     throw new Error('Genesis input requires v-out 0');
   }
@@ -92,22 +91,20 @@ export const buildGenesisTx = async (
     return Boolean(!u.token) && u.satoshis > cost && u.vout !== 0;
   })[0];
   const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
-  
+
   if (
     typeof decodedCashAddress !== 'string' &&
     decodedCashAddress.type === CashAddressType.p2sh
   ) {
     cost = genesisCost(decodedCashAddress.type);
 
-    console.log('🚀 ~ cost multisig:', cost);
-
     funds = (await opt.wallet.getAddressUtxos()).filter(
-      (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost && u.vout !== 0
+      (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost && u.vout !== 0,
     )[0];
 
     if (!funds) {
       throw new Error(
-        'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.'
+        'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.',
       );
     }
 
@@ -127,30 +124,35 @@ export const buildGenesisTx = async (
   }
 
   if (cost > 100000) {
-    throw new Error(`suspiciously high fee of ${cost} sats. Please contact admin.`);
+    throw new Error(
+      `suspiciously high fee of ${cost} sats. Please contact admin.`,
+    );
   }
 
   if (!funds) {
     throw new Error('Insufficient balance to fund the transaction');
   }
 
-  const change = funds.satoshis - cost
+  const change = funds.satoshis - cost;
   let authKeyTokenId;
   let authKeyGenesisRequest = null;
-  const lockingBytecode: any = cashAddressToLockingBytecode(opt.wallet!.getDepositAddress())
+  const lockingBytecode: any = cashAddressToLockingBytecode(
+    opt.wallet!.getDepositAddress(),
+  );
   const walletTokenDepositAddress = lockingBytecodeToCashAddress(
-    lockingBytecode.bytecode, lockingBytecode.prefix, { tokenSupport: true }
-  ) as string
+    lockingBytecode.bytecode,
+    lockingBytecode.prefix,
+    { tokenSupport: true },
+  ) as string;
 
   let tokenRecipient = opt.recipient || walletTokenDepositAddress;
 
-  console.log('OPT', opt)
   if (opt.authKey) {
     // we are using authguard
     if (opt.authKey.token?.tokenId) {
       if (opt.authKey.token.commitment != '00') {
         throw new Error(
-          'Trying to use an authkey that does not conform to AuthGuard standard'
+          'Trying to use an authkey that does not conform to AuthGuard standard',
         );
       }
       // using existing authkey
@@ -197,7 +199,7 @@ export const buildGenesisTx = async (
         'BCMR',
         hexToBin(opt.publishBCMR.contentHash),
         ...opt.publishBCMR.uris.map((u) => u.replace(/https:\/\//, '')),
-      ])
+      ]),
     );
   }
 

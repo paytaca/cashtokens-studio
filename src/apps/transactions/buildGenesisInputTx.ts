@@ -49,7 +49,7 @@ export const genesisInputCost = (walletAddressType?: CashAddressType) => {
  * the same wallet. :-)
  */
 export const buildGenesisInputTx = async (
-  opt: GenesisInputOptions
+  opt: GenesisInputOptions,
 ): Promise<GenesisInputResult> => {
   const requests = [
     new SendRequest({
@@ -60,10 +60,9 @@ export const buildGenesisInputTx = async (
   ];
 
   let cost = genesisInputCost();
-  console.log('🚀 ~ cost p2pkh:', cost);
   let discardChange = false;
   let funds = (await opt.wallet.getAddressUtxos()).filter(
-    (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost
+    (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost,
   )[0];
 
   const decodedCashAddress = decodeCashAddress(opt.wallet.getDepositAddress());
@@ -76,22 +75,18 @@ export const buildGenesisInputTx = async (
       throw new Error('Fee too high.');
     }
 
-    console.log('🚀 ~ cost multisig:', cost);
-
     funds = (await opt.wallet.getAddressUtxos()).filter(
-      (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost
+      (u: UtxoI) => Boolean(!u.token) && u.satoshis > cost,
     )[0];
 
     if (!funds) {
       throw new Error(
-        'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.'
+        'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.',
       );
     }
 
     discardChange = true;
-    console.log('🚀 ~ cost:', cost);
     const change = funds.satoshis - cost;
-    console.log('🚀 ~ change:', change);
     // mainnet-js incorrectly calculates relay fee if wallet is multisig
     // handle change ourself
     if (change > 546) {
@@ -111,7 +106,7 @@ export const buildGenesisInputTx = async (
 
   if (!funds) {
     throw new Error(
-      'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.'
+      'Insufficient balance! If you have BCH in your account, please try to consolidate your utxos.',
     );
   }
 
@@ -123,12 +118,6 @@ export const buildGenesisInputTx = async (
       ensureUtxos: [funds],
     });
 
-  console.log(
-    '🚀 ~ decodeTransaction(encodedTransaction):',
-    decodeTransaction(encodedTransaction)
-  );
-  console.log('🚀 ~ encodedTransaction:', encodedTransaction);
-  console.log('🚀 ~ sourceOutputs:', sourceOutputs);
   return {
     encoded: encodedTransaction,
     decoded: decodeTransaction(encodedTransaction),

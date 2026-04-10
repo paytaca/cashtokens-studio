@@ -1,76 +1,102 @@
-import { UtxoI, Wallet, NetworkType, NFTCapability, TokenSendRequest } from 'mainnet-js'
-import { Contract } from "@mainnet-cash/contract"
-import { DEFAULT_TOKEN_VALUE } from '../constants'
-import { bigIntToVmNumber, binToHex } from '@bitauth/libauth'
-import { calcMinerFee, requestPaytacaSignature, submitTransaction } from '../utils'
+import {
+  UtxoI,
+  Wallet,
+  NetworkType,
+  NFTCapability,
+  TokenSendRequest,
+} from 'mainnet-js';
+import { Contract } from '@mainnet-cash/contract';
+import { DEFAULT_TOKEN_VALUE } from '../constants';
+import { bigIntToVmNumber, binToHex } from '@bitauth/libauth';
+import {
+  calcMinerFee,
+  requestPaytacaSignature,
+  submitTransaction,
+} from '../utils';
 
 export class MultiThreadedMinter {
-  
-  parentMinter: UtxoI
-  mintPrice: number
-  nftCollectionSize: number
-  numberOfThreads: number
-  network: NetworkType
-  ownerWallet: Wallet
+  parentMinter: UtxoI;
+  mintPrice: number;
+  nftCollectionSize: number;
+  numberOfThreads: number;
+  network: NetworkType;
+  ownerWallet: Wallet;
   /**
    * Parameters passed to the contract script
    */
-  contractScriptParams: any 
-  private _contract: Contract
-  private _processing?: string
-  constructor(opt:{parentMinter:UtxoI, mintPrice: number, nftCollectionSize: number, numberOfThreads: number, network: NetworkType, ownerWallet: Wallet}) {
-    this.parentMinter = opt.parentMinter
-    this.mintPrice = opt.mintPrice
-    this.ownerWallet = opt.ownerWallet
-    this.numberOfThreads = opt.numberOfThreads
-    this.network = opt.network
-    this.nftCollectionSize = opt.nftCollectionSize
-    const pkh = this.ownerWallet.getPublicKeyHash(false)
-    this.contractScriptParams = [BigInt(opt.mintPrice), BigInt(opt.numberOfThreads), pkh, opt.nftCollectionSize - 1]
+  contractScriptParams: any;
+  private _contract: Contract;
+  private _processing?: string;
+  constructor(opt: {
+    parentMinter: UtxoI;
+    mintPrice: number;
+    nftCollectionSize: number;
+    numberOfThreads: number;
+    network: NetworkType;
+    ownerWallet: Wallet;
+  }) {
+    this.parentMinter = opt.parentMinter;
+    this.mintPrice = opt.mintPrice;
+    this.ownerWallet = opt.ownerWallet;
+    this.numberOfThreads = opt.numberOfThreads;
+    this.network = opt.network;
+    this.nftCollectionSize = opt.nftCollectionSize;
+    const pkh = this.ownerWallet.getPublicKeyHash(false);
+    this.contractScriptParams = [
+      BigInt(opt.mintPrice),
+      BigInt(opt.numberOfThreads),
+      pkh,
+      opt.nftCollectionSize - 1,
+    ];
     this._contract = new Contract(
       this.contractScript,
       this.contractScriptParams,
-      opt.network
-    )
-  
-  }
-  
-  
-  mintNFT(){
-    console.log('wip')
-  }
-  payout(){
-    console.log('wip')
+      opt.network,
+    );
   }
 
-  get processing(): string|undefined {
-    return this._processing
+  mintNFT() {
+    /* TODO: implement */
+  }
+  payout() {
+    /* TODO: implement */
   }
 
-  get threadsCreationCost(): {minerFee: number, totalCost: number} {
-    const minerFee = calcMinerFee({'P2SH-P2WPKH':2}, {P2SH:this.numberOfThreads, P2PKH: 1}) // out = contract address, change
-    const totalCost = minerFee + (DEFAULT_TOKEN_VALUE * this.numberOfThreads)
+  get processing(): string | undefined {
+    return this._processing;
+  }
+
+  get threadsCreationCost(): { minerFee: number; totalCost: number } {
+    const minerFee = calcMinerFee(
+      { 'P2SH-P2WPKH': 2 },
+      { P2SH: this.numberOfThreads, P2PKH: 1 },
+    ); // out = contract address, change
+    const totalCost = minerFee + DEFAULT_TOKEN_VALUE * this.numberOfThreads;
     return {
       minerFee,
-      totalCost
-    }
+      totalCost,
+    };
   }
 
   /**
    * Creates minting UTXOs
    */
-  async createThreads(){
+  async createThreads() {
     if (!this._contract) {
-      throw new Error('Missing contract instance')
+      throw new Error('Missing contract instance');
     }
     // check if the wallet owns a minting token for this category
-    this._processing = 'Preparing minting threads'
-    
-    const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter((u:UtxoI)=> {
-      return Boolean(!u.token) && u.satoshis > this.threadsCreationCost.totalCost
-    })[0]
+    this._processing = 'Preparing minting threads';
 
-    const requests = []
+    const funderUtxo = (await this.ownerWallet!.getAddressUtxos()).filter(
+      (u: UtxoI) => {
+        return (
+          Boolean(!u.token) && u.satoshis > this.threadsCreationCost.totalCost
+        );
+      },
+    )[0];
+
+    const requests = [];
     for (let i = 0; i < this.numberOfThreads; i++) {
       requests.push(
         new TokenSendRequest({
@@ -79,13 +105,13 @@ export class MultiThreadedMinter {
           tokenId: this.parentMinter.token!.tokenId,
           capability: NFTCapability.minting,
           commitment: binToHex(bigIntToVmNumber(BigInt(i))),
-        })
-      )
+        }),
+      );
     }
 
-    let encodedTransaction, sourceOutputs
+    let encodedTransaction, sourceOutputs;
     try {
-       const encoded = await this.ownerWallet!.encodeTransaction(
+      const encoded = await this.ownerWallet!.encodeTransaction(
         requests,
         false,
         {
@@ -93,35 +119,38 @@ export class MultiThreadedMinter {
           checkTokenQuantities: true,
           buildUnsigned: true,
           utxoIds: [this.parentMinter, funderUtxo],
-          ensureUtxos: [this.parentMinter, funderUtxo]
-        }
-      )
-      encodedTransaction = encoded?.encodedTransaction
-      sourceOutputs = encoded?.sourceOutputs
+          ensureUtxos: [this.parentMinter, funderUtxo],
+        },
+      );
+      encodedTransaction = encoded?.encodedTransaction;
+      sourceOutputs = encoded?.sourceOutputs;
     } catch (error) {
-      delete this._processing  
+      delete this._processing;
     }
 
-    this._processing = 'Awaiting signature'
-    const signResult = await requestPaytacaSignature(encodedTransaction, sourceOutputs)
+    this._processing = 'Awaiting signature';
+    const signResult = await requestPaytacaSignature(
+      encodedTransaction,
+      sourceOutputs,
+    );
     if (!signResult || !signResult.signedTransaction) {
-      delete this._processing
-      return
+      delete this._processing;
+      return;
     }
-    this._processing = 'Creating minting threads'
+    this._processing = 'Creating minting threads';
     try {
-      const tx = await submitTransaction(signResult, this.ownerWallet!)
-      return tx
-    } catch (error:any) {
-      console.log(error)
-      throw new Error(error.message)
+      const tx = await submitTransaction(signResult, this.ownerWallet!);
+      return tx;
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(error.message);
     } finally {
-      delete this._processing
+      delete this._processing;
     }
   }
 
-  get contract():Contract {
-    return this._contract
+  get contract(): Contract {
+    return this._contract;
   }
 
   get contractScript(): string {
@@ -207,6 +236,6 @@ export class MultiThreadedMinter {
                 require(tx.outputs[0].tokenCategory == 0x);
             }
         }
-    }`
+    }`;
   }
 }

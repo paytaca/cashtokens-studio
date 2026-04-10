@@ -48,12 +48,12 @@ export const useWalletConnect = () => {
       }
     }
 
-    walletConnectSignerClient.value.on('session_update', (s: any) => {
-      console.log('SESSION UPDATED', s);
+    walletConnectSignerClient.value.on('session_update', (_s: any) => {
+      /* no-op */
     });
 
-    walletConnectSignerClient.value.on('session_proposal', (s: any) => {
-      console.log('SESSION PROPOSAL', s);
+    walletConnectSignerClient.value.on('session_proposal', (_s: any) => {
+      /* no-op */
     });
     walletConnectSignerClient.value.on('session_delete', (s: any) => {
       if (walletConnectSession.value?.topic == s.topic) {
@@ -61,12 +61,12 @@ export const useWalletConnect = () => {
       }
     });
 
-    walletConnectSignerClient.value.on('session_event', (s: any) => {
-      console.log('SESSION EVENT', s);
+    walletConnectSignerClient.value.on('session_event', (_s: any) => {
+      /* no-op */
     });
 
-    walletConnectSignerClient.value.on('proposal_expire', (s: any) => {
-      console.log('PROPOSAL EXPIRE', s);
+    walletConnectSignerClient.value.on('proposal_expire', (_s: any) => {
+      /* no-op */
     });
 
     user.walletConnectSigner = walletConnectSignerClient.value;
