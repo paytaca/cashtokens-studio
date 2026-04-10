@@ -1,5 +1,6 @@
 .env
 .env.*
+deployment/.env.*
 *.log
 *Zone.Identifier
 .DS_Store
