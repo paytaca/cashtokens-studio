@@ -17,13 +17,8 @@
             v-if="route.path !== '/'"
             to="/"
             @click.stop="router.push('/')"
-            :src="
-              $q.screen.xs
-                ? 'images/cts_icon.png'
-                : 'images/cts_transparent.png'
-            "
-            style="max-height: 3em; object-fit: fill; max-width: 8em"
-            class="cursor-pointer"
+            :src="$q.screen.xs ? 'images/cts_icon.png' : 'images/cts_transparent.png'"
+            class="cursor-pointer app-logo"
           ></q-img>
           <code
             v-if="getAppEnv() !== 'production' && !$q.screen.xs"
@@ -295,6 +290,16 @@
         <q-ajax-bar />
       </q-page-container>
     </q-scroll-area>
+
+    <q-footer class="bg-grey-9 text-white">
+      <div class="row items-center justify-center q-pa-sm">
+        <div class="text-caption">
+          Made with <span style="color:#e25555">❤️</span> by
+          <a href="https://paytaca.com" target="_blank" rel="noopener" class="text-white q-ml-xs">Paytaca</a>
+        </div>
+      </div>
+    </q-footer>
+
     <MessageDialog v-model="messageDialog" />
   </q-layout>
 </template>
@@ -406,3 +411,18 @@ onMounted(async () => {
     await user.getPendingMultisigTransactions();
 });
 </script>
+
+<style scoped>
+.app-logo {
+  max-height: 3em;
+  max-width: 8em;
+  object-fit: contain;
+}
+
+@media (max-width: 600px) {
+  .app-logo {
+    max-height: 2.2em;
+    max-width: 4.5em;
+  }
+}
+</style>

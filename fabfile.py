@@ -41,10 +41,24 @@ hosts = [f"{DEPLOY_USER}@{DEPLOY_HOST}"]
 
 def attach_ssh_key(c):
     # allow overriding the ssh key path via SSH_KEY_PATH in .env
-    key_path = os.environ.get("SSH_KEY_PATH", "~/.ssh/ct.pem")
+    # default to standard OpenSSH private key path unless overridden
+    key_path = os.environ.get("SSH_KEY_PATH", "~/.ssh/id_rsa")
     # expand ~ to the actual home directory
     key_path = os.path.expanduser(key_path)
     c.connect_kwargs.key_filename = key_path
+
+
+@task(hosts=hosts)
+def test_uname(c):
+    """Quick connectivity check: run `uname -a` on the remote host.
+
+    Use: fab -f fabfile.py test_uname
+    """
+    attach_ssh_key(c)
+    print(f"Running uname -a on {c.host}...")
+    result = c.run("uname -a", hide=False)
+    print("Remote uname output:")
+    print(result.stdout.strip())
 
 
 @task(hosts=hosts)
