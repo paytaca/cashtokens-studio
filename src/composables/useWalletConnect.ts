@@ -110,6 +110,7 @@ export const useWalletConnect = () => {
         themeVariables: {
           '--wcm-background-color': '#20c997',
           '--wcm-accent-color': '#20c997',
+          '--wcm-z-index': '9999'
         },
         explorerExcludedWalletIds: 'ALL',
       });
