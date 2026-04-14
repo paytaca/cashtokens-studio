@@ -34,13 +34,6 @@
             </div>
           </q-card-section>
         </q-card>
-        <!-- <q-card class="action-card" @click="router.push({ name: 'create-nft-collection' })">
-          <q-card-section class="text-center">
-            <q-icon name="collections" size="48px" color="secondary" />
-            <div class="text-h6 q-mt-sm">Create NFT Collection</div>
-            <div class="text-caption text-grey">Start a new NFT collection</div>
-          </q-card-section>
-        </q-card> -->
         <q-card class="action-card" @click="router.push({ name: 'ft-reserves' })">
           <q-card-section class="text-center">
             <q-icon name="account_balance" size="48px" color="warning" />
@@ -88,20 +81,12 @@ const user = useUser();
 const isMobileBrowser = ref<boolean>(false);
 const router = useRouter();
 const bannerSize = computed(() => {
-  if (user.walletAddress) {
-    return { width: '300px' };
-  }
-  const size = { width: '400px' };
-  if (!$q.screen.lt.lg) {
-    return { width: '800px' };
-  }
-  if (!$q.screen.lt.md) {
-    return { width: '600px' };
-  }
-  if (!$q.screen.lt.sm) {
-    return { width: '400px' };
-  }
 
+  let size = { width: '500px' }
+
+  if ($q.screen.lt.sm) {
+    size = { width: '320px' }
+  }
   return size;
 });
 
