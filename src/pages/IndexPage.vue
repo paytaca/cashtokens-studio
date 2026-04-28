@@ -1,7 +1,8 @@
 <template>
   <q-page class="row justify-evenly" :class="!user.walletAddress ? 'items-center' : ''">
     <div class="col-12">
-      <div v-if="!user.walletAddress" class="row justify-center items-center q-px-lg q-pt-lg q-gutter-y-sm">
+      <div v-if="!user.walletAddress && !wizardConnect.wzSession"
+        class="row justify-center items-center q-px-lg q-pt-lg q-gutter-sm">
         <div class="col-12 text-center">
           <q-img src="images/cts_transparent.png" :style="bannerSize" />
         </div>
@@ -11,6 +12,19 @@
               <WalletConnect />
             </div>
             <div class="text-caption text-grey">To get started, click here to connect your wallet thru WalletConnect.
+            </div>
+          </q-card-section>
+        </q-card>
+        <q-card class="action-card q-py-xs" style="width: 280px" @click="() => wizardConnect.wzInitiateConnection()">
+          <q-card-section class="text-center">
+            <div class="flex no-wrap items-center justify-center text-primary" style="width: 250px; height: 100px">
+              <q-avatar>
+                <q-icon name="mdi-wizard-hat" size="2.5em"></q-icon>
+              </q-avatar>
+              <span class="text-bold text-h5">WizardConnect</span>
+            </div>
+            <div class="text-caption text-grey">
+              To get started, click here to connect your wallet thru WizardConnect.
             </div>
           </q-card-section>
         </q-card>
@@ -73,6 +87,7 @@
 import WalletConnect from 'components/WalletConnect.vue';
 import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
+import { useWizardConnect } from 'src/composables/useWizardConnect';
 import { useUser } from 'src/stores/user';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
@@ -81,7 +96,6 @@ const user = useUser();
 const isMobileBrowser = ref<boolean>(false);
 const router = useRouter();
 const bannerSize = computed(() => {
-
   let size = { width: '500px' }
 
   if ($q.screen.lt.sm) {
@@ -89,6 +103,8 @@ const bannerSize = computed(() => {
   }
   return size;
 });
+
+const wizardConnect = useWizardConnect()
 
 onMounted(async () => {
   await delay(100);
