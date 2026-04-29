@@ -21,11 +21,6 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/issuer/TokenGenesis.vue'),
       },
       {
-        name: 'create-nft-collection',
-        path: 'tokens/create/nft-collection',
-        component: () => import('pages/issuer/CreateNftCollection.vue'),
-      },
-      {
         name: 'import-auth-utxo',
         path: 'tokens/import-auth-utxo',
         component: () => import('pages/issuer/ImportAuthUtxo.vue'),
@@ -50,11 +45,6 @@ const routes: RouteRecordRaw[] = [
         name: 'nft-reserves',
         path: 'nft-reserves',
         component: () => import('pages/issuer/manage/NftReserves.vue'),
-      },
-      {
-        name: 'nft-collection',
-        path: 'nft-collection',
-        component: () => import('pages/issuer/manage/NftCollection.vue'),
       },
       {
         name: 'registries',

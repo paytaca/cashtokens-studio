@@ -33,7 +33,6 @@ const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
   manageFTReserves: '/issuer/manage/ft-reserves',
   manageNFTReserves: '/issuer/manage/nft-reserves',
-  manageNFTCollection: '/issuer/manage/nft-collection',
   manageRegistries: '/issuer/manage/registries',
   manageAuthchains: '/issuer/manage/authchains',
   manageAuthKeys: '/issuer/manage/authkeys',
@@ -42,7 +41,6 @@ const hrefs = {
   accountCollectibles: '/account/balance/collectibles',
   recentTransactions: '/account/recent-transactions',
   createNewToken: '/issuer/tokens/create',
-  createNftCollection: '/issuer/tokens/create/nft-collection',
   importAuthUtxo: '/issuer/tokens/import-auth-utxo',
 }
 
@@ -54,12 +52,6 @@ const menu = computed<any[]>(() => {
       icon: 'add',
       disabled: Boolean(user.walletAddress) === false,
     },
-    // {
-    //   label: 'Create NFT Collection',
-    //   href: hrefs.createNftCollection,
-    //   icon: 'add',
-    //   disabled: Boolean(user.walletAddress) === false,
-    // },
     {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
@@ -88,11 +80,6 @@ const menu = computed<any[]>(() => {
           href: hrefs.manageNFTReserves,
           icon: 'art_track',
         },
-        // {
-        //   label: 'NFT Collections',
-        //   href: hrefs.manageNFTCollection,
-        //   icon: 'art_track',
-        // },
         {
           label: 'Metadata',
           href: hrefs.manageRegistries,
