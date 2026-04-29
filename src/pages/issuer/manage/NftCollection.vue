@@ -49,7 +49,7 @@
             </q-menu>
           </q-btn>
           <q-btn icon="add" color="primary" :size="$q.screen.xs ? 'md' : 'lg'" class="rounded-borders"
-            :to="{ name: 'token-genesis', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
+            :to="{ name: 'create-token', query: { tokenType: 'nft', capability: 'minting', collectionType: NFTCollectionType.sequential, title: 'New NFT Collection' } }">
             New Collection
           </q-btn>
         </div>
@@ -93,7 +93,7 @@
                   Unpublished NFT metadata
                   <sup>
                     <q-badge text-color="dark" color="warning"> {{ Object.keys(nftsTypesForPublication || {}).length
-                      }}</q-badge>
+                    }}</q-badge>
                   </sup>
                   <q-btn-group push>
 

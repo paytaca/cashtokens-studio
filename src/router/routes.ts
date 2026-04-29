@@ -18,12 +18,6 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'create-token',
         path: 'tokens/create',
-        // component: () => import('pages/issuer/CreateToken.vue'),
-        component: () => import('pages/issuer/TokenGenesis.vue'),
-      },
-      {
-        name: 'token-genesis',
-        path: 'tokens/genesis',
         component: () => import('pages/issuer/TokenGenesis.vue'),
       },
       {
