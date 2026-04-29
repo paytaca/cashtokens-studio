@@ -11,19 +11,9 @@
               transaction.
             </div>
             <div class="col-xs-12 text-right">
-              <q-btn
-                icon="handyman"
-                text-color="primary"
-                :label="!progress ? 'Generate Genesis Input' : ''"
-                @click.stop="generateGenesisInput"
-                :disable="!!progress"
-                no-caps
-                size="lg"
-              >
-                <q-spinner-dots
-                  v-if="!!progress"
-                  class="q-ml-sm"
-                ></q-spinner-dots>
+              <q-btn icon="handyman" text-color="primary" :label="!progress ? 'Generate Genesis Input' : ''"
+                @click.stop="generateGenesisInput" :disable="!!progress" no-caps size="lg">
+                <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
               </q-btn>
             </div>
           </template>
@@ -35,47 +25,25 @@
               <div class="text-h5 q-my-lg">
                 AuthKey <q-icon name="key" color="warning"></q-icon>
               </div>
-              <q-input
-                :model-value="genesisInput.txid"
-                label="AuthKey ID"
-                outlined
-                readonly
-              >
+              <q-input :model-value="genesisInput.txid" label="AuthKey ID" outlined readonly>
                 <template v-slot:append>
                   <CopyText :text="genesisInput.txid" />
                 </template>
               </q-input>
             </div>
             <div class="col-xs-12 text-right">
-              <q-btn
-                icon="handyman"
-                color="primary"
-                :label="!progress ? 'Create AuthKey' : ''"
-                @click.stop="createAuthKey"
-                :disable="!!progress"
-                no-caps
-                size="lg"
-              >
-                <q-spinner-dots
-                  v-if="!!progress"
-                  class="q-ml-sm"
-                ></q-spinner-dots>
+              <q-btn icon="handyman" color="primary" :label="!progress ? 'Create AuthKey' : ''"
+                @click.stop="createAuthKey" :disable="!!progress" no-caps size="lg">
+                <q-spinner-dots v-if="!!progress" class="q-ml-sm"></q-spinner-dots>
               </q-btn>
             </div>
           </template>
         </div>
       </div>
     </div>
-    <q-inner-loading
-      :showing="!!progress"
-      id="inner-loading"
-      style="background-color: #0000002b"
-    >
+    <q-inner-loading :showing="!!progress" id="inner-loading" style="background-color: #0000002b">
       <q-spinner size="5em" color="warning" class="q-mb-lg"></q-spinner>
-      <span
-        class="bg-black q-py-sm q-px-md text-warning text-center"
-        style="border-radius: 10px"
-      >
+      <span class="bg-black q-py-sm q-px-md text-warning text-center" style="border-radius: 10px">
         {{ progress }}
       </span>
     </q-inner-loading>
@@ -283,7 +251,7 @@ const createAuthKey = async () => {
         )[0];
         $ebus?.emit('transaction', {
           txid: tx,
-          txType: 'token-genesis',
+          txType: 'authkey-genesis',
           timestamp: new Date().getTime(),
           successMsg: `AuthKey Created!`,
         });
