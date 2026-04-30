@@ -308,7 +308,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       let ext = req.file.originalname?.split('.');
       ext = ext[ext.length - 1];
 
-      const metadata = await nftStorageClient().store({
+      const metadata = await nftStorageClient()?.store({
         name: 'CTStudio',
         description: 'CashTokens Studio',
         image: new File([req.file.buffer], `${req.query.tokenId}.${ext}`, {
@@ -393,7 +393,7 @@ export default ssrMiddleware(async ({ app, resolve }) => {
       ext = ext[ext.length - 1];
 
       try {
-        const metadata = await nftStorageClient().store({
+        const metadata = await nftStorageClient()?.store({
           name: 'CTStudio',
           description: 'NFT asset',
           image: new File(
