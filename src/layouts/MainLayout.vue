@@ -3,55 +3,33 @@
     <TransactionLogger />
     <q-header style="background-color: rgb(20, 20, 20)">
       <q-toolbar class="q-py-sm">
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          size="lg"
-          @click="toggleLeftDrawer"
-        />
+        <q-btn flat dense round icon="menu" aria-label="Menu" size="lg" @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-img
-            v-if="route.path !== '/'"
-            to="/"
-            @click.stop="router.push('/')"
+          <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')"
             :src="$q.screen.xs ? 'images/cts_icon.png' : 'images/cts_transparent.png'"
-            class="cursor-pointer app-logo"
-          ></q-img>
-          <code
-            v-if="getAppEnv() !== 'production' && !$q.screen.xs"
-            class="text-caption"
-            >[TEST MODE]</code
-          >
+            class="cursor-pointer app-logo"></q-img>
+          <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         <div v-if="user.walletAddress" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
-            <q-btn-dropdown
-              auto-close
-              rounded
-              size="lg"
-              @before-show="onBeforeMenuShow"
-              style="
+            <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
                 padding: 10px;
                 border-radius: 10px;
                 background-color: #282829d4;
                 border: 2px solid #484854d4;
-              "
-            >
+              ">
               <template v-slot:label>
-                <q-avatar v-if="user.walletType == 'paytaca'" rounded size="md">
+                <q-avatar v-if="Boolean(wz.wzSession)" rounded size="md">
+                  <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
+                </q-avatar>
+                <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
                   <q-img src="images/paytaca_icon.png"></q-img>
                 </q-avatar>
-                <q-avatar
-                  v-else-if="user.walletType == 'walletconnect'"
-                  rounded
-                  size="md"
-                >
+                <q-avatar v-else-if="user?.walletType === 'walletconnect'" rounded size="md">
                   <q-img src="images/walletconnect_icon.png"></q-img>
                 </q-avatar>
+
                 <q-icon v-else name="account_balance_wallet"> </q-icon>
               </template>
               <q-list padding style="width: 300px">
@@ -61,13 +39,8 @@
                     <q-item-label>
                       <span style="position: relative">
                         Recent Transactions
-                        <q-badge
-                          v-if="pendingMultisigTransactions?.length > 0"
-                          color="orange"
-                          label="!"
-                          floating
-                          rounded
-                        ></q-badge>
+                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
+                          rounded></q-badge>
                       </span>
                     </q-item-label>
                   </q-item-section>
@@ -78,13 +51,8 @@
                     <q-item-label>
                       <span style="position: relative">
                         Scan Wallet For Managed Tokens
-                        <q-badge
-                          v-if="pendingMultisigTransactions?.length > 0"
-                          color="orange"
-                          label="!"
-                          floating
-                          rounded
-                        ></q-badge>
+                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
+                          rounded></q-badge>
                       </span>
                     </q-item-label>
                     <q-item-label lines="4" caption>
@@ -121,32 +89,26 @@
                 </q-item>
                 <q-separator inset class="q-my-md" />
                 <q-item-label header>Addresses</q-item-label>
-                <q-item
-                  clickable
-                  @click="
-                    () => {
-                      copyText(user.walletAddress);
-                      $q.notify({
-                        message: 'Wallet Address Copied',
-                        timeout: 500,
-                      });
-                    }
-                  "
-                >
+                <q-item clickable @click="
+                  () => {
+                    copyText(user.walletAddress);
+                    $q.notify({
+                      message: 'Wallet Address Copied',
+                      timeout: 500,
+                    });
+                  }
+                ">
                   <q-item-section avatar>
                     <q-avatar color="bch" text-color="white">
                       <q-img src="images/bitcoin-cash-circle.svg"></q-img>
                     </q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label
-                      class="text-positive"
-                      style="
+                    <q-item-label class="text-positive" style="
                         font-variant-numeric: tabular-nums;
                         font-size: 1.1em;
                         letter-spacing: 2px;
-                      "
-                    >
+                      ">
                       {{ user.walletBchBalance }}
                     </q-item-label>
                     <q-item-label caption>{{
@@ -158,10 +120,8 @@
                     </q-item-label>
                   </q-item-section>
                 </q-item>
-                <q-item
-                  clickable
-                  @click="() => { copyText(user.wallet!.getTokenDepositAddress()); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }"
-                >
+                <q-item clickable
+                  @click="() => { copyText(user.wallet!.getTokenDepositAddress()); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
                   <q-avatar class="q-mr-xs">
                     <q-img src="images/cashtokens.svg"></q-img>
                   </q-avatar>
@@ -178,53 +138,148 @@
                 </q-item>
                 <q-separator inset class="q-my-md" />
                 <q-item>
-                  <paytaca-connect
-                    v-if="user.walletType == 'paytaca'"
-                    variant="button"
-                    class="full-width"
-                  />
-                  <wallet-connect
-                    v-else-if="user.walletType == 'walletconnect'"
-                    variant="button"
-                  />
+                  <paytaca-connect v-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
+                  <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
                 </q-item>
               </q-list>
             </q-btn-dropdown>
-            <q-badge
-              v-if="pendingMultisigTransactions?.length > 0"
-              color="orange"
-              label="!"
-              floating
-            ></q-badge>
+            <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
+          </q-btn-group>
+        </div>
+        <div v-if="wz.wzSession" class="q-mx-sm">
+          <q-btn-group class="text-right" style="position: relative">
+            <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
+                color: rgb(20, 20, 20);
+                padding: 10px;
+                border-radius: 10px;
+                background-color: #282829d4;
+                border: 2px solid #484854d4;
+              ">
+              <template v-slot:label>
+                <q-avatar v-if="Boolean(wz.wzSession)" rounded size="md">
+                  <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
+                </q-avatar>
+                <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
+                  <q-img src="images/paytaca_icon.png"></q-img>
+                </q-avatar>
+                <q-avatar v-else-if="user?.walletType === 'walletconnect'" rounded size="md">
+                  <q-img src="images/walletconnect_icon.png"></q-img>
+                </q-avatar>
+
+                <q-icon v-else name="account_balance_wallet"> </q-icon>
+              </template>
+              <q-list padding style="width: 300px">
+                <q-item clickable :to="{ name: 'recent-transactions' }">
+                  <q-avatar class="q-mr-xs" icon="receipt"> </q-avatar>
+                  <q-item-section>
+                    <q-item-label>
+                      <span style="position: relative">
+                        Recent Transactions
+                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
+                          rounded></q-badge>
+                      </span>
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item clickable @click="scanReserves">
+                  <q-avatar class="q-mr-xs" icon="mdi-card-search"> </q-avatar>
+                  <q-item-section>
+                    <q-item-label>
+                      <span style="position: relative">
+                        Scan Wallet For Managed Tokens
+                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
+                          rounded></q-badge>
+                      </span>
+                    </q-item-label>
+                    <q-item-label lines="4" caption>
+                      Click here if some tokens aren't showing up on the FT or
+                      NFT reserves or Metadata pages due to possible delayed
+                      indexing.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator inset class="q-my-md" />
+                <q-item-label header>Tokens in Wallet</q-item-label>
+                <q-item clickable to="/account/balance/fungibletokens">
+                  <q-item-section avatar>
+                    <q-avatar text-color="white" icon="money"> </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>My Fungible Tokens</q-item-label>
+                    <q-item-label caption lines="2">
+                      Display fungible token balances of the currently connected
+                      wallet.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-item clickable to="/account/balance/collectibles">
+                  <q-item-section avatar>
+                    <q-avatar text-color="white" icon="collections"> </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>My Collectibles (NFTs)</q-item-label>
+                    <q-item-label caption lines="2">
+                      Display NFTs of the currently connected wallet.
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <q-separator inset class="q-my-md" />
+                <q-item-label header>BCH Balance</q-item-label>
+                <q-item clickable @click="() => console.log('Not implemented')">
+                  <q-item-section avatar>
+                    <q-avatar color="bch" text-color="white">
+                      <q-img src="images/bitcoin-cash-circle.svg"></q-img>
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label class="text-positive" style="
+                        font-variant-numeric: tabular-nums;
+                        font-size: 1.1em;
+                        letter-spacing: 2px;
+                      ">
+                      {{ BigNumber(wz.wzWallet?.value?.balance.toString() || '0').dividedBy(1e8).toString() }}
+                    </q-item-label>
+                    <q-item-label caption class="text-grey-6">
+                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
+                      Click to copy cash address
+                    </q-item-label>
+                  </q-item-section>
+                </q-item>
+                <!-- <q-item clickable
+                  @click="() => { copyText(''); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
+                  <q-avatar class="q-mr-xs">
+                    <q-img src="images/cashtokens.svg"></q-img>
+                  </q-avatar>
+                  <q-item-section>
+                    <q-item-label>TOKEN</q-item-label>
+                    <q-item-label caption>[token address placeholder]</q-item-label>
+                    <q-item-label caption class="text-grey-6">
+                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
+                      Click to copy token address
+                    </q-item-label>
+                  </q-item-section>
+                </q-item> -->
+                <q-separator inset class="q-my-md" />
+                <q-item>
+                  <q-btn v-if="wz.wzSession">Disconnect</q-btn>
+                  <paytaca-connect v-else-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
+                  <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
+            <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
         <!-- <light-switch /> -->
       </q-toolbar>
     </q-header>
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-      overlay
-      v-close-popup
-    >
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered overlay v-close-popup>
       <div class="text-right q-ma-lg">
-        <q-btn
-          size="md"
-          text-color="grey-6"
-          icon="chevron_left"
-          label="hide"
-          @click="toggleLeftDrawer"
-          class="justify-right"
-          dense
-          flat
-        />
+        <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
+          class="justify-right" dense flat />
       </div>
 
-      <q-scroll-area
-        style="position: relative; height: 100vh; max-width: 100vw"
-        :bar-style="{ width: '0px' }"
-      >
+      <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
             <q-btn to="/" size="2em" flat color="primary">
@@ -237,22 +292,11 @@
         <SidebarMenu />
       </q-scroll-area>
     </q-drawer>
-    <q-scroll-area
-      style="position: relative; height: 100vh; max-width: 100vw"
-      :bar-style="{ width: '0px' }"
-      :thumb-style="{ width: '0px' }"
-    >
+    <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
+      :thumb-style="{ width: '0px' }">
       <q-page-container>
-        <q-linear-progress
-          v-if="scanning"
-          indeterminate
-          color="primary"
-          class="q-mt-none"
-        />
-        <div
-          v-if="scanning"
-          class="q-ml-sm q-mt-sm text-italic text-grey-200 text-caption"
-        >
+        <q-linear-progress v-if="scanning" indeterminate color="primary" class="q-mt-none" />
+        <div v-if="scanning" class="q-ml-sm q-mt-sm text-italic text-grey-200 text-caption">
           {{ scanning }}
         </div>
         <q-toolbar v-if="ui.routeBack" class="q-mt-sm q-mb-sm">
@@ -261,11 +305,9 @@
             ui.pageTitle || $route.meta?.pageTitle
           }}</q-toolbar-title>
         </q-toolbar>
-        <template
-          v-if="
-            user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
-          "
-        >
+        <template v-if="
+          user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
+        ">
           <div class="q-pa-md q-gutter-sm">
             <q-banner inline-actions rounded class="bg-orange-400 text-warning">
               It looks like you still have a pending multisig transaction.
@@ -273,15 +315,8 @@
               creating a new transaction in Cashtokens Studio, to avoid any
               issues.
               <template v-slot:action>
-                <q-btn
-                  v-if="route.name !== 'recent-transactions'"
-                  color="warning"
-                  icon="launch"
-                  label="Check it out"
-                  text-color="black"
-                  :to="{ name: 'recent-transactions' }"
-                  no-caps
-                />
+                <q-btn v-if="route.name !== 'recent-transactions'" color="warning" icon="launch" label="Check it out"
+                  text-color="black" :to="{ name: 'recent-transactions' }" no-caps />
               </template>
             </q-banner>
           </div>
@@ -322,6 +357,8 @@ import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { shortenAddress, copyText } from 'src/apps/utils';
 import { AuthKey, Watchtower } from 'src/apps';
 import { delay, Wallet } from 'mainnet-js';
+import { useWizardConnect } from 'src/composables/useWizardConnect';
+import BigNumber from 'bignumber.js';
 
 const leftDrawerOpen = ref(false);
 const user = useUser();
@@ -334,6 +371,8 @@ const pendingMultisigTransactions = ref([]);
 const scanning = ref<string | boolean>(false);
 const eventBus = inject<EventBus>('eventBus');
 useWalletConnect();
+
+const wz = useWizardConnect()
 
 eventBus?.on('updatedPendingMultisigTransactions', async () => {
   pendingMultisigTransactions.value =
@@ -405,10 +444,33 @@ watch(
   }
 );
 
+watch(() => wz.wzSession.value, async (v) => {
+  console.log('wzsession', v)
+  if (v) {
+    // const hdWallet = await wz.wzGetHDWallet('receive')
+    // if (hdWallet) {
+    //   await hdWallet.scanMoreAddresses(50)
+    //   const balance = await hdWallet.getBalance()
+    //   console.log('Balance', balance)
+
+    // }
+
+    // const hdWalletChange = await wz.wzGetHDWallet('change')
+    // if (hdWalletChange) {
+    //   await hdWalletChange.scanMoreAddresses(50)
+    //   const balance = await hdWalletChange.getBalance()
+    //   console.log('Balance hdWalletChange', balance)
+    // }
+  }
+})
+
 onMounted(async () => {
+  console.log('NETWORK', process.env.NETWORK)
   const db = ClientDB.getInstance();
   pendingMultisigTransactions.value =
     await user.getPendingMultisigTransactions();
+
+
 });
 </script>
 

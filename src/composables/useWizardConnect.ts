@@ -1,12 +1,14 @@
-import { type WalletReadyMessage, type RelayUpdatePayload, type DisconnectReason as DisconnectReasonType, Hdwalletv1Session } from '@wizardconnect/core';
-import BigNumber from 'bignumber.js';
-import { publicKeyToP2pkhCashAddress } from 'bitauth-libauth-v3';
+import type { 
+  WalletReadyMessage, 
+  RelayUpdatePayload, 
+  DisconnectReason as DisconnectReasonType
+} from '@wizardconnect/core';
 import { HDWallet, Utxo } from 'mainnet-js-v3';
 import { useQuasar } from 'quasar';
-import { getHDWalletClass } from 'src/apps/utils';
+import { onMounted, ref } from 'vue';
 import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
-import { onMounted, ref } from 'vue';
+import { getHDWalletClass } from 'src/apps/utils';
 
 type WZWalletPath = { name: string, xpub: string}
 type WZWallet = {
@@ -97,7 +99,9 @@ export const useWizardConnect = () => {
       
       for (const i in utxoRequests) {
         if(utxoPromiseResults[i].status === 'rejected') continue
-        utxos = utxos.concat((utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i].name })))
+        utxos = utxos.concat(
+          (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i].name }))
+        )
       }
       const utxoMap = new Map()
       const balance = utxos.reduce((acc, next) => {

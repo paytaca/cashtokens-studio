@@ -10,12 +10,13 @@
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "mocha",
     "dev": "quasar dev -m ssr",
-    "prodlocal": "NODE_ENV=production quasar dev -m ssr",
+    "prodlocal": "NODE_ENV=production quasar dev --experimental-print-required-tla -m ssr ",
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build"
   },
   "dependencies": {
     "@bitauth/libauth": "^2.0.0-alpha.8",
+    "@bitjson/qr-code": "^1.0.2",
     "@cashscript/utils": "^0.8.0",
     "@electrum-cash/network": "^4.1.1",
     "@mainnet-cash/contract": "^2.3.0",
@@ -35,6 +36,7 @@
     "json-schema-library": "^9.1.3",
     "localforage": "^1.10.0",
     "mainnet-js": "^2.3.0",
+    "mainnet-js-v3": "link:/Users/ronskie/PackageTestBiz/mainnet-js/packages/mainnet-js",
     "multer": "^1.4.5-lts.1",
     "nft.storage": "^7.1.1",
     "pinia": "^2.0.11",

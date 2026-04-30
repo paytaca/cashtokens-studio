@@ -15,6 +15,7 @@ DefaultProvider.servers.testnet = [
   // 'wss://chipnet.imaginary.cash:50004',
 ];
 
+
 export const getWalletClass = () => {
   let WalletClass = Wallet;
   if (
@@ -37,6 +38,14 @@ export const getWalletClass = () => {
   }
   return WalletClass;
 };
+
+export const getHDWalletClass = async () => {
+  const { HDWallet, TestNetHDWallet } = await import('mainnet-js-v3');
+  if (process.env.NETWORK === 'testnet') {
+    return TestNetHDWallet
+  }
+  return HDWallet
+}
 
 
 export const isMultisigWallet = (template?: WalletTemplate) => {
