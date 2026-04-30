@@ -4,7 +4,13 @@
 import { defineConfig } from '#q-app/wrappers';
 import { fileURLToPath } from 'node:url';
 
+
 export default defineConfig((ctx) => {
+  let envFiles = []
+  if (Boolean(process.env.FORCE_PROD)) {
+    envFiles = ['./.env.prod', './.env.local.prod']
+  }
+  
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -45,6 +51,7 @@ export default defineConfig((ctx) => {
         vueShim: true,
         // extendTsConfig (tsConfig) {}
       },
+      envFiles: envFiles,
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
@@ -62,49 +69,71 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      // extendViteConf (viteConf) {},
+      extendViteConf (viteConf) {
+        // Exclude from pre-bundling so runtime can resolve correct versions
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {}
+        viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
+        viteConf.optimizeDeps.exclude.push('@bitauth/libauth')
+      },
+
+      // viteVuePluginOptions: {},
       // viteVuePluginOptions: {},
 
       vitePlugins: [
-        [
-          '@intlify/unplugin-vue-i18n/vite',
-          {
-            // if you want to use Vue I18n Legacy API, you need to set `compositionOnly: false`
-            // compositionOnly: false,
+        // [
+        //   '@intlify/unplugin-vue-i18n/vite',
+        //   {
+        //     // if you want to use Vue I18n Legacy API, you need to set `compositionOnly: false`
+        //     // compositionOnly: false,
 
-            // if you want to use named tokens in your Vue I18n messages, such as 'Hello {name}',
-            // you need to set `runtimeOnly: false`
-            // runtimeOnly: false,
+        //     // if you want to use named tokens in your Vue I18n messages, such as 'Hello {name}',
+        //     // you need to set `runtimeOnly: false`
+        //     // runtimeOnly: false,
 
-            ssr: ctx.modeName === 'ssr',
+        //     ssr: ctx.modeName === 'ssr',
 
-            // you need to set i18n resource including paths !
-            include: [fileURLToPath(new URL('./src/i18n', import.meta.url))],
-          },
-        ],
-        [
-          'vite-plugin-checker',
-          {
-            vueTsc: true,
-            eslint: {
-              lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{ts,js,mjs,cjs,vue}"',
-              useFlatConfig: true,
-            },
-          },
-          { server: false },
-        ],
+        //     // you need to set i18n resource including paths !
+        //     include: [fileURLToPath(new URL('./src/i18n', import.meta.url))],
+        //   },
+        // ],
+        // [
+        //   'vite-plugin-checker',
+        //   {
+        //     vueTsc: true,
+        //     eslint: {
+        //       lintCommand: 'eslint -c ./eslint.config.js "./src*/**/*.{ts,js,mjs,cjs,vue}"',
+        //       useFlatConfig: true,
+        //     },
+        //   },
+        //   { server: false },
+        // ],
+        // Custom plugin to fix deprecated 'assert' syntax
+        // {
+        //   name: 'fix-node-22-assert',
+        //   enforce: 'pre',
+        //   transform(code, id) {
+        //     if (id.includes('node_modules')) {
+        //       return code.replace(
+        //         /assert\s*\{\s*type\s*:\s*['"]json['"]\s*\}/g, 
+        //         'with { type: "json" }'
+        //       );
+        //     }
+        //   }
+        // },
       ],
     },
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#devserver
     devServer: {
       // https: true,
-      open: true, // opens browser window automatically
+      open: true, // opens browser window automatically,
+      
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
     framework: {
       config: {
+        dark: true
       },
 
       // iconSet: 'material-icons', // Quasar icon set
@@ -118,7 +147,7 @@ export default defineConfig((ctx) => {
       // directives: [],
 
       // Quasar plugins
-      plugins: [],
+      plugins: ['Dialog', 'Notify', 'Loading'],
     },
 
     // animations: 'all', // --- includes all animations
