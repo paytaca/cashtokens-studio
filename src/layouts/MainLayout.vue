@@ -20,7 +20,7 @@
                 border: 2px solid #484854d4;
               ">
               <template v-slot:label>
-                <q-avatar v-if="Boolean(wz.wzSession)" rounded size="md">
+                <q-avatar v-if="Boolean(wz.wzSession?.value)" rounded size="md">
                   <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
                 </q-avatar>
                 <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
@@ -113,7 +113,7 @@
                     </q-item-label>
                     <q-item-label caption>{{
                       shortenAddress(user.walletAddress)
-                    }}</q-item-label>
+                      }}</q-item-label>
                     <q-item-label caption class="text-grey-6">
                       <q-icon name="content_copy" size="xs" class="q-mr-xs" />
                       Click to copy cash address
@@ -129,7 +129,7 @@
                     <!-- <q-item-label>TOKEN</q-item-label> -->
                     <q-item-label caption>{{
                       shortenAddress(user.wallet!.getTokenDepositAddress())
-                    }}</q-item-label>
+                      }}</q-item-label>
                     <q-item-label caption class="text-grey-6">
                       <q-icon name="content_copy" size="xs" class="q-mr-xs" />
                       Click to copy token address
@@ -146,7 +146,7 @@
             <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
-        <div v-if="wz.wzSession" class="q-mx-sm">
+        <div v-if="wz.wzSession?.value" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
             <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
@@ -303,7 +303,7 @@
           <!-- <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" /> -->
           <q-toolbar-title class="text-h6">{{
             ui.pageTitle || $route.meta?.pageTitle
-          }}</q-toolbar-title>
+            }}</q-toolbar-title>
         </q-toolbar>
         <template v-if="
           user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
