@@ -1,7 +1,7 @@
 <template>
   <q-page class="row justify-evenly" :class="!user.walletAddress ? 'items-center' : ''">
     <div class="col-12">
-      <div v-if="!user.walletAddress && !wizardConnect.wzSession"
+      <div v-if="!user.walletAddress && !wizardConnect.wzSession?.value"
         class="row justify-center items-center q-px-lg q-pt-lg q-gutter-sm">
         <div class="col-12 text-center">
           <q-img src="images/cts_transparent.png" :style="bannerSize" />
