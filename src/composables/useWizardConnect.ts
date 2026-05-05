@@ -1,6 +1,6 @@
 import type { 
   WalletReadyMessage, 
-  RelayUpdatePayload, 
+  RelayUpdatePayload,
   DisconnectReason as DisconnectReasonType
 } from '@wizardconnect/core';
 import { HDWallet, Utxo } from 'mainnet-js-v3';
@@ -10,6 +10,7 @@ import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
 import { getHDWalletClass } from 'src/apps/utils';
 import { StoredSession } from '@wizardconnect/dapp';
+// import { initiateDappRelay } from '@wizardconnect/core';
 
 type WZWalletPath = { name: string, xpub: string}
 type WZWallet = {
@@ -46,7 +47,9 @@ export const useWizardConnect = () => {
 
     wzDappMgr.value.on("walletready", (msg: WalletReadyMessage) => {
       if (msg.action === 'wallet_ready') {
-        modal.value?.hide()
+        if (modal.value) {
+          modal.value.hide()
+        }
         wzDappMgr.value.pushDappReady()
       }
     })
@@ -78,11 +81,11 @@ export const useWizardConnect = () => {
       receive: receiveWallet,
       change: changeWallet,
       defi: defiWallet,
-      balance: 0n
+      balance: 0n,
     } as WZWallet
   }
 
-  const wzWalletGetUtxos = async (wzWallet: WZWallet) => {
+  const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: {excludeTokens: boolean}) => {
     const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
 
     if (wzWallet.receive) utxoRequests.push({ name: 'receive', req: wzWallet.receive.getUtxos() })
@@ -99,7 +102,15 @@ export const useWizardConnect = () => {
         (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i]!.name }))
       )
     }
+    if (options?.excludeTokens) {
+      return utxos?.filter((u) => !u.token)
+    }
     return utxos
+  }
+
+  const wzWalletGetGenesisInputUtxos = async (wzWallet: WZWallet) => {
+    const utxos = await wzWalletGetUtxos(wzWallet)
+    return utxos?.filter(utxo => !utxo.token && utxo.vout === 0)
   }
 
   const wzWalletGetBalance = async (wzWallet: WZWallet) => {
@@ -127,6 +138,13 @@ export const useWizardConnect = () => {
     }
   }
 
+  const wzDisconnect = async () => {
+    console.log('disconnecting')
+    wzDappMgr.value?.clearStoredSession();
+    await wzDappMgr.value?.sendDisconnect("user closed the tab");
+    wzRelayConn.value?.cleanup();
+  }
+
   onMounted(async () => {
     
     if (!wzDappMgr.value) {
@@ -145,6 +163,9 @@ export const useWizardConnect = () => {
     wzRelayConn,
     wzSession,
     wzWallet,
-    wzInitiateConnection
+    wzInitiateConnection,
+    wzDisconnect,
+    wzWalletGetUtxos,
+    wzWalletGetGenesisInputUtxos
   }
 };
