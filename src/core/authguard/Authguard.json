@@ -1,0 +1,46 @@
+{
+  "contractName": "AuthGuard",
+  "constructorInputs": [
+    {
+      "name": "tokenId",
+      "type": "bytes"
+    }
+  ],
+  "abi": [
+    {
+      "name": "unlockWithNft",
+      "inputs": [
+        {
+          "name": "keepGuarded",
+          "type": "bool"
+        }
+      ]
+    }
+  ],
+  "bytecode": "OP_1 OP_UTXOTOKENCATEGORY OP_EQUALVERIFY OP_1 OP_UTXOTOKENAMOUNT OP_0 OP_NUMEQUALVERIFY OP_IF OP_0 OP_OUTPUTBYTECODE OP_INPUTINDEX OP_UTXOBYTECODE OP_EQUALVERIFY OP_ENDIF OP_1",
+  "source": "pragma cashscript ^0.12.0;\n\ncontract AuthGuard(bytes tokenId) {\n    function unlockWithNft(bool keepGuarded) {\n    // Check that the first input holds the minting baton\n    require(tx.inputs[1].tokenCategory == tokenId);\n    require(tx.inputs[1].tokenAmount == 0);\n    if(keepGuarded){\n        // Self preservation of the minting covenant as the first output\n        require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);\n    }\n    }\n}",
+  "debug": {
+    "bytecode": "51ce8851d0009d6300cdc0c7886851",
+    "sourceMap": "6:22:6:23;:12::38:1;:4::51;7:22:7:23:0;:12::36:1;:40::41:0;:4::43:1;8:19:11:5:0;10:27:10:28;:16::45:1;:59::80:0;:49::97:1;:8::99;8:19:11:5;4:4:12",
+    "logs": [],
+    "requires": [
+      {
+        "ip": 3,
+        "line": 6
+      },
+      {
+        "ip": 7,
+        "line": 7
+      },
+      {
+        "ip": 13,
+        "line": 10
+      }
+    ]
+  },
+  "compiler": {
+    "name": "cashc",
+    "version": "0.12.1"
+  },
+  "updatedAt": "2026-05-05T05:57:04.324Z"
+}
