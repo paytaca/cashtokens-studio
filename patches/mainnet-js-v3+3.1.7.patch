@@ -1,0 +1,37 @@
+diff --git a/node_modules/mainnet-js-v3/dist/module/cache/walletCache.js b/node_modules/mainnet-js-v3/dist/module/cache/walletCache.js
+index 03d23a0..673f233 100644
+--- a/node_modules/mainnet-js-v3/dist/module/cache/walletCache.js
++++ b/node_modules/mainnet-js-v3/dist/module/cache/walletCache.js
+@@ -85,7 +85,12 @@ export class PersistentWalletCache {
+     getByIndex(addressIndex, change) {
+         const id = `${this.walletId}-${addressIndex}-${change}`;
+         if (!this.walletCache[id]) {
+-            const node = deriveHdPathRelative(this.hdNode, `${change ? 1 : 0}/${addressIndex}`);
++            let relativePath = `${change ? 1 : 0}/${addressIndex}`
++            console.log('MAINNET JS', relativePath, this.hdNode)
++            if (this.hdNode.depth === 4) {
++                relativePath = `${addressIndex}`
++            }
++            const node = deriveHdPathRelative(this.hdNode, relativePath);
+             const privateKey = "privateKey" in node ? node.privateKey : undefined;
+             const publicKey = "publicKey" in node
+                 ? node.publicKey
+diff --git a/node_modules/mainnet-js-v3/src/cache/walletCache.ts b/node_modules/mainnet-js-v3/src/cache/walletCache.ts
+index 35a274d..c67a30c 100644
+--- a/node_modules/mainnet-js-v3/src/cache/walletCache.ts
++++ b/node_modules/mainnet-js-v3/src/cache/walletCache.ts
+@@ -164,9 +164,13 @@ export class PersistentWalletCache implements WalletCacheI {
+   public getByIndex(addressIndex: number, change: boolean) {
+     const id = `${this.walletId}-${addressIndex}-${change}`;
+     if (!this.walletCache[id]) {
++      let relativePath = `${change ? 1 : 0}/${addressIndex}`
++      if (this.hdNode.depth === 4) {
++        relativePath = `${addressIndex}`
++      }
+       const node = deriveHdPathRelative(
+         this.hdNode,
+-        `${change ? 1 : 0}/${addressIndex}`
++        relativePath
+       );
+ 
+       const privateKey = "privateKey" in node ? node.privateKey : undefined;
