@@ -37,9 +37,10 @@
     "json-schema-library": "^9.1.3",
     "localforage": "^1.10.0",
     "mainnet-js": "2.3.0",
-    "mainnet-js-v3": "link:/Users/ronskie/PackageTestBiz/mainnet-js/packages/mainnet-js",
+    "mainnet-js-v3": "npm:mainnet-js@^3.1.7",
     "multer": "^1.4.5-lts.1",
     "nft.storage": "^7.1.1",
+    "pinata": "^2.5.6",
     "pinia": "^2.0.11",
     "quasar": "^2.19.3",
     "vue": "^3.4.0",
@@ -70,7 +71,6 @@
     "mainnet-js-v3/@bitauth/libauth": "^3.1.0-next.8",
     "@bitauth/libauth": "2.0.0-alpha.8"
   },
-  
   "browserslist": [
     "last 10 Chrome versions",
     "last 10 Firefox versions",

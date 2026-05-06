@@ -2,7 +2,7 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers';
-import { fileURLToPath } from 'node:url';
+import { mergeConfig } from 'vite'
 
 
 export default defineConfig((ctx) => {
@@ -45,7 +45,6 @@ export default defineConfig((ctx) => {
         browser: 'baseline-widely-available',
         node: 'node22',
       },
-
       typescript: {
         strict: true,
         vueShim: true,
@@ -69,11 +68,28 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      extendViteConf (viteConf) {
-        // Exclude from pre-bundling so runtime can resolve correct versions
-        viteConf.optimizeDeps = viteConf.optimizeDeps || {}
-        viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
-        viteConf.optimizeDeps.exclude.push('@bitauth/libauth')
+      extendViteConf (viteConf, { isServer }) {
+        if (isServer) {
+          // Merge your SSR overrides into the existing config
+          mergeConfig(viteConf, mergeConfig(viteConf, {
+            ssr: {
+              noExternal: ['@bitauth/libauth']
+            }
+          }));
+          
+          viteConf.optimizeDeps = viteConf.optimizeDeps || {}
+
+          viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
+          if (!viteConf.optimizeDeps.exclude.includes('@bitauth/libauth')) {
+            viteConf.optimizeDeps.exclude.push('@bitauth/libauth');
+          }
+        }
+        
+        // viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
+        // viteConf.optimizeDeps.exclude.push('@wizardconnect/core')
+        // // viteConf.optimizeDeps.exclude.push('mainnet-js-v3')
+        // viteConf.optimizeDeps.exclude.push('@bitauth/libauth')
+        // viteConf.optimizeDeps.force = true
       },
 
       // viteVuePluginOptions: {},
@@ -173,6 +189,8 @@ export default defineConfig((ctx) => {
       // (gets superseded if process.env.PORT is specified at runtime)
 
       middlewares: [
+        // 'api',
+        'api-v2',
         'render', // keep this as last one
       ],
 
@@ -189,6 +207,8 @@ export default defineConfig((ctx) => {
 
       // pwaExtendGenerateSWOptions (cfg) {},
       // pwaExtendInjectManifestOptions (cfg) {}
+      // This tells the Quasar SSR engine specifically not to treat it as a Node external
+      noExternal: ['@bitauth/libauth']
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
