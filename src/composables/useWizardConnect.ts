@@ -5,19 +5,27 @@ import type {
 } from '@wizardconnect/core';
 import { HDWallet, Utxo } from 'mainnet-js-v3';
 import { useQuasar } from 'quasar';
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref, toRaw } from 'vue';
 import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
 import { getHDWalletClass } from 'src/apps/utils';
 import { StoredSession } from '@wizardconnect/dapp';
-// import { initiateDappRelay } from '@wizardconnect/core';
-
+import { filterAuthKeys } from 'src/core/authguard';
+import { UtxoWithPath } from 'src/core/types';
+import { initiateDappRelay } from '@wizardconnect/core';
 type WZWalletPath = { name: string, xpub: string}
+
 type WZWallet = {
   receive?: HDWallet | undefined,
   change?: HDWallet | undefined,
   defi?: HDWallet | undefined,
-  balance?: bigint | undefined
+  balance?: bigint | undefined,
+  utxos?: UtxoWithPath[]|Utxo[],
+}
+
+type WzWalletGetUtxosOptions = {
+  excludeTokens?: boolean, 
+  authKeysOnly?: boolean
 }
 
 const wzDappMgr = ref();
@@ -29,8 +37,18 @@ export const useWizardConnect = () => {
   const wzSession = ref()
   const wzWallet = ref<WZWallet>()
 
+  const wzWalletAuthKeyUtxos = computed(() => {
+    return filterAuthKeys(wzWallet.value?.utxos || [])
+  })
+  
+  const wzWalletGenesisInputUtxos = computed(() => {
+    const nonTokenUtxos = wzWallet.value?.utxos?.filter(u => !u.token && Number(u.vout) === 0) || []
+    return nonTokenUtxos.map(u => toRaw(u))
+})
+
   const wzInitiateConnection = async () => {
-    const { initiateDappRelay } = await import('@wizardconnect/core')
+    // const { initiateDappRelay } = await import('@wizardconnect/core')
+  
     wzRelayConn.value = initiateDappRelay(
         (payload: RelayUpdatePayload) => {
           wzDappMgr.value.updateConnection(payload.client, payload.status);
@@ -85,7 +103,8 @@ export const useWizardConnect = () => {
     } as WZWallet
   }
 
-  const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: {excludeTokens: boolean}) => {
+  const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: WzWalletGetUtxosOptions) => {
+    
     const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
 
     if (wzWallet.receive) utxoRequests.push({ name: 'receive', req: wzWallet.receive.getUtxos() })
@@ -102,19 +121,41 @@ export const useWizardConnect = () => {
         (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i]!.name }))
       )
     }
+
     if (options?.excludeTokens) {
       return utxos?.filter((u) => !u.token)
     }
+
+    if (options?.authKeysOnly) {
+      return utxos.filter(u => u.token?.nft?.commitment === '00')
+    }
     return utxos
   }
+
+  const wzWalletResolveUtxosAddressIndex = (utxos: UtxoWithPath[]) => {
+    const utxosWithPath = []
+    for (const utxo of utxos) {
+      const utxoDerivationInfo = wzWallet.value?.[utxo.pathName]?.walletCache?.get(utxo.address);
+      if (!utxoDerivationInfo) {
+        return $q.notify({
+          type: 'Error',
+          message: 'Error getting the address information of some of your unspent BCH. Please try to refresh the page. If problem persists, please contact admin.'
+        })
+      }
+      utxosWithPath.push({
+        ...utxo,
+        addressIndex: utxoDerivationInfo.index
+      })
+    }
+    return utxosWithPath
+  };
 
   const wzWalletGetGenesisInputUtxos = async (wzWallet: WZWallet) => {
     const utxos = await wzWalletGetUtxos(wzWallet)
     return utxos?.filter(utxo => !utxo.token && utxo.vout === 0)
   }
 
-  const wzWalletGetBalance = async (wzWallet: WZWallet) => {
-    const utxos = await wzWalletGetUtxos(wzWallet)
+  const getBalanceFromUtxos = (utxos: Utxo[]|UtxoWithPath[]) => {
     const utxoMap = new Map()
     const balance = utxos!.reduce((acc, next) => {
       if (next.token) return acc
@@ -127,19 +168,68 @@ export const useWizardConnect = () => {
     return balance
   }
 
+  const wzWalletGetBalance = async (wzWallet: WZWallet) => {
+    const utxos = await wzWalletGetUtxos(wzWallet)
+    return getBalanceFromUtxos(utxos)
+  }
+
+  const wzWalletGetAuthKeyUtxos = async (wzWallet: WZWallet) => {
+    const utxos = await wzWalletGetUtxos(wzWallet)
+    return utxos.filter(u => u.token?.nft?.commitment === '00')
+  }
+
+  const wzGetInputPaths = async (utxos: UtxoWithPath[], wallet: WZWallet) => {
+    const inputPaths = []
+        for (const inputIndex in utxos) {
+            const utxo = utxos[inputIndex] as UtxoWithPath
+            const addressDetails = wallet[utxo.pathName as 'receive' | 'change' | 'defi']?.walletCache.get(utxo.address)
+            // Note: Don't use addressDetails.change produced by the walletCache it returns true even if the address is a receiving address
+            if (!addressDetails) {
+                $q.notify({
+                    type: 'Error',
+                    message: 'Error creating authkey. Please try refreshing the page.'
+                })
+                return
+            }
+            const inputPath = [
+                inputIndex,
+                utxo.pathName,
+                addressDetails.index
+            ]
+            inputPaths.push(inputPath)
+        }
+    return inputPaths 
+  }
+
   const wzInitWallet = async () => {
     const { loadSession } = await import('@wizardconnect/dapp')
+    
     wzSession.value = loadSession()
+    if (wzSession.value) {
+      wzRelayConn.value = initiateDappRelay(
+        (payload: RelayUpdatePayload) => {
+          wzDappMgr.value.updateConnection(payload.client, payload.status);
+        },
+        { existingCredentials: wzSession.value },
+      )
+
+      wzDappMgr.value.attachRelay(wzRelayConn.value)
+
+    }
+
     if (wzSession.value) {
       wzWallet.value = await wzCreateWalletObject(wzSession.value)
     }
     if (wzWallet.value) {
-      wzWallet.value.balance = await wzWalletGetBalance(wzWallet.value)
+      wzWallet.value.utxos = await wzWalletGetUtxos(wzWallet.value)
+      if (wzWallet.value.utxos && wzWallet.value.utxos.length > 0) {
+        wzWallet.value.balance = getBalanceFromUtxos(wzWallet.value.utxos || [])
+      }
+      
     }
   }
 
   const wzDisconnect = async () => {
-    console.log('disconnecting')
     wzDappMgr.value?.clearStoredSession();
     await wzDappMgr.value?.sendDisconnect("user closed the tab");
     wzRelayConn.value?.cleanup();
@@ -156,6 +246,7 @@ export const useWizardConnect = () => {
     
     await wzInitWallet()
     
+
   });
 
   return {
@@ -163,9 +254,14 @@ export const useWizardConnect = () => {
     wzRelayConn,
     wzSession,
     wzWallet,
+    wzWalletAuthKeyUtxos,
+    wzWalletGenesisInputUtxos,
     wzInitiateConnection,
     wzDisconnect,
     wzWalletGetUtxos,
-    wzWalletGetGenesisInputUtxos
+    wzGetInputPaths,
+    wzWalletResolveUtxosAddressIndex,
+    wzWalletGetGenesisInputUtxos,
+    wzWalletGetBalance
   }
 };
