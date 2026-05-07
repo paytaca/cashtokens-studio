@@ -58,7 +58,7 @@
                                     class="full-width" />
 
                                 <q-input v-model="token.nft.commitment" label="Commitment (Optional)" filled
-                                    hint="Optional metadata for the NFT" class="full-width" />
+                                    hint="Hex String" class="full-width" />
                             </template>
 
                             <q-input v-model="identitySnapshot.name" label="Name *" filled
@@ -101,7 +101,6 @@
                             @click="onCreateTokenClick" />
                     </q-card-actions>
                 </q-card>
-                {{ stringify(authKeySelected) }}
             </div>
         </div>
     </q-page>
@@ -124,11 +123,13 @@ import { createToken } from 'src/core/transaction'
 
 const $q = useQuasar()
 const {
+    wzDappMgr,
     wzWallet,
     wzWalletAuthKeyUtxos,
     wzWalletGenesisInputUtxos,
     wzWalletGetUtxos,
-    wzWalletGetUtxosAddressIndex,
+    wzGetInputPaths,
+    wzWalletResolveUtxosAddressIndex,
 } = useWizardConnect()
 
 const typeOptions = ['Fungible', 'Non-Fungible (NFT)', 'Mixed']
@@ -240,7 +241,7 @@ const onCreateTokenClick = async () => {
         })
     }
 
-    const utxosWithDerivationPaths = wzWalletGetUtxosAddressIndex(wzWallet.value?.utxos as UtxoWithPath[])
+    const utxosWithDerivationPaths = wzWalletResolveUtxosAddressIndex(wzWallet.value?.utxos as UtxoWithPath[])
     console.log('utxosWithDerivationPaths', utxosWithDerivationPaths)
     const genesisInput = wzWalletGenesisInputUtxos.value[0]
     const authKeyInput = authKeySelected.value
@@ -258,20 +259,36 @@ const onCreateTokenClick = async () => {
         })
     }
 
+    const sourceOutputs = [
+        genesisInput,
+        authKeyInput
+    ] as UtxoWithPath[]
+
     const createTokenArgs = {
         genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
         authKeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
         authKeyRecipientAddress: wzWallet.value.receive?.getTokenDepositAddress(0) as string,
         tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
-        sourceUtxos: [
-            genesisInput,
-            authKeyInput
-        ] as UtxoWithPath[]
+        sourceOutputs: sourceOutputs
     }
 
     try {
         const transaction = createToken(createTokenArgs)
-        console.log('transaction', transaction)
+        const inputPaths = wzGetInputPaths(sourceOutputs, wzWallet.value)
+        const response = await wzDappMgr.value.signTransaction({
+            transaction: {
+                transaction,
+                sourceOutputs: JSON.parse(stringify(sourceOutputs)),
+                userPrompt: "Confirm swap",
+                broadcast: true,
+            },
+            inputPaths
+        });
+
+        $q.notify({
+            type: 'Success',
+            message: `Successfully sent transaction. Tx: ${response.signedTransaction}`
+        })
     } catch (error) {
         $q.notify({
             type: 'Error',
@@ -291,25 +308,26 @@ watch(() => iconFile.value, async (v) => {
         // const squareIcon = await isSquareImage(v)
         const squareIcon = true
         if (!squareIcon) {
-            $q.dialog({
+            return $q.dialog({
                 message: `Please provide a square icon. Recommended dimension is 400px by 400px.
         Icons should also be suitable for display against light and dark backgrounds. Transparency is supported.`
             })
-        } else {
-            if (iconPreviewUrl.value) {
-                URL.revokeObjectURL(iconPreviewUrl.value)
-            }
-            iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
-            iconFileUploading.value = true
-            try {
-                const filename = `${identitySnapshot.value.token!.category}` || 'test.jpeg'
-                const uploadResponse = await uploadFile(iconFile.value, filename)
-                identitySnapshot.value.uris!.icon = `/api/ipfs/${uploadResponse.cid}`
-            } catch (error) {
-                console.log(error)
-            } finally {
-                iconFileUploading.value = false
-            }
+        }
+
+        if (iconPreviewUrl.value) {
+            URL.revokeObjectURL(iconPreviewUrl.value)
+        }
+
+        iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
+        iconFileUploading.value = true
+        try {
+            const filename = `${identitySnapshot.value.token!.category}` || 'test.jpeg'
+            const uploadResponse = await uploadFile(iconFile.value, filename)
+            identitySnapshot.value.uris!.icon = `/api/ipfs/${uploadResponse.cid}`
+        } catch (error) {
+            console.log(error)
+        } finally {
+            iconFileUploading.value = false
         }
     }
 })
