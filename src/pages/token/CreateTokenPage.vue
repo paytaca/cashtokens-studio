@@ -97,8 +97,7 @@
                         </q-file>
                     </q-card-section>
                     <q-card-actions>
-                        <q-btn label="Create Token" type="submit" color="primary" class="full-width"
-                            @click="onCreateTokenClick" />
+                        <q-btn label="Create Token" type="submit" color="primary" class="full-width" />
                     </q-card-actions>
                 </q-card>
             </div>
@@ -108,7 +107,7 @@
 
 <script setup lang="ts">
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { MAX_VM_NUMBER } from 'src/core/constants'
 import { IdentitySnapshot } from 'src/core/schemas/bcmr-v2.schema'
@@ -119,7 +118,8 @@ import { NFTCapability, Utxo } from 'mainnet-js-v3'
 import { shortenTokenId } from 'src/core/utils'
 import { UtxoWithPath } from 'src/core/types'
 import { stringify } from 'bitauth-libauth-v3'
-import { createToken } from 'src/core/transaction'
+import { createToken, jsonReplacer, utxoToLibauthSourceOutput } from 'src/core/transaction'
+import { cashscriptUtxoToLibauthOutput } from 'src/apps/utils'
 
 const $q = useQuasar()
 const {
@@ -210,12 +210,6 @@ const validateVmNumber = (val: string) => {
     }
 }
 
-const onSubmit = () => {
-    // Access form data via form.value
-
-    console.log('Creating CashToken:', token.value)
-}
-
 const onGenerateGenesisInput = async () => {
     try {
         if (!wzWallet.value) {
@@ -233,7 +227,7 @@ const onGenerateGenesisInput = async () => {
     }
 }
 
-const onCreateTokenClick = async () => {
+const onSubmit = async () => {
     if (!wzWallet?.value?.utxos || wzWallet.value?.utxos?.length === 0) {
         return $q.notify({
             type: 'Error',
@@ -274,17 +268,16 @@ const onCreateTokenClick = async () => {
 
     try {
         const transaction = createToken(createTokenArgs)
-        const inputPaths = wzGetInputPaths(sourceOutputs, wzWallet.value)
+        const inputPaths = await wzGetInputPaths(sourceOutputs, wzWallet.value)
         const response = await wzDappMgr.value.signTransaction({
             transaction: {
                 transaction,
-                sourceOutputs: JSON.parse(stringify(sourceOutputs)),
-                userPrompt: "Confirm swap",
-                broadcast: true,
+                sourceOutputs: sourceOutputs.map(o => utxoToLibauthSourceOutput(o, true)),
+                userPrompt: "Create Token",
+                broadcast: false,
             },
             inputPaths
         });
-
         $q.notify({
             type: 'Success',
             message: `Successfully sent transaction. Tx: ${response.signedTransaction}`
@@ -305,8 +298,7 @@ const initializeDefaultAuthKey = () => {
 
 watch(() => iconFile.value, async (v) => {
     if (v) {
-        // const squareIcon = await isSquareImage(v)
-        const squareIcon = true
+        const squareIcon = await isSquareImage(v)
         if (!squareIcon) {
             return $q.dialog({
                 message: `Please provide a square icon. Recommended dimension is 400px by 400px.
@@ -338,7 +330,4 @@ watch(() => authKeyOptions.value, (options) => {
     }
 })
 
-onMounted(() => {
-    console.log('TESTING', wzWallet.value)
-})
 </script>
