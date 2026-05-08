@@ -1,18 +1,23 @@
 import type { 
   WalletReadyMessage, 
   RelayUpdatePayload,
-  DisconnectReason as DisconnectReasonType
+  DisconnectReason as DisconnectReasonType,
+  DappRelayOptions,
+  PathXpub
 } from '@wizardconnect/core';
 import { HDWallet, Utxo } from 'mainnet-js-v3';
 import { useQuasar } from 'quasar';
-import { computed, onMounted, ref, toRaw } from 'vue';
-import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
+import { computed, onMounted, ref, toRaw, watch } from 'vue';
+// import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
 import { getHDWalletClass } from 'src/apps/utils';
-import { StoredSession } from '@wizardconnect/dapp';
+import { DappConnectionManager, StoredSession } from '@wizardconnect/dapp';
 import { filterAuthKeys } from 'src/core/authguard';
 import { UtxoWithPath } from 'src/core/types';
-import { initiateDappRelay } from '@wizardconnect/core';
+import { initiateDappRelay, DisconnectReason } from '@wizardconnect/core';
+import { loadSession } from '@wizardconnect/dapp';
+import { WizardConnectState } from './types';
+
 type WZWalletPath = { name: string, xpub: string}
 
 type WZWallet = {
@@ -21,6 +26,7 @@ type WZWallet = {
   defi?: HDWallet | undefined,
   balance?: bigint | undefined,
   utxos?: UtxoWithPath[]|Utxo[],
+  ready?: boolean
 }
 
 type WzWalletGetUtxosOptions = {
@@ -28,15 +34,15 @@ type WzWalletGetUtxosOptions = {
   authKeysOnly?: boolean
 }
 
-const wzDappMgr = ref();
-const wzRelayConn = ref()
+const modal = ref()
+const wzDappMgr = ref()
+const wzState = ref<WizardConnectState>('idle')
 
 export const useWizardConnect = () => {
   const $q = useQuasar()
-  const modal = ref()
-  const wzSession = ref()
   const wzWallet = ref<WZWallet>()
-
+  const wzRelayConn = ref()
+  
   const wzWalletAuthKeyUtxos = computed(() => {
     return filterAuthKeys(wzWallet.value?.utxos || [])
   })
@@ -44,48 +50,96 @@ export const useWizardConnect = () => {
   const wzWalletGenesisInputUtxos = computed(() => {
     const nonTokenUtxos = wzWallet.value?.utxos?.filter(u => !u.token && Number(u.vout) === 0) || []
     return nonTokenUtxos.map(u => toRaw(u))
-})
+  })
 
-  const wzInitiateConnection = async () => {
-    // const { initiateDappRelay } = await import('@wizardconnect/core')
-  
-    wzRelayConn.value = initiateDappRelay(
-        (payload: RelayUpdatePayload) => {
-          wzDappMgr.value.updateConnection(payload.client, payload.status);
-        },
-        { explicitRelayUrls: ['wss://relay.cauldron.quest:443'] },
-      )
+  const wzSession = ref()
 
-    modal.value = $q.dialog({
-      component: QrCodeModal,
-      componentProps: { contents: wzRelayConn.value.uri }
-    })
+  const wzWalletDiscovered = computed(() => {
+    return wzDappMgr.value?.isWalletDiscovered()
+  })
 
-    wzDappMgr.value.attachRelay(wzRelayConn.value)
+  const wzStartRelay = async (storedSession?: StoredSession) => {
 
-    wzDappMgr.value.on("walletready", (msg: WalletReadyMessage) => {
+    if (wzState.value === 'connecting' || wzState.value === 'connected') return 
+
+    wzDappMgr.value = new DappConnectionManager(
+      import.meta.env.VITE_APP_NAME as string,
+      import.meta.env.VITE_APP_ICON_URL as string,
+    )
+
+    wzDappMgr.value.on('walletready', async (msg: WalletReadyMessage) => {
       if (msg.action === 'wallet_ready') {
-        if (modal.value) {
-          modal.value.hide()
+        if (modal?.value) { 
+          modal.value?.hide() 
         }
-        wzDappMgr.value.pushDappReady()
+        await wzInitWallet(msg.session.hdwalletv1 as { paths: PathXpub[] })
       }
+      wzState.value = 'connected'
     })
 
-    // Listen for wallet-initiated disconnect or protocol mismatch:
-    const { DisconnectReason } = await import('@wizardconnect/core')
-    wzDappMgr.value.on("disconnect", (reason: DisconnectReasonType, msg: WalletReadyMessage) => {
+    wzDappMgr.value.on('reconnecting', (msg: WalletReadyMessage) => {
+      wzState.value = 'reconnecting'
+    })
+
+    wzDappMgr.value.on('disconnect', (reason: DisconnectReasonType) => {
+      postDisconnectCleanUp()
       if (reason === DisconnectReason.ProtocolMismatch) {
-        console.error("Protocol mismatch:", msg);
-      } else {
-        console.log("Wallet disconnected:", reason, msg);
+        $q.notify({
+          type: 'Disconnect Warning',
+          message: 'Protocol mismatch'
+        })
       }
-      wzRelayConn.value?.cleanup();
-      wzDappMgr.value?.clearStoredSession();
+      if(DisconnectReason.UserDisconnect) {
+        $q.notify({
+          type: 'Info',
+          message: 'User triggered disconnection on wallet'
+        })
+      } 
     });
+
+
+    const relayOptions = {
+      explicitRelayUrls: ['wss://relay.cauldron.quest:443']
+    } as DappRelayOptions
+    
+    if (storedSession && storedSession.walletPublicKey) {
+      relayOptions.existingCredentials = {
+        privateKey: storedSession.privateKey,
+        secret: storedSession.secret,
+        walletPublicKey: storedSession.walletPublicKey
+      }
+
+      if (storedSession.paths) {
+        await wzInitWallet(storedSession as { paths: PathXpub[] })
+      }
+    } 
+
+    try {
+      wzRelayConn.value = initiateDappRelay(
+        (payload: RelayUpdatePayload) => {
+          wzDappMgr.value?.updateConnection(payload.client, payload.status);
+        },
+        relayOptions,
+      )
+    
+      wzDappMgr.value.attachRelay(wzRelayConn.value)
+    } catch (error) {
+      $q.notify({
+        type: 'Error',
+        message: 'Error starting wizard connect!'
+      })
+      wzState.value = 'idle'
+    } 
+
+    if (!storedSession) {
+      modal.value = $q.dialog({
+        component: QrCodeModal,
+        componentProps: { contents: wzRelayConn.value.uri }
+      })
+    }
   }
 
-  const wzCreateWalletObject = async (wzSession: StoredSession) => {
+  const wzCreateWalletObject = async (wzSession: {paths?: PathXpub[]}) => {
     if (!wzSession.paths || wzSession.paths?.length === 0) return {}
     const receiveXPub = wzSession.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
     const changeXPub = wzSession.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
@@ -173,11 +227,6 @@ export const useWizardConnect = () => {
     return getBalanceFromUtxos(utxos)
   }
 
-  const wzWalletGetAuthKeyUtxos = async (wzWallet: WZWallet) => {
-    const utxos = await wzWalletGetUtxos(wzWallet)
-    return utxos.filter(u => u.token?.nft?.commitment === '00')
-  }
-
   const wzGetInputPaths = async (utxos: UtxoWithPath[], wallet: WZWallet) => {
     const inputPaths = []
         for (const inputIndex in utxos) {
@@ -192,7 +241,7 @@ export const useWizardConnect = () => {
                 return
             }
             const inputPath = [
-                inputIndex,
+                Number(inputIndex),
                 utxo.pathName,
                 addressDetails.index
             ]
@@ -201,62 +250,63 @@ export const useWizardConnect = () => {
     return inputPaths 
   }
 
-  const wzInitWallet = async () => {
-    const { loadSession } = await import('@wizardconnect/dapp')
-    
-    wzSession.value = loadSession()
-    if (wzSession.value) {
-      wzRelayConn.value = initiateDappRelay(
-        (payload: RelayUpdatePayload) => {
-          wzDappMgr.value.updateConnection(payload.client, payload.status);
-        },
-        { existingCredentials: wzSession.value },
-      )
-
-      wzDappMgr.value.attachRelay(wzRelayConn.value)
-
+  const wzInitWallet = async (session: { paths: PathXpub[]}) => {
+    if (session) {
+      wzWallet.value = await wzCreateWalletObject(session)
     }
 
-    if (wzSession.value) {
-      wzWallet.value = await wzCreateWalletObject(wzSession.value)
-    }
     if (wzWallet.value) {
       wzWallet.value.utxos = await wzWalletGetUtxos(wzWallet.value)
       if (wzWallet.value.utxos && wzWallet.value.utxos.length > 0) {
         wzWallet.value.balance = getBalanceFromUtxos(wzWallet.value.utxos || [])
       }
-      
     }
+  }
+
+  const postDisconnectCleanUp = async () => {
+    wzDappMgr.value?.clearStoredSession();
+    wzRelayConn.value?.cleanup();
+    wzDappMgr.value = null 
+    wzRelayConn.value = null
+    wzState.value = 'idle'
   }
 
   const wzDisconnect = async () => {
-    wzDappMgr.value?.clearStoredSession();
-    await wzDappMgr.value?.sendDisconnect("user closed the tab");
-    wzRelayConn.value?.cleanup();
+    try {
+      await wzDappMgr.value?.sendDisconnect("Disconnecting Cashtokens Studio");  
+      wzState.value = 'disconnected'
+    } catch (error) {
+      $q.notify({
+        type: 'Warning',
+        message: 'Error Disconnecting wizard connect'
+      })
+    } finally {
+      postDisconnectCleanUp()
+    }
   }
 
-  onMounted(async () => {
-    
-    if (!wzDappMgr.value) {
-      wzDappMgr.value = await getDappMgr(
-        process.env.APP_NAME as string,
-        process.env.APP_ICON_URL as string,
-      );
+  watch(() => wzWalletDiscovered.value, (v) => {
+    if (v) {
+      modal.value?.hide()
     }
-    
-    await wzInitWallet()
-    
+  })
 
+  onMounted(async () => {
+    const storedSession = loadSession()
+    if (!storedSession || !storedSession.walletPublicKey) return
+    await wzStartRelay(storedSession) 
   });
 
   return {
     wzDappMgr,
     wzRelayConn,
+    wzState,
     wzSession,
+    wzWalletDiscovered,
     wzWallet,
     wzWalletAuthKeyUtxos,
     wzWalletGenesisInputUtxos,
-    wzInitiateConnection,
+    wzStartRelay,
     wzDisconnect,
     wzWalletGetUtxos,
     wzGetInputPaths,

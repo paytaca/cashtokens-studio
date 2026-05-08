@@ -7,7 +7,7 @@ declare global {
   }
 }
 
-import { WalletTemplate } from 'bitauth-libauth-v3'
+import { WalletTemplate } from '@bitauth/libauth'
 import 'mainnet-js'
 declare module 'mainnet-js' {
   interface Wallet {
