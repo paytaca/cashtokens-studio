@@ -10,13 +10,17 @@ export type CreateTokenParams = {
     authKeyUtxoId: `${string}:${number}`,
     authKeyRecipientAddress: string,           // token address
     changeRecipientAddress?: string,           
-    sourceUtxos: UtxoWithPath[],
-    network?: Network
+    sourceOutputs: UtxoWithPath[],
+    network?: Network,
+    registryPublicationData: {
+        contentHash: string,
+        uris: string[]
+    }
 }
 
 export function createToken(params: CreateTokenParams): string {
 
-    const genesisInput = params.sourceUtxos.find(u => {
+    const genesisInput = params.sourceOutputs.find(u => {
         return (
             params.genesisInputUtxoId === `${u.txid}:${u.vout}`
         )
@@ -24,7 +28,7 @@ export function createToken(params: CreateTokenParams): string {
 
     if (!genesisInput) throw new Error('Genesis input not found from source utxos')
 
-    const authKeyInput = params.sourceUtxos.find(u => {
+    const authKeyInput = params.sourceOutputs.find(u => {
         return (
             params.authKeyUtxoId === `${u.txid}:${u.vout}`
         )
@@ -84,6 +88,12 @@ export function createToken(params: CreateTokenParams): string {
         amount: authKeyInput.satoshis || DEFAULT_TOKEN_VALUE,
         token: authKeyToken
     })
+    
+    transaction.addOpReturnOutput([
+        'BCMR', 
+        `0x${params.registryPublicationData.contentHash}`,
+        ...params.registryPublicationData.uris
+    ])
 
     let build = transaction.build()
     
