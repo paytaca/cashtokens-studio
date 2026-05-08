@@ -26,7 +26,7 @@
                         </q-banner>
                     </q-card-section>
                     <q-card-section>
-                        <q-form @submit="onSubmit" class="q-gutter-y-md" greedy>
+                        <q-form class="q-gutter-y-md" greedy>
                             <q-select v-model="authKeySelected" :options="authKeyOptions" label="AuthKey *" filled
                                 emit-value map-options :rules="[val => !!val || 'Type is required']"
                                 class="full-width" />
@@ -97,7 +97,7 @@
                         </q-file>
                     </q-card-section>
                     <q-card-actions>
-                        <q-btn label="Create Token" type="submit" color="primary" class="full-width" />
+                        <q-btn label="Create Token" @click="onSubmit" color="primary" class="full-width" />
                     </q-card-actions>
                 </q-card>
             </div>
@@ -110,7 +110,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { MAX_VM_NUMBER } from 'src/core/constants'
-import { IdentitySnapshot } from 'src/core/schemas/bcmr-v2.schema'
+import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
 import { uploadFile } from 'src/core/ipfs/upload-file'
 import { useWizardConnect } from 'src/composables/useWizardConnect'
@@ -120,6 +120,8 @@ import { UtxoWithPath } from 'src/core/types'
 import { stringify } from 'bitauth-libauth-v3'
 import { createToken, jsonReplacer, utxoToLibauthSourceOutput } from 'src/core/transaction'
 import { cashscriptUtxoToLibauthOutput } from 'src/apps/utils'
+import { createTokenRegistry } from 'src/core/bcmr'
+import { db, RegistryRecord } from 'src/core/client-db'
 
 const $q = useQuasar()
 const {
@@ -228,6 +230,8 @@ const onGenerateGenesisInput = async () => {
 }
 
 const onSubmit = async () => {
+
+    console.log('submitted')
     if (!wzWallet?.value?.utxos || wzWallet.value?.utxos?.length === 0) {
         return $q.notify({
             type: 'Error',
@@ -246,6 +250,56 @@ const onSubmit = async () => {
         })
     }
 
+    const authbase = genesisInput.txid
+
+    const { contentHash, registry } = createTokenRegistry({
+        authbase,
+        identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value))
+    })
+
+    const savedRegistry = await db.registry
+        .orderBy('latestRevision')
+        .reverse()
+        .filter((registryRecord) => registryRecord.authbase === authbase)
+        .first()
+
+    let uris: string[] = savedRegistry?.publicationUris || []
+
+    const registryJson = JSON.stringify(registry)
+
+    if (uris?.length === 0) {
+        try {
+            const registryBlob = new Blob([registryJson], { type: 'application/json' })
+            const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
+            uris = [`ipfs://${uploadResult.cid}`]
+        } catch (error) {
+            return $q.notify({
+                type: 'Error',
+                message: 'Error saving registry to IPFS. Try refreshing page. If problem persist please contact admin.'
+            })
+        }
+    }
+
+    if (!savedRegistry) {
+        await db.registry.add({
+            publicationUris: uris,
+            contentHash,
+            registry,
+            authbase,
+            category: authbase,
+            latestRevision: registry.latestRevision
+        })
+    }
+
+    const finalRegistryRecord = {
+        uris: savedRegistry?.publicationUris || uris,
+        contentHash: savedRegistry?.contentHash || contentHash,
+        registry: savedRegistry?.registry || registry,
+        fromDb: savedRegistry?.registry ? true : false
+    }
+
+    console.log('REGISTRY RECORD', finalRegistryRecord)
+
     if (!authKeyInput) {
         return $q.notify({
             type: 'Error',
@@ -263,7 +317,11 @@ const onSubmit = async () => {
         authKeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
         authKeyRecipientAddress: wzWallet.value.receive?.getTokenDepositAddress(0) as string,
         tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
-        sourceOutputs: sourceOutputs
+        sourceOutputs: sourceOutputs,
+        registryPublicationData: {
+            contentHash,
+            uris
+        }
     }
 
     try {
@@ -298,7 +356,8 @@ const initializeDefaultAuthKey = () => {
 
 watch(() => iconFile.value, async (v) => {
     if (v) {
-        const squareIcon = await isSquareImage(v)
+        const squareIcon = true
+        // && await isSquareImage(v)
         if (!squareIcon) {
             return $q.dialog({
                 message: `Please provide a square icon. Recommended dimension is 400px by 400px.
@@ -311,6 +370,7 @@ watch(() => iconFile.value, async (v) => {
         }
 
         iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
+        console.log('iconPreviewUrl.value', iconPreviewUrl.value)
         iconFileUploading.value = true
         try {
             const filename = `${identitySnapshot.value.token!.category}` || 'test.jpeg'
