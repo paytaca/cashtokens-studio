@@ -108,10 +108,6 @@ export const useWizardConnect = () => {
         secret: storedSession.secret,
         walletPublicKey: storedSession.walletPublicKey
       }
-
-      if (storedSession.paths) {
-        await wzInitWallet(storedSession as { paths: PathXpub[] })
-      }
     } 
 
     try {
@@ -294,6 +290,9 @@ export const useWizardConnect = () => {
   onMounted(async () => {
     const storedSession = loadSession()
     if (!storedSession || !storedSession.walletPublicKey) return
+    if (storedSession.paths) {
+      await wzInitWallet(storedSession as { paths: PathXpub[] })
+    }
     await wzStartRelay(storedSession) 
   });
 
