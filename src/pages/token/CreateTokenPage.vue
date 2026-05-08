@@ -75,7 +75,7 @@
                                 placeholder="Enter icon's URL or upload an icon" class="full-width">
                                 <template v-slot:prepend>
                                     <q-avatar>
-                                        <q-img v-if="identitySnapshot.uris!.icon" :src="identitySnapshot.uris!.icon">
+                                        <q-img v-if="tokenIconPreviewUri" :src="tokenIconPreviewUri">
                                         </q-img>
                                         <q-icon v-else name="broken_image"></q-icon>
                                     </q-avatar>
@@ -107,7 +107,7 @@
 
 <script setup lang="ts">
 
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { MAX_VM_NUMBER } from 'src/core/constants'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
@@ -122,8 +122,13 @@ import { createToken, jsonReplacer, utxoToLibauthSourceOutput } from 'src/core/t
 import { cashscriptUtxoToLibauthOutput } from 'src/apps/utils'
 import { createTokenRegistry } from 'src/core/bcmr'
 import { db, RegistryRecord } from 'src/core/client-db'
+import { useRoute, useRouter } from 'vue-router'
+import { broadcast } from 'src/core/transaction/broadcast'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 
 const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
 const {
     wzDappMgr,
     wzWallet,
@@ -146,6 +151,17 @@ const identitySnapshot = ref<IdentitySnapshot>({
     uris: {
         icon: ''
     }
+})
+
+const tokenIconPreviewUri = computed(() => {
+    const uri = identitySnapshot.value?.uris?.icon
+    if (identitySnapshot.value?.uris?.icon) {
+        if (uri?.startsWith('ipfs://')) {
+            return `/api/ipfs/${uri.replace('ipfs://', '')}`
+        }
+        return identitySnapshot.value?.uris?.icon
+    }
+    return ''
 })
 
 const token = ref({
@@ -231,7 +247,11 @@ const onGenerateGenesisInput = async () => {
 
 const onSubmit = async () => {
 
-    console.log('submitted')
+    const loadingGroup = $q.loading.show({
+        group: 'create-token-loading-group',
+        message: 'Preparing. Checking wallet for inputs...'
+    })
+
     if (!wzWallet?.value?.utxos || wzWallet.value?.utxos?.length === 0) {
         return $q.notify({
             type: 'Error',
@@ -240,7 +260,6 @@ const onSubmit = async () => {
     }
 
     const utxosWithDerivationPaths = wzWalletResolveUtxosAddressIndex(wzWallet.value?.utxos as UtxoWithPath[])
-    console.log('utxosWithDerivationPaths', utxosWithDerivationPaths)
     const genesisInput = wzWalletGenesisInputUtxos.value[0]
     const authKeyInput = authKeySelected.value
     if (!genesisInput) {
@@ -249,12 +268,22 @@ const onSubmit = async () => {
             message: 'Missing required genesis input'
         })
     }
-
+    if (!authKeyInput) {
+        return $q.notify({
+            type: 'Error',
+            message: 'Missing required authkey'
+        })
+    }
     const authbase = genesisInput.txid
+
+    loadingGroup({
+        message: 'Creating token registry...'
+    })
 
     const { contentHash, registry } = createTokenRegistry({
         authbase,
-        identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value))
+        identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value)),
+        authKeyNftCategory: authKeyInput.token?.category || authKeyInput.txid
     })
 
     const savedRegistry = await db.registry
@@ -268,10 +297,18 @@ const onSubmit = async () => {
     const registryJson = JSON.stringify(registry)
 
     if (uris?.length === 0) {
+
+        loadingGroup({
+            message: 'Uploading token registry to IPFS...'
+        })
+
         try {
             const registryBlob = new Blob([registryJson], { type: 'application/json' })
             const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
             uris = [`ipfs://${uploadResult.cid}`]
+            loadingGroup({
+                message: `Upload success, uri = ${uris[0]}`
+            })
         } catch (error) {
             return $q.notify({
                 type: 'Error',
@@ -298,19 +335,15 @@ const onSubmit = async () => {
         fromDb: savedRegistry?.registry ? true : false
     }
 
-    console.log('REGISTRY RECORD', finalRegistryRecord)
-
-    if (!authKeyInput) {
-        return $q.notify({
-            type: 'Error',
-            message: 'Missing required authkey'
-        })
-    }
+    loadingGroup({
+        message: 'Preparing transaction...'
+    })
 
     const sourceOutputs = [
         genesisInput,
         authKeyInput
     ] as UtxoWithPath[]
+
 
     const createTokenArgs = {
         genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
@@ -324,10 +357,14 @@ const onSubmit = async () => {
         }
     }
 
+    loadingGroup({
+        message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
+    })
+    let response: any = {}
     try {
         const transaction = createToken(createTokenArgs)
         const inputPaths = await wzGetInputPaths(sourceOutputs, wzWallet.value)
-        const response = await wzDappMgr.value.signTransaction({
+        response = await wzDappMgr.value.signTransaction({
             transaction: {
                 transaction,
                 sourceOutputs: sourceOutputs.map(o => utxoToLibauthSourceOutput(o, true)),
@@ -336,15 +373,32 @@ const onSubmit = async () => {
             },
             inputPaths
         });
-        $q.notify({
-            type: 'Success',
-            message: `Successfully sent transaction. Tx: ${response.signedTransaction}`
+
+        loadingGroup({
+            message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
         })
+
+        const broadcastResponse = await broadcast(response.signedTransaction)
+
+        if (broadcastResponse.ok) {
+            const broadcastResult = await broadcastResponse.json()
+            $q.dialog({
+                component: TransactionStatusDialog,
+                componentProps: {
+                    statusType: 'success',
+                    statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make Sure you don't lose it.`,
+                    txid: broadcastResult.txid
+                }
+            })
+        }
+
     } catch (error) {
         $q.notify({
             type: 'Error',
             message: 'Error creating transaction: ' + error
         })
+    } finally {
+        loadingGroup()
     }
 
 }
@@ -370,12 +424,17 @@ watch(() => iconFile.value, async (v) => {
         }
 
         iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
-        console.log('iconPreviewUrl.value', iconPreviewUrl.value)
         iconFileUploading.value = true
         try {
             const filename = `${identitySnapshot.value.token!.category}` || 'test.jpeg'
             const uploadResponse = await uploadFile(iconFile.value, filename)
-            identitySnapshot.value.uris!.icon = `/api/ipfs/${uploadResponse.cid}`
+            router.replace({
+                query: {
+                    ...route.query,
+                    iconCid: uploadResponse.cid
+                }
+            })
+            identitySnapshot.value.uris!.icon = `ipfs://${uploadResponse.cid}`
         } catch (error) {
             console.log(error)
         } finally {
@@ -388,6 +447,22 @@ watch(() => authKeyOptions.value, (options) => {
     if (options.length > 0) {
         initializeDefaultAuthKey()
     }
+})
+
+onMounted(() => {
+    if (route.query.iconCid) {
+        identitySnapshot.value.uris = {
+            icon: `ipfs://${route.query.iconCid}`
+        }
+    }
+    $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+            statusType: 'success',
+            statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make sure not to lose it.`,
+            txid: 'test'
+        }
+    })
 })
 
 </script>
