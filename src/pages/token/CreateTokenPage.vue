@@ -455,14 +455,6 @@ onMounted(() => {
             icon: `ipfs://${route.query.iconCid}`
         }
     }
-    $q.dialog({
-        component: TransactionStatusDialog,
-        componentProps: {
-            statusType: 'success',
-            statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make sure not to lose it.`,
-            txid: 'test'
-        }
-    })
 })
 
 </script>
