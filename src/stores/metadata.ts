@@ -1,28 +1,58 @@
-import { type IdentitySnapshot } from 'bitauth-libauth-v3';
+import { type IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema';
 import { defineStore } from 'pinia'
-import { BcmrIndexer } from 'src/apps';
+import { db } from 'src/core/client-db';
 
 type TokenId = string;
 
 export const useMetadataStore = defineStore('metadataStore', {
   state: (): {
-    identitySnapshots?: Record<TokenId, IdentitySnapshot | undefined> 
+    identitySnapshot?: Record<TokenId, IdentitySnapshot>
   } => ({}),
   actions: {
-    async resolveIdentitySnapshot(tokenId: TokenId) {
-      if (this.identitySnapshots?.[tokenId]) {
-        return this.identitySnapshots[tokenId]
+    async fetchIdentitySnapshot(category: string) {
+      const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/tokens/${category}`);
+      if (!response.ok) throw new Error('Network response was not ok');
+      return await response.json();
+    },
+
+    async loadIdentitySnapshot(category: string, forceFetch = false): Promise<IdentitySnapshot | undefined> {
+      const record = await db.identitySnapshot.where('category').equals(category).first()
+      if (record?.identitySnapshot) {
+        if (!this.identitySnapshot) {
+          this.identitySnapshot = {}
+        }
+        this.identitySnapshot[category] = structuredClone(record.identitySnapshot)
       }
-      const identitySnapshot = await new BcmrIndexer().fetchIdentitySnapshot(tokenId)
-      // Cap identity snapshots to 150, TODO: put this cap on site preference settings
-      if (Object.keys(this.identitySnapshots || {}).length > 150) {
-        return identitySnapshot
+
+      const networkFetch = async () => {
+        try {
+          const identitySnapshot = await this.fetchIdentitySnapshot(category)
+          if (!this.identitySnapshot) {
+            this.identitySnapshot = {}
+          }
+          this.identitySnapshot[category] = structuredClone(identitySnapshot)
+          return identitySnapshot
+        } finally {
+          if (!this.identitySnapshot?.[category]) return
+          const existing = await db.identitySnapshot.where('category').equals(category).first()
+          if (existing) {
+            await db.identitySnapshot.update(existing.id, { identitySnapshot: JSON.parse(JSON.stringify((this.identitySnapshot![category]))) })
+          } else {
+            await db.identitySnapshot.add({
+              authbase: category,
+              category: category,
+              identitySnapshot: JSON.parse(JSON.stringify((this.identitySnapshot![category])))
+            })
+          }
+        }
       }
-      if (!this.identitySnapshots) {
-        this.identitySnapshots = {}
+
+      if (forceFetch) {
+        return await networkFetch()
+      } else {
+        networkFetch()
+        return this.identitySnapshot?.[category]
       }
-      this.identitySnapshots[tokenId] = identitySnapshot
-      return this.identitySnapshots[tokenId]
     }
   }
 });
