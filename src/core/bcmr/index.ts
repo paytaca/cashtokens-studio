@@ -1,9 +1,12 @@
 import { binToHex, sha256,utf8ToBin } from '@bitauth/libauth'
 import { IdentitySnapshot, Registry } from './bcmr-v2.schema'
 
+export * from './indexer'
+
 export type CreateBcmrOptions = {
     authbase: string,
-    identitySnapshot: IdentitySnapshot
+    identitySnapshot: IdentitySnapshot,
+    authKeyNftCategory: string
 }
 
 export function createTokenRegistry(options: CreateBcmrOptions) {
@@ -23,6 +26,10 @@ export function createTokenRegistry(options: CreateBcmrOptions) {
             [options.authbase]: {
                 [latestRevision]: options.identitySnapshot
             }    
+        },
+        extensions: {
+            tokenStandard: 'Authguard',
+            authNft: options.authKeyNftCategory
         }
     }
 
@@ -38,7 +45,8 @@ export type UpdateTokenRegistryOptions = {
     authbase: string,
     registry: Registry,
     identitySnapshot: IdentitySnapshot,
-    flattenHistory: boolean
+    flattenHistory: boolean,
+    authKeyNftCategory?: string
 }
 
 export function updateTokenRegistry(options: UpdateTokenRegistryOptions) {
@@ -61,6 +69,14 @@ export function updateTokenRegistry(options: UpdateTokenRegistryOptions) {
         }
     } else {
         registry.identities[options.authbase]![registry.latestRevision] = options.identitySnapshot
+    }
+
+    if (options.authKeyNftCategory) {
+        if (!registry.extensions) {
+            registry.extensions = {}
+        }
+        registry.extensions.tokenStandard = 'Authguard'
+        registry.extensions.authNft = options.authKeyNftCategory
     }
     
     const content = JSON.stringify(registry)
