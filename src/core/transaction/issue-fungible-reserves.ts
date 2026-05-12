@@ -1,44 +1,49 @@
-import { ContractUnlocker, ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder, Unlocker, Utxo } from "cashscript"
+import { AbiFunction, ContractUnlocker, ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder, Unlocker, Utxo, WcSourceOutput } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
-import { getMinimumFee, hexToBin } from "@bitauth/libauth"
-import { LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWizardConnectSourceOutput } from "./utils"
+import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
+import { LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize"
+import { scriptToBytecode } from "@cashscript/utils"
+import { SignTransactionRequest } from "@wizardconnect/core"
+import { decodeTransactionBCH } from "@bitauth/libauth"
 
-export type IssueFungibleTokensParams = {
+export type issueFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
     issuedTokenAmount: bigint,
     recipientAddress: string,
-    authKeyUtxo: UtxoWithPath,
-    authKeyRecipientAddress: string,           
+    authkeyUtxo: UtxoWithPath,
     funderUtxos: UtxoWithPath[],
+    authKeyRecipientAddress?: string,
     network?: Network,
 }
 
-export type IssueFungibleTokensReturnType = {
+export type IssueFungibleReservesReturnType = {
     transaction: string,
-    sourceOutputs: LibauthSourceOutput[]
+    sourceOutputs: WcSourceOutput[],
+    userPrompt: string
 }
 
-export function issueFungibleTokens(params: IssueFungibleTokensParams): IssueFungibleTokensReturnType {
+export function issueFungibleReserves(params: issueFungibleReservesParams): IssueFungibleReservesReturnType {
 
     if (!params.issuerTokenUtxo?.token) throw new Error(`Issuing tokens requires a token of the same category.`)
-    if (params.authKeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
+    if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
     if (!params.issuedTokenAmount) throw new Error(`Invalid token amount.`)
 
     const authguardContract = createAuthguardContract({
-        authKeyTokenId: params.authKeyUtxo.token.category,
+        authKeyTokenId: params.authkeyUtxo.token.category,
         network: params.network
     })
 
+    console.log('AUTHGUARD CONTRACT', authguardContract)
     // This is here because ts is complaining
     if (authguardContract.unlock?.unlockWithNft === undefined) throw new Error('Error creating Authguard contract.')
 
     const funderUtxo = 
         [
             ...params.funderUtxos
-                .filter(utxo => !utxo.token && `${utxo.txid}:${utxo.vout}` !== `${params.authKeyUtxo.txid}:${params.authKeyUtxo.vout}`)
+                .filter(utxo => !utxo.token && `${utxo.txid}:${utxo.vout}` !== `${params.authkeyUtxo.txid}:${params.authkeyUtxo.vout}`)
                 .sort((a, b) => Number(b.satoshis) - Number(a.satoshis))
         ]
 
@@ -51,31 +56,55 @@ export function issueFungibleTokens(params: IssueFungibleTokensParams): IssueFun
     
     const spentUtxos = [
         params.issuerTokenUtxo, 
-        params.authKeyUtxo,
+        params.authkeyUtxo,
         funderInput
     ]
 
-    transaction.addInput(params.issuerTokenUtxo, authguardContract.unlock.unlockWithNft() as any)
-    transaction.addInput(params.authKeyUtxo, placeholderP2PKHUnlocker(params.authKeyUtxo.address))
+    const decodedAuthkeyRecipientAddress = decodeCashAddress(params.authkeyUtxo.address)
+    if (typeof(decodedAuthkeyRecipientAddress) === 'string') {
+        throw new Error('Error decoding Authkey recipient address')
+    }
+    const authkeyRecipientTokenAddress = encodeCashAddress({
+        payload: decodedAuthkeyRecipientAddress.payload,
+        prefix: decodedAuthkeyRecipientAddress.prefix,
+        type: CashAddressType.p2pkhWithTokens
+    }).address
+
+    transaction.addInput(params.issuerTokenUtxo, authguardContract.unlock.unlockWithNft(true) as any)
+    transaction.addInput(params.authkeyUtxo, placeholderP2PKHUnlocker(params.authkeyUtxo.address))
     transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
+    const tokenChange = params.issuerTokenUtxo.token.amount - params.issuedTokenAmount
+    if (tokenChange < 0n) {
+        throw new Error('Insufficient token balance')
+    }
     transaction.addOutput({
         to: authguardContract.tokenAddress,
         amount: params.issuerTokenUtxo.satoshis,
-        token: params.issuerTokenUtxo.token
+        token: {
+            ...params.issuerTokenUtxo.token,
+            amount: tokenChange
+        }
     })
     transaction.addOutput({
-        to: params.authKeyUtxo.address,
-        amount: params.authKeyUtxo.satoshis,
-        token: params.authKeyUtxo.token
+        to: authkeyRecipientTokenAddress,
+        amount: params.authkeyUtxo.satoshis,
+        token: params.authkeyUtxo.token
     })
-
+    transaction.addOutput({
+        to: params.recipientAddress,
+        amount: DEFAULT_TOKEN_VALUE,
+        token: {
+            category: params.issuerTokenUtxo.token.category,
+            amount: params.issuedTokenAmount
+        }
+    })
+    
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 3n
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
-
     const estimatedCost = fixedCost + minimumFee
     let totalSatoshiFunds = funderInput.satoshis
     let enoughFunds = totalSatoshiFunds > estimatedCost
@@ -83,7 +112,7 @@ export function issueFungibleTokens(params: IssueFungibleTokensParams): IssueFun
     let changeOutputIndex = -1
     if (change > 546n) {
         transaction.addOutput({
-            to: params.authKeyUtxo.address, // Return to owner of authKey
+            to: params.authkeyUtxo.address, // Return to owner of authKey
             amount: change
         })
         changeOutputIndex = transaction.outputs.length - 1
@@ -111,7 +140,7 @@ export function issueFungibleTokens(params: IssueFungibleTokensParams): IssueFun
         if (newChange > 546n) {
             if (changeOutputIndex === -1) {
                 transaction.addOutput({
-                    to: params.authKeyUtxo.address, // Return to owner of authKey
+                    to: params.authkeyUtxo.address, // Return to owner of authKey
                     amount: newChange
                 })
                 changeOutputIndex = transaction.outputs.length - 1
@@ -124,9 +153,24 @@ export function issueFungibleTokens(params: IssueFungibleTokensParams): IssueFun
     }
 
     if (!enoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
-    
+    const sourceOutputs = spentUtxos.map((utxo) => {
+        const args: UtxoToWcSourceOutputParams = {
+            utxo
+        }
+        if (`${utxo.txid}:${utxo.vout}` === `${params.issuerTokenUtxo.txid}:${params.issuerTokenUtxo.vout}`) {
+           args.contractInfo = {
+            contract: {
+                abiFunction: authguardContract.artifact.abi.find(abi => abi.name === 'unlockWithNft') as AbiFunction,
+                artifact: authguardContract.artifact,
+                redeemScript: scriptToBytecode(authguardContract.redeemScript)
+            }
+           }
+        }
+        return utxoToWcSourceOutput(args)
+    })    
     return {
         transaction: transactionHex,
-        sourceOutputs: spentUtxos.map(utxo => utxoToLibauthSourceOutput(utxo, true)) as LibauthSourceOutput[]
+        sourceOutputs: sourceOutputs,
+        userPrompt: 'Issue FTs from reserves'
     }
 }
