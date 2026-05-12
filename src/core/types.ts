@@ -1,6 +1,11 @@
-import type { Utxo } from "mainnet-js-v3";
+import type { TokenI, Utxo } from "mainnet-js-v3";
 
 export type UtxoWithPath = Utxo & { 
     pathName: 'receive' | 'change' | 'defi',
     addressIndex?: number 
 };
+
+export type UtxoFormSafe = Omit<UtxoWithPath, 'token' & 'satoshis'> & {
+    satoshis: string,
+    token?: Omit<TokenI, 'amount'> & { amount: string }
+}
