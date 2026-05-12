@@ -10,6 +10,9 @@ import {
 } from "@bitauth/libauth";
 
 import { Utxo } from 'mainnet-js-v3';
+import { UtxoFormSafe, UtxoWithPath } from "../types";
+import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize";
+import { SEQUENCE_NUMBER_DISABLE_VALUE } from "../constants";
 /**
    * Converts values to exportable json safe format.
    * Binary -> hex, bigint -> string
@@ -166,3 +169,41 @@ export function utxoToLibauthSourceOutput (utxo: Utxo, transportSafe: boolean = 
     }
     return output
   }
+
+
+export function utxoToWizardConnectSourceOutput (utxo: UtxoWithPath, unlockingBytecode: Uint8Array): SourceOutput {
+
+  const lockingBytecode = cashAddressToLockingBytecode(utxo.address)
+  if (typeof(lockingBytecode) === 'string') throw new Error('Error decoding utxo address')
+  const output: SourceOutput = {
+    outpointTransactionHash: hexToBin(utxo.txid),
+    outpointIndex: Number(utxo.vout),
+    valueSatoshis: utxo.satoshis,
+    unlockingBytecode: unlockingBytecode,
+    lockingBytecode: lockingBytecode.bytecode,
+    sequenceNumber: SEQUENCE_NUMBER_DISABLE_VALUE
+  }
+
+  if (utxo.token) {
+    output.token = {
+      category: hexToBin(utxo.token.category),
+      amount: utxo.token.amount
+    }
+
+    if (utxo.token?.nft) {
+      output.token.nft = {
+        capability: utxo.token.nft.capability,
+        commitment: hexToBin(utxo.token.nft.commitment)
+      }
+    }
+  }
+
+   return output
+}
+
+
+export function jsonFormSafeUtxoReviver (k: string, v: unknown) {
+  if (k === 'amount') return BigInt(v as string)
+  if (k === 'satoshis') return BigInt(v as string)
+  return v
+}
