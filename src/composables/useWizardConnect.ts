@@ -31,17 +31,19 @@ type WZWallet = {
 
 type WzWalletGetUtxosOptions = {
   excludeTokens?: boolean, 
-  authKeysOnly?: boolean
+  authKeysOnly?: boolean,
+  resolveAddressIndex?: boolean
 }
 
 const modal = ref()
 const wzDappMgr = ref()
 const wzState = ref<WizardConnectState>('idle')
-
+const relayStartAttempted = ref<boolean>()
+const wzWallet = ref<WZWallet>()
+const wzRelayConn = ref()
+  
 export const useWizardConnect = () => {
   const $q = useQuasar()
-  const wzWallet = ref<WZWallet>()
-  const wzRelayConn = ref()
   
   const wzWalletAuthKeyUtxos = computed(() => {
     return filterAuthKeys(wzWallet.value?.utxos || [])
@@ -59,8 +61,13 @@ export const useWizardConnect = () => {
   })
 
   const wzStartRelay = async (storedSession?: StoredSession) => {
+    relayStartAttempted.value = true
 
     if (wzState.value === 'connecting' || wzState.value === 'connected') return 
+    
+    if (wzDappMgr.value) {
+      wzDappMgr.value.destroy()
+    }
 
     wzDappMgr.value = new DappConnectionManager(
       import.meta.env.VITE_APP_NAME as string,
@@ -72,13 +79,23 @@ export const useWizardConnect = () => {
         if (modal?.value) { 
           modal.value?.hide() 
         }
-        await wzInitWallet(msg.session.hdwalletv1 as { paths: PathXpub[] })
+        if (wzWallet.value && !wzWallet.value.ready) {
+          await wzInitWallet(msg.session.hdwalletv1 as { paths: PathXpub[] })
+          wzWallet.value.ready = true
+        }
       }
       wzState.value = 'connected'
     })
 
     wzDappMgr.value.on('reconnecting', (msg: WalletReadyMessage) => {
       wzState.value = 'reconnecting'
+    })
+
+    wzDappMgr.value.on('messagereceive', (msg: any) => {
+      if (msg.action === 'disconnect') {
+
+        postDisconnectCleanUp()
+      }
     })
 
     wzDappMgr.value.on('disconnect', (reason: DisconnectReasonType) => {
@@ -106,13 +123,16 @@ export const useWizardConnect = () => {
       relayOptions.existingCredentials = {
         privateKey: storedSession.privateKey,
         secret: storedSession.secret,
-        walletPublicKey: storedSession.walletPublicKey
+        walletPublicKey: storedSession.walletPublicKey,
       }
     } 
 
     try {
       wzRelayConn.value = initiateDappRelay(
         (payload: RelayUpdatePayload) => {
+          if (payload.status.status === 'connected' && wzDappMgr.value?.isWalletDiscovered()) {
+            return
+          }
           wzDappMgr.value?.updateConnection(payload.client, payload.status);
         },
         relayOptions,
@@ -153,7 +173,7 @@ export const useWizardConnect = () => {
     } as WZWallet
   }
 
-  const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: WzWalletGetUtxosOptions) => {
+  const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: WzWalletGetUtxosOptions): Promise<UtxoWithPath[]> => {
     
     const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
 
@@ -173,13 +193,17 @@ export const useWizardConnect = () => {
     }
 
     if (options?.excludeTokens) {
-      return utxos?.filter((u) => !u.token)
+      return utxos?.filter((u) => !u.token) as UtxoWithPath[]
     }
 
     if (options?.authKeysOnly) {
-      return utxos.filter(u => u.token?.nft?.commitment === '00')
+      return utxos.filter(u => u.token?.nft?.commitment === '00') as UtxoWithPath[]
     }
-    return utxos
+
+    if (options?.resolveAddressIndex) {
+      return wzWalletResolveUtxosAddressIndex(utxos as UtxoWithPath[]) as UtxoWithPath[]
+    }
+    return utxos as UtxoWithPath[]
   }
 
   const wzWalletResolveUtxosAddressIndex = (utxos: UtxoWithPath[]) => {
@@ -202,7 +226,7 @@ export const useWizardConnect = () => {
 
   const wzWalletGetGenesisInputUtxos = async (wzWallet: WZWallet) => {
     const utxos = await wzWalletGetUtxos(wzWallet)
-    return utxos?.filter(utxo => !utxo.token && utxo.vout === 0)
+    return utxos?.filter((utxo: Utxo|UtxoWithPath) => !utxo.token && utxo.vout === 0)
   }
 
   const getBalanceFromUtxos = (utxos: Utxo[]|UtxoWithPath[]) => {
@@ -293,6 +317,7 @@ export const useWizardConnect = () => {
     if (storedSession.paths) {
       await wzInitWallet(storedSession as { paths: PathXpub[] })
     }
+    if (relayStartAttempted.value) return
     await wzStartRelay(storedSession) 
   });
 
