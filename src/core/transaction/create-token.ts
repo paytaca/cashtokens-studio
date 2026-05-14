@@ -3,6 +3,8 @@ import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE } from "../constants"
 import { getMinimumFee, hexToBin } from "@bitauth/libauth"
+import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
+import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 
 export type CreateTokenParams = {
     tokenSpec: Omit<TokenDetails, 'category'>,                   // The new spec of the new token to be created
@@ -18,7 +20,7 @@ export type CreateTokenParams = {
     }
 }
 
-export function createToken(params: CreateTokenParams): string {
+export function createToken(params: CreateTokenParams): SignTransactionRequest {
 
     const genesisInput = params.sourceOutputs.find(u => {
         return (
@@ -71,7 +73,8 @@ export function createToken(params: CreateTokenParams): string {
         provider: new ElectrumNetworkProvider(params.network)
     })
 
-    let funds = [genesisInput, authKeyInput].reduce((acc, nextInput) => {
+    const spentUtxos = [genesisInput, authKeyInput]
+    let funds = spentUtxos.reduce((acc, nextInput) => {
         acc = acc + nextInput.satoshis
         return acc
     }, 0n)
@@ -95,10 +98,10 @@ export function createToken(params: CreateTokenParams): string {
         ...params.registryPublicationData.uris
     ])
 
-    let build = transaction.build()
+    let transactionHex = transaction.build()
     
     const minCost = DEFAULT_TOKEN_VALUE * 2n
-    const minimumFee = getMinimumFee(BigInt(hexToBin(build).length), DEFAULT_FEE_RATE_SATS_PER_KB)
+    const minimumFee = getMinimumFee(BigInt(hexToBin(transactionHex).length), DEFAULT_FEE_RATE_SATS_PER_KB)
     const estimatedCost = minCost + minimumFee
     
     if (funds < estimatedCost) {
@@ -111,9 +114,36 @@ export function createToken(params: CreateTokenParams): string {
             to: params.changeRecipientAddress || params.authKeyRecipientAddress,
             amount: change
         })
-        build = transaction.build()  // Rebuild with change
+        transactionHex = transaction.build()  // Rebuild with change
     }
 
-    console.log('Build', build)
-    return build
+    const sourceOutputs = spentUtxos.map((utxo) => {
+        const args: UtxoToWcSourceOutputParams = {
+            utxo
+        }
+        return utxoToWcSourceOutput(args)
+    }) 
+
+    // console.log('Build', build)
+    // return build
+
+    return {
+        action: RelayMsgAction.SignTransactionRequest,
+        transaction: {
+            transaction: transactionHex,
+            sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
+            userPrompt: 'Issue FTs from reserves',
+            broadcast: false
+        },
+        inputPaths: spentUtxos.map((utxo, inputIndex) => {
+            if (!utxo.pathName) {
+                return []
+            }
+            return [
+                inputIndex, 
+                utxo.pathName,
+                utxo.addressIndex
+            ]
+        }).filter(p => p.length === 3) as [number, string, number][]
+    } as SignTransactionRequest
 }

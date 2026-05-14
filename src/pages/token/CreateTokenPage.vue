@@ -6,15 +6,14 @@
                     <q-card-section>
                         <div class="text-h5">Create Token</div>
                     </q-card-section>
-                    <q-card-section v-if="wzWalletGenesisInputUtxos.length === 0">
+                    <q-card-section v-if="genesisInputs.length === 0">
                         <q-banner>
                             Creating a new token (token genesis) requires a `genesis input`. A valid genesis input is
                             just unspent BCH which is the 1st output of a previous transaction. <q-btn no-caps dense
                                 text-color="primary" @click="onGenerateGenesisInput">Click here to generate</q-btn>
                         </q-banner>
                     </q-card-section>
-                    <q-card-section
-                        v-else-if="wzWalletAuthKeyUtxos.length === 0 && wzWalletGenesisInputUtxos.length < 2">
+                    <q-card-section v-else-if="authkeys.length === 0 && genesisInputs.length < 2">
                         <q-banner>
                             Creating a new token in CashTokens Studio requires an AuthKey. CashTokens Studio didn't find
                             any
@@ -117,29 +116,24 @@ import { useWizardConnect } from 'src/composables/useWizardConnect'
 import { NFTCapability, Utxo } from 'mainnet-js-v3'
 import { shortenTokenId } from 'src/core/utils'
 import { UtxoWithPath } from 'src/core/types'
-import { stringify } from 'bitauth-libauth-v3'
-import { createToken, jsonReplacer, utxoToLibauthSourceOutput } from 'src/core/transaction'
-import { cashscriptUtxoToLibauthOutput } from 'src/apps/utils'
+import { createToken } from 'src/core/transaction'
 import { createTokenRegistry } from 'src/core/bcmr'
-import { db, RegistryRecord } from 'src/core/client-db'
+import { db } from 'src/core/client-db'
 import { useRoute, useRouter } from 'vue-router'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { filterAuthKeys } from 'src/core/authguard'
+import { filterGenesisInputs } from 'src/core/wallet'
 
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const {
     wzDappMgr,
-    wzWallet,
-    wzWalletAuthKeyUtxos,
-    wzWalletGenesisInputUtxos,
-    wzWalletGetUtxos,
-    wzGetInputPaths,
-    wzWalletResolveUtxosAddressIndex,
+    externalWallet
 } = useWizardConnect()
 
-const typeOptions = ['Fungible', 'Non-Fungible (NFT)', 'Mixed']
+const typeOptions = ['Fungible', 'Non-Fungible', 'Mixed']
 
 const identitySnapshot = ref<IdentitySnapshot>({
     name: '',
@@ -180,21 +174,25 @@ const iconPreviewUrl = ref()
 const iconFileUploading = ref<boolean>(false)
 const authKeySelected = ref<Utxo>()
 const authKeyOptions = computed(() => {
-    const options = wzWalletAuthKeyUtxos.value?.map(u => {
+    const options = authkeys.value?.map(u => {
         return {
             label: shortenTokenId(u.token!.category as string) + ' [Existing AuthKey]',
             value: u
         }
     })
-    if (wzWalletGenesisInputUtxos.value?.length >= 2) {
+    if (genesisInputs.value?.length >= 2) {
         // Use the 2nd genesis input for authkey
         options.unshift({
-            label: shortenTokenId(wzWalletGenesisInputUtxos.value[1]!.txid) + ' [Generate New]',
-            value: wzWalletGenesisInputUtxos.value[1]!
+            label: shortenTokenId(genesisInputs.value[1]!.txid) + ' [Generate New]',
+            value: genesisInputs.value[1]!
         })
     }
     return options
 })
+
+const authkeys = ref<UtxoWithPath[]>([])
+const genesisInputs = ref<UtxoWithPath[]>([])
+
 // Logic to count digits after the decimal point
 const computedDecimals = computed(() => {
     const amountStr = token.value.amount || ''
@@ -230,13 +228,13 @@ const validateVmNumber = (val: string) => {
 
 const onGenerateGenesisInput = async () => {
     try {
-        if (!wzWallet.value) {
+        if (!externalWallet.value.ready) {
             $q.notify({
                 message: 'Wallet Not Initialized'
             })
             return
         }
-        const walletUtxos = await wzWalletGetUtxos(wzWallet.value, { excludeTokens: true })
+        throw new Error('Not Yet Implemented')
     } catch (error) {
         $q.notify({
             type: 'Error',
@@ -252,15 +250,14 @@ const onSubmit = async () => {
         message: 'Preparing. Checking wallet for inputs...'
     })
 
-    if (!wzWallet?.value?.utxos || wzWallet.value?.utxos?.length === 0) {
+    if (!externalWallet?.value?.utxos || externalWallet.value?.utxos?.length === 0) {
         return $q.notify({
             type: 'Error',
             message: 'Insufficient balance'
         })
     }
 
-    const utxosWithDerivationPaths = wzWalletResolveUtxosAddressIndex(wzWallet.value?.utxos as UtxoWithPath[])
-    const genesisInput = wzWalletGenesisInputUtxos.value[0]
+    const genesisInput = genesisInputs.value[0]
     const authKeyInput = authKeySelected.value
     if (!genesisInput) {
         return $q.notify({
@@ -348,7 +345,7 @@ const onSubmit = async () => {
     const createTokenArgs = {
         genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
         authKeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
-        authKeyRecipientAddress: wzWallet.value.receive?.getTokenDepositAddress(0) as string,
+        authKeyRecipientAddress: externalWallet.value.getTokenDepositAddress(0) as string,
         tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
         sourceOutputs: sourceOutputs,
         registryPublicationData: {
@@ -362,20 +359,16 @@ const onSubmit = async () => {
     })
     let response: any = {}
     try {
-        const transaction = createToken(createTokenArgs)
-        const inputPaths = await wzGetInputPaths(sourceOutputs, wzWallet.value)
-        response = await wzDappMgr.value.signTransaction({
-            transaction: {
-                transaction,
-                sourceOutputs: sourceOutputs.map(o => utxoToLibauthSourceOutput(o, true)),
-                userPrompt: "Create Token",
-                broadcast: false,
-            },
-            inputPaths
-        });
 
+        const createTokenSignRequest = createToken(createTokenArgs)
         loadingGroup({
             message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
+        })
+
+        response = await wzDappMgr.value.signTransaction(createTokenSignRequest);
+
+        loadingGroup({
+            message: 'Broadcasting transaction, please wait...'
         })
 
         const broadcastResponse = await broadcast(response.signedTransaction)
@@ -410,8 +403,7 @@ const initializeDefaultAuthKey = () => {
 
 watch(() => iconFile.value, async (v) => {
     if (v) {
-        const squareIcon = true
-        // && await isSquareImage(v)
+        const squareIcon = isSquareImage(v)
         if (!squareIcon) {
             return $q.dialog({
                 message: `Please provide a square icon. Recommended dimension is 400px by 400px.
@@ -449,11 +441,19 @@ watch(() => authKeyOptions.value, (options) => {
     }
 })
 
+watch(() => externalWallet.value.ready, (ready) => {
+    authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as Utxo[]
+})
+
 onMounted(() => {
     if (route.query.iconCid) {
         identitySnapshot.value.uris = {
             icon: `ipfs://${route.query.iconCid}`
         }
+    }
+    if (externalWallet.value.ready) {
+        authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as UtxoWithPath[]
+        genesisInputs.value = filterGenesisInputs(externalWallet.value.utxos || [])
     }
 })
 
