@@ -1,18 +1,19 @@
-import { Utxo } from "mainnet-js-v3"
 import { createAuthguardContract } from "./create-authguard-contract"
+import { UtxoWithPath } from "../types"
 
-export type UtxoWithAuthKey = Utxo & { authkey?: string }
+export type UtxoWithAuthKey = UtxoWithPath & { authkey?: UtxoWithPath }
 
-export async function getLockedAuthheadUtxos(authkeyNftCategories: string[]): Promise<UtxoWithAuthKey[]> {
+export async function getLockedAuthheadUtxos(authkeys: UtxoWithPath[]): Promise<UtxoWithAuthKey[]> {
     const lockedUtxos: UtxoWithAuthKey[] = []
-    for (const authKeyCategory of authkeyNftCategories) {
+    for (const authkey of authkeys) {
         const authguard = createAuthguardContract({
-            authKeyTokenId: authKeyCategory,
+            authKeyTokenId: authkey.token!.category,
             network: import.meta.env.VITE_BCH_NETWORK
         })
         const utxos: UtxoWithAuthKey[] = await authguard.getUtxos() as UtxoWithAuthKey[]
         utxos.forEach((u) => {
-            u.authkey = authKeyCategory
+            u.address = authguard.address
+            u.authkey = authkey
         })
         lockedUtxos.push(...utxos)
     }
