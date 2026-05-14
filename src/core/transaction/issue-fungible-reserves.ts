@@ -6,8 +6,8 @@ import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddr
 import { LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize"
 import { scriptToBytecode } from "@cashscript/utils"
-import { SignTransactionRequest } from "@wizardconnect/core"
-import { decodeTransactionBCH } from "@bitauth/libauth"
+import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
+import { binToHex, decodeTransactionBCH, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
 
 export type issueFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
@@ -21,11 +21,12 @@ export type issueFungibleReservesParams = {
 
 export type IssueFungibleReservesReturnType = {
     transaction: string,
+    spentUtxos: UtxoWithPath[],
     sourceOutputs: WcSourceOutput[],
     userPrompt: string
 }
 
-export function issueFungibleReserves(params: issueFungibleReservesParams): IssueFungibleReservesReturnType {
+export function issueFungibleReserves(params: issueFungibleReservesParams): SignTransactionRequest {
 
     if (!params.issuerTokenUtxo?.token) throw new Error(`Issuing tokens requires a token of the same category.`)
     if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
@@ -36,7 +37,6 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Issu
         network: params.network
     })
 
-    console.log('AUTHGUARD CONTRACT', authguardContract)
     // This is here because ts is complaining
     if (authguardContract.unlock?.unlockWithNft === undefined) throw new Error('Error creating Authguard contract.')
 
@@ -73,6 +73,7 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Issu
     transaction.addInput(params.issuerTokenUtxo, authguardContract.unlock.unlockWithNft(true) as any)
     transaction.addInput(params.authkeyUtxo, placeholderP2PKHUnlocker(params.authkeyUtxo.address))
     transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
+
     const tokenChange = params.issuerTokenUtxo.token.amount - params.issuedTokenAmount
     if (tokenChange < 0n) {
         throw new Error('Insufficient token balance')
@@ -157,20 +158,49 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Issu
         const args: UtxoToWcSourceOutputParams = {
             utxo
         }
-        if (`${utxo.txid}:${utxo.vout}` === `${params.issuerTokenUtxo.txid}:${params.issuerTokenUtxo.vout}`) {
-           args.contractInfo = {
-            contract: {
-                abiFunction: authguardContract.artifact.abi.find(abi => abi.name === 'unlockWithNft') as AbiFunction,
-                artifact: authguardContract.artifact,
-                redeemScript: scriptToBytecode(authguardContract.redeemScript)
-            }
-           }
-        }
         return utxoToWcSourceOutput(args)
     })    
+
+    const issuerTokenSourceOutputIndex = sourceOutputs.findIndex(s => {
+        return `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` === `${params.issuerTokenUtxo.txid}:${params.issuerTokenUtxo.vout}`
+    })
+
+    if (issuerTokenSourceOutputIndex === -1) throw new Error('Unexpected state, token issuer utxo not found on source output list')
+
+    const issuerTokenSourceOutput = sourceOutputs[issuerTokenSourceOutputIndex]
+
+    const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex)) as TransactionCommon
+
+    const unlockingBytecode = transaction.inputs[0]?.unlocker.generateUnlockingBytecode({
+        transaction: decodedTransaction as TransactionCommon,
+        sourceOutputs: sourceOutputs.map((sourceOutput) => {
+            return {
+                lockingBytecode: sourceOutput.lockingBytecode,
+                token:  sourceOutput.token,
+                valueSatoshis: sourceOutput.valueSatoshis
+            }
+        }) as Output[],
+        inputIndex: issuerTokenSourceOutputIndex
+    })
+
+    issuerTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
     return {
-        transaction: transactionHex,
-        sourceOutputs: sourceOutputs,
-        userPrompt: 'Issue FTs from reserves'
-    }
+        action: RelayMsgAction.SignTransactionRequest,
+        transaction: {
+            transaction: transactionHex,
+            sourceOutputs: sourceOutputs,
+            userPrompt: 'Issue FTs from reserves',
+            broadcast: false
+        },
+        inputPaths: spentUtxos.map((utxo, inputIndex) => {
+            if (!utxo.pathName) {
+                return []
+            }
+            return [
+                inputIndex, 
+                utxo.pathName,
+                utxo.addressIndex
+            ]
+        }) as [number, string, number][]
+    } as SignTransactionRequest
 }
