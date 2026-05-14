@@ -1,36 +1,28 @@
-import { AbiFunction, ContractUnlocker, ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder, Unlocker, Utxo, WcSourceOutput } from "cashscript"
+import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
-import { jsonReplacer, jsonReviver, LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
-import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize"
-import { scriptToBytecode } from "@cashscript/utils"
+import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionBCH, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
+import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
 
-export type issueFungibleReservesParams = {
+export type TransferFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
-    issuedTokenAmount: bigint,
+    transferTokenAmount: bigint,
     recipientAddress: string,
     authkeyUtxo: UtxoWithPath,
     funderUtxos: UtxoWithPath[],
     authKeyRecipientAddress?: string,
     network?: Network,
+    transferType: 'issuance' | 'burn'
 }
 
-export type IssueFungibleReservesReturnType = {
-    transaction: string,
-    spentUtxos: UtxoWithPath[],
-    sourceOutputs: WcSourceOutput[],
-    userPrompt: string
-}
+export function transferFungibleReserves(params: TransferFungibleReservesParams): SignTransactionRequest {
 
-export function issueFungibleReserves(params: issueFungibleReservesParams): SignTransactionRequest {
-
-    if (!params.issuerTokenUtxo?.token) throw new Error(`Issuing tokens requires a token of the same category.`)
+    if (!params.issuerTokenUtxo?.token) throw new Error(`Transferring tokens requires a token of the same category.`)
     if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
-    if (!params.issuedTokenAmount) throw new Error(`Invalid token amount.`)
+    if (!params.transferTokenAmount) throw new Error(`Invalid token amount.`)
 
     const authguardContract = createAuthguardContract({
         authKeyTokenId: params.authkeyUtxo.token.category,
@@ -74,7 +66,7 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Sign
     transaction.addInput(params.authkeyUtxo, placeholderP2PKHUnlocker(params.authkeyUtxo.address))
     transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
 
-    const tokenChange = params.issuerTokenUtxo.token.amount - params.issuedTokenAmount
+    const tokenChange = params.issuerTokenUtxo.token.amount - params.transferTokenAmount
     if (tokenChange < 0n) {
         throw new Error('Insufficient token balance')
     }
@@ -96,7 +88,7 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Sign
         amount: DEFAULT_TOKEN_VALUE,
         token: {
             category: params.issuerTokenUtxo.token.category,
-            amount: params.issuedTokenAmount
+            amount: params.transferTokenAmount
         }
     })
     
@@ -184,12 +176,18 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Sign
     })
 
     issuerTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
+    let userPrompt = ''
+    if (params.transferType === 'issuance') {
+        userPrompt = 'Issue FTs from reserves'
+    } else if (params.transferType === 'burn') {
+        userPrompt = 'Burn FTs from reserves'
+    }
     return {
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
             transaction: transactionHex,
             sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
-            userPrompt: 'Issue FTs from reserves',
+            userPrompt: userPrompt,
             broadcast: false
         },
         inputPaths: spentUtxos.map((utxo, inputIndex) => {

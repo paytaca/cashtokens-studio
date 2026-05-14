@@ -22,12 +22,12 @@
                             <div class="flex justify-center no-wrap q-gutter-x-sm">
                                 <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'"
                                     text-color="primary" no-caps
-                                    @click.stop="() => openFtIssuerDialog(value.row, metadataStore.identitySnapshot?.[value.row.token!.category as string])"
+                                    @click.stop="openFungibleReservesReleaseDialog(value.row, 'issuance', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
                                     :disable="!!value.row.processing" :loading="loading">
                                 </q-btn>
                                 <q-btn icon="local_fire_department" size="md" :label="$q.screen.xs ? '' : 'Burn'"
-                                    text-color="orange" no-caps @click.stop="() => console.log('burn')"
-                                    :disable="!!value.row.processing" :loading="loading">
+                                    @click.stop="openFungibleReservesReleaseDialog(value.row, 'burn', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
+                                    text-color="orange" no-caps :disable="!!value.row.processing" :loading="loading">
                                 </q-btn>
                             </div>
                         </q-td>
@@ -43,28 +43,28 @@ import { onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
 import { useWizardConnect } from 'src/composables/useWizardConnect'
 import { UtxoFormSafe, UtxoWithPath } from 'src/core/types'
-import { getLockedAuthheadUtxos, type UtxoWithAuthKey } from 'src/core/authguard'
+import { filterAuthKeys, getLockedAuthheadUtxos, type UtxoWithAuthKey } from 'src/core/authguard'
 import { useMetadataStore } from 'src/stores/metadata'
 import { shortenTokenId } from 'src/core/utils'
-import { issueFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
+import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { Network } from 'cashscript'
-import FTIssuerDialog from 'src/components/dialogs/FTIssuerDialog.vue'
+import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { decodeCashAddress } from '@bitauth/libauth'
+import { BURN_ADDRESS } from 'src/apps'
 
 const $q = useQuasar()
 const {
-    wzWallet,
     wzDappMgr,
-    wzWalletGetUtxos,
+    externalWallet
 } = useWizardConnect()
 
 const authheads = ref<UtxoWithAuthKey[]>([])
 const authkeys = ref<UtxoWithPath[]>([])
 const loading = ref<boolean>()
-const fetchUtxos = ref<boolean>(true)
 const metadataStore = useMetadataStore()
 
 const authkeysLastSync = ref<number>()
@@ -83,7 +83,6 @@ const columns: QTableColumn[] = [
         label: 'Symbol',
         align: 'left',
         field: (r) => {
-            console.log('ROW VALUE', r, metadataStore.identitySnapshot)
             return metadataStore.identitySnapshot?.[r.token?.category || r.txid]?.token?.symbol
         },
         sortable: true
@@ -110,11 +109,7 @@ const columns: QTableColumn[] = [
 const loadAuthkeys = async () => {
     try {
         loading.value = true
-        authkeys.value = await wzWalletGetUtxos(
-            wzWallet.value as any, { resolveAddressIndex: true, authKeysOnly: true }
-        ) as UtxoWithPath[]
-        console.log('authkeys', authkeys)
-        fetchUtxos.value = false
+        authkeys.value = filterAuthKeys(await externalWallet.value.getUtxos()) as UtxoWithPath[]
         authkeysLastSync.value = Date.now()
     } catch (error) {
         $q.notify({
@@ -126,22 +121,35 @@ const loadAuthkeys = async () => {
     }
 }
 
-const openFtIssuerDialog = (v: UtxoFormSafe, identitySnapshot?: IdentitySnapshot) => {
+const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
 
-    if (!wzWallet.value?.utxos || wzWallet.value?.utxos.length === 0) {
+    if (!externalWallet.value?.utxos || externalWallet.value.utxos.length === 0) {
         return $q.notify({
             type: 'Error',
             message: 'Insufficient BCH balance'
         })
     }
 
+    const componentProps = {
+        transferType: action,
+        issuerUtxo: v,
+        identitySnapshot,
+    } as any
+
+    if (action === 'issuance') {
+        componentProps.selfAddress = externalWallet.value.getTokenDepositAddress(0)
+    } else if (action === 'burn') {
+        const sampleAddress = externalWallet.value.getTokenDepositAddress(0)
+        const sampleDecodedAddress = decodeCashAddress(sampleAddress)
+        if (typeof (sampleDecodedAddress) === 'string') {
+            throw new Error(sampleDecodedAddress)
+        }
+        componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+    }
+
     $q.dialog({
-        component: FTIssuerDialog,
-        componentProps: {
-            issuerUtxo: v,
-            selfAddress: wzWallet.value?.receive?.getTokenDepositAddress(0),
-            identitySnapshot
-        },
+        component: FungibleReservesTransferDialog,
+        componentProps,
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
 
@@ -156,20 +164,24 @@ const openFtIssuerDialog = (v: UtxoFormSafe, identitySnapshot?: IdentitySnapshot
         )
 
         try {
-
-            const issueFungibleReservesRequest = issueFungibleReserves({
+            let recipientAddress = userInputs.recipient
+            if (action === 'burn') {
+                recipientAddress = componentProps.burnAddress
+            }
+            const signRequest = transferFungibleReserves({
                 issuerTokenUtxo,
                 authkeyUtxo: issuerTokenUtxo.authkey,
-                recipientAddress: userInputs.recipient,
-                issuedTokenAmount: userInputs.tokenAmount,
+                recipientAddress: recipientAddress,
+                transferTokenAmount: userInputs.tokenAmount,
                 network: import.meta.env.VITE_BCH_NETWORK as Network,
-                funderUtxos: (wzWallet.value?.utxos || []) as UtxoWithPath[]
+                funderUtxos: (externalWallet.value.utxos || []) as UtxoWithPath[],
+                transferType: action
             })
 
             loadingGroup({
                 message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
             })
-            const response = await wzDappMgr.value.signTransaction(issueFungibleReservesRequest);
+            const response = await wzDappMgr.value.signTransaction(signRequest);
 
             loadingGroup({
                 message: 'Broadcasting transaction, please wait...'
@@ -183,7 +195,7 @@ const openFtIssuerDialog = (v: UtxoFormSafe, identitySnapshot?: IdentitySnapshot
                     component: TransactionStatusDialog,
                     componentProps: {
                         statusType: 'success',
-                        statusText: `Fungible token successfully issued from FT reserves`,
+                        statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
                         txid: broadcastResult.txid
                     }
                 })
@@ -204,7 +216,6 @@ const openFtIssuerDialog = (v: UtxoFormSafe, identitySnapshot?: IdentitySnapshot
 
 watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {
-        console.log('Syncing Authheads')
         try {
             loading.value = true
             authheads.value = await getLockedAuthheadUtxos(authkeys.value)
@@ -228,7 +239,8 @@ watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) =
     }
 })
 
-watch(() => wzWallet.value.ready, async (walletReady) => {
+
+watch(() => externalWallet.value?.ready, async (walletReady) => {
     if (walletReady && !authkeysLastSync.value) {
         await loadAuthkeys()
     }
@@ -236,7 +248,7 @@ watch(() => wzWallet.value.ready, async (walletReady) => {
 
 
 onMounted(async () => {
-    if (wzWallet.value.ready) {
+    if (externalWallet.value.ready) {
         await loadAuthkeys()
     }
 })
