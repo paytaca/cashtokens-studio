@@ -13,14 +13,9 @@ import { Utxo } from 'mainnet-js-v3';
 import { UtxoFormSafe, UtxoWithPath } from "../types";
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize";
 import { SEQUENCE_NUMBER_DISABLE_VALUE } from "../constants";
-/**
-   * Converts values to exportable json safe format.
-   * Binary -> hex, bigint -> string
-   * 
-   * @return {Object} pst
-   */
-export function jsonReplacer(k: string, v: any) {
+import { WcContractInfo, WcSourceOutput } from "cashscript";
 
+export function jsonReplacer(k: string, v: any) {
     const binaryKeys = new Set([
       'outpointTransactionHash',
       'outpointTransaction',
@@ -33,7 +28,6 @@ export function jsonReplacer(k: string, v: any) {
       'commitment',
       'capability',
       'category',
-
     ]);
     
     const bigintKeys = new Set([
@@ -73,12 +67,6 @@ export function jsonReplacer(k: string, v: any) {
     return v
   }
 
-  /**
-   * A JSON reviver that converts
-   * hex -> binary , string -> bigint (for keys that's expected to be bigint)
-   * 
-   * @return {Object} pst
-   */
   export function jsonReviver(k: string, v: any) {
     const binaryKeys = new Set([
       'outpointTransactionHash',
@@ -170,32 +158,46 @@ export function utxoToLibauthSourceOutput (utxo: Utxo, transportSafe: boolean = 
     return output
   }
 
+/**
+ * Wc instead of Wz is not a mistake. 
+ * WizardConnect is also using a WalletConnect type which is exported by cashscript.
+ */
+export type UtxoToWcSourceOutputParams = {
+  utxo: UtxoWithPath, 
+  unlockingBytecode?: Uint8Array, 
+  contractInfo?: WcContractInfo
+}
 
-export function utxoToWizardConnectSourceOutput (utxo: UtxoWithPath, unlockingBytecode: Uint8Array): SourceOutput {
+export function utxoToWcSourceOutput (params: UtxoToWcSourceOutputParams): WcSourceOutput {
 
-  const lockingBytecode = cashAddressToLockingBytecode(utxo.address)
+  console.log('PARARMS', params)
+  const lockingBytecode = cashAddressToLockingBytecode(params.utxo.address)
   if (typeof(lockingBytecode) === 'string') throw new Error('Error decoding utxo address')
-  const output: SourceOutput = {
-    outpointTransactionHash: hexToBin(utxo.txid),
-    outpointIndex: Number(utxo.vout),
-    valueSatoshis: utxo.satoshis,
-    unlockingBytecode: unlockingBytecode,
+  const output: WcSourceOutput = {
+    outpointTransactionHash: hexToBin(params.utxo.txid),
+    outpointIndex: Number(params.utxo.vout),
+    valueSatoshis: params.utxo.satoshis,
+    unlockingBytecode: params.unlockingBytecode || new Uint8Array([]),
     lockingBytecode: lockingBytecode.bytecode,
     sequenceNumber: SEQUENCE_NUMBER_DISABLE_VALUE
   }
 
-  if (utxo.token) {
+  if (params.utxo.token) {
     output.token = {
-      category: hexToBin(utxo.token.category),
-      amount: utxo.token.amount
+      category: hexToBin(params.utxo.token.category),
+      amount: params.utxo.token.amount
     }
 
-    if (utxo.token?.nft) {
+    if (params.utxo.token?.nft) {
       output.token.nft = {
-        capability: utxo.token.nft.capability,
-        commitment: hexToBin(utxo.token.nft.commitment)
+        capability: params.utxo.token.nft.capability,
+        commitment: hexToBin(params.utxo.token.nft.commitment)
       }
     }
+  }
+  
+  if (params.contractInfo) {
+    output.contract = params.contractInfo.contract
   }
 
    return output
