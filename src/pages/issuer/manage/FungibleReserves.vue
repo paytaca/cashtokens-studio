@@ -54,7 +54,7 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { decodeCashAddress } from '@bitauth/libauth'
-import { BURN_ADDRESS } from 'src/apps'
+import { delay } from 'mainnet-js-v3'
 
 const $q = useQuasar()
 const {
@@ -106,10 +106,10 @@ const columns: QTableColumn[] = [
     { name: 'actions', label: 'Actions', align: 'center', field: 'actions' }
 ]
 
-const loadAuthkeys = async () => {
+const loadAuthkeys = async (sync?: boolean) => {
     try {
         loading.value = true
-        authkeys.value = filterAuthKeys(await externalWallet.value.getUtxos()) as UtxoWithPath[]
+        authkeys.value = filterAuthKeys(await externalWallet.value.getUtxos({ sync })) as UtxoWithPath[]
         authkeysLastSync.value = Date.now()
     } catch (error) {
         $q.notify({
@@ -191,16 +191,22 @@ const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' |
 
             if (broadcastResponse.ok) {
                 const broadcastResult = await broadcastResponse.json()
-                $q.dialog({
-                    component: TransactionStatusDialog,
-                    componentProps: {
-                        statusType: 'success',
-                        statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
-                        txid: broadcastResult.txid
-                    }
-                })
+                if (broadcastResult.success) {
+                    await delay(2000)
+                    loadingGroup()
+                    loadAuthkeys(true)
+                    $q.dialog({
+                        component: TransactionStatusDialog,
+                        componentProps: {
+                            statusType: 'success',
+                            statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
+                            txid: broadcastResult.txid
+                        }
+                    })
+                } else {
+                    throw new Error(broadcastResult.error)
+                }
             }
-
         } catch (error: any) {
             console.log('error', error)
             $q.notify({
