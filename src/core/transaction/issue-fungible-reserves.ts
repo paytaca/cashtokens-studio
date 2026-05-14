@@ -3,7 +3,7 @@ import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
-import { LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { jsonReplacer, jsonReviver, LibauthSourceOutput, utxoToLibauthSourceOutput, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize"
 import { scriptToBytecode } from "@cashscript/utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
@@ -188,7 +188,7 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Sign
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
             transaction: transactionHex,
-            sourceOutputs: sourceOutputs,
+            sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
             userPrompt: 'Issue FTs from reserves',
             broadcast: false
         },
@@ -201,6 +201,6 @@ export function issueFungibleReserves(params: issueFungibleReservesParams): Sign
                 utxo.pathName,
                 utxo.addressIndex
             ]
-        }) as [number, string, number][]
+        }).filter(p => p.length === 3) as [number, string, number][]
     } as SignTransactionRequest
 }
