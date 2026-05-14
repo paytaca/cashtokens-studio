@@ -26,7 +26,7 @@ type WZWallet = {
   defi?: HDWallet | undefined,
   balance?: bigint | undefined,
   utxos?: UtxoWithPath[]|Utxo[],
-  ready?: boolean
+  ready: boolean
 }
 
 type WzWalletGetUtxosOptions = {
@@ -39,7 +39,7 @@ const modal = ref()
 const wzDappMgr = ref()
 const wzState = ref<WizardConnectState>('idle')
 const relayStartAttempted = ref<boolean>()
-const wzWallet = ref<WZWallet>()
+const wzWallet = ref<WZWallet>({ ready: false })
 const wzRelayConn = ref()
   
 export const useWizardConnect = () => {
@@ -155,8 +155,8 @@ export const useWizardConnect = () => {
     }
   }
 
-  const wzCreateWalletObject = async (wzSession: {paths?: PathXpub[]}) => {
-    if (!wzSession.paths || wzSession.paths?.length === 0) return {}
+  const wzCreateWalletObject = async (wzSession: {paths?: PathXpub[]}): Promise<WZWallet> => {
+    if (!wzSession.paths || wzSession.paths?.length === 0) return { ready: false }
     const receiveXPub = wzSession.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
     const changeXPub = wzSession.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
     const defiXPub = wzSession.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
@@ -170,56 +170,75 @@ export const useWizardConnect = () => {
       change: changeWallet,
       defi: defiWallet,
       balance: 0n,
+      ready: true
     } as WZWallet
   }
 
   const wzWalletGetUtxos = async (wzWallet: WZWallet, options?: WzWalletGetUtxosOptions): Promise<UtxoWithPath[]> => {
     
     const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
-
-    if (wzWallet.receive) utxoRequests.push({ name: 'receive', req: wzWallet.receive.getUtxos() })
-    if (wzWallet.change) utxoRequests.push({ name: 'change', req: wzWallet.change.getUtxos() })
-    if (wzWallet.defi) utxoRequests.push({ name: 'defi', req: wzWallet.defi.getUtxos() })
-
-    const utxoPromiseResults = await Promise.allSettled([...utxoRequests.map((r) => r.req)])
-
-    let utxos: Utxo[] = []
-    
-    for (const i in utxoRequests) {
-      if(utxoPromiseResults[i]?.status === 'rejected') continue
-      utxos = utxos.concat(
-        (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i]!.name }))
-      )
-    }
-
-    if (options?.excludeTokens) {
-      return utxos?.filter((u) => !u.token) as UtxoWithPath[]
-    }
-
-    if (options?.authKeysOnly) {
-      return utxos.filter(u => u.token?.nft?.commitment === '00') as UtxoWithPath[]
-    }
-
-    if (options?.resolveAddressIndex) {
-      return wzWalletResolveUtxosAddressIndex(utxos as UtxoWithPath[]) as UtxoWithPath[]
-    }
-    return utxos as UtxoWithPath[]
+  
+      if (!wzWallet.utxos) {
+        wzWallet.utxos = []
+      }
+  
+      let utxos: Utxo[] = wzWallet.utxos || []
+      
+      if (wzWallet.receive) utxoRequests.push({ name: 'receive', req: wzWallet.receive.getUtxos() })
+      if (wzWallet.change) utxoRequests.push({ name: 'change', req: wzWallet.change.getUtxos() })
+      if (wzWallet.defi) utxoRequests.push({ name: 'defi', req: wzWallet.defi.getUtxos() })
+  
+      const utxoPromiseResults = await Promise.allSettled([...utxoRequests.map((r) => r.req)])
+      
+      for (const i in utxoRequests) {
+        if(utxoPromiseResults[i]?.status === 'rejected') continue
+        utxos = utxos.concat(
+          (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i]!.name }))
+        )
+      }
+      
+      const utxosMap = new Map((wzWallet.utxos).map(utxo => [`${utxo.txid}:${utxo.vout}`, utxo]))
+  
+      for (const utxo of utxos) {
+        if (!utxosMap.get(`${utxo.txid}:${utxo.vout}`)) {
+          wzWallet.utxos.push(utxo as UtxoWithPath)
+        }
+      }
+  
+      if (options?.excludeTokens) {
+        utxos = utxos?.filter((u) => !u.token) as UtxoWithPath[]
+      }
+  
+      if (!options?.excludeTokens && options?.authKeysOnly) {
+        utxos = utxos.filter(u => u.token?.nft?.commitment === '00') as UtxoWithPath[]
+      }
+  
+      if (options?.resolveAddressIndex) {
+        utxos = wzWalletResolveUtxosAddressIndex(utxos as UtxoWithPath[]) as UtxoWithPath[]
+      }
+      console.log('utxos', utxos)
+      const uniqueUtxosMap = new Map((utxos).map(utxo => [`${utxo.txid}:${utxo.vout}`, utxo]))
+      const uniqueUtxos = [...uniqueUtxosMap.values()] as UtxoWithPath[]
+      wzWallet.balance = getBalanceFromUtxos(uniqueUtxos as Utxo[])
+      return uniqueUtxos
   }
 
   const wzWalletResolveUtxosAddressIndex = (utxos: UtxoWithPath[]) => {
     const utxosWithPath = []
     for (const utxo of utxos) {
-      const utxoDerivationInfo = wzWallet.value?.[utxo.pathName]?.walletCache?.get(utxo.address);
-      if (!utxoDerivationInfo) {
-        return $q.notify({
-          type: 'Error',
-          message: 'Error getting the address information of some of your unspent BCH. Please try to refresh the page. If problem persists, please contact admin.'
+      if (utxo.pathName) {
+        const utxoDerivationInfo = wzWallet.value?.[utxo.pathName]?.walletCache?.get(utxo.address);
+        if (!utxoDerivationInfo) {
+          return $q.notify({
+            type: 'Error',
+            message: 'Error getting the address information of some of your unspent BCH. Please try to refresh the page. If problem persists, please contact admin.'
+          })
+        }
+        utxosWithPath.push({
+          ...utxo,
+          addressIndex: utxoDerivationInfo.index
         })
       }
-      utxosWithPath.push({
-        ...utxo,
-        addressIndex: utxoDerivationInfo.index
-      })
     }
     return utxosWithPath
   };
@@ -276,7 +295,7 @@ export const useWizardConnect = () => {
     }
 
     if (wzWallet.value) {
-      wzWallet.value.utxos = await wzWalletGetUtxos(wzWallet.value)
+      wzWallet.value.utxos = await wzWalletGetUtxos(wzWallet.value as WZWallet)
       if (wzWallet.value.utxos && wzWallet.value.utxos.length > 0) {
         wzWallet.value.balance = getBalanceFromUtxos(wzWallet.value.utxos || [])
       }
