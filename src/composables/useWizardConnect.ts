@@ -93,7 +93,6 @@ export const useWizardConnect = () => {
 
     wzDappMgr.value.on('messagereceive', (msg: any) => {
       if (msg.action === 'disconnect') {
-
         postDisconnectCleanUp()
       }
     })
@@ -178,11 +177,7 @@ export const useWizardConnect = () => {
     
     const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
   
-      if (!wzWallet.utxos) {
-        wzWallet.utxos = []
-      }
-  
-      let utxos: Utxo[] = wzWallet.utxos || []
+      let utxos: Utxo[] = []
       
       if (wzWallet.receive) utxoRequests.push({ name: 'receive', req: wzWallet.receive.getUtxos() })
       if (wzWallet.change) utxoRequests.push({ name: 'change', req: wzWallet.change.getUtxos() })
@@ -196,15 +191,7 @@ export const useWizardConnect = () => {
           (utxoPromiseResults[i] as PromiseFulfilledResult<Utxo[]>).value.map((u: Utxo) => ({ ...u, pathName: utxoRequests[i]!.name }))
         )
       }
-      
-      const utxosMap = new Map((wzWallet.utxos).map(utxo => [`${utxo.txid}:${utxo.vout}`, utxo]))
-  
-      for (const utxo of utxos) {
-        if (!utxosMap.get(`${utxo.txid}:${utxo.vout}`)) {
-          wzWallet.utxos.push(utxo as UtxoWithPath)
-        }
-      }
-  
+
       if (options?.excludeTokens) {
         utxos = utxos?.filter((u) => !u.token) as UtxoWithPath[]
       }
@@ -213,10 +200,19 @@ export const useWizardConnect = () => {
         utxos = utxos.filter(u => u.token?.nft?.commitment === '00') as UtxoWithPath[]
       }
   
-      if (options?.resolveAddressIndex) {
+      if (options?.resolveAddressIndex !== false) {
         utxos = wzWalletResolveUtxosAddressIndex(utxos as UtxoWithPath[]) as UtxoWithPath[]
       }
-      console.log('utxos', utxos)
+
+      const utxosMap = new Map((utxos).map(utxo => [`${utxo.txid}:${utxo.vout}`, utxo]))
+      
+      wzWallet.utxos = []
+      for (const utxo of utxos) {
+        if (!utxosMap.get(`${utxo.txid}:${utxo.vout}`)) {
+          wzWallet.utxos.push(utxo as UtxoWithPath)
+        }
+      }
+
       const uniqueUtxosMap = new Map((utxos).map(utxo => [`${utxo.txid}:${utxo.vout}`, utxo]))
       const uniqueUtxos = [...uniqueUtxosMap.values()] as UtxoWithPath[]
       wzWallet.balance = getBalanceFromUtxos(uniqueUtxos as Utxo[])
