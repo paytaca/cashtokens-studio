@@ -1,35 +1,7 @@
 <template>
-  <q-page class="row justify-evenly" :class="!user.walletAddress ? 'items-center' : ''">
+  <q-page class="row justify-evenly items-center">
     <div class="col-12">
-      <div v-if="!user.walletAddress && !wizardConnect.wzSession?.value"
-        class="row justify-center items-center q-px-lg q-pt-lg q-gutter-sm">
-        <div class="col-12 text-center">
-          <q-img src="images/cts_transparent.png" :style="bannerSize" />
-        </div>
-        <q-card class="action-card" style="width: 280px">
-          <q-card-section class="text-center">
-            <div class="q-mt-sm">
-              <WalletConnect />
-            </div>
-            <div class="text-caption text-grey">To get started, click here to connect your wallet thru WalletConnect.
-            </div>
-          </q-card-section>
-        </q-card>
-        <q-card class="action-card q-py-xs" style="width: 280px" @click="() => wizardConnect.wzInitiateConnection()">
-          <q-card-section class="text-center">
-            <div class="flex no-wrap items-center justify-center text-primary" style="width: 250px; height: 100px">
-              <q-avatar>
-                <q-icon name="mdi-wizard-hat" size="2.5em"></q-icon>
-              </q-avatar>
-              <span class="text-bold text-h5">WizardConnect</span>
-            </div>
-            <div class="text-caption text-grey">
-              To get started, click here to connect your wallet thru WizardConnect.
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
-      <div v-else class="row justify-center q-pa-md q-gutter-md">
+      <div v-if="wzWalletDiscovered" class="row justify-center q-pa-md q-gutter-md">
         <div class="col-12 text-center q-mb-md">
           <div class="text-center text-h4 text-weight-bold">
             <div>Welcome to</div>
@@ -79,20 +51,35 @@
           </q-card-section>
         </q-card>
       </div>
+      <div v-else class="row justify-center items-center q-px-lg q-pt-lg q-gutter-sm">
+        <div class="col-12 text-center">
+          <q-img src="images/cts_transparent.png" :style="bannerSize" />
+        </div>
+        <q-card class="action-card q-py-xs" style="width: 280px" @click="() => wzStartRelay()">
+          <q-card-section class="text-center">
+            <div class="flex no-wrap items-center justify-center text-primary" style="width: 250px; height: 100px">
+              <q-avatar>
+                <q-icon name="mdi-wizard-hat" size="2.5em"></q-icon>
+              </q-avatar>
+              <span class="text-bold text-h5">WizardConnect</span>
+            </div>
+            <div class="text-caption text-grey">
+              To get started, click here to connect your wallet thru WizardConnect.
+            </div>
+          </q-card-section>
+        </q-card>
+      </div>
     </div>
   </q-page>
 </template>
 
 <script setup lang="ts">
-import WalletConnect from 'components/WalletConnect.vue';
 import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
 import { useWizardConnect } from 'src/composables/useWizardConnect';
-import { useUser } from 'src/stores/user';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 const $q = useQuasar();
-const user = useUser();
 const isMobileBrowser = ref<boolean>(false);
 const router = useRouter();
 const bannerSize = computed(() => {
@@ -104,7 +91,11 @@ const bannerSize = computed(() => {
   return size;
 });
 
-const wizardConnect = useWizardConnect()
+const {
+  wzWalletDiscovered,
+  wzState,
+  wzStartRelay
+} = useWizardConnect()
 
 onMounted(async () => {
   await delay(100);

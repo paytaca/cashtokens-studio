@@ -48,15 +48,13 @@ const menu = computed<any[]>(() => {
   return [
     {
       label: 'Create New Token',
-      href: hrefs.createNewToken,
+      href: '/token/create',
       icon: 'add',
-      disabled: Boolean(user.walletAddress) === false,
     },
     {
       label: 'Create New AuthKey',
-      href: hrefs.createAuthKey,
+      href: '/authguard/authkeys/create',
       icon: 'add',
-      disabled: Boolean(user.walletAddress) === false,
     },
     // {
     //   label: 'Import Auth Utxo',
@@ -68,11 +66,11 @@ const menu = computed<any[]>(() => {
       label: 'Manage',
       href: '#Manage',
       icon: 'token',
-      disabled: Boolean(user.walletAddress) === false,
+      // disabled: Boolean(user.walletAddress) === false,
       children: [
         {
           label: 'FT Reserves',
-          href: hrefs.manageFTReserves,
+          href: '/issuer/fungible-reserves',
           icon: 'money',
         },
         {
@@ -92,7 +90,7 @@ const menu = computed<any[]>(() => {
         },
         {
           label: 'Authguard Keys',
-          href: hrefs.manageAuthKeys,
+          href: '/authguard/authkeys',
           icon: 'key',
         }
 
