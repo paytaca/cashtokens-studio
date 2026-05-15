@@ -10,7 +10,7 @@ export interface ExternalWallet {
     ready?: boolean,
     utxos?: UtxoWithPath[]
     getBalance(): Promise<bigint|undefined>
-    getUtxos(): Promise<UtxoWithPath[] | Utxo[]>
+    getUtxos(options?: { sync?: boolean }): Promise<UtxoWithPath[] | Utxo[]>
     getWalletType(): 'wizard-connect'|'wallet-connect'
     getGenesisInputUtxos(): Promise<UtxoWithPath[]|Utxo[]>
     /**
@@ -22,4 +22,5 @@ export interface ExternalWallet {
      * Refreshes utxos and balance
      */
     sync(): Promise<void>
+    waitForTransaction?(): Promise<void>
 }
