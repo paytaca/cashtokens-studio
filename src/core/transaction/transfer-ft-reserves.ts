@@ -29,7 +29,6 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
         network: params.network
     })
 
-    // This is here because ts is complaining
     if (authguardContract.unlock?.unlockWithNft === undefined) throw new Error('Error creating Authguard contract.')
 
     const funderUtxo = 
