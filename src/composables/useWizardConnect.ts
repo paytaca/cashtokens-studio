@@ -17,6 +17,7 @@ import { UtxoWithPath } from 'src/core/types';
 import { initiateDappRelay, DisconnectReason } from '@wizardconnect/core';
 import { loadSession } from '@wizardconnect/dapp';
 import { WizardConnectState } from './types';
+import { ExternalWallet, WizardConnectExternalWallet } from 'src/core/wallet';
 
 type WZWalletPath = { name: string, xpub: string}
 
@@ -41,6 +42,8 @@ const wzState = ref<WizardConnectState>('idle')
 const relayStartAttempted = ref<boolean>()
 const wzWallet = ref<WZWallet>({ ready: false })
 const wzRelayConn = ref()
+const externalWallet = ref<ExternalWallet>(new WizardConnectExternalWallet()) 
+
   
 export const useWizardConnect = () => {
   const $q = useQuasar()
@@ -75,16 +78,20 @@ export const useWizardConnect = () => {
     )
 
     wzDappMgr.value.on('walletready', async (msg: WalletReadyMessage) => {
-      if (msg.action === 'wallet_ready') {
-        if (modal?.value) { 
-          modal.value?.hide() 
-        }
-        if (wzWallet.value && !wzWallet.value.ready) {
-          await wzInitWallet(msg.session.hdwalletv1 as { paths: PathXpub[] })
-          wzWallet.value.ready = true
-        }
-      }
-      wzState.value = 'connected'
+      if (msg.action === 'wallet_ready') { 
+        if (modal?.value) { modal.value?.hide() } 
+        if (wzWallet.value && !wzWallet.value.ready) { 
+            await wzInitWallet(msg.session.hdwalletv1 as { paths: PathXpub[] }) 
+            wzWallet.value.ready = true 
+            if (!externalWallet.value.ready) { 
+                externalWallet.value.ready = true 
+                await (externalWallet.value as WizardConnectExternalWallet).initWallet( 
+                    msg.session.hdwalletv1 as { paths: PathXpub[] } 
+                ) 
+            } 
+        } 
+      } 
+      wzState.value = 'connected' 
     })
 
     wzDappMgr.value.on('reconnecting', (msg: WalletReadyMessage) => {
@@ -304,6 +311,7 @@ export const useWizardConnect = () => {
     wzDappMgr.value = null 
     wzRelayConn.value = null
     wzState.value = 'idle'
+    externalWallet.value.ready = false 
   }
 
   const wzDisconnect = async () => {
@@ -331,6 +339,7 @@ export const useWizardConnect = () => {
     if (!storedSession || !storedSession.walletPublicKey) return
     if (storedSession.paths) {
       await wzInitWallet(storedSession as { paths: PathXpub[] })
+      await (externalWallet.value as WizardConnectExternalWallet).initWallet(storedSession)
     }
     if (relayStartAttempted.value) return
     await wzStartRelay(storedSession) 
@@ -351,6 +360,7 @@ export const useWizardConnect = () => {
     wzGetInputPaths,
     wzWalletResolveUtxosAddressIndex,
     wzWalletGetGenesisInputUtxos,
-    wzWalletGetBalance
+    wzWalletGetBalance,
+    externalWallet
   }
 };
