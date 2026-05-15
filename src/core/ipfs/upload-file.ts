@@ -1,6 +1,6 @@
 import { UploadResponse } from "pinata";
 
-export async function uploadFile(file: File|Blob, filename: string): Promise<UploadResponse> {
+export async function uploadFile(file: File|Blob, filename: string, abortController?: AbortController): Promise<UploadResponse> {
     try {
         const formData = new FormData();
         formData.append('file', file, filename);
@@ -8,6 +8,7 @@ export async function uploadFile(file: File|Blob, filename: string): Promise<Upl
         const resp = await fetch('/api/ipfs', {
           method: 'POST',
           body: formData,
+          signal: abortController?.signal
         });
 
         if (resp.status >= 400) {
