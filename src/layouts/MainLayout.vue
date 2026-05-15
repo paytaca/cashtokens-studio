@@ -20,7 +20,7 @@
                 border: 2px solid #484854d4;
               ">
               <template v-slot:label>
-                <q-avatar v-if="Boolean(wz.wzSession?.value)" rounded size="md">
+                <q-avatar v-if="wzWalletDiscovered" rounded size="md">
                   <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
                 </q-avatar>
                 <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
@@ -146,7 +146,7 @@
             <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
-        <div v-if="wz.wzSession?.value" class="q-mx-sm">
+        <div v-if="wzWalletDiscovered" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
             <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
@@ -156,7 +156,7 @@
                 border: 2px solid #484854d4;
               ">
               <template v-slot:label>
-                <q-avatar v-if="Boolean(wz.wzSession)" rounded size="md">
+                <q-avatar v-if="Boolean(wzWalletDiscovered)" rounded size="md">
                   <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
                 </q-avatar>
                 <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
@@ -237,7 +237,7 @@
                         font-size: 1.1em;
                         letter-spacing: 2px;
                       ">
-                      {{ BigNumber(wz.wzWallet?.value?.balance.toString() || '0').dividedBy(1e8).toString() }}
+                      {{ BigNumber(wzWallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
                     </q-item-label>
                     <q-item-label caption class="text-grey-6">
                       <q-icon name="content_copy" size="xs" class="q-mr-xs" />
@@ -259,9 +259,19 @@
                     </q-item-label>
                   </q-item-section>
                 </q-item> -->
+                <q-item clickable to="/wizard-connect/requests">
+                  <q-item-section avatar>
+                    <q-avatar color="bch" text-color="white">
+                      <q-icon name="pending"></q-icon>
+                    </q-avatar>
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>WizardConnect Requests</q-item-label>
+                  </q-item-section>
+                </q-item>
                 <q-separator inset class="q-my-md" />
                 <q-item>
-                  <q-btn v-if="wz.wzSession">Disconnect</q-btn>
+                  <q-btn v-if="wzWalletDiscovered" @click="onDisconnectClick">Disconnect</q-btn>
                   <paytaca-connect v-else-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
                   <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
                 </q-item>
@@ -372,7 +382,11 @@ const scanning = ref<string | boolean>(false);
 const eventBus = inject<EventBus>('eventBus');
 useWalletConnect();
 
-const wz = useWizardConnect()
+const {
+  wzWalletDiscovered,
+  wzWallet,
+  wzDisconnect,
+} = useWizardConnect()
 
 eventBus?.on('updatedPendingMultisigTransactions', async () => {
   pendingMultisigTransactions.value =
@@ -418,6 +432,10 @@ const scanReserves = async () => {
 
 useInit();
 
+const onDisconnectClick = async () => {
+  await wzDisconnect()
+}
+
 watch(
   () => route.path,
   () => {
@@ -444,10 +462,10 @@ watch(
   }
 );
 
-watch(() => wz.wzSession.value, async (v) => {
-  console.log('wzsession', v)
+watch(() => wzWalletDiscovered, async (v) => {
+  console.log('wzWalletDiscovered', v)
   if (v) {
-    // const hdWallet = await wz.wzGetHDWallet('receive')
+    // const hdWallet = await wzGetHDWallet('receive')
     // if (hdWallet) {
     //   await hdWallet.scanMoreAddresses(50)
     //   const balance = await hdWallet.getBalance()
@@ -455,7 +473,7 @@ watch(() => wz.wzSession.value, async (v) => {
 
     // }
 
-    // const hdWalletChange = await wz.wzGetHDWallet('change')
+    // const hdWalletChange = await wzGetHDWallet('change')
     // if (hdWalletChange) {
     //   await hdWalletChange.scanMoreAddresses(50)
     //   const balance = await hdWalletChange.getBalance()
@@ -465,7 +483,6 @@ watch(() => wz.wzSession.value, async (v) => {
 })
 
 onMounted(async () => {
-  console.log('NETWORK', process.env.NETWORK)
   const db = ClientDB.getInstance();
   pendingMultisigTransactions.value =
     await user.getPendingMultisigTransactions();
