@@ -2,12 +2,11 @@ import { type AddressType, Contract, ElectrumNetworkProvider, type Network } fro
 import artifact from './Authguard.json' with { type: 'json'}
 
 export type CreateAuthguardContractOptions = {
-    authKeyTokenId: string,
+    authkeyTokenId: string,
     network?: Network
 }
 
 export function createAuthguardContract(options: CreateAuthguardContractOptions) {
-    
     const contractOptions = {
         provider: new ElectrumNetworkProvider(options.network || 'mainnet'),
         addressType: 'p2sh20' as AddressType
@@ -15,8 +14,12 @@ export function createAuthguardContract(options: CreateAuthguardContractOptions)
 
     const contract = new Contract(
         artifact, 
-        [options.authKeyTokenId.match(/[a-fA-F0-9]{2}/g)!.reverse().join('')],
+        [options.authkeyTokenId.match(/[a-fA-F0-9]{2}/g)!.reverse().join('')],
         contractOptions
     )
     return contract
+}
+
+export function getAuthguardContractAddress(options: CreateAuthguardContractOptions) {
+    return createAuthguardContract(options).address
 }

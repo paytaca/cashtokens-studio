@@ -25,7 +25,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     if (!params.transferTokenAmount) throw new Error(`Invalid token amount.`)
 
     const authguardContract = createAuthguardContract({
-        authKeyTokenId: params.authkeyUtxo.token.category,
+        authkeyTokenId: params.authkeyUtxo.token.category,
         network: params.network
     })
 

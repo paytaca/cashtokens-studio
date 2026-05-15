@@ -4,13 +4,12 @@ import {
     placeholderP2PKHUnlocker, 
     TransactionBuilder 
 } from "cashscript"
-import { UtxoTxid, UtxoVout, UtxoWithPath } from "../types"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
-// import { decodeCashAddress, encodeCashAddress, getMinimumFee, hexToBin } from "@bitauth/libauth"
+import { NFTCapability } from "mainnet-js-v3"
 import { decodeCashAddress, encodeCashAddress, getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
-import { NFTCapability } from "mainnet-js-v3"
+import { UtxoTxid, UtxoVout, UtxoWithPath } from "../types"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
 
 export type CreateAuthkeyParams = {
     genesisInputId: `${UtxoTxid}:${UtxoVout}`,
@@ -149,7 +148,7 @@ export function createAuthkey(params: CreateAuthkeyParams): SignTransactionReque
         transaction: {
             transaction: transactionHex,
             sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
-            userPrompt: 'Create Authguad Key NFT (Authkey)',
+            userPrompt: 'Create Authguard Key NFT (Authkey)',
             broadcast: false
         },
         inputPaths: spentUtxos.map((utxo, inputIndex) => {

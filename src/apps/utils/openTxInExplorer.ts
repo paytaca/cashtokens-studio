@@ -1,3 +1,3 @@
 export default (txid:string) => {
-  return `${process.env.TX_EXPLORER_BASE_URL}tx/${txid}`
+  return `${import.meta.env.VITE_TX_EXPLORER_BASE_URL}/tx/${txid}`
 }

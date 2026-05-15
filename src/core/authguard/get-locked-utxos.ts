@@ -7,7 +7,7 @@ export async function getLockedAuthheadUtxos(authkeys: UtxoWithPath[]): Promise<
     const lockedUtxos: UtxoWithAuthKey[] = []
     for (const authkey of authkeys) {
         const authguard = createAuthguardContract({
-            authKeyTokenId: authkey.token!.category,
+            authkeyTokenId: authkey.token!.category,
             network: import.meta.env.VITE_BCH_NETWORK
         })
         const utxos: UtxoWithAuthKey[] = await authguard.getUtxos() as UtxoWithAuthKey[]

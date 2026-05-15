@@ -441,8 +441,10 @@ watch(() => authKeyOptions.value, (options) => {
     }
 })
 
-watch(() => externalWallet.value.ready, (ready) => {
-    authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as Utxo[]
+watch(() => externalWallet.value.ready, (ready, readyPrev) => {
+    if (ready !== readyPrev) {
+        authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as Utxo[]
+    }
 })
 
 onMounted(() => {

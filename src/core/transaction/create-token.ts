@@ -64,7 +64,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
     }   
 
     const authguardContract = createAuthguardContract({
-        authKeyTokenId: authKeyToken!.category,
+        authkeyTokenId: authKeyToken!.category,
         network: params.network
     })
 
