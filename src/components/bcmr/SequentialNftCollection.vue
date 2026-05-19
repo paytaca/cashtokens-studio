@@ -1,32 +1,26 @@
 <template>
   <q-form>
-    <q-input v-model="nftCategory.description"></q-input>
-    <slot name="nftCollection">
-      <template v-if="(nftCategory.parse as any).bytecode">
-        <ParsableNftCollection v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionType)" />
-      </template>
-      <template v-else>
-        <SequentialNftCollection
-          v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionType)" />
-      </template>
+    <h6 class="q-my-sm">{{ t('label.registry.sequentialNftCollection') }}</h6>
+    <slot name="nftTypes">
+      <NftTypes v-model:nft-types="sequentialNftCollection.types" />
     </slot>
   </q-form>
   <!-- <div>
-    <div class="q-gutter-lg q-mt-lg">
-      <div class="text-h4 q-my-lg">{{ title }}</div>
-      <q-input v-if="nftCategory.description" v-model="nftCategory.description" label="Description" outlined></q-input>
-      <div v-if="nftCategory.fields" class="text-h5 q-my-lg">Fields</div>
-      <q-banner v-if="nftCategory.fields" style="background-color: #55454512; color:orange" class="rounded-borders">
-        <q-icon icon="warning"></q-icon>Sorry, the UI currently does not support adding fields. Please download the
-        registry and add the field values manually.
-      </q-banner>
-      <div class="text-h5 q-my-lg">Parse</div>
-      <q-input v-model="parseBytecode" label="Bytecode"
-        placeholder="Enter parsing bytecode. Leave this empty for sequential NFTs." outlined
-        :rules="[(v: string) => !v || /\b[0-9A-Fa-f]+\b/g.test(v) || 'Value must be a hex string']">
-        <template v-slot:prepend>
-          <span class="text-grey-8 text-italic">0x</span>
-        </template>
+      <div class="q-gutter-lg q-mt-lg">
+        <div class="text-h4 q-my-lg">{{ title }}</div>
+        <q-input v-if="nftCategory.description" v-model="nftCategory.description" label="Description" outlined></q-input>
+        <div v-if="nftCategory.fields" class="text-h5 q-my-lg">Fields</div>
+        <q-banner v-if="nftCategory.fields" style="background-color: #55454512; color:orange" class="rounded-borders">
+          <q-icon icon="warning"></q-icon>Sorry, the UI currently does not support adding fields. Please download the
+          registry and add the field values manually.
+        </q-banner>
+        <div class="text-h5 q-my-lg">Parse</div>
+        <q-input v-model="parseBytecode" label="Bytecode"
+          placeholder="Enter parsing bytecode. Leave this empty for sequential NFTs." outlined
+          :rules="[(v: string) => !v || /\b[0-9A-Fa-f]+\b/g.test(v) || 'Value must be a hex string']">
+          <template v-slot:prepend>
+            <span class="text-grey-8 text-italic">0x</span>
+          </template>
 </q-input>
 <div v-if="Object.keys(nftCategory.parse.types || {}).length > 0" class="text-h5 q-my-lg">
   {{ nftCollectionType == NFTCollectionType.sequential ? 'NFT Sequence#' : 'Bottom Alt Stack Hex' }}
@@ -44,16 +38,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed, defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type {
-  NftCategory,
-  ParsableNftCollection as ParsableNftCollectionType,
-  SequentialNftCollection as SequentialNftCollectionType
-} from 'src/core/bcmr/bcmr-v2.schema'
+import type { NftCategory, ParsableNftCollection, SequentialNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import { NFTCollectionType } from 'src/apps/bcmr/types';
 import NftTypeComponent from './NftType.vue'
-import ParsableNftCollection from './ParsableNftCollection.vue';
-import SequentialNftCollection from './SequentialNftCollection.vue';
 const { t } = useI18n()
 // function isParsableNftCollection(
 //   parse: SequentialNftCollection | ParsableNftCollection,
@@ -71,7 +60,7 @@ const { t } = useI18n()
 
 // defineComponent({ name: 'NftCategoryComponent' })
 // const props = defineProps<NftCategoryProps>()
-const nftCategory = defineModel<NftCategory>('nftCategory', { required: true })
+const sequentialNftCollection = defineModel<SequentialNftCollection>('sequentialNftCollection', { required: true })
 // const parseBytecode = computed({
 //   get: () => (isParsableNftCollection(nftCategory.value.parse) ? nftCategory.value.parse.bytecode : ''),
 //   set: (bytecode: string) => {

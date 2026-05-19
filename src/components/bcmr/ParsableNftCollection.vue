@@ -1,14 +1,9 @@
 <template>
   <q-form>
-    <q-input v-model="nftCategory.description"></q-input>
-    <slot name="nftCollection">
-      <template v-if="(nftCategory.parse as any).bytecode">
-        <ParsableNftCollection v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionType)" />
-      </template>
-      <template v-else>
-        <SequentialNftCollection
-          v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionType)" />
-      </template>
+    <h6 class="q-my-sm">{{ t('label.registry.parsableNftCollection') }}</h6>
+    <q-input v-model="parsableNftCollection.bytecode"></q-input>
+    <slot name="nftTypes">
+      <NftTypes v-model:nft-types="parsableNftCollection.types" />
     </slot>
   </q-form>
   <!-- <div>
@@ -44,16 +39,12 @@
 </template>
 
 <script setup lang="ts">
+import { computed, defineComponent } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type {
-  NftCategory,
-  ParsableNftCollection as ParsableNftCollectionType,
-  SequentialNftCollection as SequentialNftCollectionType
-} from 'src/core/bcmr/bcmr-v2.schema'
+import type { NftCategory, ParsableNftCollection, SequentialNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import { NFTCollectionType } from 'src/apps/bcmr/types';
 import NftTypeComponent from './NftType.vue'
-import ParsableNftCollection from './ParsableNftCollection.vue';
-import SequentialNftCollection from './SequentialNftCollection.vue';
+import NftTypes from './NftTypes.vue'
 const { t } = useI18n()
 // function isParsableNftCollection(
 //   parse: SequentialNftCollection | ParsableNftCollection,
@@ -71,7 +62,7 @@ const { t } = useI18n()
 
 // defineComponent({ name: 'NftCategoryComponent' })
 // const props = defineProps<NftCategoryProps>()
-const nftCategory = defineModel<NftCategory>('nftCategory', { required: true })
+const parsableNftCollection = defineModel<ParsableNftCollection>('parsableNftCollection', { required: true })
 // const parseBytecode = computed({
 //   get: () => (isParsableNftCollection(nftCategory.value.parse) ? nftCategory.value.parse.bytecode : ''),
 //   set: (bytecode: string) => {

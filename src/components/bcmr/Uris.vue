@@ -1,142 +1,154 @@
 <template>
   <div>
-    <div v-if="title" class="text-h6 q-my-lg flex items-center q-gutter-x-md">
-      <div class="q-gutter-x-xs"><q-icon name="link"></q-icon><span>{{ title || 'Links' }}</span></div>
-      <q-btn v-if="enableAddUri" @click="addUri" text-color="primary" icon="add"></q-btn>
-    </div>
-    <div class="q-col-gutter-y-md">
-      <div>
-        <!-- <q-file ref="iconFileRef" v-model="iconFile" accept=".jpg, .png, image/*"
-          @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
-          :disable="iconFileUploading" outlined bottom-slots class="hidden">
-        </q-file> -->
-        <q-file ref="iconFileRef" v-model="iconFile"
-          @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
-          :disable="iconFileUploading" outlined bottom-slots class="hidden">
-        </q-file>
-        <q-input v-model="uris!.icon" outlined bottom-slots label="Icon"
-          placeholder="Enter icon's URL or upload an icon">
+    <q-file ref="iconFileRef" v-model="iconFile"
+      @rejected="() => $q.notify({ message: 'File rejected, make sure to upload an image file!' })"
+      :disable="iconFileUploading" outlined bottom-slots class="hidden">
+    </q-file>
+    <slot name="header">
+      <div class="flex justify-between items-center">
+        <h5 class="q-my-sm text-bold q-gutter-x-sm">
+          <q-icon name="link"></q-icon><span>{{ t('label.registry.uris') }}</span>
+        </h5>
+        <q-toggle v-if="hideable" :false-value="true" :true-value="false" color="red" v-model="hidden" />
+      </div>
+    </slot>
+    <template v-if="uris && !hidden">
+      <FormField v-for="key, i in urisKeys" :key="i">
+        <q-label>{{ t(key) }}</q-label>
+        <q-input v-model="uris[key]" class="full-width" filled>
           <template v-slot:prepend>
-            <q-avatar v-if="uris!.icon">
-              <q-img :src="ipfsToGatewayUrl(uris!.icon)"></q-img>
+            <q-avatar v-if="key === 'icon' && uris.icon">
+              <q-img v-if="uris.icon" :src="iconDisplayUrl as string" />
             </q-avatar>
           </template>
-
           <template v-slot:append>
-            <div v-if="enableIconUpload" @click.stop="iconFileRef.pickFiles()">
+            <div v-if="key === 'icon' && enableIconUpload" @click.stop="iconFileRef.pickFiles()">
               <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
               <span v-else>
-                <q-btn icon="upload_file" class="cursor-pointer" text-color="warning" label="Upload Icon" dense
-                  no-caps />
+                <q-btn icon="upload_file" class="cursor-pointer" :label="t('button.upload')" dense />
               </span>
             </div>
           </template>
         </q-input>
-      </div>
-      <div v-if="uris.web != undefined">
-        <q-input label="Web" :model-value="uris['web']" @update:model-value="onUpdateModelValue"
-          @focus="selectedUriName = 'web'" outlined>
-          <template v-slot:after>
-            <q-btn icon="remove" @click="() => deleteUri('web')" text-color="negative"> </q-btn>
-          </template>
-        </q-input>
-      </div>
-      <div v-for="uriName, i in Object.keys(uris || {})" :key="'uris' + i">
-        <q-input v-if="uriName != 'icon' && uriName != 'asset' && uriName != 'web'" :label="uriName"
-          :model-value="uris[uriName]" @update:model-value="onUpdateModelValue" @focus="selectedUriName = uriName"
-          outlined>
-          <template v-slot:after>
-            <q-btn icon="remove" @click="() => deleteUri(uriName)" text-color="negative"></q-btn>
-          </template>
-        </q-input>
-      </div>
-      <div class="col-xs-12 col-sm-6">
-        <q-dialog v-model="dialog" @before-show="onBeforeDialogShow" @before-hide="onBeforeDialogHide" class="q-pa-lg">
-          <q-card style="min-width: 400px">
-            <q-card-section>
-              <div class="text-h6">Add Link</div>
-            </q-card-section>
-            <q-card-section class="q-pt-none q-gutter-lg">
-              <q-select v-model="selectedUriName" :options="options" label="Name" stack-label class="text-capitalize"
-                outlined />
-              <q-input :model-value="uris[selectedUriName]" @update:model-value="onUpdateModelValue" label="Enter a URL"
-                outlined autofocus />
-            </q-card-section>
-            <q-card-actions align="right" class="text-primary q-my-lg">
-              <q-btn label="Add" v-close-popup size="lg" />
-            </q-card-actions>
-          </q-card>
-        </q-dialog>
-      </div>
-    </div>
+      </FormField>
+      <FormField>
+        <div class="flex justify-end">
+          <q-btn icon="add" @click="addUri = true">{{ t('button.addUri') }}</q-btn>
+        </div>
+      </FormField>
+    </template>
+    <q-dialog v-model="addUri">
+      <q-card class="q-py-md">
+        <q-toolbar>
+          <q-avatar>
+            <q-icon name="link" size="lg"></q-icon>
+          </q-avatar>
+          <q-toolbar-title><span class="text-weight-bold">{{ t('button.addUri') }}</span>
+          </q-toolbar-title>
+          <q-btn flat round dense icon="close" v-close-popup />
+        </q-toolbar>
+        <q-card-section :style="$q.screen.xs ? 'min-width: 90vw' : 'min-width:40vw'">
+          <FormField>
+            <q-label>{{ t('label.registry.uriName') }}</q-label>
+            <q-select v-model="addUriKey" :options="addUriOptions" @filter="filterFn" use-input fill-input
+              input-debounce="0" hide-selected filled></q-select>
+          </FormField>
+          <FormField>
+            <q-label>{{ t('label.registry.uri') }}</q-label>
+            <q-input v-model="addUriValue" filled></q-input>
+          </FormField>
+        </q-card-section>
+        <q-card-actions align="right">
+          <q-btn color="primary" :disable="!addUriKey || !addUriValue"
+            @click="() => onAddUriClick(addUriKey!, addUriValue!)">{{ t('Add') }}</q-btn>
+        </q-card-actions>
+      </q-card>
+    </q-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { URIs } from 'mainnet-js'
-import { IconStorageArtifact, uploadIcon, upload as uploadToIPFS } from 'src/apps/ipfs';
-import { defineComponent, defineModel, ref, watch } from 'vue'
-import { ipfsToGatewayUrl, isSquareImage } from 'src/apps/utils'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { URIs } from 'src/core/bcmr/bcmr-v2.schema'
+import FormField from '../FormField.vue';
 import { useQuasar } from 'quasar';
-
+import { ipfsToGatewayUrl, uploadFile } from 'src/core/ipfs';
+const { t } = useI18n()
 const $q = useQuasar()
-const emit = defineEmits(['icon-file-uploading'])
-defineComponent({ name: 'UrisComponent' })
-export type UrisProps = {
-  title?: string,
-  /**
-   * Used as param when uploading icon
-   */
-  tokenId?: string,
+const props = defineProps<{
+  hideable?: boolean,
   enableIconUpload?: boolean,
-  enableAssetUpload?: boolean,
-  enableAddUri?: boolean
-}
-const props = defineProps<UrisProps>()
-const dialog = ref<boolean>()
-const options = [
-  'web',
-  'telegram',
-  'youtube',
-  'twitter',
-  'reddit',
-  'discord',
-  'blog',
-  'forum',
-  'chat',
-  'support',
-]
-const selectedUriName = ref<string>('web')
+  iconName?: string
+}>()
 const uris = defineModel<URIs>('uris', { required: true })
+const hidden = ref<boolean>(false)
+const urisKeys = computed(() => {
+  return Object.keys(uris.value || {})
+})
+const addUri = ref<boolean>(false)
+const addUriOptions = ref<string[]>()
+const addUriKey = ref<string>()
+const addUriValue = ref<string>()
+
 const iconFile = ref()
 const iconFileRef = ref()
 const iconPreviewUrl = ref()
 const iconFileUploading = ref<boolean>(false)
-const iconFileUploadArtifact = ref<IconStorageArtifact>()
 
-
-const addUri = () => {
-  dialog.value = true
-  selectedUriName.value = 'temp'
-}
-
-const deleteUri = (uriName: string) => {
-  delete uris.value[uriName]
-}
-
-
-const onUpdateModelValue = (v: string | number | null) => {
-  if (!uris.value) {
-    uris.value = {}
+const iconDisplayUrl = computed(() => {
+  const uri = uris.value?.icon
+  if (uri?.startsWith('ipfs://')) {
+    return `/api/ipfs/${uri.replace('ipfs://', '')}`
   }
-  uris.value[selectedUriName.value] = String(v)
+  return uri
+})
+
+const identitySnapshotUriOptionsSet = [
+  'icon',
+  'web',
+  'chat',
+  'image',
+  'migrate',
+  'support'
+]
+
+const socialUriOptionsSet = [
+  `discord`, `docker`,
+  `facebook`, `git`, `github`, `gitter`, `instagram`, `linkedin`, `matrix`,
+  `npm`, `reddit`, `slack`, `substack`, `telegram`, `twitter`, `wechat`,
+  `youtube`
+]
+
+const uriOptions = new Set(identitySnapshotUriOptionsSet.concat(socialUriOptionsSet))
+const existingUris = new Set(Object.keys(uris || {}))
+const uniqueOptions = [...uriOptions.difference(existingUris).values()]
+
+const filterFn = (val: string, update: any) => {
+  console.log('val', val, update)
+  if (val === '') {
+    update(() => {
+      addUriOptions.value = uniqueOptions
+    })
+    return
+  }
+  update(() => {
+    const needle = val.toLowerCase()
+    addUriOptions.value = uniqueOptions.filter(
+      v => v.toLowerCase().indexOf(needle) > -1
+    )
+  })
+}
+
+const onAddUriClick = (key: string, value: string) => {
+  uris.value[key] = value
+  addUri.value = false
 }
 
 watch(() => iconFile.value, async (v) => {
   if (v) {
-
-    const squareIcon = await isSquareImage(v)
-    if (!squareIcon) {
+    // const squareIcon = await isSquareImage(v)
+    if (!true) {
       $q.dialog({
         message: `Please provide a square icon. Recommended dimension is 400px by 400px.
         Icons should also be suitable for display against light and dark backgrounds. Transparency is supported.`
@@ -147,41 +159,18 @@ watch(() => iconFile.value, async (v) => {
       }
       iconPreviewUrl.value = URL.createObjectURL(iconFile.value)
       iconFileUploading.value = true
-      emit('icon-file-uploading', true)
       try {
-        const artifact = await uploadToIPFS(iconFile.value, { tokenId: props.tokenId ?? '' })
-        uris.value.icon = artifact?.uris.ipfs || ''
-
+        const uploadResponse = await uploadFile(iconFile.value, props.iconName || 'test.jpeg')
+        if (uploadResponse.cid) {
+          uris.value.icon = `ipfs://${uploadResponse.cid}`
+        }
       } catch (error) {
         console.log(error)
       } finally {
         iconFileUploading.value = false
-        emit('icon-file-uploading', false)
       }
     }
-
-
-
   }
 })
-
-
-const onBeforeDialogShow = () => {
-  if (!uris.value) {
-    uris.value = {}
-  }
-  for (const o of options) {
-    if (!uris.value[o]) {
-      selectedUriName.value = o
-      break
-    }
-  }
-}
-
-const onBeforeDialogHide = () => {
-  if (uris.value && !uris.value[selectedUriName.value]) {
-    delete uris.value[selectedUriName.value]
-  }
-}
 
 </script>

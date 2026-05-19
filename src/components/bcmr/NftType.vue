@@ -23,11 +23,13 @@
 </template>
 
 <script setup lang="ts">
-import { NftType } from 'mainnet-js'
-import { computed, defineComponent, defineModel } from 'vue'
-import Uris from './Uris.vue'
-import ExtensionsComponent from 'src/components/bcmr/Extensions.vue'
 
+import { computed, defineComponent } from 'vue'
+import { useI18n } from 'vue-i18n'
+import Uris from './Uris.vue'
+import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
+import ExtensionsComponent from 'src/components/bcmr/Extensions.vue'
+const { t } = useI18n()
 defineComponent({ name: 'NftTypeComponent' })
 
 const nftType = defineModel<NftType>('nftType', { required: true })

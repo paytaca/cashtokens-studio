@@ -1,65 +1,63 @@
 <template>
   <div>
-    <JsonEditor v-if="editor == 'json'" v-model="identitySnapshot" mode="text" class="jse-theme-dark" />
-    <div v-else>
-      <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
-      <q-section class="q-gutter-y-lg">
-        <q-input v-model="identitySnapshot.name" :label="labels?.name || 'Token Name *'" :placeholder="namePlaceholder"
-          required outlined :rules="[(v: any) => !!v || 'Required']" hide-bottom-space>
-        </q-input>
-        <q-input v-model="identitySnapshot.description" :label="labels?.description || 'Describe your token'"
-          :placeholder="descriptionPlaceholder" autogrow outlined aria-rowspan="2">
-        </q-input>
-      </q-section>
-      <q-section>
-        <slot name="token">
-          <TokenCategoryComponent v-if="identitySnapshot.token" v-model:token="identitySnapshot.token" :hide="hide" />
-        </slot>
-      </q-section>
-      <q-section>
-        <slot name="uris">
-          <UrisComponent v-if="identitySnapshot.uris" v-model:uris="identitySnapshot.uris" />
-        </slot>
-      </q-section>
-      <q-section>
-        <slot name="extensions">
-          <ExtensionsComponent v-if="identitySnapshot.extensions" v-model:extensions="identitySnapshot.extensions" />
-        </slot>
-      </q-section>
-
-    </div>
+    <slot name="header">
+      <div class="flex justify-between items-center">
+        <h5 class="q-my-sm text-bold q-gutter-x-sm">
+          <q-icon name="mdi-book-clock-outline"></q-icon><span>{{ t('label.registry.identitySnapshot') }}</span>
+        </h5>
+        <q-toggle :false-value="true" :true-value="false" color="red" v-model="identitySnapshotHidden" />
+      </div>
+    </slot>
+    <template v-if="!identitySnapshotHidden">
+      <FormField>
+        <q-label>{{ t('label.registry.name') }}</q-label>
+        <q-input v-model="identitySnapshot.name" class="full-width" filled></q-input>
+      </FormField>
+      <FormField>
+        <q-label>{{ t('label.registry.description') }}</q-label>
+        <q-input v-model="identitySnapshot.description" class="full-width" filled></q-input>
+      </FormField>
+      <FormField>
+        <q-label>{{ t('label.registry.status') }}</q-label>
+        <div class="flex">
+          <q-radio :model-value="identitySnapshot.status || 'active'" checked-icon="task_alt"
+            unchecked-icon="panorama_fish_eye" val="active" label="Active" color="green" />
+          <q-radio v-model="identitySnapshot.status" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"
+            val="inactive" label="Inactive" color="grey" disable />
+          <q-radio v-model="identitySnapshot.status" checked-icon="local_fire_department"
+            unchecked-icon="panorama_fish_eye" val="burned" label="Burned" color="orange" disable />
+        </div>
+        <!-- uncomment below if status change is supported -->
+        <!-- <div class="flex">
+          <q-radio v-model="identitySnapshot.status" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"
+            val="active" label="Active" color="green" />
+          <q-radio v-model="identitySnapshot.status" checked-icon="task_alt" unchecked-icon="panorama_fish_eye"
+            val="inactive" label="Inactive" color="grey" />
+          <q-radio v-model="identitySnapshot.status" checked-icon="local_fire_department"
+            unchecked-icon="panorama_fish_eye" val="burned" label="Burned" color="orange" />
+        </div> -->
+      </FormField>
+      <Uris v-model:uris="uris" :hideable="false" enable-icon-upload />
+    </template>
+    <slot name="token-category"></slot>
   </div>
 </template>
-
 <script setup lang="ts">
-import { computed, defineModel, ref } from 'vue'
-import type { IdentitySnapshot } from 'mainnet-js'
-import JsonEditor from 'json-editor-vue'
-import TokenCategoryComponent from './TokenCategory.vue'
-import UrisComponent from './Uris.vue'
-import ExtensionsComponent from './Extensions.vue'
-
-export type IdentitySnapshotProps = {
-  title?: string,
-  editor?: 'json' | 'form',
-  hide?: string[],
-  labels?: {
-    [field: string]: string
-  }
-}
-const props = defineProps<IdentitySnapshotProps>()
-const editor = ref<'json' | 'form'>(props.editor || 'form')
+import { onMounted, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { IdentitySnapshot, URIs } from 'src/core/bcmr/bcmr-v2.schema'
+import FormField from 'components/FormField.vue'
+import Uris from './Uris.vue'
+const { t } = useI18n()
 const identitySnapshot = defineModel<IdentitySnapshot>('identitySnapshot', { required: true })
-const namePlaceholder = computed(() => {
-  if (identitySnapshot.value?.token?.nfts) {
-    return 'E.g. My NFT, Bitcats NFT, CashNinjas NFT'
-  }
-  return 'E.g. `ACME Class A Shares`, `ACME Registry`, `Satoshi Nakamoto`, etc.'
+const identitySnapshotHidden = ref<boolean>(false)
+const uris = ref<URIs>({
+  icon: '',
+  web: ''
 })
-const descriptionPlaceholder = computed(() => {
-  if (identitySnapshot.value?.token?.nfts) {
-    return 'E.g. My NFT, is a collection of 1000 digital artworks...'
+onMounted(() => {
+  if (identitySnapshot.value?.uris) {
+    uris.value = identitySnapshot.value.uris
   }
-  return ''
 })
 </script>

@@ -1,55 +1,66 @@
 <template>
   <div>
-    <div class="q-gutter-lg q-my-lg">
-      <div v-if="title" class="text-h4 q-my-lg">{{ title }}</div>
-      <q-input v-if="!(hide || []).includes('category')" v-model="tokenCategory.category" label="Category *" outlined
-        readonly>
-        <template v-slot:append>
-          <CopyText :text="tokenCategory.category" />
-        </template>
-      </q-input>
-      <q-input label="Symbol *" placeholder="E.g. BITCATS-NFT, BANANA" :rules="symbolRules"
-        :model-value="tokenCategory.symbol"
-        @update:model-value="(v) => tokenCategory.symbol = String((v ?? '')).toUpperCase()" hide-bottom-space outlined>
-      </q-input>
-      <q-input v-if="!(hide || []).includes('decimals')" v-model="tokenCategory.decimals" label="Decimals" outlined
-        :rules="decimalsRules" hide-bottom-space>
-      </q-input>
-      <NftCategoryComponent v-if="tokenCategory.nfts && !(hide || []).includes('nfts')"
-        v-model:nft-category="tokenCategory.nfts" />
-    </div>
+    <slot name="header">
+      <div class="flex justify-between items-center">
+        <h5 class="q-my-sm text-bold q-gutter-x-sm">
+          <q-icon name="token"></q-icon><span>{{ t('label.registry.token') }}</span>
+        </h5>
+        <q-toggle :false-value="true" :true-value="false" color="red" v-model="hidden" />
+      </div>
+    </slot>
+    <template v-if="token && !hidden">
+      <FormField>
+        <q-label>Category</q-label>
+        <q-input v-model="token.category" class="full-width" filled></q-input>
+      </FormField>
+      <FormField>
+        <q-label>Symbol</q-label>
+        <q-input v-model="token.symbol" class="full-width" filled></q-input>
+      </FormField>
+      <FormField>
+        <q-label>Decimals</q-label>
+        <q-input v-model="token.decimals" class="full-width" filled></q-input>
+      </FormField>
+      <slot name="nftCategory">
+        <NftCategory v-if="token.nfts && Object.keys(token.nfts || {}).length > 0" v-model:nft-category="token.nfts" />
+      </slot>
+    </template>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, defineModel } from 'vue'
-import type { TokenCategory } from 'mainnet-js'
-import NftCategoryComponent from './NftCategory.vue';
+import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+import type { TokenCategory } from 'src/core/bcmr/bcmr-v2.schema'
+import NftCategory from './NftCategory.vue';
 import CopyText from '../CopyText.vue';
 import { default as reservedCryptoSymbols } from 'src/apps/bcmr/reserved-token-symbols-cryptocurrencies.json'
+import FormField from '../FormField.vue';
+const { t } = useI18n()
+// export type TokenCategoryProps = {
+//   title?: string,
+//   hide?: string[],
+//   labels?: {
+//     [field: string]: string
+//   }
+// }
 
-export type TokenCategoryProps = {
-  title?: string,
-  hide?: string[],
-  labels?: {
-    [field: string]: string
-  }
-}
-
-defineComponent({ name: 'TokenComponent' })
-defineProps<TokenCategoryProps>()
+// defineProps<TokenCategoryProps>()
 const reservedSymbols = reservedCryptoSymbols.concat(reservedCryptoSymbols)
-const tokenCategory = defineModel<TokenCategory>('token', { required: true })
+const token = defineModel<TokenCategory>('token', { required: true })
+const hidden = ref<boolean>(false)
 
-const symbolRules = [
-  (v: any) => !!v || 'Required',
-  (v: any) => /^[A-Z0-9][A-Z0-9-]*$/i
-    .test(v) || 'Invalid value.Symbol should only contain capitals letters A-Z, numbers 0-9 or - and start with a letter or number',
-  (v: any) => !reservedSymbols.includes(v) || 'Symbol is reserved',
-]
+// const symbolRules = [
+//   (v: any) => !!v || 'Required',
+//   (v: any) => /^[A-Z0-9][A-Z0-9-]*$/i
+//     .test(v) || 'Invalid value.Symbol should only contain capitals letters A-Z, numbers 0-9 or - and start with a letter or number',
+//   (v: any) => !reservedSymbols.includes(v) || 'Symbol is reserved',
+// ]
 
-const decimalsRules = [
-  (v: string | number) => (!v || (Number(v) >= 0 && Number(v) <= 18)) || 'Valid value is between 0 - 18 (inclusive)'
-]
+// const decimalsRules = [
+//   (v: string | number) => (!v || (Number(v) >= 0 && Number(v) <= 18)) || 'Valid value is between 0 - 18 (inclusive)'
+// ]
+
 
 </script>
