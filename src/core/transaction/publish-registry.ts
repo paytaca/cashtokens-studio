@@ -10,10 +10,15 @@ import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@b
 export type PublishRegistryParams = {
     authhead: UtxoWithAuthKey,
     funderUtxos: UtxoWithPath[],
+    registryPublicationData: {
+        contentHash: string,
+        uris: string[]
+    },
     network?: Network,
     authkeyRecipientAddress?: string,
     authheadRecipientAddress?: string,
-    userPrompt?: string
+    userPrompt?: string,
+
 }
 
 export function publishRegistry(params: PublishRegistryParams): SignTransactionRequest {
@@ -129,6 +134,7 @@ export function publishRegistry(params: PublishRegistryParams): SignTransactionR
     }
 
     transaction.addOutput(firstOutput)
+
     if (authkey) {
         const secondOutput = {
             to: authkeyRecipientTokenAddress,
@@ -138,6 +144,13 @@ export function publishRegistry(params: PublishRegistryParams): SignTransactionR
 
         transaction.addOutput(secondOutput)
     }
+
+    // Third output
+    transaction.addOpReturnOutput([
+        'BCMR', 
+        `0x${params.registryPublicationData.contentHash}`,
+        ...params.registryPublicationData.uris
+    ])
 
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 2n
