@@ -146,7 +146,7 @@
             <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
           </q-btn-group>
         </div>
-        <div v-if="wzWalletDiscovered" class="q-mx-sm">
+        <div v-if="wzWalletDiscovered || externalWallet.ready" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
             <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
@@ -157,7 +157,8 @@
               ">
               <template v-slot:label>
                 <q-avatar v-if="Boolean(wzWalletDiscovered)" rounded size="md">
-                  <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
+                  <q-img v-if="externalWallet.session?.walletIcon" :src="externalWallet.session?.walletIcon"></q-img>
+                  <q-icon v-else name="mdi-wizard-hat" color="primary"></q-icon>
                 </q-avatar>
                 <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
                   <q-img src="images/paytaca_icon.png"></q-img>
@@ -237,7 +238,7 @@
                         font-size: 1.1em;
                         letter-spacing: 2px;
                       ">
-                      {{ BigNumber(wzWallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
+                      {{ BigNumber(externalWallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
                     </q-item-label>
                     <q-item-label caption class="text-grey-6">
                       <q-icon name="content_copy" size="xs" class="q-mr-xs" />
@@ -288,7 +289,6 @@
         <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
           class="justify-right" dense flat />
       </div>
-
       <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
@@ -335,7 +335,6 @@
         <q-ajax-bar />
       </q-page-container>
     </q-scroll-area>
-
     <q-footer class="bg-grey-9 text-white">
       <div class="row items-center justify-center q-pa-sm">
         <div class="text-caption">
@@ -386,6 +385,7 @@ const {
   wzWalletDiscovered,
   wzWallet,
   wzDisconnect,
+  externalWallet
 } = useWizardConnect()
 
 eventBus?.on('updatedPendingMultisigTransactions', async () => {
@@ -461,26 +461,6 @@ watch(
     }
   }
 );
-
-watch(() => wzWalletDiscovered, async (v) => {
-  console.log('wzWalletDiscovered', v)
-  if (v) {
-    // const hdWallet = await wzGetHDWallet('receive')
-    // if (hdWallet) {
-    //   await hdWallet.scanMoreAddresses(50)
-    //   const balance = await hdWallet.getBalance()
-    //   console.log('Balance', balance)
-
-    // }
-
-    // const hdWalletChange = await wzGetHDWallet('change')
-    // if (hdWalletChange) {
-    //   await hdWalletChange.scanMoreAddresses(50)
-    //   const balance = await hdWalletChange.getBalance()
-    //   console.log('Balance hdWalletChange', balance)
-    // }
-  }
-})
 
 onMounted(async () => {
   const db = ClientDB.getInstance();
