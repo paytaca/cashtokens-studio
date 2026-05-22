@@ -1,7 +1,7 @@
 <template>
   <q-page class="row justify-evenly items-center">
     <div class="col-12">
-      <div v-if="wzWalletDiscovered" class="row justify-center q-pa-md q-gutter-md">
+      <div v-if="wzWalletDiscovered || externalWallet.ready" class="row justify-center q-pa-md q-gutter-md">
         <div class="col-12 text-center q-mb-md">
           <div class="text-center text-h4 text-weight-bold">
             <div>Welcome to</div>
@@ -67,6 +67,9 @@
               To get started, click here to connect your wallet thru WizardConnect.
             </div>
           </q-card-section>
+          <q-inner-loading :showing="wizardConnectInitializing">
+            <q-spinner-gears size="50px" color="primary" />
+          </q-inner-loading>
         </q-card>
       </div>
     </div>
@@ -93,7 +96,8 @@ const bannerSize = computed(() => {
 
 const {
   wzWalletDiscovered,
-  wzState,
+  wizardConnectInitializing,
+  externalWallet,
   wzStartRelay
 } = useWizardConnect()
 
