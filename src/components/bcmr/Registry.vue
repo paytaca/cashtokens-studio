@@ -1,25 +1,34 @@
 <template>
-  <div class="row justify-center">
+  <div class="row justify-center q-gutter-y-md">
     <div class="col-xs-12">
       <slot name="header">
         <div class="flex justify-between items-center">
-          <h5 class="q-my-sm text-bold q-gutter-x-sm">
-            <q-icon name="mdi-file-document-multiple"></q-icon><span>{{ t('label.registry.registry') }}</span>
-          </h5>
+          <div class="flex items-center">
+            <h5 class="q-my-sm text-bold q-gutter-x-sm">
+              <q-icon name="mdi-file-document-multiple"></q-icon>
+              <span>
+                {{ t('label.registry.registry') }}
+              </span>
+            </h5>
+            <q-label v-if="registryModified" class="text-caption text-warning">[{{ t('label.modified') }}]</q-label>
+          </div>
           <q-toggle :false-value="true" :true-value="false" color="red" v-model="registryHidden" />
         </div>
       </slot>
       <template v-if="registry && !registryHidden">
         <FormField>
           <q-label>{{ t('label.registry.schema') }}</q-label>
-          <q-input :model-value="registry.$schema" class="full-width" filled></q-input>
+          <q-input v-model="registry.$schema" class="full-width" filled></q-input>
         </FormField>
         <FormField>
           <q-label>{{ t('label.registry.version') }}</q-label>
           <div class="row q-gutter-x-md">
-            <q-input v-model="registry.version.major" label="Major" class="col-3" filled></q-input>
-            <q-input v-model="registry.version.minor" label="Minor" class="col-3" filled></q-input>
-            <q-input v-model="registry.version.patch" label="Patch" class="col-3" filled></q-input>
+            <q-input v-model="registry.version.major" label="Major" class="col-3" type="number" filled disable
+              required></q-input>
+            <q-input v-model="registry.version.minor" label="Minor" class="col-3" type="number" filled disable
+              required></q-input>
+            <q-input v-model="registry.version.patch" label="Patch" class="col-3" type="number" filled disable
+              required></q-input>
           </div>
         </FormField>
         <FormField>
@@ -40,50 +49,48 @@
         </div>
         <FormField v-if="isOnchainRegistryIdentity">
           <q-label>{{ t('label.registry.authbase') }}</q-label>
-          <q-select v-if="identitiesOptions.length > 0" :model-value="registryIdentity" :options="identitiesOptions"
-            class="full-width" @update:model-value="onRegistryIdentityChange" filled style="max-width:90vw">
+          <q-select v-if="identitiesOptions.length > 0" :model-value="selectedAuthbase" :options="identitiesOptions"
+            class="full-width" @update:model-value="selectIdentitiesAuthbase" filled style="max-width:90vw">
           </q-select>
         </FormField>
         <FormField>
           <q-label>{{ t('label.registry.identityHistory') }}</q-label>
-          <q-select :model-value="identityHistoryTimestamp" :options="identityHistoryTimestampOptions"
-            @update:model-value="onTimestampChange" class="full-width" filled style="max-width:90vw" bottom-slots>
-            <template v-if="identityHistoryUnpublishedTimestamp === identityHistoryTimestamp" v-slot:prepend>
+          <q-select :model-value="selectedIdentityHistoryTimestamp" :options="identityHistoryTimestampOptions"
+            @update:model-value="selectIdentityHistoryTimestamp" class="full-width" filled style="max-width:90vw"
+            bottom-slots>
+            <template v-if="identitySnapshotModified" v-slot:prepend>
               <q-icon name="priority_high" color="warning"></q-icon>
             </template>
             <template v-slot:hint>
-              <div v-if="identityHistoryUnpublishedTimestamp === identityHistoryTimestamp" class="flex items-center">
+              <div v-if="identitySnapshotModified" class="flex items-center">
                 <span class="text-warning">{{ t('label.registry.unpublished') }}</span>
               </div>
-            </template>
-            <template v-slot:after>
-              <q-btn v-if="!identityHistoryUnpublishedTimestamp" icon="add" :label="t('button.add')"
-                @click="() => onAddIdentityHistory()">
-              </q-btn>
-              <q-btn v-else icon="history" :label="t('button.reset')" @click="() => onResetIdentityHistory()">
-              </q-btn>
             </template>
           </q-select>
         </FormField>
       </template>
-      <slot name="identity-snapshot"></slot>
-      <FormField v-if="registryModified">
-        <q-btn color="primary" @click="onPublishClick">{{ t('button.publishChanges') }}</q-btn>
-      </FormField>
+      <slot name="identity-snapshot">
+        <IdentitySnapshotComponent v-if="identitySnapshot" v-model:identity-snapshot="identitySnapshot"
+          @changed="onIdentitySnapshotModified" :mode="selectedTimestampIsMostRecent ? 'write' : 'read'" />
+      </slot>
+    </div>
+    <div class="col-xs-12 flex justify-end">
+      <q-btn icon="cloud_upload" color="primary" @click="onPublishClick" :disable="!registryModified">
+        {{ t('button.publishChanges') }}
+      </q-btn>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, ref, computed, onMounted, watch, nextTick } from 'vue'
+import { defineComponent, ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import type { Registry, IdentityHistory, OffChainRegistryIdentity, IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
-// import JsonEditor from 'json-editor-vue'
+import type { Registry, IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import FormField from 'components/FormField.vue'
-import IdentityHistoryStrategyDialog from './IdentityHistoryStrategyDialog.vue'
 import { useQuasar } from 'quasar'
-import IdentityHistoryAddOptionsDialog from './IdentityHistoryAddOptionsDialog.vue'
-
+import IdentitySnapshotComponent from './IdentitySnapshot.vue'
+import RegistryVersionOptionsDialog from './RegistryVersionOptionsDialog.vue'
+import { bumpRegistry, BumpRegistryParams } from 'src/core/bcmr/bump-registry'
 const { t } = useI18n()
 const $q = useQuasar()
 
@@ -96,22 +103,39 @@ export type RegistryProps = {
 }
 
 const props = defineProps<RegistryProps>()
-const registry = defineModel<Registry>('registry', { required: false })
-const registryIdentity = ref<string | OffChainRegistryIdentity>()
+const registry = defineModel<Registry>('registry', { required: true })
 const registryModified = ref<boolean>(false)
 const registryOriginalCopy = ref<Registry>()
+const registryOriginalVersion = ref<{ major: number, minor: number, patch: number }>()
+const registryCopied = ref<boolean>(false)
 const registryHidden = ref<boolean>(false)
+
+const selectedAuthbase = ref<string>()
+const selectedIdentityHistoryTimestamp = ref<string>()
+
 const identitySnapshot = ref<IdentitySnapshot>()
-const identityHistory = ref<IdentityHistory>()
-const identityHistoryTimestamp = ref<string>()
-const identityHistoryUnpublishedTimestamp = ref<string>()
-const identityHistoryResetTriggered = ref<boolean>(false)
+const identitySnapshotModified = ref<boolean>()
+
+
 const identityHistoryTimestampOptions = computed(() => {
-  return Object.keys(identityHistory.value || {}).sort((a, b) => b.localeCompare(a))
+  if (selectedAuthbase.value) {
+    return Object.keys(registry.value!.identities![selectedAuthbase.value] || {}).sort((a, b) => b.localeCompare(a))
+  }
+  return []
 })
+
+const selectedTimestampIsMostRecent = computed(() => {
+  if (selectedIdentityHistoryTimestamp.value && identityHistoryTimestampOptions.value.indexOf(selectedIdentityHistoryTimestamp.value) === 0) {
+    return true
+  }
+  return false
+})
+
+
 const identitiesOptions = computed(() => {
   return Object.keys(registry.value?.identities || {})
 })
+
 const hasIdentities = computed(() => {
   return identitiesOptions.value.length > 0
 })
@@ -130,124 +154,81 @@ const emit = defineEmits<{
   (e: 'publish', registry: Registry): void,
 }>()
 
-const onRegistryIdentityChange = (selectedRegistryIdentity: string) => {
-  registryIdentity.value = selectedRegistryIdentity as string
-  if (isOnchainRegistryIdentity.value) {
-    identityHistory.value = registry.value!.identities![selectedRegistryIdentity]
-    identityHistoryTimestamp.value = identityHistoryTimestampOptions.value[0]
-    onTimestampChange(identityHistoryTimestamp.value!)
-  }
-  emit('update:registryIdentity', selectedRegistryIdentity)
+
+const selectIdentitiesAuthbase = (authbase: string) => {
+  selectedAuthbase.value = authbase
+  selectIdentityHistoryTimestamp(identityHistoryTimestampOptions.value[0] as string)
 }
 
-const onTimestampChange = (selectedIdentityHistoryTimestamp: string) => {
-  identityHistoryTimestamp.value = selectedIdentityHistoryTimestamp
-  identitySnapshot.value =
-    registry.value!.identities![registryIdentity.value as string]![selectedIdentityHistoryTimestamp]
-  emit('update:identityHistoryTimestamp', selectedIdentityHistoryTimestamp)
+const selectIdentityHistoryTimestamp = (timestamp: string) => {
+  selectedIdentityHistoryTimestamp.value = timestamp
+  identitySnapshot.value = registry.value.identities![selectedAuthbase.value!]![timestamp]
 }
 
 const onPublishClick = () => {
+
   $q.dialog({
-    component: IdentityHistoryStrategyDialog,
+    component: RegistryVersionOptionsDialog,
     componentProps: {
-      version: Object.values(registry.value?.version || {}),
-      latestRevision: new Date().toISOString(),
-      newRevision: new Date().toISOString(),
-      okLabel: 'Ok'
+      currentRegistryVersion: registryOriginalVersion.value
     }
-  }).onOk((strategy: 'keep-all' | 'latest-only') => {
-    if (strategy === 'latest-only') {
-      const timestamp = identityHistoryTimestampOptions.value[0]
-      const latestIdentitySnapshot = registry.value!.identities![registryIdentity.value! as string]![timestamp!]
-      const unpublishedRegistry = JSON.parse(JSON.stringify(registry.value!))
-      unpublishedRegistry.identities = {
-        [timestamp as string]: latestIdentitySnapshot
-      }
-      return emit('publish', unpublishedRegistry as Registry)
-    }
-    emit('publish', registry.value as Registry) // Published currently modified registry
-  })
-}
+  }).onOk((version: any) => {
 
-const addIdentitySnapshot = (strategy: 'copy-most-recent' | 'create-new') => {
-  identityHistoryUnpublishedTimestamp.value = new Date().toISOString()
-  if (strategy === 'copy-most-recent') {
-    registry.value!.identities![registryIdentity.value! as string]![identityHistoryUnpublishedTimestamp.value] =
-      JSON.parse(JSON.stringify(registry.value!.identities![registryIdentity.value! as string]![identityHistoryTimestamp.value!] as IdentitySnapshot))
-  }
-  if (strategy === 'create-new') {
-    registry.value!.identities![registryIdentity.value! as string]![identityHistoryUnpublishedTimestamp.value] = {
-      name: '',
-      description: '',
-      token: {
-        category: '',
-        symbol: '',
-        decimals: 0,
-      },
-      uris: {
-        icon: '',
-        web: ''
+    const bumpRegistryArgs: BumpRegistryParams = {
+      unpublished: registry.value as Registry,
+      published: registryOriginalCopy.value as Registry,
+      bumpType: version.bumpType,
+      newVersion: version.version
+    }
+
+    if (identitySnapshotModified.value) {
+      bumpRegistryArgs.unpublishedModifiedIdentityHistory = {
+        authbase: selectedAuthbase.value as string,
+        timestamp: selectedIdentityHistoryTimestamp.value as string
       }
     }
-  }
-  onTimestampChange(identityHistoryUnpublishedTimestamp.value)
-}
+    const unpublished = bumpRegistry(bumpRegistryArgs)
 
-const onAddIdentityHistory = (strategy?: 'copy-most-recent' | 'create-new') => {
-  if (identityHistoryUnpublishedTimestamp.value) return
-  if (strategy) {
-    return addIdentitySnapshot(strategy)
-  }
-  $q.dialog({
-    component: IdentityHistoryAddOptionsDialog,
-  }).onOk((strategy: 'copy-most-recent' | 'create-new') => {
-    addIdentitySnapshot(strategy)
+    emit('publish', unpublished)
   })
 }
 
-const onResetIdentityHistory = () => {
-  identityHistoryResetTriggered.value = true
-  if (isOnchainRegistryIdentity.value && identityHistoryUnpublishedTimestamp.value) {
-    delete registry.value!.identities![registryIdentity.value! as string]![identityHistoryUnpublishedTimestamp.value as string]
-    identityHistoryUnpublishedTimestamp.value = ''
-    onRegistryIdentityChange(registryIdentity.value as string)
-  }
+const onIdentitySnapshotModified = (isModified: boolean) => {
+  registryModified.value = isModified
+  identitySnapshotModified.value = isModified
 }
 
-watch(
-  () => {
-    const { identities, ...rest } = registry.value || {}
-    return JSON.parse(JSON.stringify(rest))
-  }, (newVal, oldVal) => {
-    if (!oldVal) return
-    if (!registryOriginalCopy.value) {
-      registryOriginalCopy.value = JSON.parse(JSON.stringify(oldVal)) as Registry
-      registryModified.value = true
+const unwatchRegistry = watch(() => registry.value, (newVal, oldVal) => {
+  if (newVal && !oldVal && !registryOriginalCopy.value) {
+    registryOriginalCopy.value = JSON.parse(JSON.stringify(newVal)) as Registry
+    registryOriginalVersion.value = JSON.parse(JSON.stringify(newVal.version))
+    registryCopied.value = true
+    if (hasIdentities.value) {
+      if (isOnchainRegistryIdentity) {
+        selectIdentitiesAuthbase(registry.value.registryIdentity as string)
+      }
     }
-  })
+    return
+  }
 
-// Watch for any modification of identities
-watch(
-  () => {
-    return registry.value?.identities
-  }, (newVal, oldVal) => {
-    if (!registryOriginalCopy.value) {
-      registryOriginalCopy.value = JSON.parse(JSON.stringify(registry.value)) as Registry
-      registryModified.value = true
-    }
-    if (identityHistoryResetTriggered.value) {
-      identityHistoryResetTriggered.value = false
-      return
-    }
-    // Auto copy most recent if any field is modified
-    onAddIdentityHistory('copy-most-recent')
-  }, { deep: true })
+  if (newVal && oldVal) {
+    registryModified.value = true
+  }
 
-onMounted(() => {
-  console.log('Mounted', isOnchainRegistryIdentity.value, hasIdentities.value)
-  if (isOnchainRegistryIdentity.value && hasIdentities.value) {
-    onRegistryIdentityChange(registry.value!.registryIdentity as string)
+}, { deep: true, immediate: true })
+
+
+const unwatchRegistryModified = watch(registryModified, (isModified) => {
+  if (isModified) {
+    unwatchRegistry()
+    unwatchRegistryModified()
   }
 })
+
+watch(() => selectedAuthbase.value, (authbase) => {
+  if (authbase) {
+    selectIdentityHistoryTimestamp(identityHistoryTimestampOptions.value[0] as string)
+  }
+})
+
 </script>
