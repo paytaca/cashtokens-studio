@@ -12,8 +12,9 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     change?: HDWallet | undefined
     defi?: HDWallet | undefined 
     ready: boolean | undefined;
-    private balance: bigint | undefined 
+    balance: bigint | undefined 
     utxos: UtxoWithPath[] | undefined
+    session: any | undefined
 
     constructor(options?: { ready?: boolean }) {
         this.ready = options?.ready
@@ -24,6 +25,7 @@ export class WizardConnectExternalWallet implements ExternalWallet {
             this.ready = false 
             return 
         }
+        this.session = session
         const receiveXPub = session.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
         const changeXPub = session.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
         const defiXPub = session.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
