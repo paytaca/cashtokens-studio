@@ -8,6 +8,7 @@ import type {
 import { HDWallet, Utxo } from 'mainnet-js-v3';
 import { useQuasar } from 'quasar';
 import { computed, onMounted, ref, toRaw, watch } from 'vue';
+import { useI18n } from 'vue-i18n'
 // import { getDappMgr } from 'src/apps/wizard-connect/connection-manager';
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
 import { getHDWalletClass } from 'src/apps/utils';
@@ -43,11 +44,13 @@ const relayStartAttempted = ref<boolean>()
 const wzWallet = ref<WZWallet>({ ready: false })
 const wzRelayConn = ref()
 const externalWallet = ref<ExternalWallet>(new WizardConnectExternalWallet()) 
+const wizardConnectInitializing = ref<boolean>()
 
-  
+
+
 export const useWizardConnect = () => {
   const $q = useQuasar()
-  
+  const { t } = useI18n()
   const wzWalletAuthKeyUtxos = computed(() => {
     return filterAuthKeys(wzWallet.value?.utxos || [])
   })
@@ -85,9 +88,20 @@ export const useWizardConnect = () => {
             wzWallet.value.ready = true 
             if (!externalWallet.value.ready) { 
                 externalWallet.value.ready = true 
-                await (externalWallet.value as WizardConnectExternalWallet).initWallet( 
-                    msg.session.hdwalletv1 as { paths: PathXpub[] } 
-                ) 
+                try {
+                  wizardConnectInitializing.value = true
+                  await (externalWallet.value as WizardConnectExternalWallet).initWallet( 
+                      msg.session.hdwalletv1 as { paths: PathXpub[] } 
+                  )   
+                } catch (error) {
+                  $q.notify({
+                    type: 'error',
+                    message: t('error.initializingWizardConnectWallet')
+                  })
+                } finally {
+                  wizardConnectInitializing.value = true
+                }
+                
             } 
         } 
       } 
@@ -335,14 +349,25 @@ export const useWizardConnect = () => {
   })
 
   onMounted(async () => {
-    const storedSession = loadSession()
-    if (!storedSession || !storedSession.walletPublicKey) return
-    if (storedSession.paths) {
-      await wzInitWallet(storedSession as { paths: PathXpub[] })
-      await (externalWallet.value as WizardConnectExternalWallet).initWallet(storedSession)
+    try {
+      wizardConnectInitializing.value = true
+      const storedSession = loadSession()
+      if (!storedSession || !storedSession.walletPublicKey) return
+      if (storedSession.paths) {
+        await wzInitWallet(storedSession as { paths: PathXpub[] })
+        await (externalWallet.value as WizardConnectExternalWallet).initWallet(storedSession)
+      }
+      if (relayStartAttempted.value) return
+      await wzStartRelay(storedSession)   
+    } catch (error) {
+      $q.notify({
+        type: 'error',
+        message: t('error.initializingWizardConnectWallet')
+      })
+    } finally {
+      wizardConnectInitializing.value = false
     }
-    if (relayStartAttempted.value) return
-    await wzStartRelay(storedSession) 
+    
   });
 
   return {
@@ -354,6 +379,7 @@ export const useWizardConnect = () => {
     wzWallet,
     wzWalletAuthKeyUtxos,
     wzWalletGenesisInputUtxos,
+    wizardConnectInitializing,
     wzStartRelay,
     wzDisconnect,
     wzWalletGetUtxos,
