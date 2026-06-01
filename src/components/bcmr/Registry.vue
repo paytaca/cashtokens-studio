@@ -69,13 +69,20 @@
           </q-select>
         </FormField>
       </template>
-      <slot name="identity-snapshot">
+      <slot name="identity-snapshot" :on-changed="onIdentitySnapshotModified">
         <IdentitySnapshotComponent v-if="identitySnapshot" v-model:identity-snapshot="identitySnapshot"
           @changed="onIdentitySnapshotModified" :mode="selectedTimestampIsMostRecent ? 'write' : 'read'" />
       </slot>
     </div>
+    <div>
+    </div>
     <div class="col-xs-12 flex justify-end">
-      <q-btn icon="cloud_upload" color="primary" @click="onPublishClick" :disable="!registryModified">
+      <q-btn icon="cloud_upload" color="primary" @click="emit('saved', true)"
+        :disable="!registryModified || !identitySnapshotModified">
+        {{ t('button.save') }}
+      </q-btn>
+      <q-btn icon="cloud_upload" color="primary" @click="onPublishClick"
+        :disable="!registryModified && !identitySnapshotModified">
         {{ t('button.publishChanges') }}
       </q-btn>
     </div>
@@ -91,6 +98,8 @@ import { useQuasar } from 'quasar'
 import IdentitySnapshotComponent from './IdentitySnapshot.vue'
 import RegistryVersionOptionsDialog from './RegistryVersionOptionsDialog.vue'
 import { bumpRegistry, BumpRegistryParams } from 'src/core/bcmr/bump-registry'
+import { CompactRegistry } from 'src/core/client-db.js'
+import type { PublicationStrategy } from './types.js'
 const { t } = useI18n()
 const $q = useQuasar()
 
@@ -103,7 +112,7 @@ export type RegistryProps = {
 }
 
 const props = defineProps<RegistryProps>()
-const registry = defineModel<Registry>('registry', { required: true })
+const registry = defineModel<CompactRegistry>('registry', { required: true })
 const registryModified = ref<boolean>(false)
 const registryOriginalCopy = ref<Registry>()
 const registryOriginalVersion = ref<{ major: number, minor: number, patch: number }>()
@@ -116,10 +125,9 @@ const selectedIdentityHistoryTimestamp = ref<string>()
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotModified = ref<boolean>()
 
-
 const identityHistoryTimestampOptions = computed(() => {
   if (selectedAuthbase.value) {
-    return Object.keys(registry.value!.identities![selectedAuthbase.value] || {}).sort((a, b) => b.localeCompare(a))
+    return registry.value!.identities![selectedAuthbase.value]!.sort((a, b) => b.localeCompare(a))
   }
   return []
 })
@@ -130,7 +138,6 @@ const selectedTimestampIsMostRecent = computed(() => {
   }
   return false
 })
-
 
 const identitiesOptions = computed(() => {
   return Object.keys(registry.value?.identities || {})
@@ -151,18 +158,23 @@ const isOnchainRegistryIdentity = computed(() => {
 const emit = defineEmits<{
   (e: 'update:identityHistoryTimestamp', identityHistoryTimestamp: string): void,
   (e: 'update:registryIdentity', registryIdentity: string): void,
-  (e: 'publish', registry: Registry): void,
+  (e: 'update:authbase', authbase: string): void,
+  (e: 'changed', modified: boolean): void,
+  (e: 'saved', modified: boolean): void,
+  (e: 'publish', strategy: PublicationStrategy): void | Promise<void>
+
 }>()
 
 
 const selectIdentitiesAuthbase = (authbase: string) => {
   selectedAuthbase.value = authbase
+  emit('update:authbase', authbase)
   selectIdentityHistoryTimestamp(identityHistoryTimestampOptions.value[0] as string)
 }
 
 const selectIdentityHistoryTimestamp = (timestamp: string) => {
   selectedIdentityHistoryTimestamp.value = timestamp
-  identitySnapshot.value = registry.value.identities![selectedAuthbase.value!]![timestamp]
+  emit('update:identityHistoryTimestamp', timestamp)
 }
 
 const onPublishClick = () => {
@@ -173,28 +185,14 @@ const onPublishClick = () => {
       currentRegistryVersion: registryOriginalVersion.value
     }
   }).onOk((version: any) => {
-
-    const bumpRegistryArgs: BumpRegistryParams = {
-      unpublished: registry.value as Registry,
-      published: registryOriginalCopy.value as Registry,
+    emit('publish', {
       bumpType: version.bumpType,
       newVersion: version.version
-    }
-
-    if (identitySnapshotModified.value) {
-      bumpRegistryArgs.unpublishedModifiedIdentityHistory = {
-        authbase: selectedAuthbase.value as string,
-        timestamp: selectedIdentityHistoryTimestamp.value as string
-      }
-    }
-    const unpublished = bumpRegistry(bumpRegistryArgs)
-
-    emit('publish', unpublished)
+    })
   })
 }
 
 const onIdentitySnapshotModified = (isModified: boolean) => {
-  registryModified.value = isModified
   identitySnapshotModified.value = isModified
 }
 
@@ -213,6 +211,7 @@ const unwatchRegistry = watch(() => registry.value, (newVal, oldVal) => {
 
   if (newVal && oldVal) {
     registryModified.value = true
+    emit('changed', true)
   }
 
 }, { deep: true, immediate: true })
