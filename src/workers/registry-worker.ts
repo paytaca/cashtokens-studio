@@ -3,7 +3,6 @@ import { CompactRegistry, db, IdentitySnapshotRecord, ParsedRegistryRecord, Regi
 import { retrieveLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
 import { IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues } from 'src/core/bcmr/bcmr-v2.schema';
-import { PublicationStrategy } from 'src/components/bcmr/types';
 import { uploadFile } from 'src/core/ipfs';
 import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
 
@@ -59,8 +58,6 @@ const registryWorker = {
       if (!uris.length) return
 
       const existing = await db.registry.where('contentHash').equals(contentHash).first();
-        console.log('EXISTING', existing)
-
         if(existing) {
           const { rawRegistry, ...rest } = existing
           const parsedRegistry = await this.parseRegistry(rawRegistry, true)
@@ -113,7 +110,7 @@ const registryWorker = {
               if (identitySnapshot.token?.category) {
                 identitySnapshotRecord.category = identitySnapshot.token.category
               }
-
+              // Just loads the latest
               await db.registryIdentitySnapshot.put(identitySnapshotRecord)
             }
           }
@@ -150,10 +147,40 @@ const registryWorker = {
           .first();
 
         if (queryResult) return queryResult
-      }
-      
-      if (!params.category) throw new Error('Identity or category required')
 
+        // Snapshot not cached yet - parse from rawRegistry and store it
+        const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
+        if (registryRecord?.rawRegistry) {
+          const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
+          const identitySnapshot = parsedRegistry.identities?.[params.identity.authbase]?.[params.identity.timestamp]
+
+          if (identitySnapshot) {
+            // Strip nft types from snapshot (matching getRegistry behavior)
+            const snapshot = JSON.parse(JSON.stringify(identitySnapshot)) as IdentitySnapshot
+            if (snapshot.token?.nfts?.parse?.types) {
+              snapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
+            }
+
+            const identitySnapshotRecord = {
+              contentHash: params.contentHash,
+              authbase: params.identity.authbase,
+              timestamp: params.identity.timestamp,
+              identitySnapshot: snapshot
+            } as IdentitySnapshotRecord
+
+            if (snapshot.token?.category) {
+              identitySnapshotRecord.category = snapshot.token.category
+            }
+
+            await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+            return identitySnapshotRecord
+          }
+        }
+      }
+
+      if (!params.category) throw new Error('Identity or category required')
+      
+      // Return the default latest identitySnapshot
       return await db.registryIdentitySnapshot
           .where('category')
           .equals(params.category)
@@ -233,12 +260,7 @@ const registryWorker = {
     // } [] 
   }): Promise<{uris: string[], contentHash: string}|undefined> {
 
-    console.log('params', params)
-    // const { identities: compactedIdentities, ...restOfRegistry} = params.registry
-    // const registry = structuredClone(restOfRegistry as Registry)
-    
     const registryRecord = await db.registry.where('contentHash').equals(params.originalContentHash).first()
-    console.log('RegistryRecord', registryRecord)
     if (!registryRecord?.rawRegistry) {
         return
     }
@@ -296,8 +318,6 @@ const registryWorker = {
       })
     }
 
-    
-
     let contentHash: string
     let uris: string[]
     let jsonBlob: Blob
@@ -314,7 +334,7 @@ const registryWorker = {
         contentHash = binToHex(sha256.hash(utf8ToBin(rebuiltJson)))
         uris = [`ipfs://${artifact.cid}`]
         await db.registry.update(registryRecord.id!, {
-          bumpArtifact: { contentHash, uris, cid: artifact.cid }
+          bumpArtifact: { contentHash, uris, cid: artifact.cid, registry: jsonBlob}
         })
       } else {
         jsonBlob = new Blob([rebuiltJson], { type: 'application/json' })
@@ -326,7 +346,7 @@ const registryWorker = {
       contentHash = binToHex(sha256.hash(utf8ToBin(jsonString)))
       uris = [`ipfs://${artifact.cid}`]
       await db.registry.update(registryRecord.id!, {
-        bumpArtifact: { contentHash, uris, cid: artifact.cid }
+        bumpArtifact: { contentHash, uris, cid: artifact.cid, registry: jsonBlob }
       })
     }
 
@@ -334,7 +354,76 @@ const registryWorker = {
       contentHash,
       uris
     }
+  },
+
+  async commitBumpRegistry(oldContentHash: string, newAuthhead: string): Promise<ParsedRegistryRecord | undefined> {
+    const registryRecord = await db.registry.where('contentHash').equals(oldContentHash).first();
+
+    if (!registryRecord || !registryRecord.bumpArtifact?.registry) return
+    if (!registryRecord.bumpArtifact.contentHash || !registryRecord.bumpArtifact.uris) return
+
+    const newContentHash = registryRecord.bumpArtifact.contentHash
+    const newUris = registryRecord.bumpArtifact.uris
+    const newRawRegistry = registryRecord.bumpArtifact.registry
+
+    const parsedRegistry = await this.parseRegistry(newRawRegistry, false) as Registry
+    const compactParsedRegistry = await this.parseRegistry(newRawRegistry, true) as CompactRegistry
+
+    return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot, db.nfts], async () => {
+      // Delete old records with oldContentHash
+      await db.registryIdentitySnapshot.where('contentHash').equals(oldContentHash).delete()
+      await db.nfts.where('contentHash').equals(oldContentHash).delete()
+
+      if (parsedRegistry.identities) {
+        const identities = Object.keys(parsedRegistry.identities || {})
+        for (const authbase of identities) {
+          const identityHistory = Object.keys(parsedRegistry.identities[authbase] || {})
+          identityHistory.sort((a, b) => b.localeCompare(a))
+          const latest = identityHistory[0] as string
+          const identitySnapshot = parsedRegistry.identities![authbase]![latest] as IdentitySnapshot
+          if (identitySnapshot.token?.nfts?.parse?.types) {
+            identitySnapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
+          }
+
+          const identitySnapshotRecord = {
+            contentHash: newContentHash,
+            authbase: authbase,
+            timestamp: latest,
+            identitySnapshot: identitySnapshot,
+            modified: false
+          } as IdentitySnapshotRecord
+
+          if (identitySnapshot.token?.category) {
+            identitySnapshotRecord.category = identitySnapshot.token.category
+          }
+
+          await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+        }
+      }
+
+      // Update existing registry record with new data from bumpArtifact
+      await db.registry.update(registryRecord.id!, {
+        contentHash: newContentHash,
+        publicationUris: newUris,
+        rawRegistry: newRawRegistry,
+        registry: compactParsedRegistry,
+        authhead: newAuthhead,
+        bumpArtifact: undefined,
+        modified: undefined,
+        created: undefined
+      })
+
+      return {
+        id: registryRecord.id,
+        authbase: registryRecord.authbase,
+        contentHash: newContentHash,
+        publicationUris: newUris,
+        registry: compactParsedRegistry
+      } as ParsedRegistryRecord
+    })
   }
+
+
 
 };
 
