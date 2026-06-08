@@ -1,9 +1,10 @@
 <template>
     <q-page>
         <div class="row justify-center q-pa-md">
-            <div class="col-xs-12 col-sm-10 q-my-lg">
+            <div class="col-xs-12 q-my-lg">f
                 <q-table title="Fungible Token Reserves" :rows="authheads" :columns="columns"
-                    :row-key="(row) => `${row.txid}:${row.vout}`" :loading="loading" flat bordered>
+                    :row-key="(row) => `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
+                    class="border-radius-15">
                     <template v-slot:body-cell-icon="props">
                         <q-td :props="props">
                             <q-avatar>
@@ -22,12 +23,21 @@
                             <div class="flex justify-center no-wrap q-gutter-x-sm">
                                 <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'"
                                     text-color="primary" no-caps
-                                    @click.stop="openFungibleReservesReleaseDialog(value.row, 'issuance', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
+                                    @click.stop="openFungibleReservesTransferDialog(value.row, 'issuance', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
                                     :disable="!!value.row.processing" :loading="loading">
                                 </q-btn>
                                 <q-btn icon="local_fire_department" size="md" :label="$q.screen.xs ? '' : 'Burn'"
-                                    @click.stop="openFungibleReservesReleaseDialog(value.row, 'burn', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
+                                    @click.stop="openFungibleReservesTransferDialog(value.row, 'burn', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
                                     text-color="orange" no-caps :disable="!!value.row.processing" :loading="loading">
+                                </q-btn>
+                                <q-btn icon="description" size="md" :label="$q.screen.xs ? '' : 'Metadata'"
+                                    @click.stop="() => viewRegistry(value.row as UtxoWithAuthKey)"
+                                    text-color="secondary" no-caps :disable="!!value.row.processing" :loading="loading">
+                                </q-btn>
+
+                                <q-btn icon="description" size="md" :label="$q.screen.xs ? '' : 'Refresh'"
+                                    @click.stop="async () => await loadRegistry(value.row.token!.category as string)"
+                                    text-color="secondary" no-caps :disable="!!value.row.processing" :loading="loading">
                                 </q-btn>
                             </div>
                         </q-td>
@@ -41,7 +51,6 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
-import { useWizardConnect } from 'src/composables/useWizardConnect'
 import { UtxoFormSafe, UtxoWithPath } from 'src/core/types'
 import { filterAuthKeys, getLockedAuthheadUtxos, type UtxoWithAuthKey } from 'src/core/authguard'
 import { useMetadataStore } from 'src/stores/metadata'
@@ -55,19 +64,51 @@ import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { delay } from 'mainnet-js-v3'
+import { useAuthguardStore } from 'src/stores/authguard'
+import { storeToRefs } from 'pinia'
+import { useRouter } from 'vue-router'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useRegistryStore } from 'src/stores/registry'
 
 const $q = useQuasar()
-const {
-    wzDappMgr,
-    externalWallet
-} = useWizardConnect()
+const router = useRouter()
+// const {
+//     manager,
+//     wallet
+// } = useWizardConnect()
 
-const authheads = ref<UtxoWithAuthKey[]>([])
-const authkeys = ref<UtxoWithPath[]>([])
+const {
+    manager,
+    wallet,
+    state,
+    walletLasySync
+} = useWizardConnectWallet()
+
+const {
+    loadRegistry
+} = useRegistryStore()
+
+const authguardStore = useAuthguardStore()
+const {
+    loadAuthheads,
+    loadAuthkeys,
+} = authguardStore
+
+const {
+    authheads,
+    authkeys,
+    authkeysLastSync,
+    authkeysLoading,
+    authheadsLoading,
+} = storeToRefs(authguardStore)
+
+
+// const authheads = ref<UtxoWithAuthKey[]>([])
+// const authkeys = ref<UtxoWithPath[]>([])
 const loading = ref<boolean>()
 const metadataStore = useMetadataStore()
 
-const authkeysLastSync = ref<number>()
+// const authkeysLastSync = ref<number>()
 
 const columns: QTableColumn[] = [
     {
@@ -75,7 +116,7 @@ const columns: QTableColumn[] = [
         label: 'Icon',
         align: 'left',
         field: (r) => {
-            return metadataStore.identitySnapshot?.[r.token?.category || r.txid]?.uris?.icon
+            return r.identitySnapshot?.uris?.icon
         },
     },
     {
@@ -83,7 +124,7 @@ const columns: QTableColumn[] = [
         label: 'Symbol',
         align: 'left',
         field: (r) => {
-            return metadataStore.identitySnapshot?.[r.token?.category || r.txid]?.token?.symbol
+            return r.identitySnapshot?.token?.symbol
         },
         sortable: true
     },
@@ -92,7 +133,7 @@ const columns: QTableColumn[] = [
         label: 'Decimals',
         align: 'left',
         field: (r) => {
-            return metadataStore.identitySnapshot?.[r.token?.category || r.txid]?.token?.decimals ?? 'Unknown'
+            return r.identitySnapshot?.token?.decimals ?? 0
         },
         sortable: true
     },
@@ -106,24 +147,9 @@ const columns: QTableColumn[] = [
     { name: 'actions', label: 'Actions', align: 'center', field: 'actions' }
 ]
 
-const loadAuthkeys = async (sync?: boolean) => {
-    try {
-        loading.value = true
-        authkeys.value = filterAuthKeys(await externalWallet.value.getUtxos({ sync })) as UtxoWithPath[]
-        authkeysLastSync.value = Date.now()
-    } catch (error) {
-        $q.notify({
-            type: 'Warning',
-            message: 'Error encountered while fetching fungible reserves. Please try refreshing the page. If problem persists please contact admin.'
-        })
-    } finally {
-        loading.value = false
-    }
-}
+const openFungibleReservesTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
 
-const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
-
-    if (!externalWallet.value?.utxos || externalWallet.value.utxos.length === 0) {
+    if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
         return $q.notify({
             type: 'Error',
             message: 'Insufficient BCH balance'
@@ -137,9 +163,9 @@ const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' |
     } as any
 
     if (action === 'issuance') {
-        componentProps.selfAddress = externalWallet.value.getTokenDepositAddress(0)
+        componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
     } else if (action === 'burn') {
-        const sampleAddress = externalWallet.value.getTokenDepositAddress(0)
+        const sampleAddress = wallet.value.getTokenDepositAddress(0)
         const sampleDecodedAddress = decodeCashAddress(sampleAddress)
         if (typeof (sampleDecodedAddress) === 'string') {
             throw new Error(sampleDecodedAddress)
@@ -174,14 +200,14 @@ const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' |
                 recipientAddress: recipientAddress,
                 transferTokenAmount: userInputs.tokenAmount,
                 network: import.meta.env.VITE_BCH_NETWORK as Network,
-                funderUtxos: (externalWallet.value.utxos || []) as UtxoWithPath[],
+                funderUtxos: (wallet.value.utxos || []) as UtxoWithPath[],
                 transferType: action
             })
 
             loadingGroup({
                 message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
             })
-            const response = await wzDappMgr.value.signTransaction(signRequest);
+            const response = await manager.value!.signTransaction(signRequest);
 
             loadingGroup({
                 message: 'Broadcasting transaction, please wait...'
@@ -194,7 +220,7 @@ const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' |
                 if (broadcastResult.success) {
                     await delay(2000)
                     loadingGroup()
-                    loadAuthkeys(true)
+                    loadAuthkeys(wallet.value, true)
                     $q.dialog({
                         component: TransactionStatusDialog,
                         componentProps: {
@@ -219,43 +245,25 @@ const openFungibleReservesReleaseDialog = (v: UtxoFormSafe, action: 'issuance' |
     })
 }
 
+const viewRegistry = (authhead: UtxoWithAuthKey) => {
+    authguardStore.setActiveAuthhead(authhead)
+    router.push('/token/registry?authbase=' + authhead.token?.category)
+}
 
-watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
-    if (authkeysLastSync !== authkeysPrevSync) {
-        try {
-            loading.value = true
-            authheads.value = await getLockedAuthheadUtxos(authkeys.value)
 
-            for (const authhead of authheads.value) {
-                if (!authhead.token) {
-                    continue
-                }
-                await metadataStore.loadIdentitySnapshot(authhead.token.category)
-            }
-
-        } catch (error) {
-            console.log(error)
-            $q.notify({
-                type: 'Warning',
-                message: 'Error encountered while fetching fungible reserves. Please try refreshing the page. If problem persists please contact admin.'
-            })
-        } finally {
-            loading.value = false
-        }
-    }
+watch(() => authkeysLastSync, async () => {
+    await loadAuthkeys(wallet.value, true)
 })
 
-
-watch(() => externalWallet.value?.ready, async (walletReady) => {
-    if (walletReady && !authkeysLastSync.value) {
-        await loadAuthkeys()
-    }
+watch(walletLasySync, async (recentSync, lastSync) => {
+    await loadAuthkeys(wallet.value, true)
+    // if (recentSync && recentSync !== lastSync) {
+    //     await loadAuthkeys(wallet.value, true)
+    // }
 })
-
 
 onMounted(async () => {
-    if (externalWallet.value.ready) {
-        await loadAuthkeys()
-    }
+    await loadAuthkeys(wallet.value, true)
 })
+
 </script>
