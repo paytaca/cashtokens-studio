@@ -52,7 +52,7 @@ export class WizardConnectExternalWallet implements ExternalWallet {
         return this.receive?.getTokenDepositAddress(index ?? 0) as string
     }
 
-    async getBalance(option?: { sync: false}) {
+    async getBalance(option?: { sync: boolean }) {
         if (!option?.sync) return this.balance 
         const utxos = await this.getUtxos({ sync: true })
         return this.getBalanceFromUtxos(utxos) as bigint
