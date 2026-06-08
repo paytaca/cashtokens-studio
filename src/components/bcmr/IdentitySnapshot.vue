@@ -9,23 +9,23 @@
               {{ t('label.registry.identitySnapshot') }}
             </span>
           </h5>
-          <q-label v-if="identitySnapshotModified" class="text-caption text-warning">[{{ t('label.modified')
-          }}]</q-label>
+          <q-item-label v-if="identitySnapshotModified" class="text-caption text-warning">[{{ t('label.modified')
+            }}]</q-item-label>
         </div>
         <q-toggle :false-value="true" :true-value="false" color="red" v-model="identitySnapshotHidden" />
       </div>
     </slot>
     <template v-if="!identitySnapshotHidden">
       <FormField>
-        <q-label>{{ t('label.registry.name') }}</q-label>
+        <q-item-label>{{ t('label.registry.name') }}</q-item-label>
         <q-input v-model="identitySnapshot.name" class="full-width" filled></q-input>
       </FormField>
       <FormField>
-        <q-label>{{ t('label.registry.description') }}</q-label>
+        <q-item-label>{{ t('label.registry.description') }}</q-item-label>
         <q-input v-model="identitySnapshot.description" class="full-width" filled></q-input>
       </FormField>
       <FormField>
-        <q-label>{{ t('label.registry.status') }}</q-label>
+        <q-item-label>{{ t('label.registry.status') }}</q-item-label>
         <div class="flex">
           <q-radio :model-value="identitySnapshot.status || 'active'" checked-icon="task_alt"
             unchecked-icon="panorama_fish_eye" val="active" label="Active" color="green" />
@@ -46,9 +46,11 @@
 import { onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { IdentitySnapshot, URIs } from 'src/core/bcmr/bcmr-v2.schema'
+import { sha256, utf8ToBin, binToHex } from '@bitauth/libauth'
 import TokenCategory from './TokenCategory.vue'
 import FormField from 'components/FormField.vue'
 import Uris from './Uris.vue'
+
 const { t } = useI18n()
 const emit = defineEmits<{
   (e: 'changed', value: boolean): void,
@@ -67,12 +69,38 @@ const uris = ref<URIs>({
   web: ''
 })
 
-const unwatchIdentitySnapshot = watch(
-  () => JSON.parse(JSON.stringify(identitySnapshot.value || {})),
-  () => {
-    unwatchIdentitySnapshot()
-    identitySnapshotModified.value = true
-    emit('changed', true)
+let initialSnapshotHash = ''
+
+const calculateSnapshotHash = (snapshot: IdentitySnapshot | null): string => {
+  if (!snapshot) return ''
+  const serialized = JSON.stringify(snapshot)
+  const binaryData = utf8ToBin(serialized)
+  const hashedBytes = sha256.hash(binaryData)
+  return binToHex(hashedBytes)
+}
+
+watch(
+  () => identitySnapshot.value,
+  (newSnapshot) => {
+    if (newSnapshot) {
+      initialSnapshotHash = calculateSnapshotHash(newSnapshot)
+      identitySnapshotModified.value = false
+      emit('changed', false)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => identitySnapshot.value,
+  (currentSnapshot) => {
+    if (props.mode !== 'write' || !currentSnapshot) return
+
+    const currentHash = calculateSnapshotHash(currentSnapshot)
+    const isDifferent = currentHash !== initialSnapshotHash
+
+    identitySnapshotModified.value = isDifferent
+    emit('changed', isDifferent)
   },
   { deep: true }
 )
@@ -83,6 +111,7 @@ onMounted(() => {
   }
 })
 </script>
+
 
 <style scoped lang="scss">
 .flat {
