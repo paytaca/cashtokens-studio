@@ -30,17 +30,16 @@ import {
 } from "../constants"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 
-export type MintNextNftSequence = {
+export type MintNftMinterParams = {
     minterUtxo: UtxoWithPath,
     mintQuantity: number,
     recipient: string,
-    capability: 'none' | 'mutable' | 'minting',
     funderUtxos: UtxoWithPath[],
     authkeyUtxo?: UtxoWithPath,
     network?: Network,
 }
 
-export function mintNextNftSequence(params: MintNextNftSequence): SignTransactionRequest & { outputs: TransactionOutput[] } {
+export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequest & { outputs: TransactionOutput[] } {
     if (!params.minterUtxo?.token) throw new Error(`Minting requires a token of the same category.`)
     if (params.authkeyUtxo && params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
 
