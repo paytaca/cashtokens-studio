@@ -168,7 +168,7 @@
                             <div class="flex justify-end no-wrap q-gutter-x-sm">
 
                                 <q-btn text-color="primary" icon="mdi-send-circle-outline" size="lg"
-                                    @click.stop="openMintChildNftDialog(value.row, 'issuance')" round>
+                                    @click.stop="navigateToMint(value.row)" round>
                                     <q-tooltip class="bg-primary text-weight-medium">Mint Child NFT</q-tooltip>
                                 </q-btn>
 
@@ -201,8 +201,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
-import { UtxoFormSafe, UtxoWithPath } from 'src/core/types'
-import { type UtxoWithAuthKey } from 'src/core/authguard'
+import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { Network } from 'cashscript'
@@ -435,6 +434,11 @@ const navigateToCollection = (_evt: Event, row: UtxoWithAuthKey) => {
     console.log('ROW', row)
     authguardStore.setActiveAuthhead(row)
     router.push('/issuer/nft-collection/' + row.token?.category)
+}
+
+const navigateToMint = (row: UtxoWithAuthKey) => {
+    authguardStore.setActiveAuthhead(row)
+    router.push('/issuer/nft-collection/' + row.token?.category + '/mint')
 }
 
 watch(() => authkeysLastSync, async () => {
