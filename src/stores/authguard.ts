@@ -1,8 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
-import { AuthheadUtxo, filterAuthKeys, getLockedAuthheadUtxos, UtxoWithAuthKey } from 'src/core/authguard'
-import { UtxoTxid, UtxoVout, UtxoWithPath } from 'src/core/types'
-import { useMetadataStore } from './metadata'
+import { filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/authguard'
+import type { UtxoWithPath, UtxoWithAuthKey, AuthheadUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
 
 export const useAuthguardStore = defineStore('authguard-store', () => {
@@ -34,6 +33,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
             const loadResult = await loadRegistry(authhead.token.category)
             if (loadResult) {
               const identitySnapshot = await getIdentitySnapshotByCategory(authhead.token.category)
+              
               if (identitySnapshot) {
                 authhead.identitySnapshot = identitySnapshot
               }
