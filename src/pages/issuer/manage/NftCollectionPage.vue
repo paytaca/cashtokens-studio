@@ -107,7 +107,7 @@
 
                     <div class="row q-mt-lg q-gutter-x-sm">
                         <q-btn color="primary" icon="mdi-send-circle-outline" label="Mint Child NFT" unelevated
-                            @click="openMintChildNftDialog('issuance')" />
+                            @click="router.push('/issuer/nft-collection/' + authhead?.token?.category + '/mint')" />
                         <q-btn color="orange" icon="mdi-fire" label="Burn" unelevated outline
                             @click="openMintChildNftDialog('burn')" />
                     </div>
