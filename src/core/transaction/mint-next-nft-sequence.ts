@@ -40,7 +40,7 @@ export type MintNextNftSequence = {
     network?: Network,
 }
 
-export function mintNextNftSequence(params: MintNextNftSequence): SignTransactionRequest {
+export function mintNextNftSequence(params: MintNextNftSequence): SignTransactionRequest & { mintOutputs: TransactionOutput[]} {
     if (!params.minterUtxo?.token) throw new Error(`Minting requires a token of the same category.`)
     if (params.authkeyUtxo && params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
 
@@ -100,8 +100,8 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         })
         transaction.addOutput({
             to: authkeyReturnAddress,
-            amount: params.minterUtxo.satoshis,
-            token: params.minterUtxo.token
+            amount: params.authkeyUtxo!.satoshis,
+            token: params.authkeyUtxo!.token
         })
 
         spentUtxos.push(params.authkeyUtxo!)
@@ -130,14 +130,15 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
     transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
     spentUtxos.push(funderInput)
 
-    let startingSequence = 0n
+    let sequenceNo = 0n
     if (params.minterUtxo.token.nft?.commitment) {
-        startingSequence = binToBigIntUintLE(hexToBin(params.minterUtxo.token.nft?.commitment))
+        sequenceNo = binToBigIntUintLE(hexToBin(params.minterUtxo.token.nft?.commitment))
     }
+    const startingSequence = sequenceNo + 1n
     const outputNfts: TransactionOutput[] = []
     Array.from({ length: params.mintQuantity }).forEach(() => {
-        startingSequence = startingSequence + 1n
-        const commitment = binToHex(bigIntToVmNumber(startingSequence))
+        sequenceNo = sequenceNo + 1n
+        const commitment = binToHex(bigIntToVmNumber(sequenceNo))
         const output = {
             to: params.recipient,
             amount: DEFAULT_TOKEN_VALUE,
@@ -154,6 +155,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         outputNfts.push(output)
     })
 
+    const endSequence = sequenceNo
     
     let transactionHex = transaction.build()
     const minOutputCount = authguard ? 3: 2
@@ -243,7 +245,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         transaction: {
             transaction: transactionHex,
             sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
-            userPrompt: `Mint ${params.mintQuantity} NFT(s)`,
+            userPrompt: `Mint NFT(s) #${startingSequence} - #${endSequence}`,
             broadcast: false
         },
         inputPaths: spentUtxos.map((utxo, inputIndex) => {
@@ -251,7 +253,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
             return [inputIndex, utxo.pathName, utxo.addressIndex]
         }).filter(p => p.length === 3) as [number, string, number][],
 
-        outputs: outputNfts
+        mintOutputs: outputNfts
         
-    } as SignTransactionRequest & { outputs: TransactionOutput[] }
+    } as SignTransactionRequest & { mintOutputs: TransactionOutput[] }
 }
