@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { CompactRegistry, db, IdentitySnapshotRecord, ParsedRegistryRecord, RegistryRecord, BumpArtifact } from '../core/client-db'
+import { CompactRegistry, db, IdentitySnapshotRecord, NftRecord, ParsedRegistryRecord, RegistryRecord, BumpArtifact, RegistryRecordStatus } from '../core/client-db'
 import { retrieveLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
 import { IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues } from 'src/core/bcmr/bcmr-v2.schema';
@@ -25,6 +25,23 @@ export type GetIdentitySnapshotParams = ProgressErrorListener & {
     timestamp: string
   }
   category?: string 
+}
+
+export type CreateNftRecordParams = ProgressErrorListener & {
+  contentHash: string,
+  authbase: string,
+  timestamp: string,
+  category: string,
+  type: string,
+  nft: NftType
+}
+
+export type UpdateNftRecordParams = ProgressErrorListener & {
+  contentHash: string,
+  authbase: string,
+  timestamp: string,
+  type: string,
+  nft: NftType
 }
 
 export type Authbase = string
@@ -120,7 +137,8 @@ const registryWorker = {
             contentHash,
             publicationUris: uris,
             rawRegistry: registry,
-            registry: compactParsedRegistry as CompactRegistry
+            registry: compactParsedRegistry as CompactRegistry,
+            status: 'published' as RegistryRecordStatus
           }
 
           const id = await db.registry.put(registryRecord)
@@ -190,7 +208,6 @@ const registryWorker = {
     } 
   },
 
-
   async resetRegistry(params: { contentHash: string }): Promise<ParsedRegistryRecord|undefined> {
     try {
       const existing = await db.registry.where('contentHash').equals(params.contentHash).first();
@@ -214,7 +231,7 @@ const registryWorker = {
             authbase: authbase,
             timestamp: latest,
             identitySnapshot: identitySnapshot,
-            modified: false
+            status: 'published'
           } as IdentitySnapshotRecord
 
           if (identitySnapshot.token?.category) {
@@ -229,7 +246,7 @@ const registryWorker = {
 
       await db.registry.update(existing.id!, {
         registry: compactParsedRegistry as CompactRegistry,
-        modified: false
+        status: 'published'
       })
 
       const { registry: _, ...rest } = existing
@@ -282,7 +299,7 @@ const registryWorker = {
           await db.registryIdentitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([registryRecord.contentHash, authbase, latestTimestamp] as [string, string, string]).first();
-        if (identitySnapshotRecord?.modified) {
+        if (identitySnapshotRecord?.status === 'modified') {
           unpublishedIdentities[authbase] = {
             [latestTimestamp]: identitySnapshotRecord.identitySnapshot
           }
@@ -304,13 +321,13 @@ const registryWorker = {
         unpublishedIdentities[authbase]![timestamp]!.token!.nfts!.parse.types = nftTypes
       }
       registryCandidate.identities![authbase]![timestampCandidate] = unpublishedIdentities[authbase]![timestamp] as IdentitySnapshot
-      // Query NftCollectionRecord for this contentHash, authbase, and timestamp
+      // Query NftRecord for this contentHash, authbase, and timestamp
       // Only include those with created or modified attributes
       const nftCollectionRecords = (await db.nfts
         .where('[contentHash+authbase+timestamp]')
         .equals([registryRecord.contentHash, authbase, timestamp])
         .toArray())
-        .filter(nft => nft.created || nft.modified);
+        .filter(nft => nft.status === 'new' || nft.status === 'modified');
       
       // Populate the snapshot, replace modified, add created
       nftCollectionRecords.forEach((nftRecord) => {
@@ -390,7 +407,7 @@ const registryWorker = {
             authbase: authbase,
             timestamp: latest,
             identitySnapshot: identitySnapshot,
-            modified: false
+            status: 'published'
           } as IdentitySnapshotRecord
 
           if (identitySnapshot.token?.category) {
@@ -409,8 +426,7 @@ const registryWorker = {
         registry: compactParsedRegistry,
         authhead: newAuthhead,
         bumpArtifact: undefined,
-        modified: undefined,
-        created: undefined
+        status: 'published'
       })
 
       return {
@@ -421,8 +437,60 @@ const registryWorker = {
         registry: compactParsedRegistry
       } as ParsedRegistryRecord
     })
-  }
+  },
 
+  async createNftRecord(params: CreateNftRecordParams): Promise<NftRecord|undefined> {
+    try {
+      const existing = await db.nfts
+        .where('[contentHash+authbase+timestamp+type]')
+        .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+        .first();
+
+      if (existing) {
+        throw new Error(`NftRecord already exists for type ${params.type}`)
+      }
+
+      const record = {
+        contentHash: params.contentHash,
+        authbase: params.authbase,
+        timestamp: params.timestamp,
+        category: params.category,
+        type: params.type,
+        nft: params.nft,
+        status: 'new'
+      } as NftRecord
+
+      await db.nfts.put(record);
+      return record
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    }
+  },
+
+  async updateNftRecord(params: UpdateNftRecordParams): Promise<NftRecord|undefined> {
+    try {
+      const existing = await db.nfts
+        .where('[contentHash+authbase+timestamp+type]')
+        .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+        .first();
+
+      if (!existing) {
+        throw new Error(`NftRecord not found for type ${params.type}`)
+      }
+
+      const nftEqual = JSON.stringify(existing.nft) === JSON.stringify(params.nft);
+      if (nftEqual) return existing
+
+      existing.nft = params.nft;
+      if (existing.status === 'published') {
+        existing.status = 'modified'
+      }
+      await db.nfts.put(existing);
+      return existing
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    }
+  }
 
 
 };
