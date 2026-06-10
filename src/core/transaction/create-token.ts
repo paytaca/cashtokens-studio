@@ -1,7 +1,7 @@
 import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE } from "../constants"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
 import { getMinimumFee, hexToBin } from "@bitauth/libauth"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
@@ -9,10 +9,10 @@ import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "
 export type CreateTokenParams = {
     tokenSpec: Omit<TokenDetails, 'category'>,                   // The new spec of the new token to be created
     genesisInputUtxoId: `${string}:${number}`, // txid:vout
-    authKeyUtxoId: `${string}:${number}`,
-    authKeyRecipientAddress: string,           // token address
+    authkeyUtxoId: `${string}:${number}`,
+    authkeyRecipientAddress: string,           // token address
     changeRecipientAddress?: string,           
-    sourceOutputs: UtxoWithPath[],
+    sourceUtxos: UtxoWithPath[],
     network?: Network,
     registryPublicationData: {
         contentHash: string,
@@ -22,39 +22,44 @@ export type CreateTokenParams = {
 
 export function createToken(params: CreateTokenParams): SignTransactionRequest {
 
-    const genesisInput = params.sourceOutputs.find(u => {
+    const sourceUtxos = [...params.sourceUtxos] as UtxoWithPath[]
+
+    const genesisInputIndex = sourceUtxos.findIndex((u) => {
         return (
             params.genesisInputUtxoId === `${u.txid}:${u.vout}`
         )
     })
 
-    if (!genesisInput) throw new Error('Genesis input not found from source utxos')
+    if (genesisInputIndex === -1) throw new Error('Genesis input not found from source utxos')
 
-    const authKeyInput = params.sourceOutputs.find(u => {
+    const genesisInput = sourceUtxos.splice(genesisInputIndex, 1)[0] as UtxoWithPath
+
+    const authkeyInputIndex = params.sourceUtxos.findIndex(u => {
         return (
-            params.authKeyUtxoId === `${u.txid}:${u.vout}`
+            params.authkeyUtxoId === `${u.txid}:${u.vout}`
         )
     })
 
-    if (!authKeyInput) throw new Error('AuthKey not found from source utxos')
+    if (authkeyInputIndex === -1) throw new Error('AuthKey not found from source utxos')
+
+    const authkeyInput = sourceUtxos.splice(authkeyInputIndex, 1)[0] as UtxoWithPath
     
-    const createNewAuthKey = !authKeyInput.token
+    const createNewAuthKey = !authkeyInput.token
 
-    if (createNewAuthKey && authKeyInput.vout !== 0) throw new Error('AuthKey utxo should be a valid genesis input if creating an AuthKey genesis.')
+    if (createNewAuthKey && authkeyInput.vout !== 0) throw new Error('AuthKey utxo should be a valid genesis input if creating an AuthKey genesis.')
 
-    if (!createNewAuthKey && authKeyInput?.token?.nft?.commitment !== '00') throw new Error('Invalid AuthKey commitment format') 
+    if (!createNewAuthKey && authkeyInput?.token?.nft?.commitment !== '00') throw new Error('Invalid AuthKey commitment format') 
     
     const newToken = {
         ...params.tokenSpec,
         category: genesisInput.txid
     }
 
-    let authKeyToken = authKeyInput.token
+    let authKeyToken = authkeyInput.token
     
     if (createNewAuthKey) {
-        // Authkey Genesis
         authKeyToken = {
-            category: authKeyInput.txid,
+            category: authkeyInput.txid,
             amount: 0n,
             nft: {
                 capability: 'none',
@@ -68,27 +73,24 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         network: params.network
     })
 
+    const remainingUtxos = sourceUtxos.filter(u => !u.token).sort((u1, u2) => Number(u2.satoshis) - Number(u1.satoshis))
 
     const transaction = new TransactionBuilder({
         provider: new ElectrumNetworkProvider(params.network)
     })
 
-    const spentUtxos = [genesisInput, authKeyInput]
-    let funds = spentUtxos.reduce((acc, nextInput) => {
-        acc = acc + nextInput.satoshis
-        return acc
-    }, 0n)
+    const spentUtxos = [genesisInput, authkeyInput]
 
     transaction.addInput(genesisInput, placeholderP2PKHUnlocker(genesisInput.address))
-    transaction.addInput(authKeyInput, placeholderP2PKHUnlocker(authKeyInput.address))
+    transaction.addInput(authkeyInput, placeholderP2PKHUnlocker(authkeyInput.address))
     transaction.addOutput({
         to: authguardContract.tokenAddress,
         amount: DEFAULT_TOKEN_VALUE,
         token: newToken
     })
     transaction.addOutput({
-        to: params.authKeyRecipientAddress,
-        amount: authKeyInput.satoshis || DEFAULT_TOKEN_VALUE,
+        to: params.authkeyRecipientAddress,
+        amount: DEFAULT_TOKEN_VALUE,
         token: authKeyToken
     })
     
@@ -98,23 +100,56 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         ...params.registryPublicationData.uris
     ])
 
+    let totalFunds = spentUtxos.reduce((acc, u) => acc + u.satoshis, 0n)
     let transactionHex = transaction.build()
-    
-    const minCost = DEFAULT_TOKEN_VALUE * 2n
-    const minimumFee = getMinimumFee(BigInt(hexToBin(transactionHex).length), DEFAULT_FEE_RATE_SATS_PER_KB)
-    const estimatedCost = minCost + minimumFee
-    
-    if (funds < estimatedCost) {
-        throw new Error('The genesis input have insufficient BCH balance. Try consolidating your BCH.')
+    const authkeyOutputAmount = authkeyInput.satoshis || DEFAULT_TOKEN_VALUE
+    const fixedCost = DEFAULT_TOKEN_VALUE + authkeyOutputAmount
+    const minimumFee = getMinimumFee(
+        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+        DEFAULT_FEE_RATE_SATS_PER_KB
+    )
+    let estimatedCost = fixedCost + minimumFee
+    let enoughFunds = totalFunds > estimatedCost
+    let changeOutputIndex = -1
+
+    if (!enoughFunds) {
+        while (remainingUtxos.length > 0) {
+            const funderInput = remainingUtxos.shift() as UtxoWithPath
+            transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
+            spentUtxos.push(funderInput)
+            totalFunds += funderInput.satoshis
+            transactionHex = transaction.build()
+
+            const newMinimumFee = getMinimumFee(
+                BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+                DEFAULT_FEE_RATE_SATS_PER_KB
+            )
+            const newEstimatedCost = fixedCost + newMinimumFee
+            enoughFunds = totalFunds > newEstimatedCost
+
+            if (enoughFunds) {
+                estimatedCost = newEstimatedCost
+                break
+            }
+        }
     }
 
-    const change = estimatedCost - funds
+    if (!enoughFunds) {
+        throw new Error('Insufficient BCH balance to fund the transaction')
+    }
+
+    const change = totalFunds - estimatedCost
     if (change > 546n) {
-        transaction.addOutput({
-            to: params.changeRecipientAddress || params.authKeyRecipientAddress,
-            amount: change
-        })
-        transactionHex = transaction.build()  // Rebuild with change
+        if (changeOutputIndex === -1) {
+            transaction.addOutput({
+                to: params.changeRecipientAddress || params.authkeyRecipientAddress,
+                amount: change
+            })
+            changeOutputIndex = transaction.outputs.length - 1
+        } else {
+            transaction.outputs[changeOutputIndex]!.amount = change
+        }
+        transactionHex = transaction.build()
     }
 
     const sourceOutputs = spentUtxos.map((utxo) => {
@@ -123,9 +158,6 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         }
         return utxoToWcSourceOutput(args)
     }) 
-
-    // console.log('Build', build)
-    // return build
 
     return {
         action: RelayMsgAction.SignTransactionRequest,
