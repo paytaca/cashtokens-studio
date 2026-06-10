@@ -433,12 +433,12 @@ const viewRegistry = (authhead: UtxoWithAuthKey) => {
 const navigateToCollection = (_evt: Event, row: UtxoWithAuthKey) => {
     console.log('ROW', row)
     authguardStore.setActiveAuthhead(row)
-    router.push('/issuer/nft-collection/' + row.token?.category)
+    router.push('/issuer/nft-collections/' + row.token?.category)
 }
 
 const navigateToMint = (row: UtxoWithAuthKey) => {
     authguardStore.setActiveAuthhead(row)
-    router.push('/issuer/nft-collection/' + row.token?.category + '/mint')
+    router.push('/issuer/nft-collections/' + row.token?.category + '/mint')
 }
 
 watch(() => authkeysLastSync, async () => {
