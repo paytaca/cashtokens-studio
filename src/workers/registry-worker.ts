@@ -44,6 +44,13 @@ export type UpdateNftRecordParams = ProgressErrorListener & {
   nft: NftType
 }
 
+export type CreateNewRegistryParams = ProgressErrorListener & {
+  authbase: string,
+  contentHash: string,
+  publicationUris: string[],
+  rawRegistry: Blob
+}
+
 export type Authbase = string
 
 const registryWorker = {
@@ -66,7 +73,7 @@ const registryWorker = {
     } as CompactRegistry
   },
 
-  async getRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
+  async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
       
       const pub = await retrieveLastRegistryPublication({ authbase: params.authbase })
@@ -263,18 +270,6 @@ const registryWorker = {
     originalContentHash: string, 
     bumpType: 'major'|'minor'|'patch',
     newVersion: { major: number, minor: number, patch: number },
-    // registry: CompactRegistry, 
-    // identity?: { // The modified or new identity snapshot
-    //   authbase: string,
-    //   timestamp: string, 
-    //   identitySnapshot: IdentitySnapshot
-    // },   
-    // nfts?: {    // any modified or new nft type
-    //   authbase: string,
-    //   timestamp: string,
-    //   type: string,
-    //   nft: NftType
-    // } [] 
   }): Promise<{uris: string[], contentHash: string}|undefined> {
 
     const registryRecord = await db.registry.where('contentHash').equals(params.originalContentHash).first()
@@ -490,7 +485,29 @@ const registryWorker = {
     } catch (e) {
       params.onError?.(getErrorMessage(e))
     }
-  }
+  },
+
+  async createNewRegistry(params: CreateNewRegistryParams): Promise<ParsedRegistryRecord|undefined> {
+    try {
+      const compactParsedRegistry: CompactRegistry = await this.parseRegistry(params.rawRegistry, true) as CompactRegistry
+
+      const registryRecord = {
+        authbase: params.authbase,
+        contentHash: params.contentHash,
+        publicationUris: params.publicationUris,
+        rawRegistry: params.rawRegistry,
+        registry: compactParsedRegistry,
+        status: 'new'
+      } as RegistryRecord
+
+      const id = await db.registry.add(registryRecord)
+      const { rawRegistry, ...rest } = registryRecord
+      return { ...rest, id }
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    }
+  },
+
 
 
 };
