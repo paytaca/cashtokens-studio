@@ -1,13 +1,16 @@
 // db.js
 import { Dexie, EntityTable} from 'dexie';
-import { Registry, TokenCategory, IdentitySnapshot, SequentialNftCollection, ParsableNftCollection, NftType } from './bcmr/bcmr-v2.schema';
+import { Registry, IdentitySnapshot, NftType } from './bcmr/bcmr-v2.schema';
 import { UtxoTxid, UtxoVout, UtxoWithPath } from './types';
 
 export type BumpArtifact = {
     contentHash: string,
     uris: string[],
-    cid: string
+    cid: string,
+    registry: Blob // Release candidate
 }
+
+export type RegistryRecordStatus = 'new' | 'published' | 'modified'
 
 export type RegistryRecord = {
     id: number,
@@ -18,8 +21,7 @@ export type RegistryRecord = {
     rawRegistry: Blob,
     registry: CompactRegistry,
     bumpArtifact?: BumpArtifact,
-    modified?: boolean, // registry modified
-    created?: boolean
+    status: RegistryRecordStatus
 }
 
 export type CompactRegistry = Omit<Registry, 'identities'> & { 
@@ -37,11 +39,10 @@ export type IdentitySnapshotRecord = {
   timestamp: string,
   category: string,
   identitySnapshot: IdentitySnapshot & Record<string, any>,
-  modified?: boolean,
-  created?: boolean
+  status: RegistryRecordStatus
 }
 
-export type NftCollectionRecord = {
+export type NftRecord = {
   id: number,
   contentHash: string,
   authbase: string,
@@ -49,8 +50,7 @@ export type NftCollectionRecord = {
   category: string,
   type: string,
   nft: NftType,
-  modified?: boolean,
-  created?: boolean
+  status: RegistryRecordStatus
 }
 
 export type UtxoRecord = UtxoWithPath & { 
@@ -74,11 +74,22 @@ export type IdentityHistoryRecord = Omit<IdentitiesRecord, 'identities'> & {
   identityHistory: string[]
 }
 
+export interface Publishable {
+  status: RegistryRecordStatus
+}
+
+export function setRecordStatus(record: Publishable, status: 'new'|'modified'|'published') {
+  if (status === 'modified') {
+    record.status = record.status === 'new' ? record.status : status 
+  }
+  record.status = status
+}
+
 class CashtokensStudioDB extends Dexie {
 
   registry!: EntityTable<RegistryRecord, 'id'> 
   registryIdentitySnapshot!: EntityTable<IdentitySnapshotRecord, 'id'>
-  nfts!: EntityTable<NftCollectionRecord, 'id'>
+  nfts!: EntityTable<NftRecord, 'id'>
   utxo!: EntityTable<UtxoRecord, 'id'>
 
   constructor() {
