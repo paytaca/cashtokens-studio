@@ -112,7 +112,7 @@ import { MAX_VM_NUMBER } from 'src/core/constants'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
 import { uploadFile } from 'src/core/ipfs/upload-file'
-import { useWizardConnect } from 'src/composables/useWizardConnect'
+import { useWizardConnect } from 'src/composables/useWizardConnect_'
 import { NFTCapability, Utxo } from 'mainnet-js-v3'
 import { shortenTokenId } from 'src/core/utils'
 import { UtxoWithPath } from 'src/core/types'
@@ -124,6 +124,7 @@ import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { filterAuthKeys } from 'src/core/authguard'
 import { filterGenesisInputs } from 'src/core/wallet'
+import { getRegistryWorker } from 'src/workers'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -315,13 +316,11 @@ const onSubmit = async () => {
     }
 
     if (!savedRegistry) {
-        await db.registry.add({
+        await getRegistryWorker().createNewRegistry({
             publicationUris: uris,
             contentHash,
-            registry,
-            authbase,
-            category: authbase,
-            latestRevision: registry.latestRevision
+            rawRegistry: new Blob([JSON.stringify(registry)], { type: 'application/json' }),
+            authbase
         })
     }
 
@@ -375,6 +374,9 @@ const onSubmit = async () => {
 
         if (broadcastResponse.ok) {
             const broadcastResult = await broadcastResponse.json()
+
+            await db.setRegistryPublished(authbase, contentHash)
+
             $q.dialog({
                 component: TransactionStatusDialog,
                 componentProps: {
