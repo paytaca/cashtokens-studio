@@ -259,6 +259,17 @@ onMounted(async () => {
         const authbase = route.query.authbase as string
         if (!authbase) router.back()
         registryRecord.value = await getRegistryByAuthbase(authbase)
+
+        if (registryRecord.value?.registry?.identities?.[authbase]) {
+            const timestamps = registryRecord.value.registry.identities[authbase]
+            const latestTimestamp = timestamps.sort((a, b) => b.localeCompare(a))[0]
+            if (latestTimestamp) {
+                identitySnapshotRecord.value = await getRegistryWorkerInstance().getIdentitySnapshot({
+                    contentHash: registryRecord.value.contentHash,
+                    identity: { authbase, timestamp: latestTimestamp }
+                })
+            }
+        }
     } catch (error) {
         $q.notify({
             type: 'Error',
