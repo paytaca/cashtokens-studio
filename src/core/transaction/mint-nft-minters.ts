@@ -39,7 +39,7 @@ export type MintNftMinterParams = {
     network?: Network,
 }
 
-export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequest & { outputs: TransactionOutput[] } {
+export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequest & { mintOutputs: TransactionOutput[] } {
     if (!params.minterUtxo?.token) throw new Error(`Minting requires a token of the same category.`)
     if (params.authkeyUtxo && params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
 
@@ -99,8 +99,8 @@ export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequ
         })
         transaction.addOutput({
             to: authkeyReturnAddress,
-            amount: params.minterUtxo.satoshis,
-            token: params.minterUtxo.token
+            amount: params.authkeyUtxo!.satoshis,
+            token: params.authkeyUtxo!.token
         })
 
         spentUtxos.push(params.authkeyUtxo!)
@@ -245,7 +245,7 @@ export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequ
             return [inputIndex, utxo.pathName, utxo.addressIndex]
         }).filter(p => p.length === 3) as [number, string, number][],
 
-        outputs: outputNfts
+        mintOutputs: outputNfts
         
-    } as SignTransactionRequest & { outputs: TransactionOutput[] }
+    } as SignTransactionRequest & { mintOutputs: TransactionOutput[] }
 }
