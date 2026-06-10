@@ -7,7 +7,7 @@ import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { bigIntToVmNumber, binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
 
-export type MintChildNftParams = {
+export type MintNftSequenceParams = {
     minterUtxo: UtxoWithPath,
     sequenceNo: number,
     mintQuantity: number,
@@ -18,7 +18,7 @@ export type MintChildNftParams = {
     network?: Network,
 }
 
-export function mintNftSequence(params: MintChildNftParams): SignTransactionRequest {
+export function mintNftSequence(params: MintNftSequenceParams): SignTransactionRequest & { mintOutputs: TransactionOutput[] } {
     if (!params.minterUtxo?.token) throw new Error(`Minting requires a token of the same category.`)
     if (params.authkeyUtxo && params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
 
@@ -78,8 +78,8 @@ export function mintNftSequence(params: MintChildNftParams): SignTransactionRequ
         })
         transaction.addOutput({
             to: authkeyReturnAddress,
-            amount: params.minterUtxo.satoshis,
-            token: params.minterUtxo.token
+            amount: params.authkeyUtxo!.satoshis,
+            token: params.authkeyUtxo!.token
         })
 
         spentUtxos.push(params.authkeyUtxo!)
@@ -226,7 +226,7 @@ export function mintNftSequence(params: MintChildNftParams): SignTransactionRequ
             return [inputIndex, utxo.pathName, utxo.addressIndex]
         }).filter(p => p.length === 3) as [number, string, number][],
 
-        outputs: outputNfts
-        
-    } as SignTransactionRequest & { outputs: TransactionOutput[] }
+        mintOutputs: outputNfts
+
+    } as SignTransactionRequest & { mintOutputs: TransactionOutput[] }
 }
