@@ -1,13 +1,13 @@
 <template>
-    <q-page>
+    <q-page class="bg-dark-page">
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat bordered>
+                <q-card flat class="bg-dark">
                     <q-card-section>
                         <div class="text-h5">Create Token</div>
                     </q-card-section>
                     <q-card-section v-if="genesisInputs.length === 0">
-                        <q-banner>
+                        <q-banner class="text-justify">
                             Creating a new token (token genesis) requires a `genesis input`. A valid genesis input is
                             just unspent BCH which is the 1st output of a previous transaction. <q-btn no-caps dense
                                 text-color="primary" @click="onGenerateGenesisInput">Click here to generate</q-btn>
@@ -96,7 +96,8 @@
                         </q-file>
                     </q-card-section>
                     <q-card-actions>
-                        <q-btn label="Create Token" @click="onSubmit" color="primary" class="full-width" />
+                        <q-btn label="Create Token" @click="onSubmit" color="primary" class="full-width"
+                            :disable="genesisInputs.length === 0 || authkeys.length === 0" />
                     </q-card-actions>
                 </q-card>
             </div>
@@ -121,10 +122,11 @@ import { createTokenRegistry } from 'src/core/bcmr'
 import { db } from 'src/core/client-db'
 import { useRoute, useRouter } from 'vue-router'
 import { broadcast } from 'src/core/transaction/broadcast'
+import { createGenesisInput } from 'src/core/transaction/create-genesis-input'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { filterAuthKeys } from 'src/core/authguard'
 import { filterGenesisInputs } from 'src/core/wallet'
-import { getRegistryWorker } from 'src/workers'
+import { TokenType } from 'src/core/types'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -134,7 +136,8 @@ const {
     externalWallet
 } = useWizardConnect()
 
-const typeOptions = ['Fungible', 'Non-Fungible', 'Mixed']
+
+const typeOptions: TokenType[] = ['Fungible', 'NonFungible', 'Mixed']
 
 const identitySnapshot = ref<IdentitySnapshot>({
     name: '',
@@ -142,6 +145,12 @@ const identitySnapshot = ref<IdentitySnapshot>({
     token: {
         category: '',
         symbol: '',
+        nfts: {
+            parse: {
+                bytecode: '',
+                types: {}
+            }
+        }
     },
     uris: {
         icon: ''
@@ -167,8 +176,7 @@ const token = ref({
     }
 })
 
-const tokenType = ref<string>(typeOptions[0]!)
-
+const tokenType = ref<TokenType>(typeOptions[0]!)
 const iconFile = ref()
 const iconFileRef = ref()
 const iconPreviewUrl = ref()
@@ -230,17 +238,38 @@ const validateVmNumber = (val: string) => {
 const onGenerateGenesisInput = async () => {
     try {
         if (!externalWallet.value.ready) {
-            $q.notify({
-                message: 'Wallet Not Initialized'
-            })
+            $q.notify({ message: 'Wallet Not Initialized' })
             return
         }
-        throw new Error('Not Yet Implemented')
-    } catch (error) {
-        $q.notify({
-            type: 'Error',
-            message: `Error: ${error}`
+
+        const funderUtxos = (externalWallet.value.utxos || []) as UtxoWithPath[]
+        if (funderUtxos.length === 0) {
+            $q.notify({ type: 'Error', message: 'Insufficient BCH balance' })
+            return
+        }
+
+        const signRequest = createGenesisInput({
+            funderUtxos,
+            network: import.meta.env.VITE_BCH_NETWORK as any
         })
+
+        const response = await wzDappMgr.value.signTransaction(signRequest)
+        const broadcastResponse = await broadcast(response.signedTransaction)
+
+        if (broadcastResponse.ok) {
+            const broadcastResult = await broadcastResponse.json()
+            if (broadcastResult.success) {
+                $q.notify({
+                    type: 'positive',
+                    message: `Genesis input created: ${shortenTokenId(broadcastResult.txid)}`
+                })
+                await externalWallet.value.sync()
+                genesisInputs.value = filterGenesisInputs(externalWallet.value.utxos || [])
+                authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as UtxoWithPath[]
+            }
+        }
+    } catch (error) {
+        $q.notify({ type: 'Error', message: `Error: ${error}` })
     }
 }
 
@@ -251,118 +280,112 @@ const onSubmit = async () => {
         message: 'Preparing. Checking wallet for inputs...'
     })
 
-    if (!externalWallet?.value?.utxos || externalWallet.value?.utxos?.length === 0) {
-        return $q.notify({
-            type: 'Error',
-            message: 'Insufficient balance'
-        })
-    }
+    let contentHash: string | undefined
 
-    const genesisInput = genesisInputs.value[0]
-    const authKeyInput = authKeySelected.value
-    if (!genesisInput) {
-        return $q.notify({
-            type: 'Error',
-            message: 'Missing required genesis input'
-        })
-    }
-    if (!authKeyInput) {
-        return $q.notify({
-            type: 'Error',
-            message: 'Missing required authkey'
-        })
-    }
-    const authbase = genesisInput.txid
-
-    loadingGroup({
-        message: 'Creating token registry...'
-    })
-
-    const { contentHash, registry } = createTokenRegistry({
-        authbase,
-        identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value)),
-        authKeyNftCategory: authKeyInput.token?.category || authKeyInput.txid
-    })
-
-    const savedRegistry = await db.registry
-        .orderBy('latestRevision')
-        .reverse()
-        .filter((registryRecord) => registryRecord.authbase === authbase)
-        .first()
-
-    let uris: string[] = savedRegistry?.publicationUris || []
-
-    const registryJson = JSON.stringify(registry)
-
-    if (uris?.length === 0) {
-
-        loadingGroup({
-            message: 'Uploading token registry to IPFS...'
-        })
-
-        try {
-            const registryBlob = new Blob([registryJson], { type: 'application/json' })
-            const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
-            uris = [`ipfs://${uploadResult.cid}`]
-            loadingGroup({
-                message: `Upload success, uri = ${uris[0]}`
-            })
-        } catch (error) {
-            return $q.notify({
-                type: 'Error',
-                message: 'Error saving registry to IPFS. Try refreshing page. If problem persist please contact admin.'
-            })
-        }
-    }
-
-    if (!savedRegistry) {
-        await getRegistryWorker().createNewRegistry({
-            publicationUris: uris,
-            contentHash,
-            rawRegistry: new Blob([JSON.stringify(registry)], { type: 'application/json' }),
-            authbase
-        })
-    }
-
-    const finalRegistryRecord = {
-        uris: savedRegistry?.publicationUris || uris,
-        contentHash: savedRegistry?.contentHash || contentHash,
-        registry: savedRegistry?.registry || registry,
-        fromDb: savedRegistry?.registry ? true : false
-    }
-
-    loadingGroup({
-        message: 'Preparing transaction...'
-    })
-
-    const sourceOutputs = [
-        genesisInput,
-        authKeyInput
-    ] as UtxoWithPath[]
-
-
-    const createTokenArgs = {
-        genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
-        authKeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
-        authKeyRecipientAddress: externalWallet.value.getTokenDepositAddress(0) as string,
-        tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
-        sourceOutputs: sourceOutputs,
-        registryPublicationData: {
-            contentHash,
-            uris
-        }
-    }
-
-    loadingGroup({
-        message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
-    })
-    let response: any = {}
     try {
 
-        const createTokenSignRequest = createToken(createTokenArgs)
+        if (!externalWallet?.value?.utxos || externalWallet.value?.utxos?.length === 0) {
+            return $q.notify({
+                type: 'Error',
+                message: 'Insufficient balance'
+            })
+        }
+
+        const genesisInput = genesisInputs.value[0]
+        const authKeyInput = authKeySelected.value
+        if (!genesisInput) {
+            return $q.notify({
+                type: 'Error',
+                message: 'Missing required genesis input'
+            })
+        }
+        if (!authKeyInput) {
+            return $q.notify({
+                type: 'Error',
+                message: 'Missing required authkey'
+            })
+        }
+        const authbase = genesisInput.txid
+
+        loadingGroup({
+            message: 'Creating token registry...'
+        })
+
+        if (tokenType.value === 'Fungible') {
+            delete identitySnapshot.value.token!.nfts
+        }
+        identitySnapshot.value.token!.category = authbase
+        const { contentHash: ch, registry } = createTokenRegistry({
+            authbase,
+            identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value)),
+            authKeyNftCategory: authKeyInput.token?.category || authKeyInput.txid
+        })
+
+        contentHash = ch
+
+        const savedRegistry = await db.registry
+            .where('contentHash')
+            .equals(contentHash)
+            .first()
+
+        let uris: string[] = savedRegistry?.publicationUris || []
+
+        const registryJson = JSON.stringify(registry)
+
+        if (uris?.length === 0) {
+
+            loadingGroup({
+                message: 'Uploading token registry to IPFS...'
+            })
+
+            try {
+                const registryBlob = new Blob([registryJson], { type: 'application/json' })
+                const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
+                uris = [`ipfs://${uploadResult.cid}`]
+                loadingGroup({
+                    message: `Upload success, uri = ${uris[0]}`
+                })
+            } catch (error) {
+                console.log('ERROR', error)
+                loadingGroup()
+                return $q.notify({
+                    type: 'Error',
+                    message: 'Error saving registry to IPFS. Try refreshing page. If problem persist please contact admin.'
+                })
+            }
+        }
+
+        if (!savedRegistry) {
+            await db.createNewRegistry({
+                publicationUris: uris,
+                contentHash,
+                rawRegistry: new Blob([JSON.stringify(registry)], { type: 'application/json' }),
+                authbase
+            })
+        }
+
+        loadingGroup({
+            message: 'Preparing transaction...'
+        })
+
+        const createTokenArgs = {
+            genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
+            authkeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
+            authkeyRecipientAddress: externalWallet.value.getTokenDepositAddress(0) as string,
+            tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
+            sourceUtxos: externalWallet.value.utxos,
+            registryPublicationData: {
+                contentHash,
+                uris
+            }
+        }
+
         loadingGroup({
             message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
         })
+        let response: any = {}
+
+        const createTokenSignRequest = createToken(createTokenArgs)
 
         response = await wzDappMgr.value.signTransaction(createTokenSignRequest);
 
@@ -371,6 +394,7 @@ const onSubmit = async () => {
         })
 
         const broadcastResponse = await broadcast(response.signedTransaction)
+
 
         if (broadcastResponse.ok) {
             const broadcastResult = await broadcastResponse.json()
@@ -388,6 +412,9 @@ const onSubmit = async () => {
         }
 
     } catch (error) {
+        if (contentHash) {
+            await db.registry.where('contentHash').equals(contentHash).delete()
+        }
         $q.notify({
             type: 'Error',
             message: 'Error creating transaction: ' + error
