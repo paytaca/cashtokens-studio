@@ -24,25 +24,22 @@
 
 <script setup lang="ts">
 
-import { computed, onMounted, onUnmounted, ref, toValue, watch } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { binToHex, sha256 } from '@bitauth/libauth'
-import { delay, utf8ToBin } from 'mainnet-js-v3'
+import { delay } from 'mainnet-js-v3'
 import type { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
-import { uploadFile } from 'src/core/ipfs/upload-file'
-import { type CompactRegistry, db, IdentitySnapshotRecord, ParsedRegistryRecord } from 'src/core/client-db'
+import { db, IdentitySnapshotRecord, ParsedRegistryRecord, setRecordStatus } from 'src/core/client-db'
 
-import { UtxoWithPath } from 'src/core/types'
+import type { UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { broadcast, publishRegistry } from 'src/core/transaction'
 import { useWizardConnect } from 'src/composables/useWizardConnect_'
 import TransactionStatusDialog from 'components/dialogs/TransactionStatusDialog.vue'
 import SaveSuccessDialog from 'components/dialogs/SaveSuccessDialog.vue'
 import RegistryComponent from 'components/bcmr/Registry.vue'
 import { useAuthguardStore } from 'src/stores/authguard'
-import { UtxoWithAuthKey } from 'src/core/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import type { PublicationStrategy } from 'components/bcmr/types'
 import { getRegistryWorker } from 'src/workers'
@@ -64,7 +61,11 @@ const {
     activeAuthhead
 } = storeToRefs(authguardStore)
 
-const registryWorker = getRegistryWorker()
+let _registryWorker: ReturnType<typeof getRegistryWorker> | null = null
+const getRegistryWorkerInstance = () => {
+    if (!_registryWorker) _registryWorker = getRegistryWorker()
+    return _registryWorker
+}
 const displayFull = ref<boolean>(false)
 const registryRecord = ref<ParsedRegistryRecord>()
 const identitySnapshotRecord = ref<IdentitySnapshotRecord>()
@@ -90,10 +91,10 @@ type SaveEventPayload = {
 
 const unpublishedChanges = computed<SaveEventPayload | undefined>(() => {
     const result: SaveEventPayload = {}
-    if (registryRecord.value?.modified) {
+    if (registryRecord.value?.status === 'modified' || registryRecord.value?.status === 'new') {
         result.registry = true
     }
-    if (identitySnapshotRecord.value?.modified) {
+    if (identitySnapshotRecord.value?.status === 'modified' || identitySnapshotRecord.value?.status === 'new') {
         result.identity = {
             authbase: identitySnapshotRecord.value.authbase,
             timestamp: identitySnapshotRecord.value.timestamp,
@@ -108,7 +109,7 @@ const loading = ref<boolean>()
 
 
 const onIdentitySelected = async (authbase: string, timestamp: string) => {
-    identitySnapshotRecord.value = await registryWorker.getIdentitySnapshot({
+    identitySnapshotRecord.value = await getRegistryWorkerInstance().getIdentitySnapshot({
         contentHash: registryRecord.value!.contentHash,
         identity: {
             authbase,
@@ -121,16 +122,16 @@ const onSave = async (changes: { registry?: boolean, identity?: { authbase: stri
     try {
         if (changes.registry && registryRecord.value) {
             registryRecord.value.registry = registryRecord.value.registry
-            registryRecord.value.modified = true
+            setRecordStatus(registryRecord.value, 'modified')
             await db.registry.update(registryRecord.value.id, {
                 registry: structuredClone(registryRecord.value.registry),
-                modified: true
+                status: 'modified'
             })
         }
         if (changes.identity && identitySnapshotRecord.value) {
             const clonedSnapshot = JSON.parse(JSON.stringify(changes.identity.identitySnapshot))
             identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
-            identitySnapshotRecord.value.modified = true
+            setRecordStatus(identitySnapshotRecord.value, 'modified')
             await db.registryIdentitySnapshot
                 .where('[contentHash+authbase+timestamp]')
                 .equals([
@@ -138,7 +139,7 @@ const onSave = async (changes: { registry?: boolean, identity?: { authbase: stri
                     identitySnapshotRecord.value.authbase,
                     identitySnapshotRecord.value.timestamp
                 ])
-                .modify({ identitySnapshot: clonedSnapshot, modified: true })
+                .modify({ identitySnapshot: clonedSnapshot, status: identitySnapshotRecord.value.status })
         }
 
         $q.dialog({
@@ -165,7 +166,7 @@ const onReset = async () => {
         if (!registryRecord.value) return
         const contentHash = registryRecord.value.contentHash
         registryRecord.value = undefined
-        const resetRecord = await registryWorker.resetRegistry({ contentHash })
+        const resetRecord = await getRegistryWorkerInstance().resetRegistry({ contentHash })
         if (resetRecord) {
             registryRecord.value = resetRecord
             identitySnapshotRecord.value = undefined
@@ -189,7 +190,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
 
     try {
         const originalContentHash = registryRecord.value!.contentHash
-        const bumpArtifact = await registryWorker?.bumpRegistry({
+        const bumpArtifact = await getRegistryWorkerInstance()?.bumpRegistry({
             ...publicationStrategy,
             originalContentHash
         })
@@ -223,8 +224,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
         if (broadcastResponse.ok) {
             const broadcastResult = await broadcastResponse.json()
             if (broadcastResult.success) {
-                const registryWorker = getRegistryWorker()
-                await registryWorker.commitBumpRegistry(originalContentHash, `${broadcastResult.txid}:0`)
+                await getRegistryWorkerInstance().commitBumpRegistry(originalContentHash, `${broadcastResult.txid}:0`)
                 await delay(2000)
                 loadingGroup()
                 $q.dialog({
