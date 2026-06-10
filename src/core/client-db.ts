@@ -167,7 +167,125 @@ class CashtokensStudioDB extends Dexie {
       }
     });
   }
-  
+
+  async setRegistryPublished(authbase: string, contentHash: string): Promise<void> {
+    const record = await this.registry.where({ authbase, contentHash }).first()
+    if (record) {
+      await this.registry.update(record.id!, { status: 'published' })
+    }
+  }
+
+  async createNftRecord(params: {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    category: string,
+    type: string,
+    nft: NftType
+  }): Promise<NftRecord> {
+    const existing = await this.nfts
+      .where('[contentHash+authbase+timestamp+type]')
+      .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+      .first()
+
+    if (existing) {
+      throw new Error(`NftRecord already exists for type ${params.type}`)
+    }
+
+    const record = {
+      contentHash: params.contentHash,
+      authbase: params.authbase,
+      timestamp: params.timestamp,
+      category: params.category,
+      type: params.type,
+      nft: params.nft,
+      status: 'new'
+    } as NftRecord
+
+    await this.nfts.put(record)
+    return record
+  }
+
+  async updateNftRecord(params: {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    type: string,
+    nft: NftType
+  }): Promise<NftRecord> {
+    const existing = await this.nfts
+      .where('[contentHash+authbase+timestamp+type]')
+      .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+      .first()
+
+    if (!existing) {
+      throw new Error(`NftRecord not found for type ${params.type}`)
+    }
+
+    const nftEqual = JSON.stringify(existing.nft) === JSON.stringify(params.nft)
+    if (nftEqual) return existing
+
+    existing.nft = params.nft
+    if (existing.status === 'published') {
+      existing.status = 'modified'
+    }
+    await this.nfts.put(existing)
+    return existing
+  }
+
+  async setNftRecordsPublished(params: {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    types: string[]
+  }): Promise<void> {
+    await this.transaction('rw', this.nfts, async () => {
+      for (const type of params.types) {
+        const record = await this.nfts
+          .where('[contentHash+authbase+timestamp+type]')
+          .equals([params.contentHash, params.authbase, params.timestamp, type])
+          .first()
+        if (record) {
+          await this.nfts.update(record.id!, { status: 'published' })
+        }
+      }
+    })
+  }
+
+  async createNewRegistry(params: {
+    authbase: string,
+    contentHash: string,
+    publicationUris: string[],
+    rawRegistry: Blob
+  }): Promise<ParsedRegistryRecord> {
+    const text = await params.rawRegistry.text()
+    const parsedRegistry = JSON.parse(text) as Registry
+    const compactRegistry = this.toCompactRegistry(parsedRegistry)
+
+    const registryRecord = {
+      authbase: params.authbase,
+      contentHash: params.contentHash,
+      publicationUris: params.publicationUris,
+      rawRegistry: params.rawRegistry,
+      registry: compactRegistry,
+      status: 'new'
+    } as RegistryRecord
+
+    const id = await this.registry.add(registryRecord)
+    const { rawRegistry, ...rest } = registryRecord
+    return { ...rest, id }
+  }
+
+  private toCompactRegistry(registry: Registry): CompactRegistry {
+    if (!registry.identities) return registry as unknown as CompactRegistry
+    const identities = Object.keys(registry.identities)
+    const identitiesMap = identities.reduce((acc: { [authbase: string]: string[] }, authbase: string) => {
+      acc[authbase] = Object.keys(registry.identities![authbase] || {}).sort((a, b) => b.localeCompare(a))
+      return acc
+    }, {} as { [authbase: string]: string[] })
+    return { ...registry, identities: identitiesMap }
+  }
+
 }
 
 

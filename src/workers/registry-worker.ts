@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { CompactRegistry, db, IdentitySnapshotRecord, NftRecord, ParsedRegistryRecord, RegistryRecord, BumpArtifact, RegistryRecordStatus } from '../core/client-db'
+import { CompactRegistry, db, IdentitySnapshotRecord, ParsedRegistryRecord, RegistryRecord, BumpArtifact, RegistryRecordStatus } from '../core/client-db'
 import { retrieveLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
 import { IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues } from 'src/core/bcmr/bcmr-v2.schema';
@@ -27,28 +27,9 @@ export type GetIdentitySnapshotParams = ProgressErrorListener & {
   category?: string 
 }
 
-export type CreateNftRecordParams = ProgressErrorListener & {
-  contentHash: string,
-  authbase: string,
-  timestamp: string,
-  category: string,
-  type: string,
-  nft: NftType
-}
-
-export type UpdateNftRecordParams = ProgressErrorListener & {
-  contentHash: string,
-  authbase: string,
-  timestamp: string,
-  type: string,
-  nft: NftType
-}
-
-export type CreateNewRegistryParams = ProgressErrorListener & {
-  authbase: string,
-  contentHash: string,
-  publicationUris: string[],
-  rawRegistry: Blob
+export type PaginatedNftTypesResult = {
+  items: { type: string, nft: NftType }[],
+  total: number
 }
 
 export type Authbase = string
@@ -434,75 +415,54 @@ const registryWorker = {
     })
   },
 
-  async createNftRecord(params: CreateNftRecordParams): Promise<NftRecord|undefined> {
+  async getNftTypes(params: ProgressErrorListener & {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    offset?: number,
+    limit?: number
+  }): Promise<PaginatedNftTypesResult|undefined> {
     try {
-      const existing = await db.nfts
-        .where('[contentHash+authbase+timestamp+type]')
-        .equals([params.contentHash, params.authbase, params.timestamp, params.type])
-        .first();
-
-      if (existing) {
-        throw new Error(`NftRecord already exists for type ${params.type}`)
+      const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
+      if (!registryRecord?.rawRegistry) {
+        return { items: [], total: 0 }
       }
 
-      const record = {
-        contentHash: params.contentHash,
-        authbase: params.authbase,
-        timestamp: params.timestamp,
-        category: params.category,
-        type: params.type,
-        nft: params.nft,
-        status: 'new'
-      } as NftRecord
-
-      await db.nfts.put(record);
-      return record
-    } catch (e) {
-      params.onError?.(getErrorMessage(e))
-    }
-  },
-
-  async updateNftRecord(params: UpdateNftRecordParams): Promise<NftRecord|undefined> {
-    try {
-      const existing = await db.nfts
-        .where('[contentHash+authbase+timestamp+type]')
-        .equals([params.contentHash, params.authbase, params.timestamp, params.type])
-        .first();
-
-      if (!existing) {
-        throw new Error(`NftRecord not found for type ${params.type}`)
+      const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
+      const identitySnapshot = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]
+      if (!identitySnapshot?.token?.nfts?.parse?.types) {
+        return { items: [], total: 0 }
       }
 
-      const nftEqual = JSON.stringify(existing.nft) === JSON.stringify(params.nft);
-      if (nftEqual) return existing
+      const types = identitySnapshot.token.nfts.parse.types
+      const isSequential = !(identitySnapshot.token.nfts.parse as any).bytecode
+      const entries = Object.entries(types)
 
-      existing.nft = params.nft;
-      if (existing.status === 'published') {
-        existing.status = 'modified'
+      entries.sort(([a], [b]) => {
+        if (isSequential) {
+          const aBytes = a.match(/.{1,2}/g) || []
+          const bBytes = b.match(/.{1,2}/g) || []
+          const aRev = aBytes.reverse().join('')
+          const bRev = bBytes.reverse().join('')
+          const aInt = BigInt('0x' + aRev)
+          const bInt = BigInt('0x' + bRev)
+          if (aInt < bInt) return -1
+          if (aInt > bInt) return 1
+          return 0
+        }
+        return a.localeCompare(b)
+      })
+
+      const total = entries.length
+
+      const offset = params.offset ?? 0
+      const limit = params.limit ?? entries.length
+      const page = entries.slice(offset, offset + limit)
+
+      return {
+        items: page.map(([type, nft]) => ({ type, nft })),
+        total
       }
-      await db.nfts.put(existing);
-      return existing
-    } catch (e) {
-      params.onError?.(getErrorMessage(e))
-    }
-  },
-
-  async createNewRegistry(params: CreateNewRegistryParams): Promise<ParsedRegistryRecord|undefined> {
-    try {
-      const compactParsedRegistry: CompactRegistry = await this.parseRegistry(params.rawRegistry, true) as CompactRegistry
-
-      const registryRecord = {
-        authbase: params.authbase,
-        contentHash: params.contentHash,
-        publicationUris: params.publicationUris,
-        rawRegistry: params.rawRegistry,
-        registry: compactParsedRegistry,
-        status: 'new'
-      } as RegistryRecord
-
-      const id = await db.registry.add(registryRecord)
-      const { rawRegistry, ...rest } = registryRecord
-      return { ...rest, id }
     } catch (e) {
       params.onError?.(getErrorMessage(e))
     }
