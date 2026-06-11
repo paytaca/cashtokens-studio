@@ -1,8 +1,8 @@
 <template>
   <div>
     <div class="row items-start q-gutter-md q-mb-lg">
-      <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1"
-        :class="{ 'cursor-pointer': allowEdit }" @click="allowEdit ? uploadMedia() : undefined">
+      <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1" :class="{ 'cursor-pointer': allowEdit }"
+        @click="allowEdit ? uploadMedia() : undefined">
         <q-img v-if="iconUrl" :src="iconUrl" fit="cover" />
         <q-icon v-else name="image" color="grey-6" size="32px" />
       </q-avatar>
@@ -11,9 +11,8 @@
         <div class="text-caption text-grey-5 text-mono q-mt-xs">{{ commitment }}</div>
       </div>
     </div>
-    <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg"
-      :style="{ minHeight: '300px' }" :class="{ 'cursor-pointer': allowEdit }"
-      @click="allowEdit ? uploadMedia() : undefined">
+    <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg" :style="{ minHeight: '300px' }"
+      :class="{ 'cursor-pointer': allowEdit }" @click="allowEdit ? uploadMedia() : undefined">
       <div v-if="loadingMedia" class="text-center">
         <q-spinner color="primary" size="48px" />
       </div>
@@ -43,7 +42,8 @@
           <label class="text-caption text-grey-5 text-uppercase" style="letter-spacing: 1px;">
             Attributes
           </label>
-          <q-btn v-if="allowEdit" dense flat icon="add" color="primary" size="sm" label="Add Attribute" @click="addAttribute" />
+          <q-btn v-if="allowEdit" dense flat icon="add" color="primary" size="sm" label="Add Attribute"
+            @click="addAttribute" />
         </div>
         <div v-if="Object.keys(attributes).length > 0" class="q-gutter-y-xs">
           <div v-for="(val, key) in attributes" :key="key"
@@ -52,11 +52,16 @@
               <span class="text-weight-medium">{{ key }}:</span>
               <span class="text-grey-4 q-ml-xs">{{ val }}</span>
             </div>
-            <q-btn v-if="allowEdit" dense flat round icon="close" size="sm" color="negative" @click="removeAttribute(key)" />
+            <q-btn v-if="allowEdit" dense flat round icon="close" size="sm" color="negative"
+              @click="removeAttribute(key)" />
           </div>
         </div>
         <div v-else class="text-caption text-grey-6">No attributes</div>
       </FormField>
+
+      <div v-if="allowEdit" class="row justify-end q-mt-lg">
+        <q-btn unelevated color="primary" label="Save" :disable="!isModified" @click="$emit('save', nft)" />
+      </div>
     </div>
   </div>
 </template>
@@ -75,12 +80,20 @@ const props = defineProps<{
   allowEdit?: boolean
 }>()
 
+const emit = defineEmits<{
+  save: [nft: NftType]
+}>()
+
 const nft = defineModel<NftType>('nft', { required: true })
 const $q = useQuasar()
 
 const mediaUrl = ref('')
 const mediaType = ref<'image' | 'video' | 'audio' | null>(null)
 const loadingMedia = ref(false)
+
+const initialNft = ref('')
+
+const isModified = computed(() => JSON.stringify(nft.value) !== initialNft.value)
 
 const iconUrl = computed(() => {
   const icon = nft.value.uris?.icon
@@ -100,7 +113,7 @@ const detectMediaType = (url: string): 'image' | 'video' | 'audio' | null => {
 }
 
 const loadMedia = async () => {
-  const uri = nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.web
+  const uri = nft.value.uris?.asset || nft.value.uris?.image || nft.value.uris?.web
   if (!uri) {
     mediaUrl.value = ''
     mediaType.value = null
@@ -136,6 +149,36 @@ const onMediaError = () => {
   mediaType.value = null
 }
 
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => resolve(img)
+    img.onerror = reject
+    img.src = src
+  })
+}
+
+const createSquareThumbnail = async (file: File, maxSize: number): Promise<Blob> => {
+  const url = URL.createObjectURL(file)
+  const img = await loadImage(url)
+  URL.revokeObjectURL(url)
+
+  const size = Math.min(img.width, img.height)
+  const offsetX = (img.width - size) / 2
+  const offsetY = (img.height - size) / 2
+  const targetSize = Math.min(maxSize, size)
+
+  const canvas = document.createElement('canvas')
+  canvas.width = targetSize
+  canvas.height = targetSize
+  const ctx = canvas.getContext('2d')!
+  ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize)
+
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob!), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9)
+  })
+}
+
 const uploadMedia = () => {
   if (!props.allowEdit) return
   const input = document.createElement('input')
@@ -146,14 +189,44 @@ const uploadMedia = () => {
     if (!file) return
 
     try {
+      const isImage = file.type.startsWith('image/')
       const result = await uploadFile(file, file.name)
       const { cid } = result
 
-      nft.value = {
-        ...nft.value,
-        uris: {
-          ...nft.value.uris,
-          web: `ipfs://${cid}`
+      if (isImage) {
+        const imgUrl = URL.createObjectURL(file)
+        const img = await loadImage(imgUrl)
+        URL.revokeObjectURL(imgUrl)
+
+        if (img.width <= 400 && img.height <= 400 && img.width === img.height) {
+          nft.value = {
+            ...nft.value,
+            uris: {
+              ...nft.value.uris,
+              image: `ipfs://${cid}`,
+              icon: `ipfs://${cid}`
+            }
+          }
+        } else {
+          const squareBlob = await createSquareThumbnail(file, 400)
+          const thumbResult = await uploadFile(squareBlob, `thumb_${file.name}`)
+
+          nft.value = {
+            ...nft.value,
+            uris: {
+              ...nft.value.uris,
+              image: `ipfs://${cid}`,
+              icon: `ipfs://${thumbResult.cid}`
+            }
+          }
+        }
+      } else {
+        nft.value = {
+          ...nft.value,
+          uris: {
+            ...nft.value.uris,
+            web: `ipfs://${cid}`
+          }
         }
       }
 
@@ -170,7 +243,10 @@ watch(() => nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.we
   loadMedia()
 })
 
-onMounted(loadMedia)
+onMounted(() => {
+  initialNft.value = JSON.stringify(nft.value)
+  loadMedia()
+})
 
 const attributes = computed({
   get: () => ((nft.value.extensions as any)?.attributes || {}) as { [key: string]: string },
