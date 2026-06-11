@@ -19,53 +19,52 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeysLoading = ref<boolean>()
   const activeAuthhead = ref<AuthheadUtxo>()
 
-  async function loadAuthheads (sync?: boolean) {
-    try {
-      authheadsLoading.value = true
-      authheads.value = await getLockedAuthheadUtxos(authkeys.value)
-      for (const authhead of authheads.value) {
-          if (!authhead.token) {
-              continue
+  async function loadAuthheads(sync?: boolean) {
+  try {
+    authheadsLoading.value = true;
+    authheads.value = await getLockedAuthheadUtxos(authkeys.value);
+    // Create a pipeline task for each individual authhead
+    const tasks = authheads.value.map(async (authhead) => {
+      if (!authhead.token) return;
+
+      const authbase = authhead.token.category;
+
+      try {
+        const registryRecord = await loadRegistry(authbase, sync);
+
+        if (!registryRecord) return;
+
+        if (!registryRecord.registry.identities?.[authbase]?.[0]) {
+          return;
+        }
+
+        const identity = {
+          contentHash: registryRecord.contentHash,
+          identity: {
+            authbase,
+            timestamp: registryRecord.registry.identities![authbase]![0]!
           }
-          
-          const authbase = authhead.token.category
-          // await loadIdentitySnapshot(authhead.token.category)
-          // assuming category of identity output as authbase
-          try {
-            const registryRecord = await loadRegistry(authbase, sync)
-            if (registryRecord) {
+        };
 
-              if (!registryRecord.registry.identities?.[authbase]?.[0]) {
-                continue
-              }
-
-              const identity = {
-                contentHash: registryRecord.contentHash,
-                identity: {
-                  authbase,
-                  timestamp: registryRecord.registry.identities![authbase]![0]!
-                }
-              }
-
-              const identitySnapshot = await getIdentitySnapshot(identity)
-              if (identitySnapshot) {
-                authhead.identitySnapshot = identitySnapshot
-                authhead.identitySnapshotIdentifier = identity
-              }
-            }
-            
-          } catch (error) {
-            console.log(`Error loading registry of ${authhead.token.category}`, error)
-            continue
-          }
-          
+        const identitySnapshot = await getIdentitySnapshot(identity);
+        if (identitySnapshot) {
+          authhead.identitySnapshot = identitySnapshot;
+          authhead.identitySnapshotIdentifier = identity;
+        }
+      } catch (error) {
+        console.error(`Error processing authhead for category ${authbase}:`, error);
       }
-    } catch (error) {
-        throw error
-    } finally {
-      authheadsLoading.value = false
-    }
+    });
+
+    await Promise.allSettled(tasks);
+
+  } catch (error) {
+    throw error;
+  } finally {
+    authheadsLoading.value = false;
   }
+  } 
+
 
   const loadAuthkeys = async (externalWallet: any, sync?: boolean) => {
     try {
