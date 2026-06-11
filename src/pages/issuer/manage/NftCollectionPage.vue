@@ -107,7 +107,7 @@
                             </div>
                         </div>
 
-                        <div class="row q-mt-lg q-gutter-x-sm">
+                        <div class="row justify-end q-mt-lg q-gutter-x-sm">
                             <q-btn color="primary" icon="mdi-send" label="Mint Child NFT" unelevated
                                 @click="openMintPage" />
                             <q-btn color="orange" icon="mdi-fire" label="Burn" unelevated outline
@@ -118,11 +118,15 @@
 
                 <q-card v-if="authhead && unpublishedNfts.length > 0" flat class="bg-dark q-mt-lg">
                     <div class="q-pa-lg">
-                        <div class="table-header text-h6 text-weight-medium q-mb-xs">
-                            <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
-                            {{ t('label.unpublishedNfts') }}
+                        <div class="row items-center justify-between q-mb-xs">
+                            <div class="table-header text-h6 text-weight-medium">
+                                <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
+                                {{ t('label.registry.unpublishedNfts') }}
+                            </div>
+                            <q-btn color="primary" icon="mdi-publish" :label="t('button.publish')" unelevated
+                                :loading="publishing" @click="publishNfts" size="sm" />
                         </div>
-                        <div class="text-caption text-grey-6 q-mb-md">{{ t('label.unpublishedCaption') }}</div>
+                        <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.unpublishedCaption') }}</div>
                         <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
                             :rows-per-page-options="[0]" class="bg-dark border-radius-12">
                             <template v-slot:body-cell-type="props">
@@ -154,7 +158,7 @@
                                                         <q-icon name="delete" size="xs" color="negative" />
                                                     </q-item-section>
                                                     <q-item-section class="text-negative">{{
-                                                        t('button.delete')}}</q-item-section>
+                                                        t('button.delete') }}</q-item-section>
                                                 </q-item>
                                             </q-list>
                                         </q-menu>
@@ -170,8 +174,9 @@
 
                 <q-card v-if="authhead" flat class="bg-dark q-mt-lg">
                     <div class="q-pa-lg">
-                        <div class="table-header text-h6 text-weight-medium q-mb-xs">{{ t('label.published') }}</div>
-                        <div class="text-caption text-grey-6 q-mb-md">{{ t('label.publishedCaption') }}</div>
+                        <div class="table-header text-h6 text-weight-medium q-mb-xs">{{
+                            t('label.registry.published') }}</div>
+                        <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.publishedCaption') }}</div>
                         <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
                             :loading="publishedLoading" v-model:pagination="publishedPagination"
                             @request="onPublishedRequest" class="bg-dark border-radius-12">
@@ -207,14 +212,14 @@ import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
-import { UtxoWithPath } from 'src/core/types'
-import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
+import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
+import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer, publishRegistry, isBroadcastSuccess } from 'src/core/transaction'
 import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
-import { delay } from 'mainnet-js-v3'
+import { delay, HDWallet } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
@@ -236,29 +241,33 @@ const {
 
 const authhead = computed(() => activeAuthhead.value)
 
-const registryInfo = ref<{ contentHash: string, authbase: string, timestamp: string }>()
 const unpublishedNfts = ref<NftRecord[]>([])
 const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
 const publishedLoading = ref(false)
+const publishing = ref(false)
 
 const loadUnpublishedNfts = async () => {
-    if (!registryInfo.value) return
+    if (!authhead.value?.identitySnapshotIdentifier) return
     unpublishedNfts.value = await db.nfts
         .where('[contentHash+authbase+timestamp]')
-        .equals([registryInfo.value.contentHash, registryInfo.value.authbase, registryInfo.value.timestamp])
+        .equals([
+            authhead.value.identitySnapshotIdentifier.contentHash,
+            authhead.value.identitySnapshotIdentifier.identity.authbase,
+            authhead.value.identitySnapshotIdentifier.identity.timestamp,
+        ])
         .filter(n => n.status === 'new' || n.status === 'modified')
         .toArray()
 }
 
 const loadPublishedNfts = async (offset: number, limit: number) => {
-    if (!registryInfo.value) return
+    if (!authhead.value?.identitySnapshotIdentifier) return
     publishedLoading.value = true
     try {
         const result = await getRegistryWorker().getNftTypes({
-            contentHash: registryInfo.value.contentHash,
-            authbase: registryInfo.value.authbase,
-            timestamp: registryInfo.value.timestamp,
+            contentHash: authhead.value.identitySnapshotIdentifier.contentHash,
+            authbase: authhead.value.identitySnapshotIdentifier.identity.authbase,
+            timestamp: authhead.value.identitySnapshotIdentifier.identity.timestamp,
             offset,
             limit
         })
@@ -285,6 +294,100 @@ const editNft = (nft: NftRecord) => {
 const deleteNft = async (nft: NftRecord) => {
     await db.nfts.delete(nft.id!)
     unpublishedNfts.value = unpublishedNfts.value.filter(n => n.id !== nft.id)
+}
+
+const publishNfts = async () => {
+    if (!authhead.value?.identitySnapshotIdentifier || unpublishedNfts.value.length === 0) return
+    publishing.value = true
+    const loadingGroup = $q.loading.show({
+        group: 'mpop-lg',
+        message: t('info.uploadingRegistryToIpfs')
+    })
+
+    try {
+
+        const { contentHash, identity } = authhead.value.identitySnapshotIdentifier
+        const types = unpublishedNfts.value.map(n => n.type)
+        const bumpArtifact = await getRegistryWorker().bumpRegistry({
+            originalContentHash: contentHash,
+            bumpType: 'patch',
+            targetIdentity: {
+                authbase: identity.authbase,
+                timestamp: identity.timestamp
+            }
+        })
+
+        if (!bumpArtifact) {
+            throw new Error('Error uploading registry')
+        }
+
+        loadingGroup({
+            message: t('transaction.waitingForSignature')
+        })
+
+        const publishRegistryRequest = publishRegistry({
+            authhead: activeAuthhead.value as UtxoWithAuthKey,
+            funderUtxos: wallet.value.utxos as UtxoWithPath[],
+            network: import.meta.env.VITE_BCH_NETWORK,
+            registryPublicationData: {
+                contentHash: bumpArtifact.contentHash,
+                uris: bumpArtifact.uris
+            }
+        })
+
+        const response = await manager.value!.signTransaction(publishRegistryRequest);
+
+        loadingGroup({
+            message: t('transaction.broadcasting')
+        })
+
+        const broadcastResponse = await broadcast(response.signedTransaction as string)
+
+        if (broadcastResponse.ok) {
+            const broadcastResult = await broadcastResponse.json()
+            if (isBroadcastSuccess(broadcastResult)) {
+                await getRegistryWorker().commitBumpRegistry(contentHash, `${broadcastResult.txid}:0`)
+                // await delay(2000)
+                const waitResult = await wallet.value.receive?.waitForTransaction({
+                    txHash: broadcastResult.txid
+                })
+
+                loadingGroup()
+
+                $q.dialog({
+                    component: TransactionStatusDialog,
+                    componentProps: {
+                        statusType: 'success',
+                        statusText: t('success.registryPublication'),
+                        txid: broadcastResult.txid
+                    }
+                }).onOk(() => {
+                    router.back()
+                })
+            } else {
+                throw new Error(broadcastResult.error)
+            }
+        }
+
+        await db.setNftRecordsPublished({
+            contentHash,
+            authbase: identity.authbase,
+            timestamp: identity.timestamp,
+            types
+        })
+
+
+        // await Promise.all([
+        //     loadUnpublishedNfts(),
+        //     loadPublishedNfts(0, 10)
+        // ])
+        $q.notify({ type: 'positive', message: 'NFTs published successfully' })
+    } catch (error: any) {
+        console.log('publish error', error)
+        $q.notify({ type: 'Error', message: error.message })
+    } finally {
+        publishing.value = false
+    }
 }
 
 const publishedColumns: QTableColumn[] = [
@@ -408,17 +511,14 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
 }
 
 onMounted(async () => {
+
+
     if (!authhead.value) {
         router.push('/issuer/nft-collections')
         return
     }
-    const category = authhead.value.token!.category
-    const record = await db.registryIdentitySnapshot
-        .where('category')
-        .equals(category)
-        .first()
-    if (record) {
-        registryInfo.value = { contentHash: record.contentHash, authbase: record.authbase, timestamp: record.timestamp }
+
+    if (authhead.value?.identitySnapshot) {
         await Promise.all([
             loadUnpublishedNfts(),
             loadPublishedNfts(0, 10)
