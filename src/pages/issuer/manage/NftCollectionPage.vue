@@ -179,7 +179,8 @@
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.publishedCaption') }}</div>
                         <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
                             :loading="publishedLoading" v-model:pagination="publishedPagination"
-                            @request="onPublishedRequest" class="bg-dark border-radius-12">
+                            @request="onPublishedRequest" @row-click="onPublishedRowClick"
+                            class="bg-dark border-radius-12">
                             <template v-slot:body-cell-type="props">
                                 <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
                             </template>
@@ -207,9 +208,9 @@ import { QTableColumn, useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
-import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
@@ -219,7 +220,7 @@ import { decodeCashAddress } from '@bitauth/libauth'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
-import { delay, HDWallet } from 'mainnet-js-v3'
+import { delay } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
@@ -255,7 +256,7 @@ const loadUnpublishedNfts = async () => {
             authhead.value.identitySnapshotIdentifier.contentHash,
             authhead.value.identitySnapshotIdentifier.identity.authbase,
             authhead.value.identitySnapshotIdentifier.identity.timestamp,
-        ])
+        ] as [string, string, string])
         .filter(n => n.status === 'new' || n.status === 'modified')
         .toArray()
 }
@@ -263,6 +264,7 @@ const loadUnpublishedNfts = async () => {
 const loadPublishedNfts = async (offset: number, limit: number) => {
     if (!authhead.value?.identitySnapshotIdentifier) return
     publishedLoading.value = true
+
     try {
         const result = await getRegistryWorker().getNftTypes({
             contentHash: authhead.value.identitySnapshotIdentifier.contentHash,
@@ -275,6 +277,9 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
             publishedNfts.value = result.items
             publishedTotal.value = result.total
         }
+    }
+    catch (error) {
+        console.log('error getting nft types')
     } finally {
         publishedLoading.value = false
     }
@@ -291,9 +296,19 @@ const editNft = (nft: NftRecord) => {
     console.log('edit', nft)
 }
 
-const deleteNft = async (nft: NftRecord) => {
-    await db.nfts.delete(nft.id!)
-    unpublishedNfts.value = unpublishedNfts.value.filter(n => n.id !== nft.id)
+const deleteNft = (nft: NftRecord) => {
+    $q.dialog({
+        title: 'Delete NFT',
+        message: `Are you sure you want to delete "${nft.nft.name || nft.type}"?`,
+        cancel: { label: 'Cancel', flat: true, color: 'grey-6' },
+        persistent: true,
+        ok: { label: 'Delete', color: 'negative', unelevated: true }
+    }).onOk(async () => {
+        await db.nfts.where('[contentHash+authbase+timestamp+type]')
+            .equals([nft.contentHash, nft.authbase, nft.timestamp, nft.type] as [string, string, string, string])
+            .delete()
+        await loadUnpublishedNfts()
+    })
 }
 
 const publishNfts = async () => {
@@ -406,9 +421,27 @@ watch(publishedTotal, (total) => {
     publishedPagination.value.rowsNumber = total
 })
 
+const registryStore = useRegistryStore()
+
 const openMintPage = () => {
     appStore.setActiveMinter(authhead.value)
     router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/mint')
+}
+
+const onPublishedRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
+    const id = authhead.value?.identitySnapshotIdentifier
+    const bytecode = (authhead.value?.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection | undefined)?.bytecode
+    registryStore.setActiveNft({
+        contentHash: id!.contentHash,
+        authbase: id!.identity.authbase,
+        timestamp: id!.identity.timestamp,
+        category: authhead.value!.token!.category,
+        bytecode,
+        commitmentOrBottomAltStack: row.type,
+        nft: row.nft,
+        allowEdit: true
+    })
+    router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/nft')
 }
 
 const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
@@ -519,7 +552,7 @@ onMounted(async () => {
     }
 
     if (authhead.value?.identitySnapshot) {
-        await Promise.all([
+        await Promise.allSettled([
             loadUnpublishedNfts(),
             loadPublishedNfts(0, 10)
         ])
