@@ -173,6 +173,7 @@
                                 @click="mint" />
                         </div>
                     </q-form>
+
                 </div>
                 <div v-else class="flex flex-center q-py-xl">
                     <q-spinner color="primary" size="48px" />
@@ -205,6 +206,7 @@ import { type SignTransactionRequest } from '@wizardconnect/core'
 import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { setNftUnrevealedCtsExtension } from 'src/core/bcmr/utils'
+import { db } from 'src/core/client-db'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
@@ -348,7 +350,7 @@ const mint = async () => {
                 throw new Error('Invalid mint strategy')
         }
 
-        const { mintOutputs } = signRequest
+        const { mintOutputs, ...restOfSignRequest } = signRequest
 
         const nftCollection: SequentialNftCollection = {
             types: {}
@@ -366,17 +368,43 @@ const mint = async () => {
             nftCollection.types[output.token!.nft!.commitment] = nft
         })
 
-        console.log('Minter', minter.value)
-        console.log('MInt outputs', mintOutputs)
-        return
-        //TODO: update the registry add this nfts
+        const category = minter.value!.token!.category
+        const identitySnapshotRecord = await db.registryIdentitySnapshot
+            .where('category')
+            .equals(category)
+            .first()
 
-        const response = await manager.value!.signTransaction(signRequest)
+        if (!identitySnapshotRecord) {
+            throw new Error('Registry identity snapshot not found')
+        }
+
+        const { contentHash, authbase, timestamp } = identitySnapshotRecord
+
+        const types: string[] = []
+        for (const [commitment, nft] of Object.entries(nftCollection.types)) {
+            types.push(commitment)
+            await db.createNftRecord({
+                contentHash,
+                authbase,
+                timestamp,
+                category,
+                type: commitment,
+                nft
+            })
+        }
+
+        const response = await manager.value!.signTransaction(restOfSignRequest)
         const broadcastResponse = await broadcast(response.signedTransaction)
 
         if (broadcastResponse.ok) {
             const broadcastResult = await broadcastResponse.json()
             if (broadcastResult.success) {
+                await db.setNftRecordsPublished({
+                    contentHash,
+                    authbase,
+                    timestamp,
+                    types
+                })
                 await delay(2000)
                 $q.dialog({
                     component: TransactionStatusDialog,
@@ -400,9 +428,10 @@ const mint = async () => {
     }
 }
 
-onMounted(() => {
+onMounted(async () => {
     if (!minter.value) {
         router.push('/issuer/nft-collections')
+        return
     }
     if (wallet.value) {
         recipient.value = wallet.value.getTokenDepositAddress(0)
