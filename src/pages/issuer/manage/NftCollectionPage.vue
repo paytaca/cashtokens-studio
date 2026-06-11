@@ -22,6 +22,8 @@
                                     {{ authhead.identitySnapshot?.name || 'Unnamed Collection' }}
                                 </div>
                             </div>
+                            <q-space />
+                            <q-btn flat dense round icon="refresh" size="lg" :loading="refreshing" @click="refresh" />
                         </div>
 
                         <div class="row">
@@ -122,7 +124,9 @@
                             <div class="table-header text-h6 text-weight-medium">
                                 <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
                                 {{ t('label.registry.unpublishedNfts') }}
+
                             </div>
+
                             <q-btn color="primary" icon="mdi-publish" :label="t('button.publish')" unelevated
                                 :loading="publishing" @click="publishNfts" size="sm" />
                         </div>
@@ -175,7 +179,10 @@
                 <q-card v-if="authhead" flat class="bg-dark q-mt-lg">
                     <div class="q-pa-lg">
                         <div class="table-header text-h6 text-weight-medium q-mb-xs">{{
-                            t('label.registry.published') }}</div>
+                            t('label.registry.published') }}
+                            <q-btn flat dense round icon="refresh" size="md" :loading="publishedLoading"
+                                @click="refresh" class="q-mr-xs" />
+                        </div>
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.publishedCaption') }}</div>
                         <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
                             :loading="publishedLoading" v-model:pagination="publishedPagination"
@@ -234,6 +241,7 @@ const { t } = useI18n()
 const appStore = useAppStore()
 
 const authguardStore = useAuthguardStore()
+const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const {
     manager,
@@ -247,6 +255,7 @@ const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
 const publishedLoading = ref(false)
 const publishing = ref(false)
+const refreshing = ref(false)
 
 const loadUnpublishedNfts = async () => {
     if (!authhead.value?.identitySnapshotIdentifier) return
@@ -264,7 +273,6 @@ const loadUnpublishedNfts = async () => {
 const loadPublishedNfts = async (offset: number, limit: number) => {
     if (!authhead.value?.identitySnapshotIdentifier) return
     publishedLoading.value = true
-
     try {
         const result = await getRegistryWorker().getNftTypes({
             contentHash: authhead.value.identitySnapshotIdentifier.contentHash,
@@ -283,6 +291,28 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
     } finally {
         publishedLoading.value = false
     }
+}
+
+const refresh = async () => {
+    try {
+        if (!authhead.value?.identitySnapshotIdentifier) return
+        refreshing.value = true
+        const { identity } = authhead.value.identitySnapshotIdentifier
+        await registryStore.loadRegistry(identity.authbase, true)
+        await Promise.allSettled([
+            loadUnpublishedNfts(),
+            loadPublishedNfts(0, 10)
+        ])
+    } catch (error) {
+        $q.notify({
+            type: 'warning',
+            message: 'Failed to refresh collection data. Please check your connection or try again later.',
+            color: 'warning'
+        })
+    } finally {
+        refreshing.value = false
+    }
+
 }
 
 const unpublishedColumns: QTableColumn[] = [
@@ -376,27 +406,15 @@ const publishNfts = async () => {
                         statusText: t('success.registryPublication'),
                         txid: broadcastResult.txid
                     }
-                }).onOk(() => {
+                }).onOk(async () => {
+                    await registryStore.loadRegistry(identity.authbase, true)
+                    await loadPublishedNfts(0, 10)
                     router.back()
                 })
             } else {
                 throw new Error(broadcastResult.error)
             }
         }
-
-        await db.setNftRecordsPublished({
-            contentHash,
-            authbase: identity.authbase,
-            timestamp: identity.timestamp,
-            types
-        })
-
-
-        // await Promise.all([
-        //     loadUnpublishedNfts(),
-        //     loadPublishedNfts(0, 10)
-        // ])
-        $q.notify({ type: 'positive', message: 'NFTs published successfully' })
     } catch (error: any) {
         console.log('publish error', error)
         $q.notify({ type: 'Error', message: error.message })
@@ -420,8 +438,6 @@ const onPublishedRequest = async (props: any) => {
 watch(publishedTotal, (total) => {
     publishedPagination.value.rowsNumber = total
 })
-
-const registryStore = useRegistryStore()
 
 const openMintPage = () => {
     appStore.setActiveMinter(authhead.value)
