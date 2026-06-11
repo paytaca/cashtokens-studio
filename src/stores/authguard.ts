@@ -8,7 +8,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
   const {
     loadRegistry,
-    getIdentitySnapshotByCategory
+    getIdentitySnapshot
   } = useRegistryStore()
 
   const authheads = ref<AuthheadUtxo[]>([])
@@ -19,7 +19,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeysLoading = ref<boolean>()
   const activeAuthhead = ref<AuthheadUtxo>()
 
-  async function loadAuthheads () {
+  async function loadAuthheads (sync?: boolean) {
     try {
       authheadsLoading.value = true
       authheads.value = await getLockedAuthheadUtxos(authkeys.value)
@@ -27,15 +27,30 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
           if (!authhead.token) {
               continue
           }
+          
+          const authbase = authhead.token.category
           // await loadIdentitySnapshot(authhead.token.category)
           // assuming category of identity output as authbase
           try {
-            const loadResult = await loadRegistry(authhead.token.category)
-            if (loadResult) {
-              const identitySnapshot = await getIdentitySnapshotByCategory(authhead.token.category)
-              
+            const registryRecord = await loadRegistry(authbase, sync)
+            if (registryRecord) {
+
+              if (!registryRecord.registry.identities?.[authbase]?.[0]) {
+                continue
+              }
+
+              const identity = {
+                contentHash: registryRecord.contentHash,
+                identity: {
+                  authbase,
+                  timestamp: registryRecord.registry.identities![authbase]![0]!
+                }
+              }
+
+              const identitySnapshot = await getIdentitySnapshot(identity)
               if (identitySnapshot) {
                 authhead.identitySnapshot = identitySnapshot
+                authhead.identitySnapshotIdentifier = identity
               }
             }
             
@@ -60,6 +75,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
         if (sync) {
           authkeysLastSync.value = Date.now()
         }
+        
     } catch (error) {
         throw error
     } finally {
@@ -75,7 +91,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     if (authkeysLastSync !== authkeysPrevSync) {
         try {
           authheadsLoading.value = true
-          await loadAuthheads()
+          await loadAuthheads(true)
         } catch (error) {
             console.log(error)
         } finally {
