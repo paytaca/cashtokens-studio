@@ -250,7 +250,11 @@ const registryWorker = {
   async bumpRegistry(params: ProgressErrorListener & { 
     originalContentHash: string, 
     bumpType: 'major'|'minor'|'patch',
-    newVersion: { major: number, minor: number, patch: number },
+    newVersion?: { major: number, minor: number, patch: number },
+    targetIdentity?: {
+      authbase: string,
+      timestamp: string
+    }
   }): Promise<{uris: string[], contentHash: string}|undefined> {
 
     const registryRecord = await db.registry.where('contentHash').equals(params.originalContentHash).first()
@@ -261,14 +265,40 @@ const registryWorker = {
     const { identities, ...r } = registryRecord.registry
     const { identities: originalIdentities } = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
     const registryCandidate: Registry = r
-    registryCandidate.version = params.newVersion
+    const originalVersion = registryCandidate.version
+    registryCandidate.version = params.newVersion || {
+        major: originalVersion.major + (params.bumpType === 'major' ? 1 : 0),
+        minor: originalVersion.minor + (params.bumpType === 'minor' ? 1 : 0),
+        patch: originalVersion.patch + (params.bumpType === 'patch' ? 1 : 0),
+    }
+    
     registryCandidate.latestRevision = new Date().toISOString()
     if (originalIdentities) { // Attach original identities 
       registryCandidate.identities = originalIdentities
     }
 
     const unpublishedIdentities: {[authbase: string]: RegistryTimestampKeyedValues<IdentitySnapshot> } = {}
-    if (registryRecord.registry.identities) {
+
+    if (params.targetIdentity) {
+      const identitySnapshotRecord = 
+          await db.registryIdentitySnapshot
+            .where('[contentHash+authbase+timestamp]')
+            .equals([registryRecord.contentHash, params.targetIdentity.authbase, params.targetIdentity.timestamp] as [string, string, string]).first();
+
+      let identitySnapshot = identitySnapshotRecord?.identitySnapshot
+      if (!identitySnapshot) {
+        identitySnapshot = registryCandidate.identities?.[params.targetIdentity.authbase]?.[params.targetIdentity?.timestamp]
+        if (!identitySnapshot) {
+          throw new Error('Target identity not found')
+        }
+      }
+      unpublishedIdentities[params.targetIdentity.authbase] = {
+        [params.targetIdentity.timestamp]: identitySnapshot
+      }
+    }
+
+
+    if (!params.targetIdentity && registryRecord.registry.identities) {
       for (const authbase of Object.keys(registryRecord.registry.identities || {})) {
         const latestTimestamp = registryRecord.registry.identities[authbase]?.sort((a, b) => b.localeCompare(a))![0] as string
         const identitySnapshotRecord = 
@@ -282,7 +312,7 @@ const registryWorker = {
         }
       }
     }
-    
+
     for (const authbase of Object.keys(unpublishedIdentities)) {
       const timestamp = Object.keys(unpublishedIdentities[authbase]!)[0] as string
       let timestampCandidate = timestamp 
@@ -342,7 +372,6 @@ const registryWorker = {
         bumpArtifact: { contentHash, uris, cid: artifact.cid, registry: jsonBlob }
       })
     }
-
     return {
       contentHash,
       uris
@@ -467,9 +496,6 @@ const registryWorker = {
       params.onError?.(getErrorMessage(e))
     }
   },
-
-  async publishNfts() {}
-
 };
 
 export type RegistryWorkerAPI = typeof registryWorker;
