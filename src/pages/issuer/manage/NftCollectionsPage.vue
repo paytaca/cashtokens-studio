@@ -49,7 +49,10 @@
                                 </q-avatar>
                                 <div class="col">
                                     <div class="text-subtitle2 text-weight-bold text-white token-symbol line-clamp-1">
-                                        {{ props.row.identitySnapshot?.token?.symbol || 'Unknwon Token' }}
+                                        <q-skeleton v-if="authheadsLoading"></q-skeleton>
+                                        <span v-else>
+                                            {{ props.row.identitySnapshot?.token?.symbol || 'Unknwon Token' }}
+                                        </span>
                                     </div>
                                     <div class="flex items-center q-gutter-x-xs q-mt-xs">
                                         <span class="text-caption text-grey-5 text-mono">
@@ -57,8 +60,8 @@
                                             <CopyText :text="props.row.token!.category" />
                                         </span>
                                     </div>
-                                    <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                                        <div class="flex items-center q-gutter-x-xs">
+                                    <div class="flex items-center no-wrap q-gutter-x-xs q-mt-xs">
+                                        <div class="q-gutter-x-xs">
                                             <q-badge v-if="props.row.token?.nft?.capability === 'minting'"
                                                 color="purple-10" text-color="purple-2"
                                                 class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
@@ -75,16 +78,19 @@
                                                 Immutable
                                             </q-badge>
                                         </div>
-                                        <div class="flex items-center q-gutter-x-xs">
-                                            <q-badge v-if="props.row.identitySnapshot?.token?.nfts?.parse?.bytecode"
-                                                color="green-10" text-color="green-2"
-                                                class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
-                                                Parsable
-                                            </q-badge>
-                                            <q-badge v-else color="yellow-10" text-color="yellow-2"
-                                                class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
-                                                Sequential
-                                            </q-badge>
+                                        <div class="q-gutter-x-xs">
+                                            <q-skeleton v-if="authheadsLoading" type="QBadge"></q-skeleton>
+                                            <template v-else>
+                                                <q-badge v-if="props.row.identitySnapshot?.token?.nfts?.parse?.bytecode"
+                                                    color="green-10" text-color="green-2"
+                                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                                    Parsable
+                                                </q-badge>
+                                                <q-badge v-else color="yellow-10" text-color="yellow-2"
+                                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                                    Sequential
+                                                </q-badge>
+                                            </template>
                                         </div>
                                     </div>
                                 </div>
@@ -177,12 +183,12 @@
                                     <q-tooltip class="bg-orange-9 text-weight-medium">Burn</q-tooltip>
                                 </q-btn>
 
-                                <!-- <q-btn round flat icon="description" color="secondary" class="action-btn-hover"
+                                <q-btn round flat icon="description" color="secondary" class="action-btn-hover"
                                     :disable="!!value.row.processing" :loading="loading"
                                     @click.stop="() => viewRegistry(value.row as UtxoWithAuthKey)" size="lg">
                                     <q-tooltip class="bg-secondary text-weight-medium">View Registry
                                         Metadata</q-tooltip>
-                                </q-btn> -->
+                                </q-btn>
 
                                 <!-- <q-btn round flat dense icon="refresh" color="grey-5" class="action-btn-hover"
                                     :disable="!!value.row.processing" :loading="loading"
