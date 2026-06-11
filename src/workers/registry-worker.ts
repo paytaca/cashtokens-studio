@@ -11,7 +11,7 @@ type ProgressErrorListener  = {
   onError?: (msg: string) => void
 }
 
-export type DownloadRegistryParams = ProgressErrorListener & { authbase: string } 
+export type DownloadRegistryParams = ProgressErrorListener & { authbase: string, sync?: boolean } 
 
 export type GetIdentitiesParams = ProgressErrorListener & { contentHash: string } 
 
@@ -56,6 +56,15 @@ const registryWorker = {
 
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
+      if (!params.sync) {
+        const existing = await db.registry.where('authbase').equals(params.authbase).first()
+        if (existing?.rawRegistry) {
+          const { rawRegistry, ...rest } = existing
+          const parsedRegistry = await this.parseRegistry(rawRegistry, true)
+          return { ...rest, registry: parsedRegistry as CompactRegistry }
+        }
+      }
+
       const pub = await retrieveLastRegistryPublication({ authbase: params.authbase })
       const uris: string[] = pub[0]?.uris || []
       const contentHash: string = pub[0]?.contentHash
