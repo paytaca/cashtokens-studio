@@ -56,7 +56,6 @@ const registryWorker = {
 
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
-      
       const pub = await retrieveLastRegistryPublication({ authbase: params.authbase })
       const uris: string[] = pub[0]?.uris || []
       const contentHash: string = pub[0]?.contentHash
@@ -79,7 +78,7 @@ const registryWorker = {
           }
           return uri
         })
-    
+        
         const response = await Promise.race(
           httpUris.map((uri: string) => fetch(uri))
         )
@@ -89,7 +88,6 @@ const registryWorker = {
         const registry: Blob = await response.blob();
         const parsedRegistry = await this.parseRegistry(registry, false) as Registry
         const compactParsedRegistry = await this.parseRegistry(registry, true) as CompactRegistry
-
         return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot], async () => {
           
           if (parsedRegistry.identities) {
@@ -186,11 +184,13 @@ const registryWorker = {
 
       if (!params.category) throw new Error('Identity or category required')
       
-      // Return the default latest identitySnapshot
-      return await db.registryIdentitySnapshot
+      // Return identitySnapshot of category with latest timestamp
+      const records = await db.registryIdentitySnapshot
           .where('category')
           .equals(params.category)
-          .first();
+          .toArray()
+      records.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      return records[0]
     } catch (e) {
       params.onError?.(getErrorMessage(e))
     } 
@@ -468,7 +468,7 @@ const registryWorker = {
     }
   },
 
-
+  async publishNfts() {}
 
 };
 
