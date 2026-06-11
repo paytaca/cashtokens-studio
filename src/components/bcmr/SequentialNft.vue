@@ -1,7 +1,8 @@
 <template>
   <div>
     <div class="row items-start q-gutter-md q-mb-lg">
-      <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1 cursor-pointer" @click="uploadMedia">
+      <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1"
+        :class="{ 'cursor-pointer': allowEdit }" @click="allowEdit ? uploadMedia() : undefined">
         <q-img v-if="iconUrl" :src="iconUrl" fit="cover" />
         <q-icon v-else name="image" color="grey-6" size="32px" />
       </q-avatar>
@@ -10,8 +11,9 @@
         <div class="text-caption text-grey-5 text-mono q-mt-xs">{{ commitment }}</div>
       </div>
     </div>
-    <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center cursor-pointer q-mb-lg"
-      :style="{ minHeight: '300px' }" @click="uploadMedia">
+    <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg"
+      :style="{ minHeight: '300px' }" :class="{ 'cursor-pointer': allowEdit }"
+      @click="allowEdit ? uploadMedia() : undefined">
       <div v-if="loadingMedia" class="text-center">
         <q-spinner color="primary" size="48px" />
       </div>
@@ -19,6 +21,10 @@
       <video v-else-if="mediaType === 'video'" :src="mediaUrl" class="media-content" controls @error="onMediaError" />
       <audio v-else-if="mediaType === 'audio'" :src="mediaUrl" class="media-content" controls @error="onMediaError"
         style="width: 100%; max-width: 400px" />
+      <div v-else-if="!allowEdit" class="text-center text-grey-5">
+        <q-icon name="image" size="64px" class="q-mb-sm block" />
+        <div class="text-caption">No media</div>
+      </div>
       <div v-else class="text-center text-grey-5">
         <q-icon name="add_photo_alternate" size="64px" class="q-mb-sm block" />
         <div class="text-caption">Click to add media</div>
@@ -29,7 +35,7 @@
         <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
           Description
         </label>
-        <q-input v-model="nft.description" outlined dark placeholder="NFT description" />
+        <q-input v-model="nft.description" outlined dark placeholder="NFT description" :disable="!allowEdit" />
       </FormField>
 
       <FormField>
@@ -37,7 +43,7 @@
           <label class="text-caption text-grey-5 text-uppercase" style="letter-spacing: 1px;">
             Attributes
           </label>
-          <q-btn dense flat icon="add" color="primary" size="sm" label="Add Attribute" @click="addAttribute" />
+          <q-btn v-if="allowEdit" dense flat icon="add" color="primary" size="sm" label="Add Attribute" @click="addAttribute" />
         </div>
         <div v-if="Object.keys(attributes).length > 0" class="q-gutter-y-xs">
           <div v-for="(val, key) in attributes" :key="key"
@@ -46,7 +52,7 @@
               <span class="text-weight-medium">{{ key }}:</span>
               <span class="text-grey-4 q-ml-xs">{{ val }}</span>
             </div>
-            <q-btn dense flat round icon="close" size="sm" color="negative" @click="removeAttribute(key)" />
+            <q-btn v-if="allowEdit" dense flat round icon="close" size="sm" color="negative" @click="removeAttribute(key)" />
           </div>
         </div>
         <div v-else class="text-caption text-grey-6">No attributes</div>
@@ -66,6 +72,7 @@ import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
 
 const props = defineProps<{
   commitment: string
+  allowEdit?: boolean
 }>()
 
 const nft = defineModel<NftType>('nft', { required: true })
@@ -130,6 +137,7 @@ const onMediaError = () => {
 }
 
 const uploadMedia = () => {
+  if (!props.allowEdit) return
   const input = document.createElement('input')
   input.type = 'file'
   input.accept = 'image/*,video/*,audio/*'
@@ -205,7 +213,7 @@ const removeAttribute = (key: string) => {
   overflow: hidden;
   position: relative;
 
-  &:hover {
+  &.cursor-pointer:hover {
     outline: 2px dashed rgba(255, 255, 255, 0.3);
     outline-offset: -2px;
   }
