@@ -258,23 +258,31 @@ const publishing = ref(false)
 const refreshing = ref(false)
 
 const loadUnpublishedNfts = async () => {
-    if (!authhead.value?.identitySnapshotIdentifier) return
-    unpublishedNfts.value = await db.nfts
-        .where('[contentHash+authbase+timestamp]')
-        .equals([
-            authhead.value.identitySnapshotIdentifier.contentHash,
-            authhead.value.identitySnapshotIdentifier.identity.authbase,
-            authhead.value.identitySnapshotIdentifier.identity.timestamp,
-        ] as [string, string, string])
-        .filter(n => n.status === 'new' || n.status === 'modified')
-        .toArray()
+    try {
+        if (!authhead.value?.identitySnapshotIdentifier) return
+        unpublishedNfts.value = await db.nfts
+            .where('[contentHash+authbase+timestamp]')
+            .equals([
+                authhead.value.identitySnapshotIdentifier.contentHash,
+                authhead.value.identitySnapshotIdentifier.identity.authbase,
+                authhead.value.identitySnapshotIdentifier.identity.timestamp,
+            ] as [string, string, string])
+            .filter(n => n.status === 'new' || n.status === 'modified')
+            .toArray()
+    } catch (error) {
+        $q.notify({
+            type: 'warning',
+            message: t('warning.errorLoadingUnpublishedNfts')
+        })
+    }
 }
 
 const loadPublishedNfts = async (offset: number, limit: number) => {
     if (!authhead.value?.identitySnapshotIdentifier) return
     publishedLoading.value = true
     try {
-        const result = await getRegistryWorker().getNftTypes({
+        const worker = getRegistryWorker()
+        const result = await worker.getNftTypes({
             contentHash: authhead.value.identitySnapshotIdentifier.contentHash,
             authbase: authhead.value.identitySnapshotIdentifier.identity.authbase,
             timestamp: authhead.value.identitySnapshotIdentifier.identity.timestamp,
@@ -287,7 +295,10 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
         }
     }
     catch (error) {
-        console.log('error getting nft types')
+        $q.notify({
+            type: 'warning',
+            message: t('warning.errorLoadingPublishedNfts')
+        })
     } finally {
         publishedLoading.value = false
     }
@@ -416,7 +427,6 @@ const publishNfts = async () => {
             }
         }
     } catch (error: any) {
-        console.log('publish error', error)
         $q.notify({ type: 'Error', message: error.message })
     } finally {
         publishing.value = false
@@ -548,7 +558,6 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
                 }
             }
         } catch (error: any) {
-            console.log('error', error)
             $q.notify({
                 type: 'Error',
                 message: error.message
@@ -560,20 +569,18 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
 }
 
 onMounted(async () => {
-
-
     if (!authhead.value) {
         router.push('/issuer/nft-collections')
         return
     }
 
     if (authhead.value?.identitySnapshot) {
-        await Promise.allSettled([
-            loadUnpublishedNfts(),
-            loadPublishedNfts(0, 10)
-        ])
+        await loadUnpublishedNfts()
+        await delay(0)
+        await loadPublishedNfts(0, 10)
     }
 })
+
 </script>
 
 <style scoped lang="scss">
