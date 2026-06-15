@@ -100,7 +100,6 @@
 
                     <template v-slot:body-cell-capability="props">
                         <q-td :props="props" class="text-center">
-
                             <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
                                 text-color="purple-2"
                                 class="text-uppercase text-caption q-px-sm q-py-xs border-radius-4 styled-capability-badge">
@@ -447,8 +446,17 @@ const navigateToMint = (row: UtxoWithAuthKey) => {
     router.push('/issuer/nft-collections/' + row.token?.category + '/mint')
 }
 
+const AUTO_SYNC_INTERVAL = 30 * 60 * 1000
+
+const shouldForceSync = () => {
+    const lastSync = authkeysLastSync.value
+    return !lastSync || (Date.now() - lastSync > AUTO_SYNC_INTERVAL)
+}
+
 watch(() => authkeysLastSync, async () => {
-    await loadAuthkeys(wallet.value, true)
+    if (shouldForceSync()) {
+        await loadAuthkeys(wallet.value, true)
+    }
 })
 
 watch(walletLasySync, async (recentSync, lastSync) => {
@@ -459,7 +467,7 @@ watch(walletLasySync, async (recentSync, lastSync) => {
 })
 
 onMounted(async () => {
-    await loadAuthkeys(wallet.value, true)
+    await loadAuthkeys(wallet.value, shouldForceSync())
 })
 
 </script>
