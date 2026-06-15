@@ -10,9 +10,10 @@
             <div class="q-pa-lg">
               <SequentialNft v-if="!activeNft.bytecode" :key="'seq-' + saveKey"
                 :commitment="activeNft.commitmentOrBottomAltStack" v-model:nft="activeNft.nft"
-                :allow-edit="activeNft.allowEdit" @save="handleSave" />
+                :allow-edit="activeNft.allowEdit" @save="handleSave" @close="router.back()" />
               <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="activeNft.commitmentOrBottomAltStack"
-                v-model:nft="activeNft.nft" :allow-edit="activeNft.allowEdit" @save="handleSave" />
+                v-model:nft="activeNft.nft" :allow-edit="activeNft.allowEdit" @save="handleSave"
+                :bytecode="activeNft.bytecode" @close="router.back()" />
             </div>
           </q-card>
         </div>
@@ -37,6 +38,7 @@ import { db } from 'src/core/client-db'
 
 const $q = useQuasar()
 const router = useRouter()
+
 const registryStore = useRegistryStore()
 const { activeNft } = storeToRefs(registryStore)
 const saveKey = ref(0)

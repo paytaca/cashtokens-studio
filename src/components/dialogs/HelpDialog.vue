@@ -8,7 +8,7 @@
           </q-avatar>
           <p class="col-12 text-justify text-wrap q-py-sm q-py-sm"
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
-            {{ message }}
+            <span v-html="message"></span>
           </p>
         </div>
       </q-card-section>

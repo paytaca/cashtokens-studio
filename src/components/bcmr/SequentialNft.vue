@@ -10,6 +10,9 @@
         <div class="text-subtitle1 text-weight-medium">{{ nft.name }}</div>
         <div class="text-caption text-grey-5 text-mono q-mt-xs">{{ commitment }}</div>
       </div>
+      <div class="col text-right">
+        <q-chip round color="accent" size="lg">#{{ Number(binToBigIntUintLE(hexToBin(commitment))) }}</q-chip>
+      </div>
     </div>
     <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg" :style="{ minHeight: '300px' }"
       :class="{ 'cursor-pointer': allowEdit }" @click="allowEdit ? uploadMedia() : undefined">
@@ -32,9 +35,15 @@
     <div class="q-gutter-y-md">
       <FormField>
         <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
+          Name
+        </label>
+        <q-input v-model="nft.name" outlined dark placeholder="Name" :disable="!allowEdit" />
+      </FormField>
+      <FormField>
+        <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
           Description
         </label>
-        <q-input v-model="nft.description" outlined dark placeholder="NFT description" :disable="!allowEdit" />
+        <q-input v-model="nft.description" outlined dark placeholder="Description" :disable="!allowEdit" />
       </FormField>
 
       <FormField>
@@ -59,7 +68,8 @@
         <div v-else class="text-caption text-grey-6">No attributes</div>
       </FormField>
 
-      <div v-if="allowEdit" class="row justify-end q-mt-lg">
+      <div v-if="allowEdit" class="row justify-end q-mt-lg q-gutter-x-md">
+        <q-btn unelevated label="Close" @click="$emit('close')" />
         <q-btn unelevated color="primary" label="Save" :disable="!isModified" @click="$emit('save', nft)" />
       </div>
     </div>
@@ -74,6 +84,8 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { uploadFile } from 'src/core/ipfs'
 import FormField from 'src/components/FormField.vue'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import { hexToBin } from 'mainnet-js'
+import { binToBigIntUintLE } from '@bitauth/libauth'
 
 const props = defineProps<{
   commitment: string
@@ -81,7 +93,8 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  save: [nft: NftType]
+  save: [nft: NftType],
+  close: []
 }>()
 
 const nft = defineModel<NftType>('nft', { required: true })

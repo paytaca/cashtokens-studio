@@ -9,23 +9,23 @@
               {{ t('label.registry.identitySnapshot') }}
             </span>
           </h5>
-          <q-item-label v-if="identitySnapshotModified" class="text-caption text-warning">[{{ t('label.modified')
-            }}]</q-item-label>
+          <label v-if="identitySnapshotModified" class="form-label text-caption text-warning">[{{ t('label.modified')
+            }}]</label>
         </div>
         <q-toggle :false-value="true" :true-value="false" color="red" v-model="identitySnapshotHidden" />
       </div>
     </slot>
     <template v-if="!identitySnapshotHidden">
       <FormField>
-        <q-item-label>{{ t('label.registry.name') }}</q-item-label>
+        <label>{{ t('label.registry.name') }}</label>
         <q-input v-model="identitySnapshot.name" class="full-width" filled></q-input>
       </FormField>
       <FormField>
-        <q-item-label>{{ t('label.registry.description') }}</q-item-label>
+        <label>{{ t('label.registry.description') }}</label>
         <q-input v-model="identitySnapshot.description" class="full-width" filled></q-input>
       </FormField>
       <FormField>
-        <q-item-label>{{ t('label.registry.status') }}</q-item-label>
+        <label>{{ t('label.registry.status') }}</label>
         <div class="flex">
           <q-radio :model-value="identitySnapshot.status || 'active'" checked-icon="task_alt"
             unchecked-icon="panorama_fish_eye" val="active" label="Active" color="green" />
@@ -37,7 +37,8 @@
       </FormField>
       <Uris v-model:uris="uris" :hideable="false" enable-icon-upload />
       <slot name="token-category">
-        <TokenCategory v-if="identitySnapshot?.token" v-model:token="identitySnapshot.token" />
+        <TokenCategory v-if="identitySnapshot?.token" v-model:token="identitySnapshot.token" :authbase="authbase"
+          :content-hash="contentHash" :timestamp="timestamp" />
       </slot>
     </template>
   </fieldset>
@@ -57,6 +58,9 @@ const emit = defineEmits<{
 }>()
 const props = withDefaults(defineProps<{
   mode?: 'read' | 'write'
+  authbase?: string
+  contentHash?: string
+  timestamp?: string
 }>(), {
   mode: 'write'
 })
