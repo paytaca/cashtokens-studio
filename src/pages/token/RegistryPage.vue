@@ -14,9 +14,9 @@
                 <RegistryComponent v-model:registry="registryRecord.registry"
                     v-model:identity-snapshot="identitySnapshot" view-type="form"
                     :unpublished-changes="unpublishedChanges" :visibility="displayFull ? 'visible' : 'hidden'"
+                    :content-hash="registryRecord.contentHash"
                     @select:identity="onIdentitySelected" @reset="onReset" @save="onSave" @publish="onPublish">
                 </RegistryComponent>
-                {{ unpublishedChanges }}
             </div>
         </div>
     </q-page>
@@ -44,15 +44,18 @@ import { useRegistryStore } from 'src/stores/registry'
 import type { PublicationStrategy } from 'components/bcmr/types'
 import { getRegistryWorker } from 'src/workers'
 import { getErrorMessage } from 'src/core/utils'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
-const {
-    externalWallet,
-    wzDappMgr
-} = useWizardConnect()
+// const {
+//     externalWallet,
+//     wzDappMgr
+// } = useWizardConnect()
+
+const { wallet, manager } = useWizardConnectWallet()
 
 const { getRegistryByAuthbase } = useRegistryStore()
 
@@ -61,11 +64,6 @@ const {
     activeAuthhead
 } = storeToRefs(authguardStore)
 
-let _registryWorker: ReturnType<typeof getRegistryWorker> | null = null
-const getRegistryWorkerInstance = () => {
-    if (!_registryWorker) _registryWorker = getRegistryWorker()
-    return _registryWorker
-}
 const displayFull = ref<boolean>(false)
 const registryRecord = ref<ParsedRegistryRecord>()
 const identitySnapshotRecord = ref<IdentitySnapshotRecord>()
@@ -107,9 +105,8 @@ const unpublishedChanges = computed<SaveEventPayload | undefined>(() => {
 
 const loading = ref<boolean>()
 
-
 const onIdentitySelected = async (authbase: string, timestamp: string) => {
-    identitySnapshotRecord.value = await getRegistryWorkerInstance().getIdentitySnapshot({
+    identitySnapshotRecord.value = await getRegistryWorker().getIdentitySnapshot({
         contentHash: registryRecord.value!.contentHash,
         identity: {
             authbase,
@@ -166,7 +163,7 @@ const onReset = async () => {
         if (!registryRecord.value) return
         const contentHash = registryRecord.value.contentHash
         registryRecord.value = undefined
-        const resetRecord = await getRegistryWorkerInstance().resetRegistry({ contentHash })
+        const resetRecord = await getRegistryWorker().resetRegistry({ contentHash })
         if (resetRecord) {
             registryRecord.value = resetRecord
             identitySnapshotRecord.value = undefined
@@ -183,6 +180,7 @@ const onReset = async () => {
 }
 
 const onPublish = async (publicationStrategy: PublicationStrategy) => {
+
     const loadingGroup = $q.loading.show({
         group: 'mpop-lg',
         message: t('info.uploadingRegistryToIpfs')
@@ -190,7 +188,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
 
     try {
         const originalContentHash = registryRecord.value!.contentHash
-        const bumpArtifact = await getRegistryWorkerInstance()?.bumpRegistry({
+        const bumpArtifact = await getRegistryWorker()?.bumpRegistry({
             ...publicationStrategy,
             originalContentHash
         })
@@ -205,7 +203,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
 
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
-            funderUtxos: externalWallet.value.utxos as UtxoWithPath[],
+            funderUtxos: wallet.value.utxos as UtxoWithPath[],
             network: import.meta.env.VITE_BCH_NETWORK,
             registryPublicationData: {
                 contentHash: bumpArtifact.contentHash,
@@ -213,7 +211,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
             }
         })
 
-        const response = await wzDappMgr.value.signTransaction(publishRegistryRequest);
+        const response = await manager.value!.signTransaction(publishRegistryRequest);
 
         loadingGroup({
             message: t('transaction.broadcasting')
@@ -224,7 +222,7 @@ const onPublish = async (publicationStrategy: PublicationStrategy) => {
         if (broadcastResponse.ok) {
             const broadcastResult = await broadcastResponse.json()
             if (broadcastResult.success) {
-                await getRegistryWorkerInstance().commitBumpRegistry(originalContentHash, `${broadcastResult.txid}:0`)
+                await getRegistryWorker().commitBumpRegistry(originalContentHash, `${broadcastResult.txid}:0`)
                 await delay(2000)
                 loadingGroup()
                 $q.dialog({
@@ -264,7 +262,7 @@ onMounted(async () => {
             const timestamps = registryRecord.value.registry.identities[authbase]
             const latestTimestamp = timestamps.sort((a, b) => b.localeCompare(a))[0]
             if (latestTimestamp) {
-                identitySnapshotRecord.value = await getRegistryWorkerInstance().getIdentitySnapshot({
+                identitySnapshotRecord.value = await getRegistryWorker().getIdentitySnapshot({
                     contentHash: registryRecord.value.contentHash,
                     identity: { authbase, timestamp: latestTimestamp }
                 })
@@ -279,7 +277,5 @@ onMounted(async () => {
         loading.value = false
     }
 })
-
-
 
 </script>
