@@ -575,8 +575,9 @@ onMounted(async () => {
     }
 
     if (authhead.value?.identitySnapshot) {
+        publishedLoading.value = true
         await loadUnpublishedNfts()
-        await delay(0)
+        await delay(500)
         await loadPublishedNfts(0, 10)
     }
 })
