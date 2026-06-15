@@ -1,43 +1,132 @@
 <template>
-    <q-page>
+    <q-page class="bg-black text-white">
         <div class="row justify-center q-pa-md">
-            <div class="col-xs-12 q-my-lg">f
-                <q-table title="Fungible Token Reserves" :rows="authheads" :columns="columns"
-                    :row-key="(row) => `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
-                    class="border-radius-15">
-                    <template v-slot:body-cell-icon="props">
+            <div class="col-xs-12 q-my-lg">
+                <div class="row items-center justify-between q-mb-md q-px-sm">
+                    <div class="text-h5 text-weight-bold flex items-center gap-sm">
+                        <q-icon name="money" />
+                        Manager Fungible Supply
+                    </div>
+                    <div class="text-caption text-grey-4 bg-grey-9 q-px-md q-py-xs border-radius-8 shadow-1">
+                        Last synced: <span class="text-weight-medium text-white">{{ authkeysLastSync }}</span>
+                    </div>
+                </div>
+
+                <q-table :rows="authheads" :columns="columns" :row-key="(row) => `${row.txid}:${row.vout}`"
+                    :loading="authkeysLoading || authheadsLoading" flat bordered dark
+                    class="bg-dark border-radius-12 token-reserves-table">
+
+                    <template v-slot:body-cell-token="props">
                         <q-td :props="props">
-                            <q-avatar>
-                                <q-img v-if="props.value" :src="ipfsToGatewayUrl(props.value)!"></q-img>
-                                <q-icon v-else name="token"></q-icon>
-                            </q-avatar>
+                            <div class="flex items-center no-wrap q-gutter-x-md">
+                                <q-avatar size="42px" class="bg-grey-9 border-radius-8 shadow-1">
+                                    <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                                        :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!"
+                                        fit="cover"></q-img>
+                                    <q-icon v-else name="token" color="primary" size="24px"></q-icon>
+                                </q-avatar>
+                                <div>
+                                    <div class="text-subtitle2 text-weight-bold text-white line-clamp-1">
+                                        {{ props.row.identitySnapshot?.name || 'Unnamed Token' }}
+                                    </div>
+                                    <div class="flex items-center q-gutter-x-xs">
+                                        <span class="text-caption text-weight-medium text-primary">
+                                            {{ props.row.identitySnapshot?.token?.symbol || '?' }}
+                                        </span>
+                                        <span class="text-grey-7">•</span>
+                                        <span class="text-caption text-grey-5 text-mono">
+                                            ID: {{ shortenTokenId(props.row.token!.category) }}
+                                            <CopyText :text="props.row.token!.category" />
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
                         </q-td>
                     </template>
-                    <template v-slot:body-cell-category="props">
-                        <q-td :props="props">
-                            {{ shortenTokenId(props.value) }}
+
+                    <!-- Capability Badge Column (Minting vs Mutable vs None / Immutable) -->
+                    <template v-slot:body-cell-capability="props">
+                        <q-td :props="props" class="text-center">
+
+                            <!-- 1. MINTING CAPABILITY -->
+                            <!-- Allows you to mint any child NFT or fungible supply of the same category -->
+                            <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
+                                text-color="purple-2"
+                                class="text-weight-bold text-uppercase q-px-sm q-py-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="14px" class="q-mr-xs" />
+                                Minting
+                                <q-tooltip class="bg-purple-10 text-purple-2 text-weight-medium text-caption"
+                                    maxWidth="240px">
+                                    <strong>Factory Reserve:</strong> This authority key permits unlimited generation of
+                                    child NFTs and supply assets inside this token category.
+                                </q-tooltip>
+                            </q-badge>
+
+                            <!-- 2. MUTABLE CAPABILITY -->
+                            <!-- Allows you to modify the NFT commitment layer or downgrade its flag structure to none -->
+                            <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="teal-10"
+                                text-color="teal-2"
+                                class="text-weight-bold text-uppercase q-px-sm q-py-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="published_with_changes" size="14px" class="q-mr-xs" />
+                                Mutable
+                                <q-tooltip class="bg-teal-10 text-teal-2 text-weight-medium text-caption"
+                                    maxWidth="240px">
+                                    <strong>Adaptable Token:</strong> Permits updating the internal state commitment
+                                    payload or freezing it completely into an immutable asset.
+                                </q-tooltip>
+                            </q-badge>
+
+                            <!-- 3. NONE (IMMUTABLE) CAPABILITY -->
+                            <!-- Completely locked out from further alterations -->
+                            <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="grey-9"
+                                text-color="grey-4"
+                                class="text-weight-bold text-uppercase q-px-sm q-py-xs border-radius-4 styled-capability-badge border-grey-8">
+                                <q-icon name="lock_outline" size="14px" class="q-mr-xs" />
+                                Immutable
+                                <q-tooltip class="bg-grey-9 text-grey-4 text-weight-medium text-caption"
+                                    maxWidth="240px">
+                                    <strong>Locked Asset:</strong> State properties and configurations are permanently
+                                    sealed. No mutation paths remain active.
+                                </q-tooltip>
+                            </q-badge>
+
+                            <!-- 4. FALLBACK (Non-NFT plain UTXO or general balance data) -->
+                            <span v-else class="text-grey-7 text-caption text-mono">—</span>
+
                         </q-td>
                     </template>
+
+
+
+                    <!-- Quantities and Decimal Resolution Mapping -->
+                    <template v-slot:body-cell-amount="props">
+                        <q-td :props="props" class="text-right">
+                            <!-- Changed text-dark to text-white -->
+                            <div class="text-subtitle1 text-weight-bold text-mono text-white">
+                                {{ props.value.toLocaleString() }}
+                            </div>
+                            <div class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                                <span>Decimals:</span>
+                                <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                                    {{ props.row.identitySnapshot?.token?.decimals ?? 0 }}
+                                </q-badge>
+                            </div>
+                        </q-td>
+                    </template>
+
                     <template v-slot:body-cell-actions="value">
-                        <q-td class="text-center">
-                            <div class="flex justify-center no-wrap q-gutter-x-sm">
-                                <q-btn icon="send" size="md" :label="$q.screen.xs ? '' : 'Issue Tokens'"
-                                    text-color="primary" no-caps
-                                    @click.stop="openFungibleReservesTransferDialog(value.row, 'issuance', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
-                                    :disable="!!value.row.processing" :loading="loading">
-                                </q-btn>
-                                <q-btn icon="local_fire_department" size="md" :label="$q.screen.xs ? '' : 'Burn'"
-                                    @click.stop="openFungibleReservesTransferDialog(value.row, 'burn', metadataStore.identitySnapshot?.[value.row.token!.category as string])"
-                                    text-color="orange" no-caps :disable="!!value.row.processing" :loading="loading">
-                                </q-btn>
-                                <q-btn icon="description" size="md" :label="$q.screen.xs ? '' : 'Metadata'"
-                                    @click.stop="() => viewRegistry(value.row as UtxoWithAuthKey)"
-                                    text-color="secondary" no-caps :disable="!!value.row.processing" :loading="loading">
+                        <q-td :props="value">
+                            <div class="flex justify-end no-wrap q-gutter-x-sm">
+
+                                <q-btn text-color="primary" icon="mdi-send-circle-outline" size="lg"
+                                    @click="openFungibleReservesTransferDialog(value.row, 'issuance')" round>
+                                    <q-tooltip class="bg-primary text-weight-medium">Send</q-tooltip>
                                 </q-btn>
 
-                                <q-btn icon="description" size="md" :label="$q.screen.xs ? '' : 'Refresh'"
-                                    @click.stop="async () => await loadRegistry(value.row.token!.category as string)"
-                                    text-color="secondary" no-caps :disable="!!value.row.processing" :loading="loading">
+                                <q-btn round flat dense icon="refresh" color="grey-5" class="action-btn-hover"
+                                    :disable="!!value.row.processing" :loading="loading"
+                                    @click.stop="async () => await loadRegistry(value.row.token!.category as string)">
+                                    <q-tooltip class="bg-grey-9 text-weight-medium">Refresh Cache</q-tooltip>
                                 </q-btn>
                             </div>
                         </q-td>
@@ -48,12 +137,12 @@
     </q-page>
 </template>
 
+
+
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
-import { UtxoFormSafe, UtxoWithPath } from 'src/core/types'
-import { filterAuthKeys, getLockedAuthheadUtxos, type UtxoWithAuthKey } from 'src/core/authguard'
-import { useMetadataStore } from 'src/stores/metadata'
+import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { Network } from 'cashscript'
@@ -62,25 +151,21 @@ import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { decodeCashAddress } from '@bitauth/libauth'
+import { decodeCashAddress, stringify } from '@bitauth/libauth'
 import { delay } from 'mainnet-js-v3'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useRegistryStore } from 'src/stores/registry'
+import CopyText from 'components/CopyText.vue'
 
 const $q = useQuasar()
 const router = useRouter()
-// const {
-//     manager,
-//     wallet
-// } = useWizardConnect()
 
 const {
     manager,
     wallet,
-    state,
     walletLasySync
 } = useWizardConnectWallet()
 
@@ -90,62 +175,85 @@ const {
 
 const authguardStore = useAuthguardStore()
 const {
-    loadAuthheads,
     loadAuthkeys,
 } = authguardStore
 
 const {
     authheads,
-    authkeys,
     authkeysLastSync,
     authkeysLoading,
     authheadsLoading,
 } = storeToRefs(authguardStore)
 
 
-// const authheads = ref<UtxoWithAuthKey[]>([])
-// const authkeys = ref<UtxoWithPath[]>([])
 const loading = ref<boolean>()
-const metadataStore = useMetadataStore()
 
-// const authkeysLastSync = ref<number>()
-
+// const columns: QTableColumn[] = [
+//     {
+//         name: 'icon',
+//         label: 'Icon',
+//         align: 'left',
+//         field: (r) => {
+//             return r.identitySnapshot?.uris?.icon
+//         },
+//     },
+//     {
+//         name: 'symbol',
+//         label: 'Symbol',
+//         align: 'left',
+//         field: (r) => {
+//             return r.identitySnapshot?.token?.symbol
+//         },
+//         sortable: true
+//     },
+//     {
+//         name: 'decimals',
+//         label: 'Decimals',
+//         align: 'left',
+//         field: (r) => {
+//             return r.identitySnapshot?.token?.decimals ?? 0
+//         },
+//         sortable: true
+//     },
+//     {
+//         name: 'reserved-supply',
+//         label: 'Reserved Supply',
+//         align: 'left',
+//         field: r => r.token.amount,
+//         sortable: true
+//     },
+//     { name: 'actions', label: 'Actions', align: 'center', field: 'actions' }
+// ]
 const columns: QTableColumn[] = [
     {
-        name: 'icon',
-        label: 'Icon',
+        name: 'token',
+        label: 'Token',
+        field: (row) => row.identitySnapshot?.token?.symbol,
         align: 'left',
-        field: (r) => {
-            return r.identitySnapshot?.uris?.icon
-        },
-    },
-    {
-        name: 'symbol',
-        label: 'Symbol',
-        align: 'left',
-        field: (r) => {
-            return r.identitySnapshot?.token?.symbol
-        },
         sortable: true
     },
+    // {
+    //     name: 'capability',
+    //     label: 'Capability',
+    //     field: (row) => row.token?.nft?.capability,
+    //     align: 'center',
+    //     sortable: true
+    // },
     {
-        name: 'decimals',
-        label: 'Decimals',
-        align: 'left',
-        field: (r) => {
-            return r.identitySnapshot?.token?.decimals ?? 0
-        },
-        sortable: true
-    },
-    {
-        name: 'reserved-supply',
+        name: 'amount',
         label: 'Reserved Supply',
-        align: 'left',
-        field: r => r.token.amount,
+        field: (row) => row.token?.amount,
+        align: 'right',
         sortable: true
     },
-    { name: 'actions', label: 'Actions', align: 'center', field: 'actions' }
+    {
+        name: 'actions',
+        label: 'Actions',
+        field: 'actions',
+        align: 'right'
+    }
 ]
+
 
 const openFungibleReservesTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
 
@@ -267,3 +375,64 @@ onMounted(async () => {
 })
 
 </script>
+
+<style scoped lang="scss">
+.border-radius-8 {
+    border-radius: 8px;
+}
+
+.border-radius-12 {
+    border-radius: 12px;
+}
+
+.token-reserves-table {
+    border-color: #2c2c2c !important;
+    /* Subtle dark border line */
+
+    :deep(.q-table__card) {
+        box-shadow: none;
+    }
+
+    :deep(thead tr th) {
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-size: 11px;
+        color: #aaaaaa;
+        /* Light text for column headers */
+        background-color: #1e1e1e;
+        /* Darker background layer specifically for the header */
+        border-bottom: 1px solid #2c2c2c;
+    }
+
+    /* Fixed your row hover style so it highlights dark grey instead of flashing light white */
+    :deep(tbody tr:hover) {
+        background-color: #1e1e1e !important;
+    }
+}
+
+.action-btn-hover {
+    transition: transform 0.15s ease, background-color 0.15s ease;
+
+    &:hover {
+        transform: translateY(-1px);
+        background-color: rgba(255, 255, 255, 0.08);
+        /* White transparency effect for dark mode actions */
+    }
+}
+
+.text-mono {
+    font-family: 'Courier New', Courier, monospace;
+}
+
+.font-10 {
+    font-size: 10px;
+}
+
+.line-clamp-1 {
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
