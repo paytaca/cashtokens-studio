@@ -25,7 +25,6 @@
                             <q-space />
                             <q-btn flat dense round icon="refresh" size="lg" :loading="refreshing" @click="refresh" />
                         </div>
-
                         <div class="row">
                             <div class="col-12">
                                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs"
@@ -36,6 +35,12 @@
                                     class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
                                     {{ authhead.token!.category }}
                                     <CopyText :text="authhead.token!.category" />
+                                </div>
+                                <div class="q-mt-xs">
+                                    <a class="text-caption link-style cursor-pointer" @click="viewRegistry">
+                                        <q-icon name="description" size="14px" class="q-mr-xs" />
+                                        View Registry
+                                    </a>
                                 </div>
                             </div>
 
@@ -110,8 +115,7 @@
                         </div>
 
                         <div class="row justify-end q-mt-lg q-gutter-x-sm">
-                            <q-btn color="primary" icon="mdi-send" label="Mint Child NFT" unelevated
-                                @click="openMintPage" />
+                            <q-btn color="primary" icon="mdi-send" label="Mint" unelevated @click="openMintPage" />
                             <q-btn color="orange" icon="mdi-fire" label="Burn" unelevated outline
                                 @click="openMintChildNftDialog('burn')" />
                         </div>
@@ -124,9 +128,7 @@
                             <div class="table-header text-h6 text-weight-medium">
                                 <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
                                 {{ t('label.registry.unpublishedNfts') }}
-
                             </div>
-
                             <q-btn color="primary" icon="mdi-publish" :label="t('button.publish')" unelevated
                                 :loading="publishing" @click="publishNfts" size="sm" />
                         </div>
@@ -449,6 +451,10 @@ watch(publishedTotal, (total) => {
     publishedPagination.value.rowsNumber = total
 })
 
+const viewRegistry = () => {
+    router.push('/token/registry?authbase=' + authhead.value?.token?.category)
+}
+
 const openMintPage = () => {
     appStore.setActiveMinter(authhead.value)
     router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/mint')
@@ -599,5 +605,15 @@ onMounted(async () => {
 
 .text-mono {
     font-family: 'Courier New', Courier, monospace;
+}
+
+.link-style {
+    color: #7c4dff;
+    text-decoration: none;
+
+    &:hover {
+        text-decoration: underline;
+        color: #9c7cff;
+    }
 }
 </style>
