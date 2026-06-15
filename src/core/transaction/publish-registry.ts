@@ -1,6 +1,6 @@
 import { Contract, ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder, Unlocker, WcSourceOutput } from "cashscript"
-import { UtxoWithPath } from "../types"
-import { createAuthguardContract, filterAuthKeys, UtxoWithAuthKey } from "../authguard"
+import type { UtxoWithPath, UtxoWithAuthKey } from "../types"
+import { createAuthguardContract, filterAuthKeys,  } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
