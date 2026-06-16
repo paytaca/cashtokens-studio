@@ -53,13 +53,13 @@ export class Watchtower {
   processing?: string;
   error?: unknown;
   constructor() {
-    if (!process.env.WATCHTOWER_API) throw new Error('WATCHTOWER_API not set');
-    this.apiBaseUri = process.env.WATCHTOWER_API;
+    if (!import.meta.env.VITE_WATCHTOWER_API) throw new Error('WATCHTOWER_API not set');
+    this.apiBaseUri = import.meta.env.VITE_WATCHTOWER_API;
   }
 
   async subscribe(address: string): Promise<any> {
     this.processing = 'Subscribing address to watchtower';
-    const res = await fetch(`${process.env.WATCHTOWER_API}subscription/`, {
+    const res = await fetch(`${import.meta.env.VITE_WATCHTOWER_API}subscription/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ address: address }),
