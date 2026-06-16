@@ -31,17 +31,16 @@
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
-import { useWizardConnect } from 'src/composables/useWizardConnect'
 import { UtxoWithPath } from 'src/core/types'
 import { filterAuthKeys, getAuthguardContractAddress } from 'src/core/authguard'
 import { useMetadataStore } from 'src/stores/metadata'
 import { shortenCashAddress, shortenTokenId } from 'src/core/utils'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 
 const $q = useQuasar()
 const {
-    wzDappMgr,
-    externalWallet
-} = useWizardConnect()
+    wallet
+} = useWizardConnectWallet()
 
 const authkeys = ref<UtxoWithPath[]>([])
 const loading = ref<boolean>()
@@ -71,7 +70,7 @@ const columns: QTableColumn[] = [
 const loadAuthkeys = async (sync?: boolean) => {
     try {
         loading.value = true
-        authkeys.value = filterAuthKeys(await externalWallet.value.getUtxos({ sync })) as UtxoWithPath[]
+        authkeys.value = filterAuthKeys(await wallet.value.getUtxos({ sync })) as UtxoWithPath[]
         authkeysLastSync.value = Date.now()
     } catch (error) {
         $q.notify({
@@ -83,7 +82,7 @@ const loadAuthkeys = async (sync?: boolean) => {
     }
 }
 
-watch(() => externalWallet.value?.ready, async (walletReady) => {
+watch(() => wallet.value?.ready, async (walletReady) => {
     if (walletReady && !authkeysLastSync.value) {
         await loadAuthkeys()
     }
@@ -91,7 +90,7 @@ watch(() => externalWallet.value?.ready, async (walletReady) => {
 
 
 onMounted(async () => {
-    if (externalWallet.value.ready) {
+    if (wallet.value.ready) {
         await loadAuthkeys()
     }
 })
