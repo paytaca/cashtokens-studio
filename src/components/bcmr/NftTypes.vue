@@ -1,34 +1,32 @@
 <template>
-  <div class="q-pa-md">
-    <q-table title="NFT Types" :rows="tableRows" :columns="columns" row-key="hexKey" flat bordered
-      :pagination="{ rowsPerPage: 10 }">
-      <!-- Top Right Button: Add New Entry -->
-      <template v-slot:top-right>
-        <q-btn color="primary" icon="add" label="Add Type" @click="addNewRow" />
-      </template>
+  <q-table title="NFT Types" :rows="tableRows" :columns="columns" row-key="hexKey" flat bordered
+    :pagination="{ rowsPerPage: 10 }">
+    <!-- Top Right Button: Add New Entry -->
+    <template v-slot:top-right>
+      <q-btn color="primary" icon="add" label="Add Type" @click="addNewRow" />
+    </template>
 
-      <!-- Custom Body Slot to make fields editable directly in the row -->
-      <template v-slot:body="props">
-        <q-tr :props="props">
-          <!-- Hex Key Column (The Object Key) -->
-          <q-td key="hexKey" :props="props">
-            <q-input v-model="props.row.hexKey" dense borderless
-              @update:model-value="(val) => updateKey(props.row.originalKey, val as string)" />
-          </q-td>
+    <!-- Custom Body Slot to make fields editable directly in the row -->
+    <template v-slot:body="props">
+      <q-tr :props="props">
+        <!-- Hex Key Column (The Object Key) -->
+        <q-td key="hexKey" :props="props">
+          <q-input v-model="props.row.hexKey" dense borderless
+            @update:model-value="(val) => updateKey(props.row.originalKey, val as string)" />
+        </q-td>
 
-          <!-- NftType Property: Name -->
-          <q-td key="name" :props="props">
-            <q-input v-model="types[props.row.originalKey]!.name" dense borderless />
-          </q-td>
+        <!-- NftType Property: Name -->
+        <q-td key="name" :props="props">
+          <q-input v-model="types[props.row.originalKey]!.name" dense borderless />
+        </q-td>
 
-          <!-- Actions Column (Delete Row) -->
-          <q-td key="actions" :props="props" align="right">
-            <q-btn flat round color="negative" icon="delete" dense @click="deleteRow(props.row.originalKey)" />
-          </q-td>
-        </q-tr>
-      </template>
-    </q-table>
-  </div>
+        <!-- Actions Column (Delete Row) -->
+        <q-td key="actions" :props="props" align="right">
+          <q-btn flat round color="negative" icon="delete" dense @click="deleteRow(props.row.originalKey)" />
+        </q-td>
+      </q-tr>
+    </template>
+  </q-table>
 </template>
 
 <script setup lang="ts">
