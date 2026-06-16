@@ -104,9 +104,14 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/issuer/manage/FungibleReservesPage.vue'),
       },
       {
-        name: 'nft-collection',
+        name: 'nft-collection-detail',
         path: 'nft-collections/:category',
         component: () => import('pages/issuer/manage/NftCollectionPage.vue'),
+      },
+      {
+        name: 'nft-collection-mint',
+        path: 'nft-collections/:category/mint',
+        component: () => import('pages/issuer/manage/MintNftPage.vue'),
       },
       {
         name: 'nft-collections',
