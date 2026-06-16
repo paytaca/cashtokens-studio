@@ -26,7 +26,9 @@ export default {
         whatsThis: `What's this?`,
         uploadingRegistryToIpfs: 'Uploading registry to IPFS',
         uploadedRegsitryToIpfs: 'Uploaded registry to IPFS, id = {cid}',
-        clearingChanges: 'Clearing Changes'
+        clearingChanges: 'Clearing Changes',
+        sequentialCollectionHelp: `<p>A sequential NFT collection where each NFT includes a sequential identifier within its on-chain commitment. The type of each NFT is indexed by the full contents of its commitment, interpreted as a positive number.</p><p>Your NFT items are numbered sequentially — each minted NFT gets the next available sequence number (1, 2, 3...). This is the simplest NFT model, ideal for numbered collectibles, images, videos, or any series where items differ only by their position in the sequence.</p>`,
+        parsableCollectionHelp: 'A parsable NFT collection where each NFT may include additional metadata fields beyond a sequential identifier within its on-chain commitment. Parsable collections require a parsing bytecode with which to inspect each NFT commitment: the type of each NFT is indexed by the bottom item on the altstack following evaluation of the parsing bytecode.'
     },
     error: {
         genesisInputCreation: 'Error creating genesis input.',
@@ -37,6 +39,10 @@ export default {
         loadingRegistry: 'Error loading token registry',
         initializingWizardConnectWalle: 'Error initializing wizard connect wallet',
         registryPublication: 'Error publishing registry'
+    },
+    warning: {
+        errorLoadingUnpublishedNfts: 'Error loading unpublished NFTs',
+        errorLoadingPublishedNfts: 'Error loading published NFTs'
     },
     button: {
         ok: 'Ok',
@@ -112,6 +118,7 @@ export default {
             unpublishedCaption: 'These NFTs are not yet published on chain',
             published: 'Published NFTs',
             publishedCaption: 'These NFTs are published on chain',
+            nftCategory: 'NFT Category'
         }
     },
     mint: {

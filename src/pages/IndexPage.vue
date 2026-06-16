@@ -1,7 +1,7 @@
 <template>
   <q-page class="row justify-evenly items-center">
     <div class="col-12">
-      <div v-if="wzWalletDiscovered || externalWallet.ready" class="row justify-center q-pa-md q-gutter-md">
+      <div v-if="wallet.ready" class="row justify-center q-pa-md q-gutter-md">
         <div class="col-12 text-center q-mb-md">
           <div class="text-center text-h4 text-weight-bold">
             <div>Welcome to</div>
@@ -55,7 +55,7 @@
         <div class="col-12 text-center">
           <q-img src="images/cts_transparent.png" :style="bannerSize" />
         </div>
-        <q-card class="action-card q-py-xs" style="width: 280px" @click="() => wzStartRelay()">
+        <q-card class="action-card q-py-xs" style="width: 280px" @click="() => connect()">
           <q-card-section class="text-center">
             <div class="flex no-wrap items-center justify-center text-primary" style="width: 250px; height: 100px">
               <q-avatar>
@@ -67,7 +67,7 @@
               To get started, click here to connect your wallet thru WizardConnect.
             </div>
           </q-card-section>
-          <q-inner-loading :showing="wizardConnectInitializing">
+          <q-inner-loading :showing="state === 'reconnecting'">
             <q-spinner-gears size="50px" color="primary" />
           </q-inner-loading>
         </q-card>
@@ -79,7 +79,7 @@
 <script setup lang="ts">
 import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { useWizardConnect } from 'src/composables/useWizardConnect';
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 const $q = useQuasar();
@@ -95,11 +95,11 @@ const bannerSize = computed(() => {
 });
 
 const {
-  wzWalletDiscovered,
-  wizardConnectInitializing,
-  externalWallet,
-  wzStartRelay
-} = useWizardConnect()
+  wallet,
+  manager,
+  state,
+  connect
+} = useWizardConnectWallet()
 
 onMounted(async () => {
   await delay(100);
