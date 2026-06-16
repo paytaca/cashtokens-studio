@@ -114,6 +114,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/issuer/manage/MintNftPage.vue'),
       },
       {
+        name: 'nft-detail',
+        path: 'nft-collections/:category/nft',
+        component: () => import('pages/issuer/manage/NftPage.vue'),
+      },
+      
+      {
         name: 'nft-collections',
         path: 'nft-collections',
         component: () => import('pages/issuer/manage/NftCollectionsPage.vue'),
@@ -151,6 +157,11 @@ const routes: RouteRecordRaw[] = [
         name: 'registry',
         path: 'registry',
         component: () => import('pages/token/RegistryPage.vue'),
+      },
+      {
+        name: 'nft-category',
+        path: 'nft-category',
+        component: () => import('pages/token/NftCategoryPage.vue'),
       },
     ]
   },
