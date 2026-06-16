@@ -8,6 +8,7 @@ import { NftType, Registry } from 'src/core/bcmr/bcmr-v2.schema';
 let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
 
 export type ActiveNft = {
+    contentHash: string,
     authbase: string,
     timestamp: string,
     category: string,
