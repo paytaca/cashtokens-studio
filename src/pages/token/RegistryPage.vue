@@ -14,8 +14,8 @@
                 <RegistryComponent v-model:registry="registryRecord.registry"
                     v-model:identity-snapshot="identitySnapshot" view-type="form"
                     :unpublished-changes="unpublishedChanges" :visibility="displayFull ? 'visible' : 'hidden'"
-                    :content-hash="registryRecord.contentHash"
-                    @select:identity="onIdentitySelected" @reset="onReset" @save="onSave" @publish="onPublish">
+                    :content-hash="registryRecord.contentHash" @select:identity="onIdentitySelected" @reset="onReset"
+                    @save="onSave" @publish="onPublish">
                 </RegistryComponent>
             </div>
         </div>
@@ -35,7 +35,6 @@ import { db, IdentitySnapshotRecord, ParsedRegistryRecord, setRecordStatus } fro
 
 import type { UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { broadcast, publishRegistry } from 'src/core/transaction'
-import { useWizardConnect } from 'src/composables/useWizardConnect_'
 import TransactionStatusDialog from 'components/dialogs/TransactionStatusDialog.vue'
 import SaveSuccessDialog from 'components/dialogs/SaveSuccessDialog.vue'
 import RegistryComponent from 'components/bcmr/Registry.vue'
@@ -50,10 +49,6 @@ const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
 const { t } = useI18n()
-// const {
-//     externalWallet,
-//     wzDappMgr
-// } = useWizardConnect()
 
 const { wallet, manager } = useWizardConnectWallet()
 
