@@ -88,7 +88,7 @@
                         <FormField>
                             <template v-if="collectionType === 'parsable'">
                                 <ParsableNftCollection
-                                    v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionType)"
+                                    v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionI)"
                                     v-model:fields="nftCategory.fields">
                                     <template #nftTypes>
                                         <label class="form-label">Items</label>
@@ -110,7 +110,7 @@
                             </template>
                             <template v-else>
                                 <SequentialNftCollection
-                                    v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionType)">
+                                    v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                     <template #nftTypes>
                                         <label class="q-mb-lg">Items</label>
                                         <q-table :rows="nftTypeRows" :columns="nftTypeColumns" row-key="hexKey" flat
@@ -157,10 +157,10 @@ import type { QTableColumn } from 'quasar'
 import type {
     IdentitySnapshot,
     NftType,
-    ParsableNftCollection as ParsableNftCollectionType,
-    SequentialNftCollection as SequentialNftCollectionType
+    ParsableNftCollection as ParsableNftCollectionI,
+    SequentialNftCollection as SequentialNftCollectionI
 } from 'src/core/bcmr/bcmr-v2.schema'
-import { DEFAULT_NFT_CATEGORY, type NftCategory as NftCategoryI } from 'src/core/bcmr/bcmr-v2.schema'
+import { type NftCategory as NftCategoryI } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, IdentitySnapshotRecord, setRecordStatus } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
 import { getErrorMessage } from 'src/core/utils'
@@ -170,6 +170,10 @@ import FormField from 'components/FormField.vue'
 import ParsableNftCollection from 'components/bcmr/ParsableNftCollection.vue'
 import SequentialNftCollection from 'components/bcmr/SequentialNftCollection.vue'
 import HelpDialog from 'components/dialogs/HelpDialog.vue'
+
+const DEFAULT_NFT_CATEGORY: NftCategoryI = {
+    parse: { types: {} } as SequentialNftCollectionI,
+};
 
 const $q = useQuasar()
 const route = useRoute()
@@ -423,7 +427,7 @@ onMounted(async () => {
 
         const snapshot = identitySnapshotRecord.value?.identitySnapshot
         const nfts = snapshot?.token?.nfts
-        const isParsable = !!((nfts?.parse as ParsableNftCollectionType | undefined)?.bytecode)
+        const isParsable = !!((nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
 
         const keyCol = nftTypeColumns[0]
