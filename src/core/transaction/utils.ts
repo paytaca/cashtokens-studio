@@ -209,3 +209,8 @@ export function jsonFormSafeUtxoReviver (k: string, v: unknown) {
   if (k === 'satoshis') return BigInt(v as string)
   return v
 }
+
+
+export function isBroadcastSuccess(broadcastResult: {success?: boolean, error?: boolean, message?: string}) {
+  return Boolean(broadcastResult.success) || broadcastResult.message?.includes('txn-already-known') 
+}
