@@ -50,18 +50,18 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuasar } from 'quasar'
-import { useWizardConnect } from 'src/composables/useWizardConnect'
 import { delay } from 'mainnet-js-v3'
 import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { UtxoWithPath } from 'src/core/types'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 
 const $q = useQuasar()
 const {
-    externalWallet,
-    wzDappMgr
-} = useWizardConnect()
+    wallet,
+    manager
+} = useWizardConnectWallet()
 
 const { t } = useI18n()
 
@@ -86,14 +86,14 @@ const onGenerateGenesisInput = async () => {
     })
 
     try {
-        if (!externalWallet.value?.ready) {
+        if (!wallet.value?.ready) {
             $q.notify({
                 message: 'Wallet not ready'
             })
             return
         }
 
-        const utxos = await externalWallet.value.getUtxos()
+        const utxos = await wallet.value.getUtxos()
         const genesisInputSignReq = createGenesisInput({
             funderUtxos: utxos,
         })
@@ -102,7 +102,11 @@ const onGenerateGenesisInput = async () => {
             message: t('transaction.waitingForSignature')
         })
 
-        const response = await wzDappMgr.value.signTransaction(genesisInputSignReq);
+        const response = await manager.value?.signTransaction(genesisInputSignReq);
+
+        if (!response) {
+            return loadingGroup()
+        }
 
         loadingGroup({
             message: t('transaction.broadcasting')
@@ -148,7 +152,7 @@ const onCreateAuthKey = async () => {
 
     try {
 
-        if (!externalWallet.value?.ready) {
+        if (!wallet.value?.ready) {
 
             $q.notify({
                 message: t('info.walletNotReady')
@@ -157,8 +161,8 @@ const onCreateAuthKey = async () => {
             return
         }
 
-        const utxos = await externalWallet.value.getUtxos()
-        const recipientAddress = externalWallet.value.getDepositAddress(0)
+        const utxos = await wallet.value.getUtxos()
+        const recipientAddress = wallet.value.getDepositAddress(0)
 
         const signRequest = createAuthkey({
             genesisInputId: `${genesisInputCandidate.value!.txid}:${genesisInputCandidate.value!.vout}` as `${string}:${number}`,
@@ -172,7 +176,12 @@ const onCreateAuthKey = async () => {
             message: t('info.waitingForSignature')
         })
 
-        const response = await wzDappMgr.value.signTransaction(signRequest);
+        const response = await manager.value?.signTransaction(signRequest);
+
+        if (!response) {
+            return loadingGroup()
+        }
+
 
         loadingGroup({
             message: t('info.broadcastingTx')
@@ -199,15 +208,15 @@ const onCreateAuthKey = async () => {
     }
 }
 
-watch(() => externalWallet.value.ready, async (ready, readyPrev) => {
+watch(() => wallet.value.ready, async (ready, readyPrev) => {
     if (ready !== readyPrev) {
-        utxos.value = await externalWallet.value.getUtxos()
+        utxos.value = await wallet.value.getUtxos()
     }
 })
 
 onMounted(async () => {
-    if (externalWallet.value.ready) {
-        utxos.value = await externalWallet.value.getUtxos()
+    if (wallet.value.ready) {
+        utxos.value = await wallet.value.getUtxos()
     }
 })
 
