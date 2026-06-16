@@ -2,6 +2,10 @@ export function shortenTokenId(tokenId: string) {
     return (tokenId || '').replace(tokenId.substring(5, 60), '...')
 }
 
+export function shortenCashAddress(address: string) {
+    return (address || '').replace(address.substring(15, 50), '...')
+}
+
 
 export function formatCurrency(amount: number|bigint, customSymbol: string, decimals?: number) {
 
@@ -34,3 +38,10 @@ export function sortXpubsLexicographically(xpubs: string[]): string[] {
     // Use slice() to avoid mutating the original array directly
     return xpubs.slice().sort((a, b) => a.localeCompare(b));
   }
+
+export function getErrorMessage(error: unknown): string {
+    if (error instanceof Error) return error.message;
+    return String(error);
+}
+  
+  
