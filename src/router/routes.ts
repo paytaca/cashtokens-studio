@@ -147,6 +147,11 @@ const routes: RouteRecordRaw[] = [
         path: 'create',
         component: () => import('pages/token/CreateTokenPage.vue'),
       },
+      {
+        name: 'registry',
+        path: 'registry',
+        component: () => import('pages/token/RegistryPage.vue'),
+      },
     ]
   },
   {
