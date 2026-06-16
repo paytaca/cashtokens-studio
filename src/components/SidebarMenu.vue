@@ -74,8 +74,8 @@ const menu = computed<any[]>(() => {
           icon: 'money',
         },
         {
-          label: 'NFT Reserves',
-          href: hrefs.manageNFTReserves,
+          label: 'NFT Collections',
+          href: '/issuer/nft-collections',
           icon: 'art_track',
         },
         {
