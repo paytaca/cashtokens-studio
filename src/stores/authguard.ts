@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/authguard'
-import type { UtxoWithPath, UtxoWithAuthKey, AuthheadUtxo} from 'src/core/types'
+import type { UtxoWithPath, UtxoWithAuthKey, AuthheadUtxo, DecoratedUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
 
 export const useAuthguardStore = defineStore('authguard-store', () => {
@@ -11,13 +11,13 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     getIdentitySnapshot
   } = useRegistryStore()
 
-  const authheads = ref<AuthheadUtxo[]>([])
+  const authheads = ref<DecoratedUtxo[]>([])
   const authheadsLastSync = ref<number>()
   const authheadsLoading = ref<boolean>()
   const authkeys = ref<UtxoWithPath[]>([])
   const authkeysLastSync = ref<number>()
   const authkeysLoading = ref<boolean>()
-  const activeAuthhead = ref<AuthheadUtxo>()
+  const activeAuthhead = ref<DecoratedUtxo>()
 
   async function loadAuthheads(sync?: boolean) {
   try {
