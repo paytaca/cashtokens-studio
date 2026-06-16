@@ -1,12 +1,16 @@
 import { DisconnectReason, type PathXpub, type ProtocolMessage, type WalletReadyMessage } from '@wizardconnect/core'
 import { useWizardConnect } from 'wizardconnect-vue'
-import { onBeforeUnmount, ref, shallowRef, watch } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 import { WizardConnectExternalWallet } from 'src/core/wallet'
 
 const wallet = shallowRef(new WizardConnectExternalWallet())
 const walletLasySync = ref<number>()
+const showQR = ref(false)
+const qrURI = ref<string | null>(null)
+const qrDataURI = ref<string | null>(null)
 
 let _wc: ReturnType<typeof useWizardConnect> | null = null
+let _watcherSetup = false
 
 export const useWizardConnectWallet = () => {
 
@@ -14,6 +18,7 @@ export const useWizardConnectWallet = () => {
         _wc = useWizardConnect({
             dappName: import.meta.env.VITE_APP_NAME as string,
             dappIcon: import.meta.env.VITE_APP_ICON_URL as string,
+            relayUrls: ['wss://relay.cauldron.quest:443'],
         })
     }
 
@@ -22,6 +27,24 @@ export const useWizardConnectWallet = () => {
         manager,
         walletName, uri, qrUri, connect, disconnect,
     } = _wc
+
+    if (!_watcherSetup) {
+        _watcherSetup = true
+
+        watch(uri, (newUri) => {
+            if (newUri) {
+                qrURI.value = newUri
+                qrDataURI.value = qrUri.value
+                showQR.value = true
+            }
+        })
+
+        watch(state, (newState) => {
+            if (newState === 'connected' || newState === 'disconnected') {
+                showQR.value = false
+            }
+        })
+    }
 
     const wrappedConnect = () => {
         const result = connect()
@@ -75,6 +98,9 @@ export const useWizardConnectWallet = () => {
         qrUri,
         wallet,
         walletLasySync,
+        showQR,
+        qrURI,
+        qrDataURI,
         connect: wrappedConnect,
         disconnect,
     }

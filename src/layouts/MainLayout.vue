@@ -1,8 +1,10 @@
 <template>
   <q-layout view="lHh Lpr lFf">
     <TransactionLogger />
+
     <q-header style="background-color: rgb(20, 20, 20)">
       <q-toolbar class="q-py-sm">
+
         <q-btn flat dense round icon="menu" aria-label="Menu" size="lg" @click="toggleLeftDrawer" />
         <q-toolbar-title>
           <q-img v-if="route.path !== '/'" to="/" @click.stop="router.push('/')"
@@ -10,7 +12,8 @@
             class="cursor-pointer app-logo"></q-img>
           <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
-        <div v-if="user.walletAddress" class="q-mx-sm">
+        {{ state }}
+        <div v-if="wallet.ready" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
             <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
@@ -20,153 +23,10 @@
                 border: 2px solid #484854d4;
               ">
               <template v-slot:label>
-                <q-avatar v-if="wzWalletDiscovered" rounded size="md">
-                  <q-icon name="mdi-wizard-hat" color="primary"></q-icon>
-                </q-avatar>
-                <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
-                  <q-img src="images/paytaca_icon.png"></q-img>
-                </q-avatar>
-                <q-avatar v-else-if="user?.walletType === 'walletconnect'" rounded size="md">
-                  <q-img src="images/walletconnect_icon.png"></q-img>
-                </q-avatar>
-
-                <q-icon v-else name="account_balance_wallet"> </q-icon>
-              </template>
-              <q-list padding style="width: 300px">
-                <q-item clickable :to="{ name: 'recent-transactions' }">
-                  <q-avatar class="q-mr-xs" icon="receipt"> </q-avatar>
-                  <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Recent Transactions
-                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
-                          rounded></q-badge>
-                      </span>
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item clickable @click="scanReserves">
-                  <q-avatar class="q-mr-xs" icon="mdi-card-search"> </q-avatar>
-                  <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Scan Wallet For Managed Tokens
-                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
-                          rounded></q-badge>
-                      </span>
-                    </q-item-label>
-                    <q-item-label lines="4" caption>
-                      Click here if some tokens aren't showing up on the FT or
-                      NFT reserves or Metadata pages due to possible delayed
-                      indexing.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item-label header>Tokens in Wallet</q-item-label>
-                <q-item clickable to="/account/balance/fungibletokens">
-                  <q-item-section avatar>
-                    <q-avatar text-color="white" icon="money"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>My Fungible Tokens</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display fungible token balances of the currently connected
-                      wallet.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item clickable to="/account/balance/collectibles">
-                  <q-item-section avatar>
-                    <q-avatar text-color="white" icon="collections"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>My Collectibles (NFTs)</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display NFTs of the currently connected wallet.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item-label header>Addresses</q-item-label>
-                <q-item clickable @click="
-                  () => {
-                    copyText(user.walletAddress);
-                    $q.notify({
-                      message: 'Wallet Address Copied',
-                      timeout: 500,
-                    });
-                  }
-                ">
-                  <q-item-section avatar>
-                    <q-avatar color="bch" text-color="white">
-                      <q-img src="images/bitcoin-cash-circle.svg"></q-img>
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-positive" style="
-                        font-variant-numeric: tabular-nums;
-                        font-size: 1.1em;
-                        letter-spacing: 2px;
-                      ">
-                      {{ user.walletBchBalance }}
-                    </q-item-label>
-                    <q-item-label caption>{{
-                      shortenAddress(user.walletAddress)
-                      }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy cash address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item clickable
-                  @click="() => { copyText(user.wallet!.getTokenDepositAddress()); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
-                  <q-avatar class="q-mr-xs">
-                    <q-img src="images/cashtokens.svg"></q-img>
-                  </q-avatar>
-                  <q-item-section>
-                    <!-- <q-item-label>TOKEN</q-item-label> -->
-                    <q-item-label caption>{{
-                      shortenAddress(user.wallet!.getTokenDepositAddress())
-                      }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy token address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item>
-                  <paytaca-connect v-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
-                  <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
-                </q-item>
-              </q-list>
-            </q-btn-dropdown>
-            <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge>
-          </q-btn-group>
-        </div>
-        <div v-if="wzWalletDiscovered || externalWallet.ready" class="q-mx-sm">
-          <q-btn-group class="text-right" style="position: relative">
-            <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
-                color: rgb(20, 20, 20);
-                padding: 10px;
-                border-radius: 10px;
-                background-color: #282829d4;
-                border: 2px solid #484854d4;
-              ">
-              <template v-slot:label>
-                <q-avatar v-if="Boolean(wzWalletDiscovered)" rounded size="md">
-                  <q-img v-if="externalWallet.session?.walletIcon" :src="externalWallet.session?.walletIcon"></q-img>
+                <q-avatar v-if="Boolean(wallet.session)" rounded size="md">
+                  <q-img v-if="wallet.session.walletIcon" :src="wallet.session.walletIcon"></q-img>
                   <q-icon v-else name="mdi-wizard-hat" color="primary"></q-icon>
                 </q-avatar>
-                <q-avatar v-else-if="user?.walletType === 'paytaca'" rounded size="md">
-                  <q-img src="images/paytaca_icon.png"></q-img>
-                </q-avatar>
-                <q-avatar v-else-if="user?.walletType === 'walletconnect'" rounded size="md">
-                  <q-img src="images/walletconnect_icon.png"></q-img>
-                </q-avatar>
-
                 <q-icon v-else name="account_balance_wallet"> </q-icon>
               </template>
               <q-list padding style="width: 300px">
@@ -238,7 +98,7 @@
                         font-size: 1.1em;
                         letter-spacing: 2px;
                       ">
-                      {{ BigNumber(externalWallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
+                      {{ BigNumber(wallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
                     </q-item-label>
                     <q-item-label caption class="text-grey-6">
                       <q-icon name="content_copy" size="xs" class="q-mr-xs" />
@@ -272,7 +132,7 @@
                 </q-item>
                 <q-separator inset class="q-my-md" />
                 <q-item>
-                  <q-btn v-if="wzWalletDiscovered" @click="onDisconnectClick">Disconnect</q-btn>
+                  <q-btn v-if="wallet.ready" @click="onDisconnectClick">Disconnect</q-btn>
                   <paytaca-connect v-else-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
                   <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
                 </q-item>
@@ -313,7 +173,7 @@
           <!-- <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" /> -->
           <q-toolbar-title class="text-h6">{{
             ui.pageTitle || $route.meta?.pageTitle
-            }}</q-toolbar-title>
+          }}</q-toolbar-title>
         </q-toolbar>
         <template v-if="
           user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
@@ -343,7 +203,8 @@
         </div>
       </div>
     </q-footer>
-
+    <WizardConnectQRDialog :show="showQR" :qr-uri="(qrUri as string)" :uri="(uri as string)" :onClose="closeQR"
+      @update:show="onQRUpdateShow" />
     <MessageDialog v-model="messageDialog" />
   </q-layout>
 </template>
@@ -366,8 +227,9 @@ import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { shortenAddress, copyText } from 'src/apps/utils';
 import { AuthKey, Watchtower } from 'src/apps';
 import { delay, Wallet } from 'mainnet-js';
-import { useWizardConnect } from 'src/composables/useWizardConnect';
 import BigNumber from 'bignumber.js';
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { WizardConnectQRDialog } from 'wizardconnect-vue';
 
 const leftDrawerOpen = ref(false);
 const user = useUser();
@@ -381,12 +243,10 @@ const scanning = ref<string | boolean>(false);
 const eventBus = inject<EventBus>('eventBus');
 useWalletConnect();
 
-const {
-  wzWalletDiscovered,
-  wzWallet,
-  wzDisconnect,
-  externalWallet
-} = useWizardConnect()
+const { wallet, manager, state, disconnect, showQR, uri, qrUri } = useWizardConnectWallet()
+
+const closeQR = () => { showQR.value = false }
+const onQRUpdateShow = (val: boolean) => { if (!val) showQR.value = false }
 
 eventBus?.on('updatedPendingMultisigTransactions', async () => {
   pendingMultisigTransactions.value =
@@ -433,7 +293,7 @@ const scanReserves = async () => {
 useInit();
 
 const onDisconnectClick = async () => {
-  await wzDisconnect()
+  await disconnect()
 }
 
 watch(
@@ -461,6 +321,9 @@ watch(
     }
   }
 );
+
+watch(() => uri, (v) => { console.log(v) })
+watch(() => qrUri, (v) => { console.log(v) })
 
 onMounted(async () => {
   const db = ClientDB.getInstance();
