@@ -79,7 +79,8 @@
                   <q-icon name="search" color="grey-6" size="xs" />
                 </template>
                 <template v-slot:append v-if="createdSearchQuery">
-                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="createdSearchQuery = ''" />
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer"
+                    @click="createdSearchQuery = ''" />
                 </template>
               </q-input>
             </div>
@@ -95,10 +96,12 @@
                         <q-img v-else
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                           fit="cover">
-                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated placeholder</q-tooltip>
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
+                            placeholder</q-tooltip>
                         </q-img>
                       </q-avatar>
-                      <span class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;">No Icon</span>
+                      <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                        style="line-height: 1;">No Icon</span>
                     </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
@@ -248,14 +251,15 @@
                 :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
-                :label="`Mixed (${collectedMixedCount})`"                 @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
+                :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
               <q-input v-model="collectedSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
                 style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
                 <template v-slot:prepend>
                   <q-icon name="search" color="grey-6" size="xs" />
                 </template>
                 <template v-slot:append v-if="collectedSearchQuery">
-                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="collectedSearchQuery = ''" />
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer"
+                    @click="collectedSearchQuery = ''" />
                 </template>
               </q-input>
             </div>
@@ -272,10 +276,12 @@
                         <q-img v-else
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                           fit="cover">
-                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated placeholder</q-tooltip>
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
+                            placeholder</q-tooltip>
                         </q-img>
                       </q-avatar>
-                      <span class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;">No Icon</span>
+                      <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                        style="line-height: 1;">No Icon</span>
                     </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
