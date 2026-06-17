@@ -79,11 +79,18 @@
               <template v-slot:body-cell-token="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
-                    <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                      <q-img v-if="props.row.identitySnapshot?.uris?.icon"
-                        :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
-                      <q-icon v-else name="token" color="primary" size="20px"></q-icon>
-                    </q-avatar>
+                    <div class="flex column items-center">
+                      <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                        <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                          :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                        <q-img v-else
+                          :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
+                          fit="cover">
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated placeholder</q-tooltip>
+                        </q-img>
+                      </q-avatar>
+                      <span class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;">No Icon</span>
+                    </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
                         <span class="text-caption text-weight-medium text-primary">
@@ -240,9 +247,18 @@
               <template v-slot:body-cell-collectedToken="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
-                    <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                      <q-icon name="token" color="primary" size="20px"></q-icon>
-                    </q-avatar>
+                    <div class="flex column items-center">
+                      <q-avatar size="md" class="bg-grey-9 border-radius-8 shadow-1">
+                        <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                          :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                        <q-img v-else
+                          :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
+                          fit="cover">
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated placeholder</q-tooltip>
+                        </q-img>
+                      </q-avatar>
+                      <span class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;">No Icon</span>
+                    </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
                         <span class="text-caption text-weight-medium text-primary">
@@ -830,7 +846,7 @@ onMounted(async () => {
 }
 
 .font-8 {
-  font-size: 8px;
+  font-size: 0.75em;
 }
 
 .font-10 {
