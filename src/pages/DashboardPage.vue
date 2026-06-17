@@ -105,47 +105,48 @@
                     </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
-                        <span class="text-caption text-weight-medium text-primary">
+                        <span class="text-caption token-symbol">
                           {{ props.row.identitySnapshot?.token?.symbol || '?' }}
                         </span>
-                        <span class="text-grey-7">•</span>
-                        <span class="text-caption text-grey-5 text-mono">
+                        <span class="text-grey-7">-</span>
+                        <span class="flex items-center text-caption text-grey-5 text-mono">
                           {{ shortenTokenId(props.row.token!.category) }}
                           <CopyText :text="props.row.token!.category" />
                         </span>
                       </div>
                       <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="purple-10" text-color="purple-2"
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Mixed
                         </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="blue-10" text-color="blue-2"
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="token" size="10px" class="q-mr-xs" />
                           NFT
                         </q-badge>
-                        <q-badge v-else color="orange-10" text-color="orange-2"
+                        <q-badge v-else color="dark" text-color="orange-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="money" size="10px" class="q-mr-xs" />
                           Fungible
                         </q-badge>
 
-                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
-                          text-color="purple-2"
+                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
+                          text-color="purple-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Minting
                         </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="teal-10"
-                          text-color="teal-2"
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                          text-color="teal-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
                           Mutable
                         </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="grey-9"
-                          text-color="grey-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
+                          text-color="grey-9"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
+                          dense>
                           <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
                           Immutable
                         </q-badge>
@@ -286,46 +287,49 @@
                     </div>
                     <div>
                       <div class="flex items-center q-gutter-x-xs">
-                        <span class="text-caption text-weight-medium text-primary">
-                          {{ props.row.identitySnapshot?.token?.symbol || '?' }}
+                        <span class="text-caption  token-symbol">
+                          {{ props.row.identitySnapshot?.token?.symbol || '?' }} {{ props.row.token?.nft?.commitment ?
+                            `- ${props.row.token?.nft?.commitment}` : ''
+                          }}
                         </span>
-                        <span class="text-grey-7">•</span>
+                      </div>
+                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
                         <span class="text-caption text-grey-5 text-mono">
                           {{ shortenTokenId(props.row.token!.category) }}
                           <CopyText :text="props.row.token!.category" />
                         </span>
                       </div>
                       <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="purple-10" text-color="purple-2"
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Mixed
                         </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="blue-10" text-color="blue-2"
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="token" size="10px" class="q-mr-xs" />
                           NFT
                         </q-badge>
-                        <q-badge v-else color="orange-10" text-color="orange-2"
+                        <q-badge v-else color="dark" text-color="orange-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="money" size="10px" class="q-mr-xs" />
                           Fungible
                         </q-badge>
 
-                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
-                          text-color="purple-2"
+                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
+                          text-color="purple-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Minting
                         </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="teal-10"
-                          text-color="teal-2"
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                          text-color="teal-10"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
                           Mutable
                         </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="grey-9"
-                          text-color="grey-4"
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
+                          text-color="grey-9"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
                           <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
                           Immutable
