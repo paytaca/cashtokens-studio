@@ -42,7 +42,7 @@
               <q-icon name="grid_view" size="sm" />
               <span>Collected Tokens</span>
               <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
-                {{mockNfts.filter(n => n.category === 'collected').length}}
+                {{ walletTokenUtxos.length }}
               </q-badge>
             </div>
           </q-tab>
@@ -54,21 +54,6 @@
           </q-tab>
         </q-tabs>
       </div>
-      <!-- 4. Filters Toolbar -->
-      <div v-if="activeTab === 'collected'" class="row items-center justify-between q-mt-lg q-col-gutter-md">
-        <div class="col-12 col-sm-6 col-md-4">
-          <q-input v-model="searchQuery" dark outlined dense placeholder="Search by name..." class="bg-grey-10"
-            style="border-radius: 0.75rem;">
-            <template v-slot:prepend>
-              <q-icon name="search" color="grey-6" />
-            </template>
-          </q-input>
-        </div>
-        <div class="col-auto text-caption text-grey-5 text-weight-medium">
-          Showing {{ filteredNfts.length }} items
-        </div>
-      </div>
-
       <!-- 5. Tab Panels -->
       <div class="q-py-lg" style="min-height: 400px;">
         <q-tab-panels v-model="activeTab" animated class="bg-transparent text-grey-2">
@@ -90,8 +75,7 @@
                 @click="tokenTypeFilter = 'mixed'" class="q-px-sm" />
             </div>
             <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
-              :loading="authkeysLoading || authheadsLoading" flat bordered dark
-              class="bg-dark border-radius-12 token-reserves-table">
+              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table">
               <template v-slot:body-cell-token="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
@@ -233,35 +217,119 @@
             </q-table>
           </q-tab-panel>
 
-          <!-- Collected: NFT Grid -->
+          <!-- Collected: Wallet Token UTXOs Table -->
           <q-tab-panel name="collected" class="q-pa-none">
-            <div v-if="filteredNfts.length > 0" class="row q-col-gutter-lg">
-              <div v-for="nft in filteredNfts" :key="nft.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
-                <q-card class="bg-dark nft-card cursor-pointer" style="border: 1px solid rgba(255,255,255,0.08);">
-                  <q-img :src="nft.image" :ratio="1" class="nft-image" />
-                  <q-card-section class="q-pa-md">
-                    <div class="text-caption text-uppercase text-grey-5 text-weight-bold">{{ nft.collection }}</div>
-                    <div class="text-subtitle1 text-weight-bold text-white q-mt-xs ellipsis">{{ nft.name }}</div>
-                    <q-separator class="q-my-md bg-grey-9" />
-                    <div class="row justify-between items-end">
-                      <div>
-                        <div class="text-caption text-weight-bold text-grey-5 text-uppercase">Price</div>
-                        <div class="text-subtitle2 text-weight-bold text-white text-mono">{{ nft.price }}</div>
+            <div class="row q-gutter-sm q-mb-md">
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
+                :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
+                :label="`All (${walletTokenUtxos.length})`" @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" />
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'orange-10' : 'transparent'"
+                :text-color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
+                :label="`Fungible (${collectedFungibleCount})`" @click="collectedTokenTypeFilter = 'fungible'"
+                class="q-px-sm" />
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'nft' ? 'blue-10' : 'transparent'"
+                :text-color="collectedTokenTypeFilter === 'nft' ? 'white' : 'grey-5'"
+                :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
+                :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
+                :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
+            </div>
+            <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
+              :row-key="(row: any) => `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
+              class="border-radius-12 token-reserves-table">
+              <template v-slot:body-cell-collectedToken="props">
+                <q-td :props="props">
+                  <div class="flex items-center no-wrap q-gutter-x-md">
+                    <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                      <q-icon name="token" color="primary" size="20px"></q-icon>
+                    </q-avatar>
+                    <div>
+                      <div class="flex items-center q-gutter-x-xs">
+                        <span class="text-caption text-weight-medium text-primary">
+                          {{ props.row.identitySnapshot?.token?.symbol || '?' }}
+                        </span>
+                        <span class="text-grey-7">•</span>
+                        <span class="text-caption text-grey-5 text-mono">
+                          {{ shortenTokenId(props.row.token!.category) }}
+                          <CopyText :text="props.row.token!.category" />
+                        </span>
                       </div>
-                      <div class="text-right">
-                        <div class="text-caption text-weight-bold text-grey-5 text-uppercase">Last Sale</div>
-                        <div class="text-caption text-weight-medium text-grey-3 text-mono">{{ nft.lastSale }}</div>
+                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="purple-10" text-color="purple-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                          Mixed
+                        </q-badge>
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="blue-10" text-color="blue-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="token" size="10px" class="q-mr-xs" />
+                          NFT
+                        </q-badge>
+                        <q-badge v-else color="orange-10" text-color="orange-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="money" size="10px" class="q-mr-xs" />
+                          Fungible
+                        </q-badge>
+
+                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
+                          text-color="purple-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                          Minting
+                        </q-badge>
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="teal-10"
+                          text-color="teal-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
+                          Mutable
+                        </q-badge>
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="grey-9"
+                          text-color="grey-4"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                          <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
+                          Immutable
+                        </q-badge>
                       </div>
                     </div>
-                  </q-card-section>
-                </q-card>
-              </div>
-            </div>
+                  </div>
+                </q-td>
+              </template>
 
-            <div v-else class="text-center q-py-xl text-grey-6 text-weight-medium"
-              style="border: 2px dashed rgba(255,255,255,0.1); border-radius: 1rem;">
-              No items found matching your criteria.
-            </div>
+              <template v-slot:body-cell-collectedAmount="props">
+                <q-td :props="props" class="text-right">
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                    class="text-subtitle1 text-weight-bold text-mono text-white">
+                    {{ formatAmount(props.value) }}
+                  </div>
+                  <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                    class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                    <span>Decimals:</span>
+                    <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                      {{ props.row.identitySnapshot?.token?.decimals === undefined ? '?' :
+                        props.row.identitySnapshot?.token?.decimals }}
+                    </q-badge>
+                  </div>
+                </q-td>
+              </template>
+
+              <template v-slot:body-cell-collectedActions="value">
+                <q-td :props="value">
+                  <q-btn flat round icon="more_vert" color="grey-5" size="sm">
+                    <q-menu dark auto-close class="bg-dark-2 shadow-2">
+                      <q-list dark class="bg-dark" dense style="min-width: 180px">
+                        <q-item clickable @click="viewCollectedRegistry(value.row)">
+                          <q-item-section avatar>
+                            <q-icon name="description" color="secondary" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">View Registry</q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </q-td>
+              </template>
+            </q-table>
           </q-tab-panel>
 
           <!-- Activity Table — scrolls independently -->
@@ -303,6 +371,7 @@ import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 import { ref, computed, onMounted, watch } from 'vue';
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
+import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
 import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
@@ -326,18 +395,13 @@ const authguardStore = useAuthguardStore()
 const { loadAuthkeys } = authguardStore
 const { authheads, authkeysLoading, authheadsLoading } = storeToRefs(authguardStore)
 
-const { loadRegistry } = useRegistryStore()
+const appStore = useAppStore()
+
+const { loadRegistry, fetchIdentitySnapshot } = useRegistryStore()
 
 const primaryXPub = computed(() =>
   wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
 )
-
-const mockNfts = ref([
-  { id: 1, name: 'Cyber Samurai #402', collection: 'NeoTokyo', image: 'https://unsplash.com', price: '0.45 ETH', lastSale: '0.38 ETH', category: 'collected' },
-  { id: 2, name: 'Abstract Ether #88', collection: 'Genesis Art', image: 'https://unsplash.com', price: '1.20 ETH', lastSale: '0.95 ETH', category: 'collected' },
-  { id: 3, name: 'Pixel Mecha #12', collection: 'MechaVerse', image: 'https://unsplash.com', price: '0.15 ETH', lastSale: '0.08 ETH', category: 'created' },
-  { id: 4, name: 'Neon Dreamscape', collection: 'Genesis Art', image: 'https://unsplash.com', price: '2.50 ETH', lastSale: '1.80 ETH', category: 'collected' },
-])
 
 const mockActivity = ref([
   { id: 1, item: 'Cyber Samurai #402', event: 'Transfer', price: '---', from: '0x71C...3a9', to: 'You', date: '2 days ago' },
@@ -346,15 +410,8 @@ const mockActivity = ref([
 ])
 
 const activeTab = ref<'collected' | 'created' | 'activity'>('created')
-const searchQuery = ref('')
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
-
-const filteredNfts = computed(() =>
-  mockNfts.value.filter(nft =>
-    nft.category === 'collected' &&
-    nft.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-  )
-)
+const collectedTokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 
 function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
   const hasAmount = !!row.token?.amount
@@ -377,14 +434,58 @@ function formatAmount(value: any): string {
   }
 }
 
+const walletTokenUtxos = computed(() =>
+  (wallet.value?.utxos || []).filter((u: any) => !!u.token)
+)
+
 const fungibleCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'fungible').length)
 const nftCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'nft').length)
 const mixedCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'mixed').length)
+
+const collectedFungibleCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'fungible').length)
+const collectedNftCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'nft').length)
+const collectedMixedCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'mixed').length)
 
 const filteredAuthheads = computed(() => {
   if (tokenTypeFilter.value === 'all') return authheads.value
   return authheads.value.filter(r => getTokenType(r) === tokenTypeFilter.value)
 })
+
+const filteredCollectedUtxos = computed(() => {
+  if (collectedTokenTypeFilter.value === 'all') return walletTokenUtxos.value
+  return walletTokenUtxos.value.filter(r => getTokenType(r) === collectedTokenTypeFilter.value)
+})
+
+const registryStore = useRegistryStore()
+
+const collectedUtxosWithIdentity = computed(() => {
+  return filteredCollectedUtxos.value.map((utxo) => {
+    const snapshot = registryStore.identitySnapshotCache[utxo.token?.category]
+    return {
+      ...utxo,
+      identitySnapshot: snapshot || undefined
+    }
+  })
+})
+
+const loadCollectedIdentitySnapshots = async () => {
+  const categories = [...new Set(walletTokenUtxos.value.map((u: any) => u.token?.category).filter(Boolean))]
+  const results = await Promise.allSettled(categories.map(async (category) => {
+    try {
+      return await fetchIdentitySnapshot(category as string)
+    } catch (e) {
+      console.log('Failed to fetch identity snapshot for', category, e)
+      return undefined
+    }
+  }))
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      console.log('Identity snapshot rejected for category', categories[index], result.reason)
+    } else if (result.value === null || result.value === undefined) {
+      console.log('No identity snapshot found for category', categories[index])
+    }
+  })
+}
 
 const columns: QTableColumn[] = [
   {
@@ -409,13 +510,41 @@ const columns: QTableColumn[] = [
   }
 ]
 
+const collectedColumns: QTableColumn[] = [
+  {
+    name: 'collectedToken',
+    label: 'Token',
+    field: (row) => row.token?.category,
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'collectedAmount',
+    label: 'Amount',
+    field: (row) => row.token?.amount,
+    align: 'right',
+    sortable: true
+  },
+  {
+    name: 'collectedActions',
+    label: 'Actions',
+    field: 'actions',
+    align: 'right'
+  }
+]
+
 const viewRegistry = (authhead: UtxoWithAuthKey) => {
   authguardStore.setActiveAuthhead(authhead)
   router.push('/token/registry?authbase=' + authhead.token?.category)
 }
 
+const viewCollectedRegistry = (row: any) => {
+  router.push('/token/registry?authbase=' + row.token?.category)
+}
+
 const navigateToMint = (row: UtxoWithAuthKey) => {
   authguardStore.setActiveAuthhead(row)
+  appStore.setActiveMinter(row as any)
   router.push('/issuer/nft-collections/' + row.token?.category + '/mint')
 }
 
@@ -439,12 +568,14 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
 
   if (action === 'issuance') {
     componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
+    componentProps.transferType = 'issuance'
   } else if (action === 'burn') {
     const sampleAddress = wallet.value.getTokenDepositAddress(0)
     const sampleDecodedAddress = decodeCashAddress(sampleAddress)
     if (typeof (sampleDecodedAddress) === 'string') {
       throw new Error(sampleDecodedAddress)
     }
+    componentProps.transferType = 'burn'
     componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
   }
 
@@ -524,10 +655,12 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
 
 watch(walletLasySync, async () => {
   await loadAuthkeys(wallet.value, true)
+  await loadCollectedIdentitySnapshots()
 })
 
 onMounted(async () => {
   await loadAuthkeys(wallet.value, true)
+  await loadCollectedIdentitySnapshots()
 })
 </script>
 
