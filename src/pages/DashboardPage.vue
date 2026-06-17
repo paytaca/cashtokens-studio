@@ -175,7 +175,7 @@
 
               <template v-slot:body-cell-actions="value">
                 <q-td :props="value">
-                  <q-btn flat round icon="more_vert" color="grey-5" size="sm">
+                  <q-btn round icon="more_vert" size=" sm">
                     <q-menu dark auto-close class="bg-dark-2 shadow-2">
                       <q-list dark class="bg-dark" dense style="min-width: 180px">
                         <q-item clickable @click="viewRegistry(value.row)">
@@ -270,7 +270,7 @@
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
                     <div class="flex column items-center">
-                      <q-avatar size="md" class="bg-grey-9 border-radius-8 shadow-1">
+                      <q-avatar size="md">
                         <q-img v-if="props.row.identitySnapshot?.uris?.icon"
                           :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
                         <q-img v-else
@@ -355,7 +355,7 @@
 
               <template v-slot:body-cell-collectedActions="value">
                 <q-td :props="value">
-                  <q-btn flat round icon="more_vert" color="grey-5" size="sm">
+                  <q-btn round icon="more_vert" size="sm">
                     <q-menu dark auto-close class="bg-dark-2 shadow-2">
                       <q-list dark class="bg-dark" dense style="min-width: 180px">
                         <q-item clickable @click="viewCollectedRegistry(value.row)">
@@ -564,7 +564,7 @@ const columns: QTableColumn[] = [
   },
   {
     name: 'actions',
-    label: 'Actions',
+    label: '',
     field: 'actions',
     align: 'right'
   }
@@ -587,7 +587,7 @@ const collectedColumns: QTableColumn[] = [
   },
   {
     name: 'collectedActions',
-    label: 'Actions',
+    label: '',
     field: 'actions',
     align: 'right'
   }
