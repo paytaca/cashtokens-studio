@@ -73,6 +73,15 @@
               <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
                 :text-color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-5'" :label="`Mixed (${mixedCount})`"
                 @click="tokenTypeFilter = 'mixed'" class="q-px-sm" />
+              <q-input v-model="createdSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
+                style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
+                <template v-slot:prepend>
+                  <q-icon name="search" color="grey-6" size="xs" />
+                </template>
+                <template v-slot:append v-if="createdSearchQuery">
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="createdSearchQuery = ''" />
+                </template>
+              </q-input>
             </div>
             <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
               :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table">
@@ -239,7 +248,16 @@
                 :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
-                :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
+                :label="`Mixed (${collectedMixedCount})`"                 @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
+              <q-input v-model="collectedSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
+                style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
+                <template v-slot:prepend>
+                  <q-icon name="search" color="grey-6" size="xs" />
+                </template>
+                <template v-slot:append v-if="collectedSearchQuery">
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="collectedSearchQuery = ''" />
+                </template>
+              </q-input>
             </div>
             <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
               :row-key="(row: any) => `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
@@ -428,6 +446,8 @@ const mockActivity = ref([
 const activeTab = ref<'collected' | 'created' | 'activity'>('created')
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 const collectedTokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
+const createdSearchQuery = ref('')
+const collectedSearchQuery = ref('')
 
 function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
   const hasAmount = !!row.token?.amount
@@ -462,9 +482,23 @@ const collectedFungibleCount = computed(() => walletTokenUtxos.value.filter(r =>
 const collectedNftCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'nft').length)
 const collectedMixedCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'mixed').length)
 
+function matchesSearch(row: any, query: string): boolean {
+  if (!query) return true
+  const q = query.toLowerCase()
+  const symbol = row.identitySnapshot?.token?.symbol?.toLowerCase() || ''
+  const category = row.token?.category?.toLowerCase() || ''
+  return symbol.includes(q) || category.includes(q)
+}
+
 const filteredAuthheads = computed(() => {
-  if (tokenTypeFilter.value === 'all') return authheads.value
-  return authheads.value.filter(r => getTokenType(r) === tokenTypeFilter.value)
+  let rows = authheads.value
+  if (tokenTypeFilter.value !== 'all') {
+    rows = rows.filter(r => getTokenType(r) === tokenTypeFilter.value)
+  }
+  if (createdSearchQuery.value) {
+    rows = rows.filter(r => matchesSearch(r, createdSearchQuery.value))
+  }
+  return rows
 })
 
 const filteredCollectedUtxos = computed(() => {
@@ -475,13 +509,17 @@ const filteredCollectedUtxos = computed(() => {
 const registryStore = useRegistryStore()
 
 const collectedUtxosWithIdentity = computed(() => {
-  return filteredCollectedUtxos.value.map((utxo) => {
+  let rows = filteredCollectedUtxos.value.map((utxo) => {
     const snapshot = registryStore.identitySnapshotCache[utxo.token!.category!]
     return {
       ...utxo,
       identitySnapshot: snapshot || undefined
     }
   })
+  if (collectedSearchQuery.value) {
+    rows = rows.filter(r => matchesSearch(r, collectedSearchQuery.value))
+  }
+  return rows
 })
 
 const loadCollectedIdentitySnapshots = async () => {
