@@ -13,7 +13,7 @@
           <code v-if="getAppEnv() !== 'production' && !$q.screen.xs" class="text-caption">[TEST MODE]</code>
         </q-toolbar-title>
         {{ state }}
-        <div v-if="wallet.ready" class="q-mx-sm">
+        <div v-if="state !== 'disconnected' && manager" class="q-mx-sm">
           <q-btn-group class="text-right" style="position: relative">
             <q-btn-dropdown auto-close rounded size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
