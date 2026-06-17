@@ -1,10 +1,10 @@
 <template>
-  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" class="text-title" :title="transferType" full-width>
+  <q-dialog ref="dialogRef" @hide="onDialogHide" class="text-title" :title="transferType" full-width>
     <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
           <div class="flex items-center col justify-between">
-            <div class="flex items-center text-capitalize">{{ transferType }}</div>
+            <div class="flex items-center text-capitalize">{{ transferLabel }}</div>
             <div class="flex items-center token-symbol q-gutter-xs">
               <q-avatar>
                 <q-img v-if="identitySnapshot?.uris?.icon"
@@ -18,21 +18,19 @@
       </q-toolbar>
       <q-card-section>
         <div class="q-mt-sm">
-          <q-form v-if="issuerUtxo" id="ft-issuer-form" ref="transferForm" @submit.prevent="onSubmit"
+          <q-form id="ft-transfer-form" ref="transferForm" @submit.prevent="onSubmit"
             style="justify-items: initial !important;">
             <div class="q-gutter-md">
-              <q-input :model-value="shortenTokenId(issuerUtxo.token!.category)" label="Token ID" outlined readonly
-                size="lg">
+              <q-input :model-value="shortenTokenId(tokenCategory)" label="Token ID" outlined readonly size="lg">
                 <template v-slot:append>
-                  <CopyText :text="issuerUtxo.token!.category" />
+                  <CopyText :text="tokenCategory" />
                 </template>
               </q-input>
-              <q-input :model-value="issuerUtxo.token!.amount" label="Balance" outlined
+              <q-input :model-value="balanceDecimal" label="Balance" outlined
                 style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive" readonly
                 hide-bottom-space>
               </q-input>
-              <q-input :model-value="identitySnapshot?.token?.decimals || 0" label="Decimals" outlined
-                readonly></q-input>
+              <q-input :model-value="decimals" label="Decimals" outlined readonly></q-input>
               <q-input v-if="Number(transferAmount) > 0" :model-value="newBalance" label="New Balance After Send"
                 outlined class="currency-amount" readonly>
               </q-input>
@@ -47,7 +45,7 @@
                 </template>
               </q-input>
               <q-input
-                v-if="transferType === 'issuance' && transferAmount && BigInt(transferAmount.replace('.', '')) > 0"
+                v-if="(transferType === 'issuance' || transferType === 'send') && transferAmount && decimalToBigInt(transferAmount, decimals) > 0n"
                 v-model="recipient" ref="recipientInputElement" label="Recipient"
                 placeholder="Paste recipient's token address"
                 :rules="[(v: string) => v && isTokenAddress(v) || 'Value should be a cashtoken address']" outlined>
@@ -60,13 +58,13 @@
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn v-if="transferType === 'issuance'" text-color="primary" label="Send" icon="send"
-          @click.stop="(e) => transferForm.submit(e)" size="lg"
-          :disable="!transferAmount || BigInt(transferAmount.replace('.', '')) <= 0">
+        <q-btn v-if="transferType === 'issuance' || transferType === 'send'" text-color="primary" label="Send"
+          icon="send" @click.stop="(e) => transferForm.submit(e)" size="lg"
+          :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
         </q-btn>
         <q-btn v-else-if="transferType === 'burn'" text-color="orange" label="Burn" icon="local_fire_department"
           @click.stop="(e) => transferForm.submit(e)" size="lg"
-          :disable="!transferAmount || BigInt(transferAmount.replace('.', '')) <= 0">
+          :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
         </q-btn>
       </q-card-actions>
     </q-card>
@@ -79,22 +77,48 @@ import { type IdentitySnapshot } from 'mainnet-js'
 import { computed, nextTick, onMounted, ref } from 'vue';
 import BigNumber from 'bignumber.js'
 import { ipfsToGatewayUrl, isTokenAddress } from '../../apps/utils';
-import { UtxoFormSafe } from 'src/core/types';
 import { shortenTokenId } from 'src/core/utils';
+import CopyText from 'components/CopyText.vue'
 
 defineEmits([
   ...useDialogPluginComponent.emits,
 ])
 
-const { dialogRef: issuerDialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
+const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
 
 const props = defineProps<{
-  issuerUtxo: UtxoFormSafe,
-  transferType: 'issuance' | 'burn',
-  identitySnapshot?: IdentitySnapshot,
-  selfAddress?: string,
+  tokenCategory: string
+  balance: bigint
+  decimals: number
+  transferType: 'issuance' | 'send' | 'burn'
+  identitySnapshot?: IdentitySnapshot
+  selfAddress?: string
   burnAddress?: string
 }>()
+
+function decimalToBigInt(value: string, decimals: number): bigint {
+  const parts = value.split('.')
+  const whole = parts[0] || '0'
+  const fraction = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals)
+  return BigInt(whole + fraction)
+}
+
+function bigIntToDecimal(value: bigint, decimals: number): string {
+  const s = value.toString()
+  if (decimals === 0) return s
+  if (s.length <= decimals) return '0.' + s.padStart(decimals, '0')
+  const whole = s.slice(0, -decimals)
+  const fraction = s.slice(-decimals)
+  return whole + '.' + fraction
+}
+
+const transferLabel = computed(() => {
+  if (props.transferType === 'issuance') return 'Release Reserves'
+  if (props.transferType === 'send') return 'Send Tokens'
+  return 'Burn Tokens'
+})
+
+const balanceDecimal = computed(() => bigIntToDecimal(props.balance, props.decimals))
 
 const recipient = ref<string>()
 const recipientInputElement = ref()
@@ -102,12 +126,17 @@ const transferForm = ref()
 const transferAmount = ref<string>('0')
 const transferAmountRules = [
   (v: string) => {
-    return new BigNumber(newBalance.value) >= new BigNumber(0) || 'Amount should not exceed current balance'
+    try {
+      const rawAmount = decimalToBigInt(v, props.decimals)
+      return BigInt(props.balance) - rawAmount >= 0n || 'Amount should not exceed current balance'
+    } catch {
+      return 'Invalid amount'
+    }
   },
   (v: string) => {
     const i = v.indexOf('.')
     if (i === -1) return true
-    const expectedMaxDecimals = Number(props.identitySnapshot?.token?.decimals || 0)
+    const expectedMaxDecimals = Number(props.decimals || 0)
     if (expectedMaxDecimals === 0) return 'Violates max decimal value'
     return v.substring(i + 1).length <= expectedMaxDecimals || 'Violates max decimal value'
   },
@@ -120,29 +149,37 @@ const transferAmountRules = [
 ]
 const newBalance = computed(() => {
   if (transferAmount.value) {
-    return new BigNumber(props.issuerUtxo.token!.amount).minus(transferAmount.value).toString()
+    try {
+      const rawTransferAmount = decimalToBigInt(transferAmount.value, props.decimals)
+      const remaining = BigInt(props.balance) - rawTransferAmount
+      return bigIntToDecimal(remaining, props.decimals)
+    } catch {
+      return balanceDecimal.value
+    }
   }
-  return new BigNumber(props.issuerUtxo.token!.amount || 0).toString()
+  return balanceDecimal.value
 })
 
 const confirmIssuance = () => {
+  const rawAmount = decimalToBigInt(transferAmount.value, props.decimals)
   onDialogOK({
-    tokenAmount: BigInt(transferAmount.value),
+    tokenAmount: rawAmount,
     recipient: recipient.value
   })
-  issuerDialogRef.value = undefined
+  dialogRef.value = undefined
 }
 
 const confirmBurn = () => {
+  const rawAmount = decimalToBigInt(transferAmount.value, props.decimals)
   onDialogOK({
-    tokenAmount: BigInt(transferAmount.value),
+    tokenAmount: rawAmount,
     recipient: props.burnAddress
   })
-  issuerDialogRef.value = undefined
+  dialogRef.value = undefined
 }
 
 const onSubmit = () => {
-  if (props.transferType === 'issuance') {
+  if (props.transferType === 'issuance' || props.transferType === 'send') {
     return confirmIssuance()
   }
   if (props.transferType === 'burn') {
@@ -157,7 +194,6 @@ const sendToSelf = () => {
       const inputEl = recipientInputElement.value.$el.querySelector('input')
       if (inputEl) {
         inputEl.focus()
-        // Move cursor to the end
         const len = inputEl.value.length
         inputEl.setSelectionRange(len, len)
       }
@@ -169,6 +205,4 @@ onMounted(() => {
   transferForm.value?.resetValidation()
   transferForm.value?.reset()
 })
-
-
 </script>

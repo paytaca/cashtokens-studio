@@ -228,7 +228,7 @@ import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
+import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import { delay } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
@@ -487,11 +487,14 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
         })
     }
 
-    const componentProps = {
+    const identitySnapshot = v.identitySnapshot
+    const componentProps: Record<string, any> = {
         transferType: action,
-        issuerUtxo: v,
-        identitySnapshot: v.identitySnapshot,
-    } as any
+        tokenCategory: v.token!.category,
+        balance: BigInt(v.token!.amount),
+        decimals: identitySnapshot?.token?.decimals ?? 0,
+        identitySnapshot,
+    }
 
     if (action === 'issuance') {
         componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
@@ -505,7 +508,7 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
     }
 
     $q.dialog({
-        component: FungibleReservesTransferDialog,
+        component: FungibleTransferDialog,
         componentProps,
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {

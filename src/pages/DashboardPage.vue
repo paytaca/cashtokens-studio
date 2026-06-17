@@ -430,11 +430,11 @@ import { QTableColumn, useQuasar } from 'quasar'
 import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
-import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
+import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { useRouter } from 'vue-router'
 import CopyText from 'components/CopyText.vue'
-import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
+import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
@@ -642,51 +642,122 @@ const viewCollectedRegistry = (row: any) => {
 
 const sendCollectedTokens = (row: any) => {
   $q.dialog({
-    title: 'Send Tokens',
-    message: `${row.identitySnapshot?.token?.symbol || 'Token'} from ${row.isAggregated ? row.utxoCount + ' UTXOs' : '1 UTXO'}`,
-    prompt: {
-      model: '',
-      type: 'text',
-      label: 'Recipient address'
+    component: FungibleTransferDialog,
+    componentProps: {
+      transferType: 'send',
+      tokenCategory: row.token!.category,
+      balance: BigInt(row.token!.amount),
+      decimals: row.identitySnapshot?.token?.decimals ?? 0,
+      identitySnapshot: row.identitySnapshot,
+      selfAddress: wallet.value?.getTokenDepositAddress(0),
     },
-    cancel: true,
-    persistent: true
-  }).onOk(async (recipient: string) => {
-    $q.dialog({
-      title: 'Send Tokens',
-      message: `Token decimals: ${row.identitySnapshot?.token?.decimals ?? 0}`,
-      prompt: {
-        model: '',
-        type: 'text',
-        label: 'Token amount'
-      },
-      cancel: true,
-      persistent: true
-    }).onOk(async (amount: string) => {
-      $q.notify({
-        type: 'positive',
-        message: `Sending ${amount} tokens to ${recipient} - transaction building coming soon`
-      })
+    focus: 'none'
+  }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
+    const loadingGroup = $q.loading.show({
+      group: 'send-tokens-loading-group',
+      message: 'Preparing. Checking wallet for inputs...'
     })
+    try {
+      const signRequest = transferFts({
+        category: row.token!.category,
+        tokenAmount: userInputs.tokenAmount,
+        recipientAddress: userInputs.recipient,
+        changeAddress: wallet.value!.getTokenDepositAddress(0),
+        walletUtxos: (wallet.value!.utxos || []) as UtxoWithPath[],
+        network: import.meta.env.VITE_BCH_NETWORK as Network,
+        transferType: 'send'
+      })
+      loadingGroup({ message: 'Preparing transaction. Waiting for signature. Please check your wallet...' })
+      const response = await manager.value!.signTransaction(signRequest)
+      loadingGroup({ message: 'Broadcasting transaction, please wait...' })
+      const broadcastResponse = await broadcast(response.signedTransaction)
+      if (broadcastResponse.ok) {
+        const broadcastResult = await broadcastResponse.json()
+        if (broadcastResult.success) {
+          await delay(2000)
+          loadingGroup()
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'success',
+              statusText: 'Fungible tokens successfully sent',
+              txid: broadcastResult.txid
+            }
+          })
+        } else {
+          throw new Error(broadcastResult.error)
+        }
+      }
+    } catch (error: any) {
+      console.log('error', error)
+      $q.notify({ type: 'Error', message: error.message })
+    } finally {
+      loadingGroup()
+    }
   })
 }
 
 const burnCollectedTokens = (row: any) => {
+  const sampleAddress = wallet.value!.getTokenDepositAddress(0)
+  const sampleDecodedAddress = decodeCashAddress(sampleAddress)
+  if (typeof (sampleDecodedAddress) === 'string') {
+    throw new Error(sampleDecodedAddress)
+  }
+  const burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+
   $q.dialog({
-    title: 'Burn Tokens',
-    message: `${row.identitySnapshot?.token?.symbol || 'Token'} from ${row.isAggregated ? row.utxoCount + ' UTXOs' : '1 UTXO'}`,
-    prompt: {
-      model: '',
-      type: 'text',
-      label: 'Token amount to burn'
+    component: FungibleTransferDialog,
+    componentProps: {
+      transferType: 'burn',
+      tokenCategory: row.token!.category,
+      balance: BigInt(row.token!.amount),
+      decimals: row.identitySnapshot?.token?.decimals ?? 0,
+      identitySnapshot: row.identitySnapshot,
+      burnAddress,
     },
-    cancel: true,
-    persistent: true
-  }).onOk(async (amount: string) => {
-    $q.notify({
-      type: 'positive',
-      message: `Burning ${amount} tokens - transaction building coming soon`
+    focus: 'none'
+  }).onOk(async (userInputs: { tokenAmount: bigint }) => {
+    const loadingGroup = $q.loading.show({
+      group: 'burn-tokens-loading-group',
+      message: 'Preparing. Checking wallet for inputs...'
     })
+    try {
+      const signRequest = transferFts({
+        category: row.token!.category,
+        tokenAmount: userInputs.tokenAmount,
+        recipientAddress: burnAddress,
+        changeAddress: wallet.value!.getTokenDepositAddress(0),
+        walletUtxos: (wallet.value!.utxos || []) as UtxoWithPath[],
+        network: import.meta.env.VITE_BCH_NETWORK as Network,
+        transferType: 'burn'
+      })
+      loadingGroup({ message: 'Preparing transaction. Waiting for signature. Please check your wallet...' })
+      const response = await manager.value!.signTransaction(signRequest)
+      loadingGroup({ message: 'Broadcasting transaction, please wait...' })
+      const broadcastResponse = await broadcast(response.signedTransaction)
+      if (broadcastResponse.ok) {
+        const broadcastResult = await broadcastResponse.json()
+        if (broadcastResult.success) {
+          await delay(2000)
+          loadingGroup()
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'success',
+              statusText: 'Fungible tokens successfully burned',
+              txid: broadcastResult.txid
+            }
+          })
+        } else {
+          throw new Error(broadcastResult.error)
+        }
+      }
+    } catch (error: any) {
+      console.log('error', error)
+      $q.notify({ type: 'Error', message: error.message })
+    } finally {
+      loadingGroup()
+    }
   })
 }
 
@@ -709,27 +780,28 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
   }
 
   console.log('issuerTokenUtxo', v)
-  const componentProps = {
+  const componentProps: Record<string, any> = {
     transferType: action,
-    issuerUtxo: v,
-  } as any
+    tokenCategory: v.token!.category,
+    balance: BigInt(v.token!.amount),
+    decimals: v.identitySnapshot?.token?.decimals ?? 0,
+    identitySnapshot: v.identitySnapshot,
+  }
 
   if (action === 'issuance') {
     componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
-    componentProps.transferType = 'issuance'
   } else if (action === 'burn') {
     const sampleAddress = wallet.value.getTokenDepositAddress(0)
     const sampleDecodedAddress = decodeCashAddress(sampleAddress)
     if (typeof (sampleDecodedAddress) === 'string') {
       throw new Error(sampleDecodedAddress)
     }
-    componentProps.transferType = 'burn'
     componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
   }
 
 
   $q.dialog({
-    component: FungibleReservesTransferDialog,
+    component: FungibleTransferDialog,
     componentProps,
     focus: 'none'
   }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {

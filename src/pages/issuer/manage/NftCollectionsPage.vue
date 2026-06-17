@@ -210,7 +210,7 @@ import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types
 import { shortenTokenId } from 'src/core/utils'
 import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { Network } from 'cashscript'
-import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
+import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { broadcast } from 'src/core/transaction/broadcast'
@@ -341,11 +341,13 @@ const openMintChildNftDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', id
         })
     }
 
-    const componentProps = {
+    const componentProps: Record<string, any> = {
         transferType: action,
-        issuerUtxo: v,
+        tokenCategory: v.token!.category,
+        balance: BigInt(v.token!.amount),
+        decimals: identitySnapshot?.token?.decimals ?? 0,
         identitySnapshot,
-    } as any
+    }
 
     if (action === 'issuance') {
         componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
@@ -359,7 +361,7 @@ const openMintChildNftDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', id
     }
 
     $q.dialog({
-        component: FungibleReservesTransferDialog,
+        component: FungibleTransferDialog,
         componentProps,
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
@@ -468,6 +470,7 @@ watch(walletLasySync, async (recentSync, lastSync) => {
 
 onMounted(async () => {
     await loadAuthkeys(wallet.value, shouldForceSync())
+    console.log('AUTHHEADS', typeof (authheads.value[0]))
 })
 
 </script>
