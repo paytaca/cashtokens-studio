@@ -156,15 +156,15 @@
                 <q-td :props="props" class="text-right">
                   <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                     class="text-subtitle1 text-weight-bold text-mono text-white">
-                    {{ props.value ? Number(props.value).toLocaleString() : '—' }}
+                    {{ formatAmount(props.value) }}
                   </div>
                   <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
-                  <div
-                    v-if="['fungible', 'mixed'].includes(getTokenType(props.row)) && props.row.identitySnapshot?.token?.decimals !== undefined"
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                     class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
                     <span>Decimals:</span>
                     <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
-                      {{ props.row.identitySnapshot?.token?.decimals ?? 0 }}
+                      {{ props.row.identitySnapshot?.token?.decimals === undefined ? '?' :
+                        props.row.identitySnapshot?.token?.decimals }}
                     </q-badge>
                   </div>
                 </q-td>
@@ -366,6 +366,17 @@ function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
   return 'fungible'
 }
 
+function formatAmount(value: any): string {
+  if (value == null || value === '') return '—'
+  try {
+    if (typeof value === 'bigint') return value.toLocaleString()
+    if (typeof value === 'number') return value.toLocaleString()
+    return BigInt(value).toLocaleString()
+  } catch {
+    return String(value)
+  }
+}
+
 const fungibleCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'fungible').length)
 const nftCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'nft').length)
 const mixedCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'mixed').length)
@@ -420,6 +431,7 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
     })
   }
 
+  console.log('issuerTokenUtxo', v)
   const componentProps = {
     transferType: action,
     issuerUtxo: v,
@@ -435,6 +447,7 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
     }
     componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
   }
+
 
   $q.dialog({
     component: FungibleReservesTransferDialog,
@@ -456,6 +469,8 @@ const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
       if (action === 'burn') {
         recipientAddress = componentProps.burnAddress
       }
+
+
       const signRequest = transferFungibleReserves({
         issuerTokenUtxo,
         authkeyUtxo: issuerTokenUtxo.authkey,
