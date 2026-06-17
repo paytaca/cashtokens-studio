@@ -33,6 +33,7 @@ export const useRegistryStore = defineStore('registry-store', () => {
 
     const registries = ref<ParsedRegistryRecord[]>([] as any)
     const activeNft = ref<ActiveNft|undefined|null>()
+    const identitySnapshotCache = ref<Record<string, any>>({})
 
     const setActiveNft = (newActiveNft: ActiveNft | undefined | null) => {
         activeNft.value = newActiveNft
@@ -52,6 +53,18 @@ export const useRegistryStore = defineStore('registry-store', () => {
         }
         
     }
+
+    const fetchIdentitySnapshot = async (category: string) => {
+        if (identitySnapshotCache.value[category]) {
+            return identitySnapshotCache.value[category]
+        }
+        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/tokens/${category}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        console.log(`Identity snapshot for ${category}:`, data)
+        identitySnapshotCache.value[category] = data
+        return data;
+      }
 
     const getIdentitySnapshotByCategory = async(category: string) => {
         const identitySnapshotRecord = await worker?.getIdentitySnapshot({ category })
@@ -82,5 +95,7 @@ export const useRegistryStore = defineStore('registry-store', () => {
         getIdentitySnapshot,
         getIdentitySnapshotByCategory,
         getIdentitySnapshotRecordByCategory,
+        fetchIdentitySnapshot,
+        identitySnapshotCache
     }
 })
