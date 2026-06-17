@@ -1,10 +1,10 @@
 <template>
-  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" title="Issue" full-width>
+  <q-dialog ref="issuerDialogRef" @hide="onDialogHide" class="text-title" :title="transferType" full-width>
     <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
           <div class="flex items-center col justify-between">
-            <div class="flex items-center"><span>Issue</span></div>
+            <div class="flex items-center text-capitalize">{{ transferType }}</div>
             <div class="flex items-center token-symbol q-gutter-xs">
               <q-avatar>
                 <q-img v-if="identitySnapshot?.uris?.icon"
@@ -42,7 +42,7 @@
                   <q-avatar>
                     <q-img v-if="identitySnapshot?.uris?.icon"
                       :src="ipfsToGatewayUrl(identitySnapshot.uris.icon) as string"></q-img>
-                    <q-icon v-else="token"></q-icon>
+                    <q-icon v-else name="token"></q-icon>
                   </q-avatar>
                 </template>
               </q-input>
