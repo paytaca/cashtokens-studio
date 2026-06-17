@@ -36,6 +36,7 @@ export type Authbase = string
 
 const registryWorker = {
 
+  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   async parseRegistry(registry: Blob, compact: boolean = true): Promise<CompactRegistry|Registry> {
     const text = await registry.text()
     const parsedRegistry = JSON.parse(text)
