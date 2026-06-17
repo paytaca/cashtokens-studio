@@ -1,5 +1,4 @@
-import { HDWallet, Utxo } from "mainnet-js-v3"
-import { UtxoWithAuthKey } from "../authguard";
+import { type Utxo } from "mainnet-js-v3"
 
 export type UtxoWithPath = Utxo & { 
     pathName: 'receive' | 'change' | 'defi',
@@ -9,6 +8,9 @@ export type UtxoWithPath = Utxo & {
 export interface ExternalWallet {
     ready?: boolean,
     utxos?: UtxoWithPath[]
+    balance?: bigint
+    session?: any
+
     getBalance(): Promise<bigint|undefined>
     getUtxos(options?: { sync?: boolean }): Promise<UtxoWithPath[] | Utxo[]>
     getWalletType(): 'wizard-connect'|'wallet-connect'

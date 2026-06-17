@@ -206,7 +206,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
-import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
+import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { Network } from 'cashscript'
@@ -332,7 +332,7 @@ const visibleColumns = computed(() => {
     return ['token', 'actions']
 })
 
-const openMintChildNftDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
+const openMintChildNftDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn', identitySnapshot?: IdentitySnapshot) => {
 
     if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
         return $q.notify({

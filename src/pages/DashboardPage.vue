@@ -264,8 +264,8 @@
               </q-input>
             </div>
             <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
-              :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
-              class="border-radius-12 token-reserves-table">
+              :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`"
+              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table">
               <template v-slot:body-cell-collectedToken="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
@@ -427,7 +427,7 @@ import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
-import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
+import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
@@ -771,7 +771,7 @@ const refreshCache = async (category: string) => {
   await loadRegistry(category)
 }
 
-const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
+const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn') => {
   if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
     return $q.notify({
       type: 'Error',

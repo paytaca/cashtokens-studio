@@ -9,12 +9,24 @@ export type UtxoWithPath = Utxo & {
     addressIndex?: number 
 };
 
-export type UtxoFormSafe = Omit<UtxoWithPath, 'token' & 'satoshis'> & {
+export type UtxoWithAuthKey = UtxoWithPath & { authkey?: UtxoWithPath }
+
+export type AuthheadUtxo = UtxoWithAuthKey & { 
+    identitySnapshot?: IdentitySnapshot, 
+    identitySnapshotIdentifier?: { contentHash: string, identity: { authbase: string, timestamp: string } } 
+}
+
+export type DecoratedUtxo = UtxoWithAuthKey & { 
+    authkey?: UtxoWithPath,
+    identitySnapshot?: IdentitySnapshot, 
+    identitySnapshotIdentifier?: { contentHash: string, identity: { authbase: string, timestamp: string } },
+    isAuthhead?: boolean
+}
+
+export type DecoratedUtxoFormSafe = Omit<DecoratedUtxo, 'token' & 'satoshis'> & {
     satoshis: string,
     token?: Omit<TokenI, 'amount'> & { amount: string }
 }
 
-export type UtxoWithAuthKey = UtxoWithPath & { authkey?: UtxoWithPath }
-
-export type AuthheadUtxo = UtxoWithAuthKey & { identitySnapshot?: IdentitySnapshot }
+export type TokenType = 'Fungible' | 'NonFungible' | 'Mixed'
 
