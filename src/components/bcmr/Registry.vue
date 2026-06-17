@@ -242,7 +242,7 @@ const unwatchRegistry = watch(() => registry.value, (newVal, oldVal) => {
     registryOriginalVersion.value = JSON.parse(JSON.stringify(newVal.version))
     registryCopied.value = true
     if (hasIdentities.value) {
-      if (isOnchainRegistryIdentity) {
+      if (isOnchainRegistryIdentity.value) {
         selectIdentitiesAuthbase(registry.value.registryIdentity as string)
       }
     }
