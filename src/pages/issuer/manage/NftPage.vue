@@ -5,17 +5,24 @@
         <div class="q-mb-md q-px-sm">
           <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
         </div>
-        <div v-if="activeNft" class="bg-dark border-radius-12 q-pa-lg">
+        <div v-if="activeNft?.nftType" class="bg-dark border-radius-12 q-pa-lg">
           <q-card flat class="bg-dark q-mt-lg">
             <div class="q-pa-lg">
               <SequentialNft v-if="!activeNft.bytecode" :key="'seq-' + saveKey"
-                :commitment="activeNft.commitmentOrBottomAltStack" v-model:nft="activeNft.nft"
-                :allow-edit="activeNft.allowEdit" @save="handleSave" @close="router.back()" />
+                :commitment="activeNft.commitmentOrBottomAltStack" v-model:nft="activeNft.nftType"
+                :allow-edit="!!activeAuthhead" @save="handleSave" @close="router.back()" />
               <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="activeNft.commitmentOrBottomAltStack"
-                v-model:nft="activeNft.nft" :allow-edit="activeNft.allowEdit" @save="handleSave"
+                v-model:nft="activeNft.nftType" :allow-edit="!!activeAuthhead" @save="handleSave"
                 :bytecode="activeNft.bytecode" @close="router.back()" />
             </div>
           </q-card>
+        </div>
+        <div v-else-if="activeNft && !activeNft.nftType"
+          class="bg-dark border-radius-12 q-pa-lg flex flex-center" style="min-height: 200px;">
+          <div class="text-center text-grey-5">
+            <q-icon name="info" size="48px" class="q-mb-sm block" />
+            <div class="text-caption">No NFT metadata available for this UTXO</div>
+          </div>
         </div>
         <div v-else class="flex flex-center q-py-xl">
           <q-spinner color="primary" size="48px" />
@@ -30,6 +37,7 @@ import { onMounted, ref } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useRegistryStore } from 'src/stores/registry'
+import { useAuthguardStore } from 'src/stores/authguard'
 import { useQuasar } from 'quasar'
 import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
 import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
@@ -40,12 +48,14 @@ const $q = useQuasar()
 const router = useRouter()
 
 const registryStore = useRegistryStore()
+const authguardStore = useAuthguardStore()
 const { activeNft } = storeToRefs(registryStore)
+const { activeAuthhead } = storeToRefs(authguardStore)
 const saveKey = ref(0)
 
 const handleSave = async (rawNft: NftType) => {
   const a = activeNft.value
-  if (!a) return
+  if (!a || !activeAuthhead.value) return
 
   const nft = JSON.parse(JSON.stringify(rawNft))
 
@@ -78,9 +88,23 @@ const handleSave = async (rawNft: NftType) => {
   $q.notify({ type: 'positive', message: 'NFT saved' })
 }
 
-onMounted(() => {
-  if (!activeNft.value) {
+onMounted(async () => {
+  const a = activeNft.value
+  if (!a) {
     router.back()
+    return
+  }
+
+  if (!a.nftType) {
+    a.nftType = { name: '', description: '' }
+    try {
+      const result = await registryStore.fetchNftType(a.category, a.commitmentOrBottomAltStack)
+      if (result) {
+        a.nftType = result
+      }
+    } catch (e) {
+      console.log('Failed to fetch NFT type for', a.category, a.commitmentOrBottomAltStack, e)
+    }
   }
 })
 

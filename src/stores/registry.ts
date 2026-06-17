@@ -5,6 +5,7 @@ import { ref } from 'vue';
 
 import { type RegistryWorkerAPI } from 'src/workers/registry-worker';
 import { NftType, Registry } from 'src/core/bcmr/bcmr-v2.schema';
+import type { DecoratedUtxo } from 'src/core/types';
 let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
 
 export type ActiveNft = {
@@ -14,7 +15,8 @@ export type ActiveNft = {
     category: string,
     bytecode?: string,
     commitmentOrBottomAltStack: string,
-    nft: NftType,
+    nftType?: NftType,
+    utxo?: DecoratedUtxo,
     allowEdit?: boolean
 }
 
@@ -66,6 +68,13 @@ export const useRegistryStore = defineStore('registry-store', () => {
         return data;
       }
 
+    const fetchNftType = async (category:string, commitment: string): Promise<any> => {
+        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}registry/${category}/identity-snapshot/token-category/nfts/parse/types/${commitment}/?include_metadata=true`)  
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        return data;
+    }
+
     const getIdentitySnapshotByCategory = async(category: string) => {
         const identitySnapshotRecord = await worker?.getIdentitySnapshot({ category })
         return identitySnapshotRecord?.identitySnapshot
@@ -96,6 +105,7 @@ export const useRegistryStore = defineStore('registry-store', () => {
         getIdentitySnapshotByCategory,
         getIdentitySnapshotRecordByCategory,
         fetchIdentitySnapshot,
-        identitySnapshotCache
+        identitySnapshotCache,
+        fetchNftType
     }
 })

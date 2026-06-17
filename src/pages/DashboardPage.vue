@@ -265,7 +265,8 @@
             </div>
             <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
               :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`"
-              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table">
+              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table"
+              @row-click="onCollectedRowClick">
               <template v-slot:body-cell-collectedToken="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
@@ -608,28 +609,34 @@ const columns: QTableColumn[] = [
   }
 ]
 
-const collectedColumns: QTableColumn[] = [
-  {
-    name: 'collectedToken',
-    label: 'Token',
-    field: (row) => row.token?.category,
-    align: 'left',
-    sortable: true
-  },
-  {
-    name: 'collectedAmount',
-    label: 'Amount',
-    field: (row) => row.token?.amount,
-    align: 'right',
-    sortable: true
-  },
-  {
-    name: 'collectedActions',
-    label: '',
-    field: 'actions',
-    align: 'right'
+const collectedColumns = computed<QTableColumn[]>(() => {
+  const cols: QTableColumn[] = [
+    {
+      name: 'collectedToken',
+      label: 'Token',
+      field: (row) => row.token?.category,
+      align: 'left',
+      sortable: true
+    },
+    {
+      name: 'collectedAmount',
+      label: 'Amount',
+      field: (row) => row.token?.amount,
+      align: 'right',
+      sortable: true
+    },
+    {
+      name: 'collectedActions',
+      label: '',
+      field: 'actions',
+      align: 'right'
+    }
+  ]
+  if (collectedTokenTypeFilter.value === 'nft') {
+    return cols.filter(c => c.name !== 'collectedAmount')
   }
-]
+  return cols
+})
 
 const viewRegistry = (authhead: UtxoWithAuthKey) => {
   authguardStore.setActiveAuthhead(authhead)
@@ -638,6 +645,26 @@ const viewRegistry = (authhead: UtxoWithAuthKey) => {
 
 const viewCollectedRegistry = (row: any) => {
   router.push('/token/registry?authbase=' + row.token?.category)
+}
+
+const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
+  const type = getTokenType(row)
+  if (type !== 'nft') return
+
+  authguardStore.setActiveAuthhead(null as any)
+
+  registryStore.setActiveNft({
+    contentHash: '',
+    authbase: '',
+    timestamp: '',
+    category: row.token?.category || '',
+    commitmentOrBottomAltStack: row.token?.nft?.commitment || '',
+    nftType: undefined,
+    utxo: row as any,
+    allowEdit: false
+  })
+
+  router.push(`/issuer/nft-collections/${row.token?.category}/nft`)
 }
 
 const sendCollectedTokens = (row: any) => {

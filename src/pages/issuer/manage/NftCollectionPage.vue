@@ -470,7 +470,7 @@ const onPublishedRowClick = (_evt: Event, row: { type: string, nft: NftType }) =
         category: authhead.value!.token!.category,
         bytecode,
         commitmentOrBottomAltStack: row.type,
-        nft: row.nft,
+        nftType: row.nft,
         allowEdit: true
     })
     router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/nft')
