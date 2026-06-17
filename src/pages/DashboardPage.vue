@@ -42,7 +42,7 @@
               <q-icon name="grid_view" size="sm" />
               <span>Collected Tokens</span>
               <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
-                {{ walletTokenUtxos.length }}
+                {{ allCollectedRows.length }}
               </q-badge>
             </div>
           </q-tab>
@@ -241,7 +241,7 @@
             <div class="row q-gutter-sm q-mb-md">
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
-                :label="`All (${walletTokenUtxos.length})`" @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" />
+                :label="`All (${allCollectedRows.length})`" @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" />
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'orange-10' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
                 :label="`Fungible (${collectedFungibleCount})`" @click="collectedTokenTypeFilter = 'fungible'"
@@ -264,7 +264,7 @@
               </q-input>
             </div>
             <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
-              :row-key="(row: any) => `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
+              :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`" :loading="authkeysLoading || authheadsLoading" flat
               class="border-radius-12 token-reserves-table">
               <template v-slot:body-cell-collectedToken="props">
                 <q-td :props="props">
@@ -339,7 +339,7 @@
                 <q-td :props="props" class="text-right">
                   <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                     class="text-subtitle1 text-weight-bold text-mono text-white">
-                    {{ formatAmount(props.value) }}
+                    {{ formatAmount(props.row.token?.amount) }}
                   </div>
                   <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
                   <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
@@ -348,6 +348,10 @@
                     <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
                       {{ props.row.identitySnapshot?.token?.decimals === undefined ? '?' :
                         props.row.identitySnapshot?.token?.decimals }}
+                    </q-badge>
+                    <q-badge v-if="props.row.isAggregated" color="blue-grey-8" text-color="grey-3"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                      {{ props.row.utxoCount }} UTXO{{ props.row.utxoCount !== 1 ? 's' : '' }}
                     </q-badge>
                   </div>
                 </q-td>
@@ -358,11 +362,20 @@
                   <q-btn round icon="more_vert" size="sm">
                     <q-menu dark auto-close class="bg-dark-2 shadow-2">
                       <q-list dark class="bg-dark" dense style="min-width: 180px">
-                        <q-item clickable @click="viewCollectedRegistry(value.row)">
+                        <q-item clickable @click="sendCollectedTokens(value.row)">
                           <q-item-section avatar>
-                            <q-icon name="description" color="secondary" size="xs" />
+                            <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
                           </q-item-section>
-                          <q-item-section class="text-caption text-grey-3">View Registry</q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Send Tokens</q-item-section>
+                        </q-item>
+
+                        <q-separator dark inset />
+
+                        <q-item clickable @click="burnCollectedTokens(value.row)">
+                          <q-item-section avatar>
+                            <q-icon name="mdi-fire" color="orange" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Burn Tokens</q-item-section>
                         </q-item>
                       </q-list>
                     </q-menu>
@@ -465,6 +478,10 @@ function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
   return 'fungible'
 }
 
+function isPureFungible(row: any): boolean {
+  return getTokenType(row) === 'fungible'
+}
+
 function formatAmount(value: any): string {
   if (value == null || value === '') return '—'
   try {
@@ -484,9 +501,38 @@ const fungibleCount = computed(() => authheads.value.filter(r => getTokenType(r)
 const nftCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'nft').length)
 const mixedCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'mixed').length)
 
-const collectedFungibleCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'fungible').length)
-const collectedNftCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'nft').length)
-const collectedMixedCount = computed(() => walletTokenUtxos.value.filter(r => getTokenType(r) === 'mixed').length)
+const allCollectedRows = computed(() => {
+  let rows = walletTokenUtxos.value.map((utxo: any) => {
+    const snapshot = registryStore.identitySnapshotCache[utxo.token!.category!]
+    return { ...utxo, identitySnapshot: snapshot || undefined }
+  })
+  const grouped = new Map<string, any[]>()
+  for (const row of rows) {
+    const cat = row.token!.category!
+    if (!grouped.has(cat)) grouped.set(cat, [])
+    grouped.get(cat)!.push(row)
+  }
+  const result: any[] = []
+  for (const [, catRows] of grouped) {
+    if (catRows.every((r: any) => isPureFungible(r))) {
+      const totalAmount = catRows.reduce((sum: bigint, r: any) => sum + BigInt(r.token.amount), BigInt(0))
+      result.push({
+        ...catRows[0],
+        token: { ...catRows[0].token, amount: totalAmount },
+        utxoCount: catRows.length,
+        isAggregated: true,
+        aggregatedUtxos: catRows,
+      })
+    } else {
+      result.push(...catRows)
+    }
+  }
+  return result
+})
+
+const collectedFungibleCount = computed(() => allCollectedRows.value.filter(r => getTokenType(r) === 'fungible').length)
+const collectedNftCount = computed(() => allCollectedRows.value.filter(r => getTokenType(r) === 'nft').length)
+const collectedMixedCount = computed(() => allCollectedRows.value.filter(r => getTokenType(r) === 'mixed').length)
 
 function matchesSearch(row: any, query: string): boolean {
   if (!query) return true
@@ -507,21 +553,13 @@ const filteredAuthheads = computed(() => {
   return rows
 })
 
-const filteredCollectedUtxos = computed(() => {
-  if (collectedTokenTypeFilter.value === 'all') return walletTokenUtxos.value
-  return walletTokenUtxos.value.filter(r => getTokenType(r) === collectedTokenTypeFilter.value)
-})
-
 const registryStore = useRegistryStore()
 
 const collectedUtxosWithIdentity = computed(() => {
-  let rows = filteredCollectedUtxos.value.map((utxo) => {
-    const snapshot = registryStore.identitySnapshotCache[utxo.token!.category!]
-    return {
-      ...utxo,
-      identitySnapshot: snapshot || undefined
-    }
-  })
+  let rows = allCollectedRows.value
+  if (collectedTokenTypeFilter.value !== 'all') {
+    rows = rows.filter(r => getTokenType(r) === collectedTokenTypeFilter.value)
+  }
   if (collectedSearchQuery.value) {
     rows = rows.filter(r => matchesSearch(r, collectedSearchQuery.value))
   }
@@ -600,6 +638,56 @@ const viewRegistry = (authhead: UtxoWithAuthKey) => {
 
 const viewCollectedRegistry = (row: any) => {
   router.push('/token/registry?authbase=' + row.token?.category)
+}
+
+const sendCollectedTokens = (row: any) => {
+  $q.dialog({
+    title: 'Send Tokens',
+    message: `${row.identitySnapshot?.token?.symbol || 'Token'} from ${row.isAggregated ? row.utxoCount + ' UTXOs' : '1 UTXO'}`,
+    prompt: {
+      model: '',
+      type: 'text',
+      label: 'Recipient address'
+    },
+    cancel: true,
+    persistent: true
+  }).onOk(async (recipient: string) => {
+    $q.dialog({
+      title: 'Send Tokens',
+      message: `Token decimals: ${row.identitySnapshot?.token?.decimals ?? 0}`,
+      prompt: {
+        model: '',
+        type: 'text',
+        label: 'Token amount'
+      },
+      cancel: true,
+      persistent: true
+    }).onOk(async (amount: string) => {
+      $q.notify({
+        type: 'positive',
+        message: `Sending ${amount} tokens to ${recipient} - transaction building coming soon`
+      })
+    })
+  })
+}
+
+const burnCollectedTokens = (row: any) => {
+  $q.dialog({
+    title: 'Burn Tokens',
+    message: `${row.identitySnapshot?.token?.symbol || 'Token'} from ${row.isAggregated ? row.utxoCount + ' UTXOs' : '1 UTXO'}`,
+    prompt: {
+      model: '',
+      type: 'text',
+      label: 'Token amount to burn'
+    },
+    cancel: true,
+    persistent: true
+  }).onOk(async (amount: string) => {
+    $q.notify({
+      type: 'positive',
+      message: `Burning ${amount} tokens - transaction building coming soon`
+    })
+  })
 }
 
 const navigateToMint = (row: UtxoWithAuthKey) => {
