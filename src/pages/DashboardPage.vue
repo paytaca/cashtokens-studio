@@ -460,7 +460,7 @@ const registryStore = useRegistryStore()
 
 const collectedUtxosWithIdentity = computed(() => {
   return filteredCollectedUtxos.value.map((utxo) => {
-    const snapshot = registryStore.identitySnapshotCache[utxo.token?.category]
+    const snapshot = registryStore.identitySnapshotCache[utxo.token!.category!]
     return {
       ...utxo,
       identitySnapshot: snapshot || undefined
