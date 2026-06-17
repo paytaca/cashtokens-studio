@@ -1,0 +1,706 @@
+<template>
+  <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
+
+    <!-- 1. Profile Banner -->
+    <div class="row relative-position bg-gradient-to-r from-blue-700 to-purple-800" style="height: 10rem;">
+      <q-avatar size="128px" class="profile-avatar z-top bg-grey-9">
+        <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="Avatar">
+      </q-avatar>
+    </div>
+    <!-- 2. Main Content Container -->
+    <div class="q-pt-xl q-px-md q-px-md-xl content-container">
+      <!-- Header Row -->
+      <div class="row justify-between items-start q-col-gutter-md q-pt-md">
+        <div class="col-12 col-md-8">
+          <div class="flex items-center text-caption">
+            <q-icon name="account_balance_wallet" size="16px" color="blue-4" class="q-mr-xs" />
+            <div class="ellipsis wallet-max-width">{{ primaryXPub }}</div>
+          </div>
+        </div>
+
+        <div class="col-12 col-md-4 row justify-end q-gutter-sm">
+          <q-btn outline round color="grey-8" text-color="grey-4" icon="share" class="bg-grey-9" />
+          <q-btn outline round color="grey-8" text-color="grey-4" icon="more_horiz" class="bg-grey-9" />
+          <q-btn outline round color="grey-8" text-color="grey-4" icon="settings" class="bg-grey-9" />
+        </div>
+      </div>
+
+      <div class="tabs-scroll-container q-mt-xl" style="border-bottom: 1px solid var(--q-grey-9, #212121);">
+        <q-tabs v-model="activeTab" dense no-caps align="left" active-color="white" indicator-color="blue-5"
+          class="text-grey-5 text-weight-bold" style="min-width: max-content;" shrink>
+          <q-tab name="created">
+            <div class="row items-center q-gutter-xs no-wrap">
+              <q-icon name="brush" size="sm" />
+              <span>Created Tokens</span>
+              <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
+                {{ authheads.length }}
+              </q-badge>
+            </div>
+          </q-tab>
+          <q-tab name="collected">
+            <div class="row items-center q-gutter-xs no-wrap">
+              <q-icon name="grid_view" size="sm" />
+              <span>Collected Tokens</span>
+              <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
+                {{mockNfts.filter(n => n.category === 'collected').length}}
+              </q-badge>
+            </div>
+          </q-tab>
+          <q-tab name="activity">
+            <div class="row items-center q-gutter-xs no-wrap">
+              <q-icon name="history" size="sm" />
+              <span>Activity</span>
+            </div>
+          </q-tab>
+        </q-tabs>
+      </div>
+      <!-- 4. Filters Toolbar -->
+      <div v-if="activeTab === 'collected'" class="row items-center justify-between q-mt-lg q-col-gutter-md">
+        <div class="col-12 col-sm-6 col-md-4">
+          <q-input v-model="searchQuery" dark outlined dense placeholder="Search by name..." class="bg-grey-10"
+            style="border-radius: 0.75rem;">
+            <template v-slot:prepend>
+              <q-icon name="search" color="grey-6" />
+            </template>
+          </q-input>
+        </div>
+        <div class="col-auto text-caption text-grey-5 text-weight-medium">
+          Showing {{ filteredNfts.length }} items
+        </div>
+      </div>
+
+      <!-- 5. Tab Panels -->
+      <div class="q-py-lg" style="min-height: 400px;">
+        <q-tab-panels v-model="activeTab" animated class="bg-transparent text-grey-2">
+
+          <!-- Created: Authheads Table -->
+          <q-tab-panel name="created" class="q-pa-none">
+            <div class="row q-gutter-sm q-mb-md">
+              <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
+                :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
+                @click="tokenTypeFilter = 'all'" class="q-px-sm" />
+              <q-btn flat unelevated :color="tokenTypeFilter === 'fungible' ? 'orange-10' : 'transparent'"
+                :text-color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-5'" :label="`Fungible (${fungibleCount})`"
+                @click="tokenTypeFilter = 'fungible'" class="q-px-sm" />
+              <q-btn flat unelevated :color="tokenTypeFilter === 'nft' ? 'blue-10' : 'transparent'"
+                :text-color="tokenTypeFilter === 'nft' ? 'white' : 'grey-5'" :label="`NFT (${nftCount})`"
+                @click="tokenTypeFilter = 'nft'" class="q-px-sm" />
+              <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
+                :text-color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-5'" :label="`Mixed (${mixedCount})`"
+                @click="tokenTypeFilter = 'mixed'" class="q-px-sm" />
+            </div>
+            <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
+              :loading="authkeysLoading || authheadsLoading" flat bordered dark
+              class="bg-dark border-radius-12 token-reserves-table">
+              <template v-slot:body-cell-token="props">
+                <q-td :props="props">
+                  <div class="flex items-center no-wrap q-gutter-x-md">
+                    <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                      <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                        :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                      <q-icon v-else name="token" color="primary" size="20px"></q-icon>
+                    </q-avatar>
+                    <div>
+                      <div class="flex items-center q-gutter-x-xs">
+                        <span class="text-caption text-weight-medium text-primary">
+                          {{ props.row.identitySnapshot?.token?.symbol || '?' }}
+                        </span>
+                        <span class="text-grey-7">•</span>
+                        <span class="text-caption text-grey-5 text-mono">
+                          {{ shortenTokenId(props.row.token!.category) }}
+                          <CopyText :text="props.row.token!.category" />
+                        </span>
+                      </div>
+                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="purple-10" text-color="purple-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                          Mixed
+                        </q-badge>
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="blue-10" text-color="blue-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="token" size="10px" class="q-mr-xs" />
+                          NFT
+                        </q-badge>
+                        <q-badge v-else color="orange-10" text-color="orange-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="money" size="10px" class="q-mr-xs" />
+                          Fungible
+                        </q-badge>
+
+                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="purple-10"
+                          text-color="purple-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                          Minting
+                        </q-badge>
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="teal-10"
+                          text-color="teal-2"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                          <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
+                          Mutable
+                        </q-badge>
+                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="grey-9"
+                          text-color="grey-4"
+                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                          <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
+                          Immutable
+                        </q-badge>
+                      </div>
+                    </div>
+                  </div>
+                </q-td>
+              </template>
+
+              <template v-slot:body-cell-fungibleReserves="props">
+                <q-td :props="props" class="text-right">
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                    class="text-subtitle1 text-weight-bold text-mono text-white">
+                    {{ props.value ? Number(props.value).toLocaleString() : '—' }}
+                  </div>
+                  <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
+                  <div
+                    v-if="['fungible', 'mixed'].includes(getTokenType(props.row)) && props.row.identitySnapshot?.token?.decimals !== undefined"
+                    class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                    <span>Decimals:</span>
+                    <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                      {{ props.row.identitySnapshot?.token?.decimals ?? 0 }}
+                    </q-badge>
+                  </div>
+                </q-td>
+              </template>
+
+              <template v-slot:body-cell-actions="value">
+                <q-td :props="value">
+                  <q-btn flat round icon="more_vert" color="grey-5" size="sm">
+                    <q-menu dark auto-close class="bg-dark-2 shadow-2">
+                      <q-list dark class="bg-dark" dense style="min-width: 180px">
+                        <q-item clickable @click="viewRegistry(value.row)">
+                          <q-item-section avatar>
+                            <q-icon name="description" color="secondary" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">View Registry</q-item-section>
+                        </q-item>
+
+                        <q-separator dark inset />
+
+                        <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))" clickable
+                          @click="openTransferDialog(value.row, 'issuance')">
+                          <q-item-section avatar>
+                            <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Release Reserves</q-item-section>
+                        </q-item>
+
+                        <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))" clickable
+                          @click="openTransferDialog(value.row, 'burn')">
+                          <q-item-section avatar>
+                            <q-icon name="mdi-fire" color="orange" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Burn Reserves</q-item-section>
+                        </q-item>
+
+                        <q-item
+                          v-if="getTokenType(value.row) !== 'fungible' && value.row.token?.nft?.capability === 'minting'"
+                          clickable @click="navigateToMint(value.row)">
+                          <q-item-section avatar>
+                            <q-icon name="add_circle" color="primary" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Mint Child NFT</q-item-section>
+                        </q-item>
+
+                        <q-item v-if="getTokenType(value.row) !== 'fungible'" clickable
+                          @click="openTransferDialog(value.row, 'burn')">
+                          <q-item-section avatar>
+                            <q-icon name="mdi-fire" color="orange" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Burn</q-item-section>
+                        </q-item>
+
+                        <q-separator dark inset />
+
+                        <q-item clickable @click="refreshCache(value.row.token!.category as string)">
+                          <q-item-section avatar>
+                            <q-icon name="refresh" color="grey-5" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Refresh Cache</q-item-section>
+                        </q-item>
+                      </q-list>
+                    </q-menu>
+                  </q-btn>
+                </q-td>
+              </template>
+            </q-table>
+          </q-tab-panel>
+
+          <!-- Collected: NFT Grid -->
+          <q-tab-panel name="collected" class="q-pa-none">
+            <div v-if="filteredNfts.length > 0" class="row q-col-gutter-lg">
+              <div v-for="nft in filteredNfts" :key="nft.id" class="col-12 col-sm-6 col-md-4 col-lg-3">
+                <q-card class="bg-dark nft-card cursor-pointer" style="border: 1px solid rgba(255,255,255,0.08);">
+                  <q-img :src="nft.image" :ratio="1" class="nft-image" />
+                  <q-card-section class="q-pa-md">
+                    <div class="text-caption text-uppercase text-grey-5 text-weight-bold">{{ nft.collection }}</div>
+                    <div class="text-subtitle1 text-weight-bold text-white q-mt-xs ellipsis">{{ nft.name }}</div>
+                    <q-separator class="q-my-md bg-grey-9" />
+                    <div class="row justify-between items-end">
+                      <div>
+                        <div class="text-caption text-weight-bold text-grey-5 text-uppercase">Price</div>
+                        <div class="text-subtitle2 text-weight-bold text-white text-mono">{{ nft.price }}</div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-caption text-weight-bold text-grey-5 text-uppercase">Last Sale</div>
+                        <div class="text-caption text-weight-medium text-grey-3 text-mono">{{ nft.lastSale }}</div>
+                      </div>
+                    </div>
+                  </q-card-section>
+                </q-card>
+              </div>
+            </div>
+
+            <div v-else class="text-center q-py-xl text-grey-6 text-weight-medium"
+              style="border: 2px dashed rgba(255,255,255,0.1); border-radius: 1rem;">
+              No items found matching your criteria.
+            </div>
+          </q-tab-panel>
+
+          <!-- Activity Table — scrolls independently -->
+          <q-tab-panel name="activity" class="q-pa-none">
+            <div class="table-scroll-wrapper">
+              <q-markup-table flat dark class="bg-dark text-left table-min-width">
+                <thead>
+                  <tr style="background: rgba(255,255,255,0.04);">
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Event</th>
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Item</th>
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Price</th>
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">From</th>
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">To</th>
+                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="act in mockActivity" :key="act.id" class="table-row">
+                    <td class="q-pa-md text-weight-bold text-white">{{ act.event }}</td>
+                    <td class="q-pa-md text-blue-4 text-weight-bold cursor-pointer table-item-link">{{ act.item }}</td>
+                    <td class="q-pa-md text-mono text-caption text-grey-2">{{ act.price }}</td>
+                    <td class="q-pa-md text-mono text-grey-5 text-caption">{{ act.from }}</td>
+                    <td class="q-pa-md text-mono text-grey-5 text-caption">{{ act.to }}</td>
+                    <td class="q-pa-md text-grey-6 text-caption">{{ act.date }}</td>
+                  </tr>
+                </tbody>
+              </q-markup-table>
+            </div>
+          </q-tab-panel>
+
+        </q-tab-panels>
+      </div>
+    </div>
+  </q-page>
+</template>
+
+<script setup lang="ts">
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { ref, computed, onMounted, watch } from 'vue';
+import { useAuthguardStore } from 'src/stores/authguard'
+import { useRegistryStore } from 'src/stores/registry'
+import { storeToRefs } from 'pinia'
+import { QTableColumn, useQuasar } from 'quasar'
+import type { UtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
+import { shortenTokenId } from 'src/core/utils'
+import { ipfsToGatewayUrl } from 'src/core/ipfs'
+import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
+import { broadcast } from 'src/core/transaction/broadcast'
+import { useRouter } from 'vue-router'
+import CopyText from 'components/CopyText.vue'
+import FungibleReservesTransferDialog from 'src/components/dialogs/FungibleReservesTransferDialog.vue'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { Network } from 'cashscript'
+import { decodeCashAddress } from '@bitauth/libauth'
+import { delay } from 'mainnet-js-v3'
+
+const $q = useQuasar()
+const router = useRouter()
+const { wallet, walletLasySync, manager } = useWizardConnectWallet()
+
+const authguardStore = useAuthguardStore()
+const { loadAuthkeys } = authguardStore
+const { authheads, authkeysLoading, authheadsLoading } = storeToRefs(authguardStore)
+
+const { loadRegistry } = useRegistryStore()
+
+const primaryXPub = computed(() =>
+  wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
+)
+
+const mockNfts = ref([
+  { id: 1, name: 'Cyber Samurai #402', collection: 'NeoTokyo', image: 'https://unsplash.com', price: '0.45 ETH', lastSale: '0.38 ETH', category: 'collected' },
+  { id: 2, name: 'Abstract Ether #88', collection: 'Genesis Art', image: 'https://unsplash.com', price: '1.20 ETH', lastSale: '0.95 ETH', category: 'collected' },
+  { id: 3, name: 'Pixel Mecha #12', collection: 'MechaVerse', image: 'https://unsplash.com', price: '0.15 ETH', lastSale: '0.08 ETH', category: 'created' },
+  { id: 4, name: 'Neon Dreamscape', collection: 'Genesis Art', image: 'https://unsplash.com', price: '2.50 ETH', lastSale: '1.80 ETH', category: 'collected' },
+])
+
+const mockActivity = ref([
+  { id: 1, item: 'Cyber Samurai #402', event: 'Transfer', price: '---', from: '0x71C...3a9', to: 'You', date: '2 days ago' },
+  { id: 2, item: 'Abstract Ether #88', event: 'Sale', price: '1.20 ETH', from: '0xA2b...89f', to: 'You', date: '5 days ago' },
+  { id: 3, item: 'Pixel Mecha #12', event: 'Mint', price: '0.05 ETH', from: 'NullAddress', to: 'You', date: '1 week ago' },
+])
+
+const activeTab = ref<'collected' | 'created' | 'activity'>('created')
+const searchQuery = ref('')
+const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
+
+const filteredNfts = computed(() =>
+  mockNfts.value.filter(nft =>
+    nft.category === 'collected' &&
+    nft.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+  )
+)
+
+function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
+  const hasAmount = !!row.token?.amount
+  const capability = row.token?.nft?.capability
+
+  if (hasAmount && capability === 'minting') return 'mixed'
+  if (hasAmount && (capability === 'mutable' || capability === 'none')) return 'fungible'
+  if (!hasAmount) return 'nft'
+  return 'fungible'
+}
+
+const fungibleCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'fungible').length)
+const nftCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'nft').length)
+const mixedCount = computed(() => authheads.value.filter(r => getTokenType(r) === 'mixed').length)
+
+const filteredAuthheads = computed(() => {
+  if (tokenTypeFilter.value === 'all') return authheads.value
+  return authheads.value.filter(r => getTokenType(r) === tokenTypeFilter.value)
+})
+
+const columns: QTableColumn[] = [
+  {
+    name: 'token',
+    label: 'Token',
+    field: (row) => row.identitySnapshot?.token?.symbol || row.identitySnapshot?.name,
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'fungibleReserves',
+    label: 'Fungible Reserves',
+    field: (row) => row.token?.amount,
+    align: 'right',
+    sortable: true
+  },
+  {
+    name: 'actions',
+    label: 'Actions',
+    field: 'actions',
+    align: 'right'
+  }
+]
+
+const viewRegistry = (authhead: UtxoWithAuthKey) => {
+  authguardStore.setActiveAuthhead(authhead)
+  router.push('/token/registry?authbase=' + authhead.token?.category)
+}
+
+const navigateToMint = (row: UtxoWithAuthKey) => {
+  authguardStore.setActiveAuthhead(row)
+  router.push('/issuer/nft-collections/' + row.token?.category + '/mint')
+}
+
+const refreshCache = async (category: string) => {
+  await loadRegistry(category)
+}
+
+const openTransferDialog = (v: UtxoFormSafe, action: 'issuance' | 'burn') => {
+  if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
+    return $q.notify({
+      type: 'Error',
+      message: 'Insufficient BCH balance'
+    })
+  }
+
+  const componentProps = {
+    transferType: action,
+    issuerUtxo: v,
+  } as any
+
+  if (action === 'issuance') {
+    componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
+  } else if (action === 'burn') {
+    const sampleAddress = wallet.value.getTokenDepositAddress(0)
+    const sampleDecodedAddress = decodeCashAddress(sampleAddress)
+    if (typeof (sampleDecodedAddress) === 'string') {
+      throw new Error(sampleDecodedAddress)
+    }
+    componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+  }
+
+  $q.dialog({
+    component: FungibleReservesTransferDialog,
+    componentProps,
+    focus: 'none'
+  }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
+    const loadingGroup = $q.loading.show({
+      group: 'issue-fungible-reserves-loading-group',
+      message: 'Preparing. Checking wallet for inputs...'
+    })
+
+    const issuerTokenUtxo = JSON.parse(
+      JSON.stringify(v, jsonReplacer),
+      jsonFormSafeUtxoReviver,
+    )
+
+    try {
+      let recipientAddress = userInputs.recipient
+      if (action === 'burn') {
+        recipientAddress = componentProps.burnAddress
+      }
+      const signRequest = transferFungibleReserves({
+        issuerTokenUtxo,
+        authkeyUtxo: issuerTokenUtxo.authkey,
+        recipientAddress: recipientAddress,
+        transferTokenAmount: userInputs.tokenAmount,
+        network: import.meta.env.VITE_BCH_NETWORK as Network,
+        funderUtxos: (wallet.value.utxos || []) as UtxoWithPath[],
+        transferType: action
+      })
+
+      loadingGroup({
+        message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
+      })
+      const response = await manager.value!.signTransaction(signRequest)
+
+      loadingGroup({
+        message: 'Broadcasting transaction, please wait...'
+      })
+
+      const broadcastResponse = await broadcast(response.signedTransaction)
+
+      if (broadcastResponse.ok) {
+        const broadcastResult = await broadcastResponse.json()
+        if (broadcastResult.success) {
+          await delay(2000)
+          loadingGroup()
+          loadAuthkeys(wallet.value, true)
+          $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+              statusType: 'success',
+              statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
+              txid: broadcastResult.txid
+            }
+          })
+        } else {
+          throw new Error(broadcastResult.error)
+        }
+      }
+    } catch (error: any) {
+      console.log('error', error)
+      $q.notify({
+        type: 'Error',
+        message: error.message
+      })
+    } finally {
+      loadingGroup()
+    }
+  })
+}
+
+watch(walletLasySync, async () => {
+  await loadAuthkeys(wallet.value, true)
+})
+
+onMounted(async () => {
+  await loadAuthkeys(wallet.value, true)
+})
+</script>
+
+<style scoped>
+/* Prevent the page itself from ever growing wider than the viewport */
+.page-root {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Max-width container */
+.content-container {
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  /* Critical: this must not exceed viewport width */
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Avatar positioning */
+.profile-avatar {
+  bottom: -4rem;
+  left: 1rem;
+}
+
+@media (min-width: 768px) {
+  .profile-avatar {
+    left: 4rem;
+  }
+}
+
+/* Wallet address truncation */
+.wallet-max-width {
+  max-width: 25em;
+}
+
+/* Tabs: scrollable on small screens, no scrollbar visible */
+.tabs-scroll-container {
+  overflow-x: auto;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.tabs-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+/* NFT card */
+.nft-card {
+  border-radius: 1rem;
+  overflow: hidden;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.nft-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+}
+
+.nft-image {
+  transition: transform 0.3s ease;
+}
+
+.nft-card:hover .nft-image {
+  transform: scale(1.05);
+}
+
+/*
+  Table scroll fix:
+  - The wrapper must be a block-level element with a real bounded width.
+  - overflow-x: auto only clips if the element has a width shorter than its content.
+  - We use min-width: 0 to override any flex/grid stretch that would let it grow
+    to match the table's natural width (which defeats overflow clipping).
+*/
+.table-scroll-wrapper {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  /* Hide scrollbar but keep it functional */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar {
+  height: 4px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+/* The table itself is never allowed to shrink below this */
+.table-min-width {
+  min-width: 640px;
+}
+
+/* Activity table row */
+.table-row {
+  transition: background-color 0.15s ease;
+}
+
+.table-row:hover {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.table-item-link:hover {
+  text-decoration: underline;
+}
+
+/* Input border radius override */
+:deep(.q-field--outlined .q-field__control) {
+  border-radius: 0.75rem;
+}
+
+/* Table styles from issuer pages */
+.border-radius-8 {
+  border-radius: 8px;
+}
+
+.border-radius-12 {
+  border-radius: 12px;
+}
+
+.token-reserves-table {
+  border-color: #2c2c2c !important;
+}
+
+.token-reserves-table :deep(.q-table__card) {
+  box-shadow: none;
+}
+
+.token-reserves-table :deep(thead tr th) {
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 10px;
+  color: #888888;
+  background-color: #1e1e1e;
+  border-bottom: 1px solid #2c2c2c;
+}
+
+.token-reserves-table :deep(tbody tr:hover) {
+  background-color: #1e1e1e !important;
+}
+
+.action-btn-hover {
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.action-btn-hover:hover {
+  transform: translateY(-1px);
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.text-mono {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.font-8 {
+  font-size: 8px;
+}
+
+.font-10 {
+  font-size: 10px;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.styled-capability-badge {
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.border-grey-8 {
+  border: 1px solid #424242;
+}
+</style>
