@@ -1,3 +1,4 @@
+<!-- @deprecated Use ./src/core/transaction/unguard-authhead.ts + AuthguardPage.vue confirm dialogs instead -->
 <template>
   <q-dialog ref="authchainBurnerDialogRef" v-close-popup>
     <q-card class="q-px-sm q-py-lg full-width">
