@@ -6,32 +6,31 @@
           <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
         </div>
 
-        <div class="row relative-position bg-gradient-to-r from-blue-700 to-purple-800" style="height: 10rem;">
-          <q-avatar size="96px" class="profile-avatar z-top bg-grey-9">
-            <q-img v-if="identitySnapshot?.uris?.icon"
-              :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" fit="cover" />
-            <q-img v-else
-              :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`"
+        <div class="row" style="height: 10rem;">
+          <q-avatar size="3xl" class="profile-avatar bg-grey-9">
+            <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
               fit="cover" />
+            <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" fit="cover" />
           </q-avatar>
         </div>
 
-        <div class="q-pt-xl q-px-md content-container">
+        <div class="q-pt-lg q-px-md content-container">
           <div class="q-mb-lg">
             <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || 'Authguard Vault' }}</div>
-            <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{ identitySnapshot.description }}</div>
+            <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
+              identitySnapshot.description }}</div>
           </div>
 
           <div class="row q-gutter-y-md q-mb-lg">
             <div class="col-12 col-sm-6">
-              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">Authguard Address</div>
+              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">Authguard Vault Address</div>
               <div class="flex items-center q-gutter-x-xs">
-                <span class="text-caption text-grey-3 text-mono">{{ shortenTokenId(vaultAddress) }}</span>
+                <span class="text-caption text-grey-3 text-mono">{{ shortenAddress(vaultAddress) }}</span>
                 <CopyText :text="vaultAddress" />
               </div>
             </div>
             <div class="col-12 col-sm-6">
-              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">AuthKey Category</div>
+              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">Authguard Key ID</div>
               <div class="flex items-center q-gutter-x-xs">
                 <span class="text-caption text-grey-3 text-mono">{{ shortenTokenId(authkeyCategory) }}</span>
                 <CopyText :text="authkeyCategory" />
@@ -46,12 +45,13 @@
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
                     <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                      <q-img v-if="identitySnapshot?.uris?.icon"
-                        :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" fit="cover" />
+                      <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
+                        fit="cover" />
                       <q-img v-else
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                         fit="cover">
-                        <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated placeholder</q-tooltip>
+                        <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
+                          placeholder</q-tooltip>
                       </q-img>
                     </q-avatar>
                     <div>
@@ -108,16 +108,17 @@
 
               <template v-slot:body-cell-utxoRef="props">
                 <q-td :props="props">
-                  <span class="text-caption text-grey-5 text-mono">{{ props.row.txid?.slice(0, 8) }}...:{{ props.row.vout }}</span>
+                  <span class="text-caption text-grey-5 text-mono">{{ props.row.txid?.slice(0, 8) }}...:{{
+                    props.row.vout }}</span>
                 </q-td>
               </template>
 
               <template v-slot:body-cell-actions="props">
                 <q-td :props="props" class="text-right">
-                  <q-btn flat dense icon="lock_open" label="Unguard" size="sm"
-                    color="grey-4" class="q-mr-sm" @click="confirmUnguard(props.row)" />
-                  <q-btn flat dense icon="mdi-fire" label="Burn" size="sm"
-                    color="orange" @click="confirmBurn(props.row)" />
+                  <q-btn flat dense icon="lock_open" label="Unlock" size="sm" color="grey-4" class="q-mr-sm"
+                    @click="confirmUnguard(props.row)" />
+                  <q-btn flat dense icon="mdi-fire" label="Burn" size="sm" color="orange"
+                    @click="confirmBurn(props.row)" />
                 </q-td>
               </template>
             </q-table>
@@ -125,6 +126,15 @@
         </div>
       </div>
     </div>
+
+    <UnguardAuthheadDialog v-model="showUnguardDialog" :icon="identitySnapshot?.uris?.icon"
+      :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory" @cancel="selectedRow = null"
+      @unguard="onUnguardDialogConfirm" />
+
+    <BurnAuthheadDialog v-model="showBurnDialog" :icon="identitySnapshot?.uris?.icon"
+      :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory"
+      :amount="selectedRow?.token?.amount?.toString()" :capability="selectedRow?.token?.nft?.capability"
+      @cancel="selectedRow = null" @burn="onBurnDialogConfirm" />
   </q-page>
 </template>
 
@@ -144,8 +154,11 @@ import { useQuasar } from 'quasar'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { delay } from 'mainnet-js-v3'
 import CopyText from 'components/CopyText.vue'
+import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
+import BurnAuthheadDialog from 'src/components/dialogs/BurnAuthheadDialog.vue'
 import type { DecoratedUtxo } from 'src/core/types'
 import type { QTableColumn } from 'quasar'
+import { shortenAddress } from 'src/apps/utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -160,6 +173,9 @@ const loading = ref(false)
 const vaultAddress = ref('')
 const authkeyCategory = ref('')
 const identitySnapshot = ref<any>(null)
+const showUnguardDialog = ref(false)
+const showBurnDialog = ref(false)
+const selectedRow = ref<any>(null)
 
 function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
   const hasAmount = !!row.token?.amount
@@ -212,27 +228,27 @@ const loadAuthguardUtxos = async (a: DecoratedUtxo) => {
 }
 
 const confirmUnguard = (row: any) => {
-  $q.dialog({
-    title: 'Release Utxo From Authguard',
-    message: 'You are about to release the token category\'s identity output from the AuthGuard contract. Doing so will transfer the token category\'s identity output to your regular token wallet address and it will be removed from Token Categories list.',
-    icon: 'warning',
-    iconColor: 'warning',
-    ok: { label: 'Release Utxo', color: 'primary', unelevated: true },
-    cancel: { label: 'Cancel', flat: true, color: 'grey-6' },
-    persistent: true
-  }).onOk(() => handleUnguard(row))
+  selectedRow.value = row
+  showUnguardDialog.value = true
 }
 
 const confirmBurn = (row: any) => {
-  $q.dialog({
-    title: 'Burn Token Identity',
-    message: 'Warning! This action will burn this token (token of the utxo will be discarded). Any fungible token amount and/or minting capability will be lost. This will also burn this token identity\'s AuthHead, this means you\'ll no longer be able to publish an update to the registry.',
-    icon: 'warning',
-    iconColor: 'warning',
-    ok: { label: 'Burn', color: 'negative', unelevated: true },
-    cancel: { label: 'Cancel', flat: true, color: 'grey-6' },
-    persistent: true
-  }).onOk(() => handleBurn(row))
+  selectedRow.value = row
+  showBurnDialog.value = true
+}
+
+const onUnguardDialogConfirm = () => {
+  if (selectedRow.value) {
+    handleUnguard(selectedRow.value)
+  }
+  selectedRow.value = null
+}
+
+const onBurnDialogConfirm = () => {
+  if (selectedRow.value) {
+    handleBurn(selectedRow.value)
+  }
+  selectedRow.value = null
 }
 
 const handleUnguard = async (row: any) => {
@@ -407,14 +423,13 @@ onBeforeRouteLeave(() => {
 <style scoped>
 .profile-avatar {
   bottom: -3rem;
-  left: 1rem;
 }
 
-@media (min-width: 768px) {
+/* @media (min-width: 768px) {
   .profile-avatar {
     left: 3rem;
   }
-}
+} */
 
 .content-container {
   max-width: 80rem;

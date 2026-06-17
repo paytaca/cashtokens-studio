@@ -187,7 +187,7 @@ function buildSignRequest(
 
     const authheadIndex = sourceOutputs.findIndex(s =>
         `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` ===
-        `${spentUtxos[0].txid}:${spentUtxos[0].vout}`
+        `${spentUtxos?.[0]?.txid}:${spentUtxos?.[0]?.vout}`
     )
     if (authheadIndex === -1) {
         throw new Error('Authhead UTXO not found in source outputs')
@@ -233,7 +233,7 @@ function buildSignRequest(
  * @param params.authheadUtxo - The vault UTXO currently locked in the AuthGuard contract
  * @param params.authkeyUtxo - The controlling AuthKey UTXO (proves ownership)
  * @param params.funderUtxos - Non-token wallet UTXOs to fund BCH fees
- * @param params.recipientAddress - Owner's token deposit address (e.g. wallet.getTokenDepositAddress(0))
+ * @param params.recipientAddress - Example: Owner's token deposit address (e.g. wallet.getTokenDepositAddress(0))
  * @param params.network - BCH network (defaults to VITE_BCH_NETWORK)
  * @returns A SignTransactionRequest for WalletConnect signing
  * @throws If the authhead UTXO has no token, authkey is invalid, or insufficient BCH
@@ -271,7 +271,7 @@ export function unguardAuthhead(params: UnguardAuthheadParams): SignTransactionR
         transaction,
         transactionHex,
         finalSpentUtxos,
-        'Release Utxo From Authguard'
+        'Release Token Identity From Authguard Vault'
     )
 }
 

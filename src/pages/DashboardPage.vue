@@ -32,7 +32,7 @@
             <div class="row items-center q-gutter-xs no-wrap">
               <q-icon name="brush" size="sm" />
               <span>Created Tokens</span>
-              <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
+              <q-badge color="grey-6" text-color="grey-3" class="q-ml-xs" rounded>
                 {{ authheads.length }}
               </q-badge>
             </div>
@@ -41,7 +41,7 @@
             <div class="row items-center q-gutter-xs no-wrap">
               <q-icon name="grid_view" size="sm" />
               <span>Collected Tokens</span>
-              <q-badge color="grey-9" text-color="grey-3" class="q-ml-xs" rounded>
+              <q-badge color="grey-6" text-color="grey-3" class="q-ml-xs" rounded>
                 {{ allCollectedRows.length }}
               </q-badge>
             </div>
@@ -64,13 +64,13 @@
               <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
                 @click="tokenTypeFilter = 'all'" class="q-px-sm" />
-              <q-btn flat unelevated :color="tokenTypeFilter === 'fungible' ? 'orange-10' : 'transparent'"
+              <q-btn flat unelevated :color="tokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
                 :text-color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-5'" :label="`Fungible (${fungibleCount})`"
                 @click="tokenTypeFilter = 'fungible'" class="q-px-sm" />
-              <q-btn flat unelevated :color="tokenTypeFilter === 'nft' ? 'blue-10' : 'transparent'"
+              <q-btn flat unelevated :color="tokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
                 :text-color="tokenTypeFilter === 'nft' ? 'white' : 'grey-5'" :label="`NFT (${nftCount})`"
                 @click="tokenTypeFilter = 'nft'" class="q-px-sm" />
-              <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
+              <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
                 :text-color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-5'" :label="`Mixed (${mixedCount})`"
                 @click="tokenTypeFilter = 'mixed'" class="q-px-sm" />
               <q-input v-model="createdSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
@@ -115,24 +115,24 @@
                         </span>
                       </div>
                       <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-10"
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Mixed
                         </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-10"
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="token" size="10px" class="q-mr-xs" />
                           NFT
                         </q-badge>
-                        <q-badge v-else color="dark" text-color="orange-10"
+                        <q-badge v-else color="dark" text-color="green-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="money" size="10px" class="q-mr-xs" />
                           Fungible
                         </q-badge>
 
                         <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
-                          text-color="purple-10"
+                          text-color="purple-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Minting
@@ -144,7 +144,7 @@
                           Mutable
                         </q-badge>
                         <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
-                          text-color="grey-9"
+                          text-color="grey-6"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
                           dense>
                           <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
@@ -184,6 +184,13 @@
                             <q-icon name="description" color="secondary" size="xs" />
                           </q-item-section>
                           <q-item-section class="text-caption text-grey-3">View Registry</q-item-section>
+                        </q-item>
+
+                        <q-item clickable @click="navigateToAuthguard(value.row)">
+                          <q-item-section avatar>
+                            <q-icon name="lock" color="secondary" size="xs" />
+                          </q-item-section>
+                          <q-item-section class="text-caption text-grey-3">Token Vault</q-item-section>
                         </q-item>
 
                         <q-separator dark inset />
@@ -243,14 +250,14 @@
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
                 :label="`All (${allCollectedRows.length})`" @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" />
-              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'orange-10' : 'transparent'"
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
                 :label="`Fungible (${collectedFungibleCount})`" @click="collectedTokenTypeFilter = 'fungible'"
                 class="q-px-sm" />
-              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'nft' ? 'blue-10' : 'transparent'"
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'nft' ? 'white' : 'grey-5'"
                 :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
-              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-10' : 'transparent'"
+              <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
                 :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
               <q-input v-model="collectedSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
@@ -300,24 +307,24 @@
                         </span>
                       </div>
                       <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-10"
+                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Mixed
                         </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-10"
+                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="token" size="10px" class="q-mr-xs" />
                           NFT
                         </q-badge>
-                        <q-badge v-else color="dark" text-color="orange-10"
+                        <q-badge v-else color="dark" text-color="green-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="money" size="10px" class="q-mr-xs" />
                           Fungible
                         </q-badge>
 
                         <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
-                          text-color="purple-10"
+                          text-color="purple-4"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                           <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                           Minting
@@ -329,7 +336,7 @@
                           Mutable
                         </q-badge>
                         <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
-                          text-color="grey-9"
+                          text-color="grey-6"
                           class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
                           <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
                           Immutable
@@ -645,6 +652,13 @@ const collectedColumns = computed<QTableColumn[]>(() => {
 const viewRegistry = (authhead: UtxoWithAuthKey) => {
   authguardStore.setActiveAuthhead(authhead)
   router.push('/token/registry?authbase=' + authhead.token?.category)
+}
+
+const navigateToAuthguard = (row: UtxoWithAuthKey) => {
+  const authkeyCategory = row.authkey?.token?.category
+  if (!authkeyCategory) return
+  authguardStore.setActiveAuthhead(row)
+  router.push(`/authguard/${authkeyCategory}?authhead=${row.txid}:${row.vout}`)
 }
 
 const viewCollectedRegistry = (row: any) => {

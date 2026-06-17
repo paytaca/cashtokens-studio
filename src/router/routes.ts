@@ -141,6 +141,11 @@ const routes: RouteRecordRaw[] = [
         path: 'authkeys',
         component: () => import('pages/authguard/AuthkeysPage.vue'),
       },
+      {
+        name: 'authguard-detail',
+        path: ':authkeyCategory',
+        component: () => import('pages/authguard/AuthguardPage.vue'),
+      },
     ]
   },
   
@@ -162,6 +167,17 @@ const routes: RouteRecordRaw[] = [
         name: 'nft-category',
         path: 'nft-category',
         component: () => import('pages/token/NftCategoryPage.vue'),
+      },
+    ]
+  },
+  {
+    path: '/dashboard',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        name: 'dashboard',
+        path: '',
+        component: () => import('pages/DashboardPage.vue'),
       },
     ]
   },
