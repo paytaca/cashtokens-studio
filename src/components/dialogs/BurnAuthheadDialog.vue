@@ -1,13 +1,9 @@
 <template>
   <q-dialog :model-value="modelValue" persistent>
     <q-card class="q-px-sm q-py-lg full-width">
-      <div class="row justify-end">
-        <q-btn flat color="negative" icon="close" @click="onCancel" />
-      </div>
       <q-avatar class="q-mx-sm" v-if="icon">
         <img :src="icon" alt="">
       </q-avatar>
-      <span v-if="symbol" class="q-mx-sm text-bold">{{ symbol }}</span>
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">Burn Token Identity</q-toolbar-title>
       </q-toolbar>

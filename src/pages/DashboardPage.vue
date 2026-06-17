@@ -9,23 +9,30 @@
     </div>
     <!-- 2. Main Content Container -->
     <div class="q-pt-xl q-px-md q-px-md-xl content-container">
-      <!-- Header Row -->
-      <div class="row justify-between items-start q-col-gutter-md q-pt-md">
-        <div class="col-12 col-md-8">
-          <div class="flex items-center text-caption">
-            <q-icon name="account_balance_wallet" size="16px" color="blue-4" class="q-mr-xs" />
-            <div class="ellipsis wallet-max-width">{{ primaryXPub }}</div>
+      <div class="dashboard-header-wrapper">
+        <!-- Header Row -->
+        <div class="row justify-between items-start q-col-gutter-md q-pt-md">
+          <div class="col-12 col-md-8">
+            <div class="flex items-center text-caption">
+              <q-icon name="account_balance_wallet" size="md" color="grey-5" class="q-mr-xs" />
+              <div class="ellipsis wallet-max-width text-caption">{{ primaryXPub }}</div>
+            </div>
           </div>
-        </div>
 
-        <div class="col-12 col-md-4 row justify-end q-gutter-sm">
-          <q-btn outline round color="grey-8" text-color="grey-4" icon="share" class="bg-grey-9" />
-          <q-btn outline round color="grey-8" text-color="grey-4" icon="more_horiz" class="bg-grey-9" />
-          <q-btn outline round color="grey-8" text-color="grey-4" icon="settings" class="bg-grey-9" />
+          <div class="col-12 col-md-4 row justify-end items-center q-gutter-sm">
+            <div class="flex items-center q-gutter-x-xs text-grey-4 q-mr-md">
+              <q-icon name="img:/images/bitcoin-cash-circle.svg" size="md" color="bch"
+                style="transform: rotate(-15deg);" />
+              <span class="text-weight-bold text-mono">{{ formatBch(bchBalance) }}</span>
+            </div>
+            <q-btn outline round color="grey-8" text-color="grey-4" icon="share" class="bg-grey-9" />
+            <q-btn outline round color="grey-8" text-color="grey-4" icon="more_horiz" class="bg-grey-9" />
+            <q-btn outline round color="grey-8" text-color="grey-4" icon="settings" class="bg-grey-9" />
+          </div>
         </div>
       </div>
 
-      <div class="tabs-scroll-container q-mt-xl" style="border-bottom: 1px solid var(--q-grey-9, #212121);">
+      <div class="tabs-scroll-container" style="border-bottom: 1px solid var(--q-grey-9, #212121);">
         <q-tabs v-model="activeTab" dense no-caps align="left" active-color="white" indicator-color="blue-5"
           class="text-grey-5 text-weight-bold" style="min-width: max-content;" shrink>
           <q-tab name="created">
@@ -505,6 +512,21 @@ function formatAmount(value: any): string {
   }
 }
 
+function formatBch(satoshis: bigint): string {
+  const bch = Number(satoshis) / 100_000_000
+  return bch.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+}
+
+const bchBalance = computed(() => {
+  const utxos = wallet.value?.utxos || []
+  return utxos.reduce((sum: bigint, u: any) => {
+    if (!u.token) {
+      return sum + BigInt(u.satoshis)
+    }
+    return sum
+  }, 0n)
+})
+
 const walletTokenUtxos = computed(() =>
   (wallet.value?.utxos || []).filter((u: any) => !!u.token)
 )
@@ -944,6 +966,21 @@ onMounted(async () => {
   /* Critical: this must not exceed viewport width */
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Dashboard header: translucent gradient from blue-10, fading to dark */
+.dashboard-header-wrapper {
+  background: linear-gradient(180deg,
+      rgba(21, 101, 192, 0.04) 0%,
+      /* blue-10 at 4% — subtle top glow */
+      rgba(21, 101, 192, 0.015) 50%,
+      /* nearly gone by midpoint */
+      transparent 75%
+      /* fully dark page bg */
+    );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Avatar positioning */
