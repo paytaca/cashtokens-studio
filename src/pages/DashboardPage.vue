@@ -466,14 +466,14 @@ import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialo
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
-import { delay } from 'mainnet-js-v3'
+import { BaseWallet } from 'mainnet-js-v3'
 
 const $q = useQuasar()
 const router = useRouter()
 const { wallet, walletLasySync, manager } = useWizardConnectWallet()
 
 const authguardStore = useAuthguardStore()
-const { loadAuthkeys } = authguardStore
+const { loadAuthkeys, loadAuthheads } = authguardStore
 const { authheads, authkeysLoading, authheadsLoading } = storeToRefs(authguardStore)
 
 const appStore = useAppStore()
@@ -750,12 +750,13 @@ const sendCollectedTokens = (row: any) => {
       if (broadcastResponse.ok) {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
-          await delay(2000)
-          const waitResult = await wallet.value.receive?.waitForTransaction({
-            txHash: broadcastResult.txid
+          loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
           })
 
-          console.log('Wait Result', waitResult)
+          await new BaseWallet(import.meta.env.VITE_BCH_NETWORK).waitForTransaction({
+            txHash: broadcastResult.txid
+          })
 
           await wallet.value?.sync()
           triggerRef(wallet)
@@ -822,7 +823,15 @@ const burnCollectedTokens = (row: any) => {
       if (broadcastResponse.ok) {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
-          await delay(2000)
+          loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+          })
+          await new BaseWallet(import.meta.env.VITE_BCH_NETWORK).waitForTransaction({
+            txHash: broadcastResult.txid
+          })
+
+
+
           await wallet.value?.sync()
           triggerRef(wallet)
           loadingGroup()
@@ -932,7 +941,17 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
       if (broadcastResponse.ok) {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
-          await delay(2000)
+          // await delay(2000)
+          loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+          })
+
+          await new BaseWallet(import.meta.env.VITE_BCH_NETWORK).waitForTransaction({
+            txHash: broadcastResult.txid
+          })
+
+
+
           loadingGroup()
           await loadAuthkeys(wallet.value, true)
           triggerRef(wallet)
