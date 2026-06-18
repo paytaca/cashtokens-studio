@@ -43,7 +43,7 @@ export type IdentitySnapshotRecord = {
 }
 
 export type NftRecord = {
-  id: number,
+  id?: number,
   contentHash: string,
   authbase: string,
   timestamp: string,
@@ -74,6 +74,16 @@ export type IdentityHistoryRecord = Omit<IdentitiesRecord, 'identities'> & {
   identityHistory: string[]
 }
 
+export type ActivityStatus = 'pending' | 'success' | 'failed'
+
+export type ActivityRecord = {
+  id?: number,
+  event: string,
+  timestamp: number,
+  txid?: string,
+  status: ActivityStatus
+}
+
 export interface Publishable {
   status: RegistryRecordStatus
 }
@@ -91,6 +101,7 @@ class CashtokensStudioDB extends Dexie {
   registryIdentitySnapshot!: EntityTable<IdentitySnapshotRecord, 'id'>
   nfts!: EntityTable<NftRecord, 'id'>
   utxo!: EntityTable<UtxoRecord, 'id'>
+  activity!: EntityTable<ActivityRecord, 'id'>
 
   constructor() {
 
@@ -100,6 +111,13 @@ class CashtokensStudioDB extends Dexie {
       registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
       nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
       utxo: 'id, walletId'
+    })
+    this.version(2).stores({
+      registry: '++id, contentHash, authbase',
+      registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
+      nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
+      utxo: 'id, walletId',
+      activity: '++id, event, timestamp, status'
     })
   }
 
@@ -168,6 +186,19 @@ class CashtokensStudioDB extends Dexie {
     });
   }
 
+  async saveActivity(params: {
+    event: string,
+    txid?: string,
+    status: ActivityStatus
+  }): Promise<number|undefined> {
+    return await this.activity.add({
+      event: params.event,
+      timestamp: Date.now(),
+      txid: params.txid,
+      status: params.status
+    })
+  }
+
   async setRegistryPublished(authbase: string, contentHash: string): Promise<void> {
     const record = await this.registry.where({ authbase, contentHash }).first()
     if (record) {
@@ -185,11 +216,11 @@ class CashtokensStudioDB extends Dexie {
   }): Promise<NftRecord> {
     const existing = await this.nfts
       .where('[contentHash+authbase+timestamp+type]')
-      .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+      .equals([params.contentHash, params.authbase, params.timestamp, params.type] as [string, string, string, string])
       .first()
 
     if (existing) {
-      throw new Error(`NftRecord already exists for type ${params.type}`)
+      return existing
     }
 
     const record = {
@@ -215,7 +246,7 @@ class CashtokensStudioDB extends Dexie {
   }): Promise<NftRecord> {
     const existing = await this.nfts
       .where('[contentHash+authbase+timestamp+type]')
-      .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+      .equals([params.contentHash, params.authbase, params.timestamp, params.type] as [string, string, string, string])
       .first()
 
     if (!existing) {
@@ -243,10 +274,14 @@ class CashtokensStudioDB extends Dexie {
       for (const type of params.types) {
         const record = await this.nfts
           .where('[contentHash+authbase+timestamp+type]')
-          .equals([params.contentHash, params.authbase, params.timestamp, type])
+          .equals([params.contentHash, params.authbase, params.timestamp, type] as [string, string, string, string])
           .first()
         if (record) {
           await this.nfts.update(record.id!, { status: 'published' })
+          // await this.nfts.update(
+          //   [record.contentHash, record.authbase, record.timestamp, record.type] as [string, string, string, string],
+          //   { status: 'published' }
+          // )
         }
       }
     })

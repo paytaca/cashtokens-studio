@@ -57,6 +57,9 @@
             <div class="row items-center q-gutter-xs no-wrap">
               <q-icon name="history" size="sm" />
               <span>Activity</span>
+              <q-badge color="grey-6" text-color="grey-3" class="q-ml-xs" rounded>
+                {{ activities.length }}
+              </q-badge>
             </div>
           </q-tab>
         </q-tabs>
@@ -410,35 +413,47 @@
             </q-table>
           </q-tab-panel>
 
-          <!-- Activity Table — scrolls independently -->
+          <!-- Activity Table -->
           <q-tab-panel name="activity" class="q-pa-none">
             <div class="q-mb-sm text-grey-5 text-caption">
               Your recent token transaction history.
             </div>
-            <div class="table-scroll-wrapper">
-              <q-markup-table flat dark class="bg-dark text-left table-min-width">
-                <thead>
-                  <tr style="background: rgba(255,255,255,0.04);">
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Event</th>
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Item</th>
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Price</th>
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">From</th>
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">To</th>
-                    <th class="q-pa-md text-grey-4 text-uppercase text-caption text-weight-bold">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="act in mockActivity" :key="act.id" class="table-row">
-                    <td class="q-pa-md text-weight-bold text-white">{{ act.event }}</td>
-                    <td class="q-pa-md text-blue-4 text-weight-bold cursor-pointer table-item-link">{{ act.item }}</td>
-                    <td class="q-pa-md text-mono text-caption text-grey-2">{{ act.price }}</td>
-                    <td class="q-pa-md text-mono text-grey-5 text-caption">{{ act.from }}</td>
-                    <td class="q-pa-md text-mono text-grey-5 text-caption">{{ act.to }}</td>
-                    <td class="q-pa-md text-grey-6 text-caption">{{ act.date }}</td>
-                  </tr>
-                </tbody>
-              </q-markup-table>
+            <div class="row q-gutter-sm q-mb-md items-center">
+              <q-input v-model="activitySearchQuery" dark dense outlined placeholder="Search by event or txid..." class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px;">
+                <template v-slot:prepend>
+                  <q-icon name="search" color="grey-6" size="xs" />
+                </template>
+                <template v-slot:append v-if="activitySearchQuery">
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="activitySearchQuery = ''" />
+                </template>
+              </q-input>
+              <q-btn flat color="grey-6" label="Clear Activities" @click="clearActivities" class="q-ml-sm" />
             </div>
+            <q-table :rows="filteredActivities" :columns="activityColumns" :row-key="(row: any) => row.id" :pagination="{ rowsPerPage: 5 }" :loading="activityLoading" flat class="border-radius-12 token-reserves-table">
+              <template v-slot:body-cell-activityEvent="props">
+                <q-td :props="props">
+                  <span class="text-weight-bold text-white">{{ props.value }}</span>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-activityTxid="props">
+                <q-td :props="props">
+                  <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value) }}<CopyText :text="props.value" /></span>
+                  <span v-else class="text-grey-6 text-caption">—</span>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-activityStatus="props">
+                <q-td :props="props">
+                  <q-badge v-if="props.value === 'success'" color="green-9" text-color="green-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
+                  <q-badge v-else-if="props.value === 'failed'" color="red-9" text-color="red-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
+                  <q-badge v-else color="blue-9" text-color="blue-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
+                </q-td>
+              </template>
+              <template v-slot:body-cell-activityDate="props">
+                <q-td :props="props">
+                  <span class="text-grey-6 text-caption">{{ props.value }}</span>
+                </q-td>
+              </template>
+            </q-table>
           </q-tab-panel>
 
         </q-tab-panels>
@@ -467,6 +482,7 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { BaseWallet } from 'mainnet-js-v3'
+import { db } from 'src/core/client-db'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -484,11 +500,75 @@ const primaryXPub = computed(() =>
   wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
 )
 
-const mockActivity = ref([
-  { id: 1, item: 'Cyber Samurai #402', event: 'Transfer', price: '---', from: '0x71C...3a9', to: 'You', date: '2 days ago' },
-  { id: 2, item: 'Abstract Ether #88', event: 'Sale', price: '1.20 ETH', from: '0xA2b...89f', to: 'You', date: '5 days ago' },
-  { id: 3, item: 'Pixel Mecha #12', event: 'Mint', price: '0.05 ETH', from: 'NullAddress', to: 'You', date: '1 week ago' },
-])
+const activities = ref<any[]>([])
+const activityLoading = ref(false)
+const activitySearchQuery = ref('')
+
+const activityColumns: QTableColumn[] = [
+  {
+    name: 'activityEvent',
+    label: 'Event',
+    field: 'event',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'activityTxid',
+    label: 'TXID',
+    field: 'txid',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'activityStatus',
+    label: 'Status',
+    field: 'status',
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'activityDate',
+    label: 'Date',
+    field: 'timestamp',
+    align: 'left',
+    sortable: true,
+    format: (val: number) => new Date(val).toLocaleString()
+  }
+]
+
+const loadActivities = async () => {
+  try {
+    activityLoading.value = true
+    const records = await db.activity.orderBy('timestamp').reverse().toArray()
+    activities.value = records
+  } catch (error: any) {
+    $q.notify({ type: 'Error', message: `Error loading activities: ${error.message}` })
+  } finally {
+    activityLoading.value = false
+  }
+}
+
+const filteredActivities = computed(() => {
+  let rows = activities.value
+  if (activitySearchQuery.value) {
+    const q = activitySearchQuery.value.toLowerCase()
+    rows = rows.filter((r) => {
+      const event = r.event?.toLowerCase() || ''
+      const txid = r.txid?.toLowerCase() || ''
+      return event.includes(q) || txid.includes(q)
+    })
+  }
+  return rows
+})
+
+const clearActivities = async () => {
+  try {
+    await db.activity.clear()
+    activities.value = []
+  } catch (error: any) {
+    $q.notify({ type: 'Error', message: `Error clearing activities: ${error.message}` })
+  }
+}
 
 const activeTab = ref<'collected' | 'created' | 'activity'>('created')
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
@@ -760,6 +840,7 @@ const sendCollectedTokens = (row: any) => {
 
           await wallet.value?.sync()
           triggerRef(wallet)
+          await db.saveActivity({ event: 'Transfer FTs', txid: broadcastResult.txid, status: 'success' })
           loadingGroup()
           $q.dialog({
             component: TransactionStatusDialog,
@@ -834,6 +915,7 @@ const burnCollectedTokens = (row: any) => {
 
           await wallet.value?.sync()
           triggerRef(wallet)
+          await db.saveActivity({ event: 'Burn FTs', txid: broadcastResult.txid, status: 'success' })
           loadingGroup()
           $q.dialog({
             component: TransactionStatusDialog,
@@ -955,6 +1037,11 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
           loadingGroup()
           await loadAuthkeys(wallet.value, true)
           triggerRef(wallet)
+          await db.saveActivity({
+            event: action === 'issuance' ? 'Release Reserves' : 'Burn Reserves',
+            txid: broadcastResult.txid,
+            status: 'success'
+          })
           $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
@@ -985,10 +1072,17 @@ watch(walletLasySync, async () => {
   await loadCollectedIdentitySnapshots()
 })
 
+watch(activeTab, async (newTab) => {
+  if (newTab === 'activity') {
+    await loadActivities()
+  }
+})
+
 onMounted(async () => {
   await loadAuthkeys(wallet.value, true)
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
+  await loadActivities()
 })
 </script>
 
