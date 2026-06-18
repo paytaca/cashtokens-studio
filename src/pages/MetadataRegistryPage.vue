@@ -1,12 +1,37 @@
 <template>
   <q-page class="bg-dark-page text-grey-2">
     <div class="row justify-center q-pa-md">
+      <!-- Back button -->
+      <div class="col-xs-12 q-mb-md">
+        <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+      </div>
+
       <!-- Loading skeleton -->
-      <div v-if="loading" class="col-xs-12 col-sm-8 flex justify-left q-gutter-y-md">
-        <q-skeleton type="QInput" class="full-width" />
-        <q-skeleton type="QInput" class="full-width" />
-        <q-skeleton type="QInput" class="full-width" />
-        <q-skeleton type="QInput" class="full-width" />
+      <div v-if="loading" class="col-xs-12 col-sm-10">
+        <q-card flat class="bg-dark q-pa-lg q-mb-md">
+          <div class="row items-center q-gutter-x-md">
+            <q-skeleton type="QAvatar" size="64px" class="bg-grey-9" />
+            <div class="col">
+              <q-skeleton type="text" class="text-h6 q-mb-xs" width="60%" />
+              <q-skeleton type="text" class="text-caption" width="40%" />
+            </div>
+          </div>
+        </q-card>
+        <q-card flat class="bg-dark q-pa-md q-mb-md">
+          <q-skeleton type="QSelect" class="full-width q-mb-md" />
+          <q-skeleton type="QSelect" class="full-width" />
+        </q-card>
+        <q-card flat class="bg-dark q-pa-lg">
+          <q-skeleton type="text" class="q-mb-md" width="30%" />
+          <q-skeleton type="text" class="q-mb-sm" />
+          <q-skeleton type="text" class="q-mb-sm" width="80%" />
+          <q-skeleton type="text" width="50%" />
+        </q-card>
+        <div class="flex justify-end q-gutter-md q-mt-lg">
+          <q-skeleton type="QBtn" />
+          <q-skeleton type="QBtn" />
+          <q-skeleton type="QBtn" />
+        </div>
       </div>
 
       <!-- No registry state -->
@@ -33,47 +58,45 @@
         </q-card>
       </div>
 
+
       <!-- Main content -->
-      <div v-else class="col-xs-12 col-sm-10 col-md-8">
-        <!-- Header card -->
-        <q-card flat class="bg-dark q-pa-lg">
-          <div class="row items-center q-gutter-x-md q-mb-lg">
-            <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
-              <q-img v-if="identitySnapshot?.uris?.icon"
-                :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" fit="cover" />
-              <q-icon v-else name="token" color="primary" size="32px" />
-            </q-avatar>
-            <div>
-              <div class="text-h6 text-weight-medium">
-                {{ identitySnapshot?.name || 'Unnamed Token' }}
-              </div>
-              <div class="flex items-center q-gutter-x-xs text-caption">
-                <span class="text-grey-5">{{ identitySnapshot?.token?.symbol || '?' }}</span>
-                <span class="text-grey-7">-</span>
-                <span class="text-mono text-grey-5">{{ shortenTokenId(authbase) }}</span>
-                <CopyText :text="authbase" />
+      <div v-else class="col-xs-12 col-sm-10">
+
+        <div class="avatar-banner-wrapper">
+          <div class="row items-center q-gutter-y-md q-mb-lg">
+            <div class="col-12">
+              <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
+                <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
+                  fit="cover" />
+                <q-icon v-else name="token" color="primary" size="32px" />
+              </q-avatar>
+              <div>
+                <div class="text-h6 text-weight-medium">
+                  {{ identitySnapshot?.name || 'Unnamed Token' }}
+                </div>
+                <div class="flex items-center q-gutter-x-xs text-caption">
+                  <span class="text-grey-5">{{ identitySnapshot?.token?.symbol || '?' }}</span>
+                  <span class="text-grey-7">-</span>
+                  <span class="text-mono text-grey-5">{{ shortenTokenId(authbase) }}</span>
+                  <CopyText :text="authbase" />
+                </div>
               </div>
             </div>
-          </div>
-        </q-card>
-
-        <!-- Authbase / Timestamp Selectors -->
-        <q-card flat class="bg-dark q-pa-md q-mt-md">
-          <div class="row q-gutter-md items-center">
-            <div class="col-12 col-md-5">
+            <div class="col-12">
               <q-select v-model="selectedAuthbase" :options="authbaseOptions" label="Authbase" dark filled
                 @update:model-value="onAuthbaseChange" />
             </div>
-            <div class="col-12 col-md-5">
+            <div class="col-12">
               <q-select v-model="selectedTimestamp" :options="timestampOptions" label="Timestamp" dark filled
-                @update:model-value="onTimestampChange" />
-            </div>
-            <div class="col-auto">
-              <q-badge v-if="isLatestTimestamp" color="green-9" text-color="green-3">Latest</q-badge>
-              <q-badge v-else color="grey-8" text-color="grey-4">Read-only</q-badge>
+                @update:model-value="onTimestampChange">
+                <template v-slot:append>
+                  <q-badge v-if="isLatestTimestamp" color="green-9" text-color="green-3">Latest</q-badge>
+                  <q-badge v-else color="grey-8" text-color="grey-4">Read-only</q-badge>
+                </template>
+              </q-select>
             </div>
           </div>
-        </q-card>
+        </div>
 
         <!-- Tabs -->
         <div class="q-mt-md">
@@ -103,11 +126,7 @@
             <!-- Tab 1: Token Identity -->
             <q-tab-panel name="identity" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
-                <div class="flex items-center q-gutter-x-sm q-mb-md">
-                  <q-icon name="mdi-book-clock-outline" size="24px" color="primary" />
-                  <span class="text-h6 text-weight-medium">Token Identity</span>
-                  <q-badge v-if="identitySnapshotModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
-                </div>
+                <q-badge v-if="identitySnapshotModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
                 <IdentitySnapshotComponent v-if="identitySnapshot" v-model:identity-snapshot="identitySnapshot"
                   @changed="onIdentitySnapshotChanged" :mode="isLatestTimestamp ? 'write' : 'read'"
                   :authbase="selectedAuthbase" :content-hash="currentContentHash" :timestamp="selectedTimestamp" />
@@ -120,10 +139,6 @@
             <!-- Tab 2: NFTs -->
             <q-tab-panel name="nfts" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
-                <div class="flex items-center q-gutter-x-sm q-mb-md">
-                  <q-icon name="token" size="24px" color="primary" />
-                  <span class="text-h6 text-weight-medium">NFTs</span>
-                </div>
                 <div v-if="!nftCategory" class="text-caption text-grey-5 text-center q-pa-md">
                   This token does not have NFT metadata.
                 </div>
@@ -206,8 +221,8 @@
                       </div>
                       <div class="text-caption text-grey-6 q-mb-md">NFT types currently in the registry</div>
                       <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
-                        :loading="publishedLoading" v-model:pagination="publishedPagination" @request="onPublishedRequest"
-                        @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
+                        :loading="publishedLoading" v-model:pagination="publishedPagination"
+                        @request="onPublishedRequest" @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
                         <template v-slot:body-cell-type="props">
                           <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
                         </template>
@@ -227,11 +242,7 @@
             <!-- Tab 3: Registry -->
             <q-tab-panel name="registry" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
-                <div class="flex items-center q-gutter-x-sm q-mb-md">
-                  <q-icon name="mdi-file-document-multiple" size="24px" color="primary" />
-                  <span class="text-h6 text-weight-medium">Registry Metadata</span>
-                  <q-badge v-if="registryModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
-                </div>
+                <q-badge v-if="registryModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
                 <RegistryComponent v-if="registry" v-model:registry="registry" embedded
                   @change:registry="registryModified = true" />
               </q-card>
@@ -241,26 +252,19 @@
 
         <!-- Universal Action Buttons -->
         <div class="flex justify-end q-gutter-md q-mt-lg q-mb-xl">
-          <q-btn icon="mdi-undo" color="warning" @click="onReset"
-            :disable="!anyModified && !inMemoryRegistry">
+          <q-btn icon="mdi-undo" color="warning" @click="onReset" :disable="!anyModified && !inMemoryRegistry">
             {{ t('button.reset') }}
           </q-btn>
-          <q-btn icon="cloud_upload" color="primary" @click="onSave"
-            :disable="!anyModified && !inMemoryRegistry">
+          <q-btn icon="cloud_upload" color="primary" @click="onSave" :disable="!anyModified && !inMemoryRegistry">
             {{ t('button.save') }}
           </q-btn>
-          <q-btn icon="cloud_upload" color="primary" @click="onPublish"
-            :disable="!canPublish">
+          <q-btn icon="cloud_upload" color="primary" @click="onPublish" :disable="!canPublish">
             {{ t('button.publish') }}
           </q-btn>
         </div>
       </div>
     </div>
-    <AddNftDialog
-      v-model="showAddNftDialog"
-      :collection-type="collectionType"
-      @ok="onAddNftOk"
-    />
+    <AddNftDialog v-model="showAddNftDialog" :collection-type="collectionType" @ok="onAddNftOk" />
   </q-page>
 </template>
 
@@ -413,18 +417,17 @@ const collectionType = computed(() => {
 })
 
 const anyModified = computed(() => {
-  return registryModified.value || identitySnapshotModified.value || !!inMemoryRegistry.value
+  return registryModified.value || identitySnapshotModified.value || !!inMemoryRegistry.value || unpublishedNfts.value.length > 0
 })
 
 const canPublish = computed(() => {
-  return anyModified.value || registryRecord.value?.status === 'modified' || registryRecord.value?.status === 'new'
+  return anyModified.value || registryRecord.value?.status === 'modified' || registryRecord.value?.status === 'new' || unpublishedNfts.value.length > 0
 })
 
-const registry = computed<CompactRegistry | undefined>(() => {
-  const reg = currentRegistry.value
-  if (!reg) return undefined
-  return toCompactRegistry(reg)
-})
+const registry = ref<CompactRegistry | undefined>()
+watch(currentRegistry, (reg) => {
+  registry.value = reg ? toCompactRegistry(reg) : undefined
+}, { immediate: true })
 
 const toCompactRegistry = (registry: Registry | CompactRegistry): CompactRegistry => {
   if (!registry.identities) return registry as unknown as CompactRegistry
@@ -612,7 +615,8 @@ const onAddNftOk = async (typeKey: string) => {
     allowEdit: true,
     isNew: true
   })
-  router.push(`/issuer/nft-collections/${ab}/nft`)
+  const returnTo = encodeURIComponent(router.currentRoute.value.fullPath)
+  router.push(`/issuer/nft-collections/${ab}/nft?returnTo=${returnTo}`)
 }
 
 const editNft = (record: NftRecord) => {
@@ -628,7 +632,8 @@ const editNft = (record: NftRecord) => {
     nftType: record.nft,
     allowEdit: true
   })
-  router.push(`/issuer/nft-collections/${record.category}/nft`)
+  const returnTo = encodeURIComponent(router.currentRoute.value.fullPath)
+  router.push(`/issuer/nft-collections/${record.category}/nft?returnTo=${returnTo}`)
 }
 
 const deleteNft = (record: NftRecord) => {
@@ -1023,13 +1028,14 @@ watch(() => identitySnapshot.value?.token?.nfts, (nfts) => {
 }, { deep: true, immediate: true })
 
 onMounted(async () => {
+  const authbaseVal = authbase.value
+  if (!authbaseVal) {
+    router.push('/dashboard')
+    return
+  }
+
   try {
     loading.value = true
-    const authbaseVal = authbase.value
-    if (!authbaseVal) {
-      router.push('/dashboard')
-      return
-    }
 
     if (contentHashParam.value) {
       // Load specific registry version
@@ -1038,7 +1044,6 @@ onMounted(async () => {
       if (record && record.contentHash === contentHashParam.value) {
         registryRecord.value = record
       } else {
-        // Try to find by contentHash directly
         const fromDb = await db.registry.where('contentHash').equals(contentHashParam.value).first()
         if (fromDb) {
           const { rawRegistry, ...rest } = fromDb
@@ -1047,7 +1052,6 @@ onMounted(async () => {
         }
       }
     } else {
-      // Load latest
       registryRecord.value = await getRegistryByAuthbase(authbaseVal)
     }
 
@@ -1057,15 +1061,29 @@ onMounted(async () => {
         selectedTimestamp.value = timestamps[0]
       }
     }
-
-    await loadIdentitySnapshot()
-    await loadNftTypes(0, 10)
-    await loadUnpublishedNfts()
-    await loadPublishedNfts(0, 10)
   } catch (error) {
     $q.notify({ type: 'error', message: t('error.loadingRegistry') })
   } finally {
     loading.value = false
+  }
+
+  // Load identity snapshot and NFTs in background
+  loadIdentitySnapshot().catch((err) => {
+    $q.notify({ type: 'error', message: getErrorMessage(err) })
+  })
+
+  if (registryRecord.value) {
+    Promise.all([
+      loadNftTypes(0, 10).catch(() => {
+        $q.notify({ type: 'warning', message: 'Failed to load NFT types' })
+      }),
+      loadUnpublishedNfts().catch(() => {
+        $q.notify({ type: 'warning', message: 'Failed to load unpublished NFTs' })
+      }),
+      loadPublishedNfts(0, 10).catch(() => {
+        $q.notify({ type: 'warning', message: 'Failed to load published NFTs' })
+      }),
+    ])
   }
 })
 </script>
@@ -1081,5 +1099,20 @@ onMounted(async () => {
 
 .text-mono {
   font-family: 'Courier New', Courier, monospace;
+}
+
+/* Dashboard header: translucent gradient from blue-10, fading to dark */
+.avatar-banner-wrapper {
+  background: linear-gradient(180deg,
+      rgba(21, 101, 192, 0.04) 0%,
+      /* blue-10 at 4% — subtle top glow */
+      rgba(21, 101, 192, 0.015) 50%,
+      /* nearly gone by midpoint */
+      transparent 75%
+      /* fully dark page bg */
+    );
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  padding-bottom: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 </style>

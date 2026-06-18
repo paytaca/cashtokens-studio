@@ -3,17 +3,17 @@
     <div class="row justify-center q-pa-md">
       <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
         <div class="q-mb-md q-px-sm">
-          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="goBack" />
         </div>
         <div v-if="activeNft?.nftType" class="bg-dark border-radius-12 q-pa-lg">
           <q-card flat class="bg-dark q-mt-lg">
             <div class="q-pa-lg">
               <SequentialNft v-if="!activeNft.bytecode" :key="'seq-' + saveKey"
                 :commitment="activeNft.commitmentOrBottomAltStack" v-model:nft="activeNft.nftType"
-                :allow-edit="!!activeAuthhead" @save="handleSave" @close="router.back()" />
+                :allow-edit="!!activeAuthhead" @save="handleSave" @close="goBack" />
               <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="activeNft.commitmentOrBottomAltStack"
                 v-model:nft="activeNft.nftType" :allow-edit="!!activeAuthhead" @save="handleSave"
-                :bytecode="activeNft.bytecode" @close="router.back()" />
+                :bytecode="activeNft.bytecode" @close="goBack" />
             </div>
           </q-card>
         </div>
@@ -34,7 +34,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
-import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { onBeforeRouteLeave, useRouter, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useRegistryStore } from 'src/stores/registry'
 import { useAuthguardStore } from 'src/stores/authguard'
@@ -46,12 +46,22 @@ import { db } from 'src/core/client-db'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 
 const registryStore = useRegistryStore()
 const authguardStore = useAuthguardStore()
 const { activeNft } = storeToRefs(registryStore)
 const { activeAuthhead } = storeToRefs(authguardStore)
 const saveKey = ref(0)
+
+const goBack = () => {
+  const returnTo = route.query.returnTo as string | undefined
+  if (returnTo) {
+    router.push(returnTo)
+  } else {
+    router.back()
+  }
+}
 
 const handleSave = async (rawNft: NftType) => {
   const a = activeNft.value
@@ -90,7 +100,7 @@ const handleSave = async (rawNft: NftType) => {
 onMounted(async () => {
   const a = activeNft.value
   if (!a) {
-    router.back()
+    goBack()
     return
   }
 
