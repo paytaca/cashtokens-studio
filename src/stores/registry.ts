@@ -17,7 +17,8 @@ export type ActiveNft = {
     commitmentOrBottomAltStack: string,
     nftType?: NftType,
     utxo?: DecoratedUtxo,
-    allowEdit?: boolean
+    allowEdit?: boolean,
+    isNew?: boolean
 }
 
 

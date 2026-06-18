@@ -70,7 +70,7 @@ const handleSave = async (rawNft: NftType) => {
     await db.nfts.update(existing.id!, { nft, status })
 
   } else {
-
+    const status = a.isNew ? 'new' : 'modified'
     await db.nfts.put({
       contentHash: a.contentHash,
       authbase: a.authbase,
@@ -78,9 +78,8 @@ const handleSave = async (rawNft: NftType) => {
       category: a.category,
       type: a.commitmentOrBottomAltStack,
       nft,
-      status: 'modified'
+      status
     })
-
   }
 
   saveKey.value++

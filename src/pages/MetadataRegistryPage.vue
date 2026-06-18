@@ -256,6 +256,11 @@
         </div>
       </div>
     </div>
+    <AddNftDialog
+      v-model="showAddNftDialog"
+      :collection-type="collectionType"
+      @ok="onAddNftOk"
+    />
   </q-page>
 </template>
 
@@ -293,6 +298,8 @@ import SaveSuccessDialog from 'components/dialogs/SaveSuccessDialog.vue'
 import TransactionStatusDialog from 'components/dialogs/TransactionStatusDialog.vue'
 import RegistryVersionOptionsDialog from 'components/bcmr/RegistryVersionOptionsDialog.vue'
 import { NftRecord } from 'src/core/client-db'
+import AddNftDialog from 'components/dialogs/AddNftDialog.vue'
+import formatCommitment from 'src/apps/utils/formatCommitment'
 
 const DEFAULT_NFT_CATEGORY: NftCategory = {
   parse: { types: {} } as SequentialNftCollectionI,
@@ -337,6 +344,7 @@ const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
 const publishedLoading = ref(false)
 const publishing = ref(false)
+const showAddNftDialog = ref(false)
 
 const nftTypeColumns: QTableColumn[] = [
   { name: 'key', align: 'left', label: 'Sequence Number', field: 'hexKey', sortable: true },
@@ -577,39 +585,34 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
 }
 
 const addNft = () => {
-  const isParsable = collectionType.value === 'parsable'
   const ch = currentContentHash.value
   const ab = selectedAuthbase.value
   const ts = selectedTimestamp.value
   if (!ch || !ab || !ts) return
+  showAddNftDialog.value = true
+}
 
-  $q.dialog({
-    title: 'Add NFT Type',
-    message: `Enter the ${isParsable ? 'bottom alt stack hex' : 'sequence number'} key:`,
-    prompt: {
-      model: '',
-      type: 'text'
-    },
-    cancel: true,
-    persistent: true
-  }).onOk(async (typeKey: string) => {
-    if (!typeKey) {
-      return $q.notify({ type: 'warning', message: 'Type key is required' })
-    }
-    const regStore = useRegistryStore()
-    const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
-    regStore.setActiveNft({
-      contentHash: ch,
-      authbase: ab,
-      timestamp: ts,
-      category: ab,
-      bytecode,
-      commitmentOrBottomAltStack: typeKey,
-      nftType: undefined,
-      allowEdit: true
-    })
-    router.push(`/issuer/nft-collections/${ab}/nft`)
+const onAddNftOk = async (typeKey: string) => {
+  const ch = currentContentHash.value
+  const ab = selectedAuthbase.value
+  const ts = selectedTimestamp.value
+  if (!ch || !ab || !ts) return
+  const isParsable = collectionType.value === 'parsable'
+  const resolvedKey = isParsable ? typeKey : formatCommitment(typeKey, 'decimal', 'vm-number')
+  const regStore = useRegistryStore()
+  const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
+  regStore.setActiveNft({
+    contentHash: ch,
+    authbase: ab,
+    timestamp: ts,
+    category: ab,
+    bytecode,
+    commitmentOrBottomAltStack: resolvedKey,
+    nftType: undefined,
+    allowEdit: true,
+    isNew: true
   })
+  router.push(`/issuer/nft-collections/${ab}/nft`)
 }
 
 const editNft = (record: NftRecord) => {
