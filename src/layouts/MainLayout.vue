@@ -30,96 +30,23 @@
                 <q-icon v-else name="account_balance_wallet"> </q-icon>
               </template>
               <q-list padding style="width: 300px">
-                <q-item clickable :to="{ name: 'recent-transactions' }">
-                  <q-avatar class="q-mr-xs" icon="receipt"> </q-avatar>
+                <q-item clickable :to="{ name: 'dashboard' }">
+                  <q-item-section avatar>
+                    <q-avatar icon="dashboard"> </q-avatar>
+                  </q-item-section>
                   <q-item-section>
                     <q-item-label>
                       <span style="position: relative">
-                        Recent Transactions
+                        Dashboard
                         <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
                           rounded></q-badge>
                       </span>
                     </q-item-label>
                   </q-item-section>
                 </q-item>
-                <q-item clickable @click="scanReserves">
-                  <q-avatar class="q-mr-xs" icon="mdi-card-search"> </q-avatar>
-                  <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Scan Wallet For Managed Tokens
-                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
-                          rounded></q-badge>
-                      </span>
-                    </q-item-label>
-                    <q-item-label lines="4" caption>
-                      Click here if some tokens aren't showing up on the FT or
-                      NFT reserves or Metadata pages due to possible delayed
-                      indexing.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
+
                 <q-separator inset class="q-my-md" />
                 <q-item-label header>Tokens in Wallet</q-item-label>
-                <q-item clickable to="/account/balance/fungibletokens">
-                  <q-item-section avatar>
-                    <q-avatar text-color="white" icon="money"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>My Fungible Tokens</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display fungible token balances of the currently connected
-                      wallet.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item clickable to="/account/balance/collectibles">
-                  <q-item-section avatar>
-                    <q-avatar text-color="white" icon="collections"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>My Collectibles (NFTs)</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display NFTs of the currently connected wallet.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item-label header>BCH Balance</q-item-label>
-                <q-item clickable @click="() => console.log('Not implemented')">
-                  <q-item-section avatar>
-                    <q-avatar color="bch" text-color="white">
-                      <q-img src="images/bitcoin-cash-circle.svg"></q-img>
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label class="text-positive" style="
-                        font-variant-numeric: tabular-nums;
-                        font-size: 1.1em;
-                        letter-spacing: 2px;
-                      ">
-                      {{ BigNumber(wallet?.balance?.toString() || '0').dividedBy(1e8).toString() }}
-                    </q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy cash address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <!-- <q-item clickable
-                  @click="() => { copyText(''); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }">
-                  <q-avatar class="q-mr-xs">
-                    <q-img src="images/cashtokens.svg"></q-img>
-                  </q-avatar>
-                  <q-item-section>
-                    <q-item-label>TOKEN</q-item-label>
-                    <q-item-label caption>[token address placeholder]</q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy token address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item> -->
                 <q-item clickable to="/wizard-connect/requests">
                   <q-item-section avatar>
                     <q-avatar color="bch" text-color="white">
@@ -324,6 +251,12 @@ watch(
 
 watch(() => uri, (v) => { console.log(v) })
 watch(() => qrUri, (v) => { console.log(v) })
+
+watch(state, (newState, oldState) => {
+  if (newState === 'connected' && (oldState === 'connecting' || oldState === 'idle') && route.name !== 'dashboard') {
+    router.push({ name: 'dashboard' })
+  }
+})
 
 onMounted(async () => {
   const db = ClientDB.getInstance();
