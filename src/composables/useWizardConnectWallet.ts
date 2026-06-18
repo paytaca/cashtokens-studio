@@ -18,7 +18,9 @@ export const useWizardConnectWallet = () => {
         _wc = useWizardConnect({
             dappName: import.meta.env.VITE_APP_NAME as string,
             dappIcon: import.meta.env.VITE_APP_ICON_URL as string,
-            relayUrls: ['wss://relay.cauldron.quest:443'],
+            relayUrls: ['wss://relay.riften.net:443', 'wss://relay.cauldron.quest:443'],
+            maxReconnectAttempts: 10,
+            reconnectInterval: 10000,
         })
     }
 
@@ -84,11 +86,11 @@ export const useWizardConnectWallet = () => {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
                 wallet.value = new WizardConnectExternalWallet()
                 await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
-                wallet.value.getBalance({ sync: true })
+                await wallet.value.getBalance({ sync: true })
                 walletLasySync.value = Date.now()
             }
         }
-    })
+    }, { immediate: true })
 
     return {
         state,

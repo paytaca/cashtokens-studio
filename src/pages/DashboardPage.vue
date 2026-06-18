@@ -67,6 +67,9 @@
 
           <!-- Created: Authheads Table -->
           <q-tab-panel name="created" class="q-pa-none">
+            <div class="q-mb-sm text-grey-5 text-caption">
+              Tokens you have authority and control over, including their metadata.
+            </div>
             <div class="row q-gutter-sm q-mb-md">
               <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
@@ -253,6 +256,9 @@
 
           <!-- Collected: Wallet Token UTXOs Table -->
           <q-tab-panel name="collected" class="q-pa-none">
+            <div class="q-mb-sm text-grey-5 text-caption">
+              Tokens you have received or collected in your wallet.
+            </div>
             <div class="row q-gutter-sm q-mb-md">
               <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
@@ -406,6 +412,9 @@
 
           <!-- Activity Table — scrolls independently -->
           <q-tab-panel name="activity" class="q-pa-none">
+            <div class="q-mb-sm text-grey-5 text-caption">
+              Your recent token transaction history.
+            </div>
             <div class="table-scroll-wrapper">
               <q-markup-table flat dark class="bg-dark text-left table-min-width">
                 <thead>
@@ -440,7 +449,7 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, triggerRef } from 'vue';
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
@@ -742,6 +751,14 @@ const sendCollectedTokens = (row: any) => {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
           await delay(2000)
+          const waitResult = await wallet.value.receive?.waitForTransaction({
+            txHash: broadcastResult.txid
+          })
+
+          console.log('Wait Result', waitResult)
+
+          await wallet.value?.sync()
+          triggerRef(wallet)
           loadingGroup()
           $q.dialog({
             component: TransactionStatusDialog,
@@ -806,6 +823,8 @@ const burnCollectedTokens = (row: any) => {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
           await delay(2000)
+          await wallet.value?.sync()
+          triggerRef(wallet)
           loadingGroup()
           $q.dialog({
             component: TransactionStatusDialog,
@@ -915,7 +934,8 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
         if (broadcastResult.success) {
           await delay(2000)
           loadingGroup()
-          loadAuthkeys(wallet.value, true)
+          await loadAuthkeys(wallet.value, true)
+          triggerRef(wallet)
           $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
@@ -942,11 +962,13 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
 
 watch(walletLasySync, async () => {
   await loadAuthkeys(wallet.value, true)
+  triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
 })
 
 onMounted(async () => {
   await loadAuthkeys(wallet.value, true)
+  triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
 })
 </script>
