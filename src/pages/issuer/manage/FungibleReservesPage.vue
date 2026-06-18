@@ -357,7 +357,7 @@ const openFungibleReservesTransferDialog = (v: DecoratedUtxoFormSafe, action: 'i
 
 const viewRegistry = (authhead: UtxoWithAuthKey) => {
     authguardStore.setActiveAuthhead(authhead)
-    router.push('/token/registry?authbase=' + authhead.token?.category)
+    router.push({ path: '/token/metadata-registry', query: { authbase: authhead.token?.category } })
 }
 
 

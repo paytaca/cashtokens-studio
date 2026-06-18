@@ -452,7 +452,7 @@ watch(publishedTotal, (total) => {
 })
 
 const viewRegistry = () => {
-    router.push('/token/registry?authbase=' + authhead.value?.token?.category)
+    router.push({ path: '/token/metadata-registry', query: { authbase: authhead.value?.token?.category } })
 }
 
 const openMintPage = () => {

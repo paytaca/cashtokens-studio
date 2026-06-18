@@ -43,56 +43,58 @@
         <FormField v-else>
           <!-- // TODO: DISPLAY OffChainRegistryIdentity -->
         </FormField>
-        <div class="flex justify-between items-center">
-          <h5 class="q-my-sm text-bold q-gutter-x-sm">
-            <q-icon name="mdi-file-document-multiple"></q-icon><span>{{ t('label.registry.identities') }}</span>
-          </h5>
-        </div>
-        <FormField v-if="isOnchainRegistryIdentity">
-          <label>{{ t('label.registry.authbase') }}</label>
-          <q-select v-if="identitiesOptions.length > 0" :model-value="selectedAuthbase" :options="identitiesOptions"
-            class="full-width" @update:model-value="selectIdentitiesAuthbase" outlined style="max-width:90vw">
-          </q-select>
-        </FormField>
-        <FormField>
-          <label>{{ t('label.registry.identityHistory') }}</label>
-          <q-select :model-value="selectedIdentityHistoryTimestamp" :options="identityHistoryTimestampOptions"
-            @update:model-value="selectIdentityHistoryTimestamp" class="full-width" outlined style="max-width:90vw"
-            bottom-slots>
-            <template v-if="identitySnapshotModified" v-slot:prepend>
-              <q-icon name="priority_high" color="warning"></q-icon>
-            </template>
-            <template v-slot:hint>
-              <div
-                v-if="identitySnapshotModified || (unpublishedChanges?.identity?.authbase === selectedAuthbase && unpublishedChanges?.identity?.timestamp === selectedIdentityHistoryTimestamp)"
-                class="flex items-center">
-                <span class="text-warning">{{ t('label.registry.unpublished') }}</span>
-              </div>
-            </template>
-          </q-select>
-        </FormField>
+        <template v-if="!embedded">
+          <div class="flex justify-between items-center">
+            <h5 class="q-my-sm text-bold q-gutter-x-sm">
+              <q-icon name="mdi-file-document-multiple"></q-icon><span>{{ t('label.registry.identities') }}</span>
+            </h5>
+          </div>
+          <FormField v-if="isOnchainRegistryIdentity">
+            <label>{{ t('label.registry.authbase') }}</label>
+            <q-select v-if="identitiesOptions.length > 0" :model-value="selectedAuthbase" :options="identitiesOptions"
+              class="full-width" @update:model-value="selectIdentitiesAuthbase" outlined style="max-width:90vw">
+            </q-select>
+          </FormField>
+          <FormField>
+            <label>{{ t('label.registry.identityHistory') }}</label>
+            <q-select :model-value="selectedIdentityHistoryTimestamp" :options="identityHistoryTimestampOptions"
+              @update:model-value="selectIdentityHistoryTimestamp" class="full-width" outlined style="max-width:90vw"
+              bottom-slots>
+              <template v-if="identitySnapshotModified" v-slot:prepend>
+                <q-icon name="priority_high" color="warning"></q-icon>
+              </template>
+              <template v-slot:hint>
+                <div
+                  v-if="identitySnapshotModified || (unpublishedChanges?.identity?.authbase === selectedAuthbase && unpublishedChanges?.identity?.timestamp === selectedIdentityHistoryTimestamp)"
+                  class="flex items-center">
+                  <span class="text-warning">{{ t('label.registry.unpublished') }}</span>
+                </div>
+              </template>
+            </q-select>
+          </FormField>
+        </template>
       </template>
 
-      <IdentitySnapshotComponent v-if="identitySnapshot" v-model:identity-snapshot="identitySnapshot"
+      <IdentitySnapshotComponent v-if="!embedded && identitySnapshot" v-model:identity-snapshot="identitySnapshot"
         @changed="onIdentitySnapshotModified" :mode="selectedTimestampIsMostRecent ? 'write' : 'read'"
         :authbase="selectedAuthbase" :content-hash="contentHash" :timestamp="selectedIdentityHistoryTimestamp" />
     </div>
-    <div>
-    </div>
-    <div class="col-xs-12 flex justify-end q-gutter-md">
-      <q-btn icon="mdi-undo" color="warning" @click="onResetClick"
-        :disable="!registryModified && !identitySnapshotModified && !Boolean(unpublishedChanges)">
-        {{ t('button.reset') }}
-      </q-btn>
-      <q-btn icon="cloud_upload" color="primary" @click="handleSave"
-        :disable="!registryModified && !identitySnapshotModified">
-        {{ t('button.save') }}
-      </q-btn>
-      <q-btn icon="cloud_upload" color="primary" @click="onPublishClick"
-        :disable="!registryModified && !identitySnapshotModified && !Boolean(unpublishedChanges)">
-        {{ t('button.publish') }}
-      </q-btn>
-    </div>
+    <template v-if="!embedded">
+      <div class="col-xs-12 flex justify-end q-gutter-md">
+        <q-btn icon="mdi-undo" color="warning" @click="onResetClick"
+          :disable="!registryModified && !identitySnapshotModified && !Boolean(unpublishedChanges)">
+          {{ t('button.reset') }}
+        </q-btn>
+        <q-btn icon="cloud_upload" color="primary" @click="handleSave"
+          :disable="!registryModified && !identitySnapshotModified">
+          {{ t('button.save') }}
+        </q-btn>
+        <q-btn icon="cloud_upload" color="primary" @click="onPublishClick"
+          :disable="!registryModified && !identitySnapshotModified && !Boolean(unpublishedChanges)">
+          {{ t('button.publish') }}
+        </q-btn>
+      </div>
+    </template>
   </div>
 </template>
 
@@ -117,9 +119,12 @@ export type RegistryProps = {
   showAll?: boolean,
   unpublishedChanges?: SaveEventPayload
   contentHash?: string
+  embedded?: boolean
 }
 
-const props = defineProps<RegistryProps>()
+const props = withDefaults(defineProps<RegistryProps>(), {
+  embedded: false
+})
 const registry = defineModel<CompactRegistry>('registry', { required: true })
 const registryModified = ref<boolean>(false)
 const registryOriginalCopy = ref<Registry>()
@@ -179,6 +184,7 @@ const emit = defineEmits<{
   (e: 'select:authbase', authbase: string): void,
   (e: 'select:identity', authbase: string, timestamp: string): void,
   (e: 'changed', modified: boolean): void,
+  (e: 'change:registry', modified: boolean): void,
   (e: 'save', save: SaveEventPayload): void,
   (e: 'reset'): void,
   (e: 'publish', strategy: PublicationStrategy): void | Promise<void>
@@ -252,6 +258,7 @@ const unwatchRegistry = watch(() => registry.value, (newVal, oldVal) => {
   if (newVal && oldVal) {
     registryModified.value = true
     emit('changed', true)
+    emit('change:registry', true)
   }
 
 }, { deep: true, immediate: true })

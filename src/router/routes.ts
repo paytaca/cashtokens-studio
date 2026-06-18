@@ -168,6 +168,11 @@ const routes: RouteRecordRaw[] = [
         path: 'nft-category',
         component: () => import('pages/token/NftCategoryPage.vue'),
       },
+      {
+        name: 'metadata-registry',
+        path: 'metadata-registry',
+        component: () => import('pages/MetadataRegistryPage.vue'),
+      },
     ]
   },
   {

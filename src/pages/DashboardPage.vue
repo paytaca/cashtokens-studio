@@ -470,7 +470,7 @@ import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
-import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
+import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo } from 'src/core/types'
 import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
@@ -760,9 +760,13 @@ const collectedColumns = computed<QTableColumn[]>(() => {
   return cols
 })
 
-const viewRegistry = (authhead: UtxoWithAuthKey) => {
+const viewRegistry = (authhead: DecoratedUtxo) => {
   authguardStore.setActiveAuthhead(authhead)
-  router.push('/token/registry?authbase=' + authhead.token?.category)
+  const query: Record<string, string> = { authbase: authhead.token?.category || '' }
+  if (authhead.identitySnapshotIdentifier?.contentHash) {
+    query.contentHash = authhead.identitySnapshotIdentifier.contentHash
+  }
+  router.push({ path: '/token/metadata-registry', query })
 }
 
 const navigateToAuthguard = (row: UtxoWithAuthKey) => {
@@ -773,7 +777,7 @@ const navigateToAuthguard = (row: UtxoWithAuthKey) => {
 }
 
 const viewCollectedRegistry = (row: any) => {
-  router.push('/token/registry?authbase=' + row.token?.category)
+  router.push({ path: '/token/metadata-registry', query: { authbase: row.token?.category } })
 }
 
 const onCollectedRowClick = (_evt: Event, row: any, index: number) => {

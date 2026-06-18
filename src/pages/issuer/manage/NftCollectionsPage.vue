@@ -434,7 +434,7 @@ const openMintChildNftDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | '
 
 const viewRegistry = (authhead: UtxoWithAuthKey) => {
     authguardStore.setActiveAuthhead(authhead)
-    router.push('/token/registry?authbase=' + authhead.token?.category)
+    router.push({ path: '/token/metadata-registry', query: { authbase: authhead.token?.category } })
 }
 
 const navigateToCollection = (_evt: Event, row: UtxoWithAuthKey) => {

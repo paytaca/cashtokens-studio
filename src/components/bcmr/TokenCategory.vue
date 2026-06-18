@@ -57,7 +57,14 @@ const token = defineModel<TokenCategory>('token', { required: true })
 const hidden = ref<boolean>(false)
 
 const openNftCategory = () => {
-  router.push(`/token/nft-category?authbase=${props.authbase}&contentHash=${props.contentHash}&timestamp=${props.timestamp}`)
+  router.push({
+    path: '/token/metadata-registry',
+    query: {
+      authbase: props.authbase,
+      contentHash: props.contentHash,
+      tab: 'nfts'
+    }
+  })
 }
 
 </script>

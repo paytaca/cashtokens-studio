@@ -1,3 +1,8 @@
+<!--
+  @deprecated This page is being phased out in favor of MetadataRegistryPage.vue.
+  The NFT category management is now unified under the MetadataRegistryPage tabs.
+  This file is kept for component reuse and backward compatibility.
+-->
 <template>
     <q-page>
         <div class="row justify-center q-pa-md">
@@ -10,7 +15,7 @@
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <div class="q-mb-md q-px-sm">
                     <q-btn flat dense icon="arrow_back" label="Back to Registry" color="grey-4"
-                        @click="router.push('/token/registry?authbase=' + authbase)" />
+                        @click="router.push({ path: '/token/metadata-registry', query: { authbase } })" />
                 </div>
                 <q-card flat class="bg-dark q-pa-lg">
                     <div class="row items-center q-gutter-x-md q-mb-lg">
@@ -388,7 +393,7 @@ onMounted(async () => {
         loading.value = true
         const authbaseVal = authbase.value
         if (!authbaseVal) {
-            router.push('/token/registry')
+            router.push({ path: '/token/metadata-registry' })
             return
         }
 

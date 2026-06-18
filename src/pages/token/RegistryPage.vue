@@ -1,3 +1,8 @@
+<!--
+  @deprecated This page is being phased out in favor of MetadataRegistryPage.vue.
+  Registry viewing and editing is now unified under the MetadataRegistryPage tabs.
+  This file is kept for component reuse and backward compatibility.
+-->
 <template>
     <q-page>
         <div class="row justify-center q-pa-md">
