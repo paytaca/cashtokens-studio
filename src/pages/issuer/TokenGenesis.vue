@@ -25,6 +25,18 @@
           <div
             class="col-xs-12 q-col-gutter-y-lg col-sm-6 q-mt-md bg-content q-pa-lg rounded-borders"
           >
+            <q-banner
+              v-if="returnUrl"
+              dense
+              rounded
+              class="bg-grey-9 text-white q-mb-md"
+            >
+              <template v-slot:avatar>
+                <q-icon name="link" color="primary" />
+              </template>
+              After your token is created you can return to
+              <b>{{ returnUrlHost(returnUrl) }}</b> with the new category.
+            </q-banner>
             <div v-if="authKey && genesisInput" class="col-xs-12 col-sm-6">
               <span class="text-h3 flex flex-wrap item-center">
                 <span>Create Token</span>
@@ -383,7 +395,7 @@ import { signTx } from 'src/apps/transactions/signTx';
 import { broadcastTx, buildGenesisTx } from 'src/apps/transactions';
 import { useUser } from 'src/stores/user';
 import { useQuasar } from 'quasar';
-import { shortenTx } from 'src/apps/utils';
+import { shortenTx, parseReturnUrl, buildReturnUrl, returnUrlHost } from 'src/apps/utils';
 import { createRegistryTemplate } from 'src/apps/bcmr';
 import { getInstance as getAuthguardInstance } from 'src/apps/contracts';
 import bcmrSchema from 'src/apps/bcmr/bcmr-v2.schema.json';
@@ -400,6 +412,7 @@ import txIsInMempool from 'src/apps/utils/txIsInMempool';
 
 const route = useRoute();
 const router = useRouter();
+const returnUrl = ref<string | null>(parseReturnUrl(route.query.redirect));
 const { $ebus } = useEventBus();
 const authKey = ref<UtxoI | null>(); // the authkey
 const authKeyOptions =
@@ -491,6 +504,31 @@ const showAdvancedFields = ref<boolean>();
 const progress = ref<string | boolean>();
 const user = useUser();
 const $q = useQuasar();
+
+const goToReserves = () => {
+  if (tokenType.value?.value == 'nft' || tokenType.value?.value == 'hybrid') {
+    router.push({ name: 'nft-reserves' });
+  } else {
+    router.push({ name: 'ft-reserves' });
+  }
+};
+
+const promptReturnToDapp = (target: string, category: string, genesisTxid: string) => {
+  $q.dialog({
+    title: 'Return to app',
+    message: `Your token has been created. Return to ${returnUrlHost(target)} with the new category?`,
+    cancel: { label: 'Stay here', flat: true },
+    ok: { label: 'Return', color: 'primary' },
+    persistent: true,
+    class: 'q-pa-md',
+  })
+    .onOk(() => {
+      window.location.assign(buildReturnUrl(target, { category, genesisTxid }));
+    })
+    .onCancel(() => {
+      goToReserves();
+    });
+};
 
 const generateGenesisInput = async () => {
   try {
@@ -843,14 +881,10 @@ const createToken = async () => {
             txid: tx,
           },
         }).onDismiss(() => {
-          if (
-            tokenType.value?.value == 'nft' ||
-            tokenType.value?.value == 'hybrid'
-          ) {
-            router.push({ name: 'nft-reserves' });
-          } else {
-            router.push({ name: 'ft-reserves' });
+          if (returnUrl.value) {
+            return promptReturnToDapp(returnUrl.value, genesisInput.value!.txid, tx);
           }
+          goToReserves();
         });
       }
     }
