@@ -18,8 +18,8 @@
           </div>
         </q-card>
         <q-card flat class="bg-dark q-pa-md q-mb-md">
-          <q-skeleton type="QSelect" class="full-width q-mb-md" />
-          <q-skeleton type="QSelect" class="full-width" />
+          <q-skeleton type="QInput" class="full-width q-mb-md" />
+          <q-skeleton type="QInput" class="full-width" />
         </q-card>
         <q-card flat class="bg-dark q-pa-lg">
           <q-skeleton type="text" class="q-mb-md" width="30%" />
@@ -150,10 +150,11 @@
                     <div v-else class="flex items-center q-gutter-x-md">
                       <q-chip color="green-9" text-color="green-3" icon="code" label="Parsable" dense />
                     </div>
+                    <q-btn color="primary" icon="add" label="Add NFT" unelevated @click="addNft" size="sm" />
                   </div>
 
                   <!-- Unpublished NFTs -->
-                  <q-card flat class="bg-dark q-mt-md">
+                  <q-card v-if="unpublishedNfts.length > 0" flat class="bg-dark q-mt-md">
                     <div class="q-pa-lg">
                       <div class="row items-center justify-between q-mb-xs">
                         <div class="text-h6 text-weight-medium">
@@ -161,47 +162,45 @@
                           Unpublished NFTs
                         </div>
                         <div class="q-gutter-x-sm">
-                          <q-btn color="primary" icon="add" label="Add NFT" unelevated @click="addNft" size="sm" />
                           <q-btn color="primary" icon="mdi-publish" label="Publish" unelevated :loading="publishing"
                             @click="publishNfts" size="sm" :disable="unpublishedNfts.length === 0" />
                         </div>
                       </div>
                       <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
                       <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
-                        :rows-per-page-options="[0]" class="bg-dark border-radius-12">
-                        <template v-slot:body-cell-type="props">
-                          <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
-                        </template>
-                        <template v-slot:body-cell-name="props">
-                          <q-td :props="props">{{ props.row.nft.name }}</q-td>
-                        </template>
-                        <template v-slot:body-cell-status="props">
+                        :rows-per-page-options="[0]" class="bg-dark border-radius-12" @row-click="(_evt, row) => editNft(row as NftRecord)">
+                        <template v-slot:body-cell-nft="props">
                           <q-td :props="props">
-                            <q-badge :color="props.row.status === 'new' ? 'info' : 'warning'">
-                              {{ props.row.status }}
-                            </q-badge>
+                            <div class="flex items-center no-wrap q-gutter-x-md">
+                              <div class="flex column items-center">
+                                <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                                  <q-img v-if="props.row.nft.uris?.icon"
+                                    :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!" fit="cover" />
+                                  <q-img v-else
+                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                    fit="cover" />
+                                </q-avatar>
+                                <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                  style="line-height: 1;">No Icon</span>
+                              </div>
+                              <div>
+                                <div class="flex items-center q-gutter-x-xs">
+                                  <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
+                                  <q-badge :color="props.row.status === 'new' ? 'info' : 'warning'">
+                                    {{ props.row.status }}
+                                  </q-badge>
+                                </div>
+                                <div class="text-caption text-grey-5 text-mono">
+                                  {{ props.row.type }}
+                                </div>
+                              </div>
+                            </div>
                           </q-td>
                         </template>
                         <template v-slot:body-cell-actions="props">
                           <q-td :props="props">
-                            <q-btn dense flat round icon="more_vert" size="sm">
-                              <q-menu auto-close>
-                                <q-list style="min-width: 100px">
-                                  <q-item clickable @click="editNft(props.row)">
-                                    <q-item-section avatar>
-                                      <q-icon name="edit" size="xs" />
-                                    </q-item-section>
-                                    <q-item-section>Edit</q-item-section>
-                                  </q-item>
-                                  <q-item clickable @click="deleteNft(props.row)">
-                                    <q-item-section avatar>
-                                      <q-icon name="delete" size="xs" color="negative" />
-                                    </q-item-section>
-                                    <q-item-section class="text-negative">Delete</q-item-section>
-                                  </q-item>
-                                </q-list>
-                              </q-menu>
-                            </q-btn>
+                            <q-btn dense flat round icon="delete" color="negative" size="sm"
+                              @click.stop="deleteNft(props.row)" />
                           </q-td>
                         </template>
                         <template v-slot:no-data>
@@ -223,11 +222,30 @@
                       <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
                         :loading="publishedLoading" v-model:pagination="publishedPagination"
                         @request="onPublishedRequest" @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
-                        <template v-slot:body-cell-type="props">
-                          <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
-                        </template>
-                        <template v-slot:body-cell-name="props">
-                          <q-td :props="props">{{ props.row.nft.name }}</q-td>
+                        <template v-slot:body-cell-nft="props">
+                          <q-td :props="props">
+                            <div class="flex items-center no-wrap q-gutter-x-md">
+                              <div class="flex column items-center">
+                                <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                                  <q-img v-if="props.row.nft.uris?.icon"
+                                    :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!" fit="cover" />
+                                  <q-img v-else
+                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                    fit="cover" />
+                                </q-avatar>
+                                <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                  style="line-height: 1;">No Icon</span>
+                              </div>
+                              <div>
+                                <div class="flex items-center q-gutter-x-xs">
+                                  <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
+                                </div>
+                                <div class="text-caption text-grey-5 text-mono">
+                                  {{ props.row.type }}
+                                </div>
+                              </div>
+                            </div>
+                          </q-td>
                         </template>
                         <template v-slot:no-data>
                           <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
@@ -364,15 +382,12 @@ const nftTypeRows = computed(() => {
 })
 
 const unpublishedColumns: QTableColumn[] = [
-  { name: 'type', label: 'Type', field: 'type', align: 'left', sortable: true },
-  { name: 'name', label: 'Name', field: (row) => row.nft.name, align: 'left', sortable: false },
-  { name: 'status', label: 'Status', field: 'status', align: 'center', sortable: true },
+  { name: 'nft', label: 'NFT', field: (row: any) => row.nft.name, align: 'left', sortable: true },
   { name: 'actions', label: '', field: 'actions', align: 'center' },
 ]
 
 const publishedColumns: QTableColumn[] = [
-  { name: 'type', label: 'Type', field: 'type', align: 'left', sortable: true },
-  { name: 'name', label: 'Name', field: (row) => row.nft.name, align: 'left', sortable: false },
+  { name: 'nft', label: 'NFT', field: (row: any) => row.nft.name, align: 'left', sortable: true },
 ]
 
 const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
