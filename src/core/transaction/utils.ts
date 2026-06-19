@@ -10,7 +10,7 @@ import {
 } from "@bitauth/libauth";
 
 import { Utxo } from 'mainnet-js-v3';
-import { UtxoFormSafe, UtxoWithPath } from "../types";
+import { DecoratedUtxoFormSafe, UtxoWithPath } from "../types";
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize";
 import { SEQUENCE_NUMBER_DISABLE_VALUE } from "../constants";
 import { WcContractInfo, WcSourceOutput } from "cashscript";
