@@ -1,5 +1,3 @@
-import SequentialNftCollection from "src/components/bcmr/SequentialNftCollection.vue";
-
 export default {
     success: {
         genesisInputCreation: 'Genesis input created successfully.',
