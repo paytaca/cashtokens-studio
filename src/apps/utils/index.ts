@@ -18,3 +18,4 @@ export { default as sortNftTypesASC } from './sortNftTypesASC';
 export * from './cashAddressToTokenAddress'
 export * from './wallet'
 export * from './transaction'
+export * from './returnUrl'
