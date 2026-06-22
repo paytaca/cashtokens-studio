@@ -815,7 +815,9 @@ const createRegistry = async () => {
     token: {
       category: authbaseVal,
       symbol: existingSnapshot?.token?.symbol || 'UNKNOWN',
-      ...(existingSnapshot?.token?.decimals !== undefined ? { decimals: existingSnapshot.token.decimals } : {}),
+      decimals: existingSnapshot?.token?.decimals !== undefined
+        ? Number(existingSnapshot.token.decimals)
+        : 0,
       ...(existingSnapshot?.token?.nfts ? { nfts: existingSnapshot.token.nfts } : {})
     },
     uris: {
@@ -872,6 +874,13 @@ const saveIdentitySnapshot = async () => {
 
   try {
     const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
+    // Ensure decimals is a number, default to 0
+    if (clonedSnapshot.token) {
+      clonedSnapshot.token.decimals =
+        clonedSnapshot.token.decimals !== undefined && clonedSnapshot.token.decimals !== null
+          ? Number(clonedSnapshot.token.decimals)
+          : 0
+    }
     setRecordStatus(identitySnapshotRecord.value, 'modified')
     await db.registryIdentitySnapshot
       .where('[contentHash+authbase+timestamp]')
