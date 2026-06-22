@@ -39,6 +39,7 @@ const registryWorker = {
   // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   async parseRegistry(registry: Blob, compact: boolean = true): Promise<CompactRegistry|Registry> {
     const text = await registry.text()
+    console.log('TEXT', text)
     const parsedRegistry = JSON.parse(text)
     if (!parsedRegistry.identities) return parsedRegistry
     if (!compact) return parsedRegistry
@@ -57,6 +58,7 @@ const registryWorker = {
 
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
+      
       if (!params.sync) {
         const existing = await db.registry.where('authbase').equals(params.authbase).first()
         if (existing?.rawRegistry) {
@@ -82,18 +84,41 @@ const registryWorker = {
 
         params.onProgress?.('Downloading registry...');
 
-        const httpUris = uris.map((uri: string) => {
-          if (uri.startsWith('ipfs://')) {
-            return `/api/ipfs/${uri.replace('ipfs://', '')}`
+        const httpUris = Array.from(new Set(
+          uris.map((uri: string) => {
+
+            let cid = ''
+  
+            if (uri.startsWith('ipfs://') ) {
+              cid = uri.replace('ipfs://', '')
+            }
+  
+            if (uri.startsWith('ipfs.paytaca.com/ipfs/')) {
+              cid = uri.replace('ipfs.paytaca.com/ipfs/', '')
+            }
+  
+            if (cid) {
+              return [
+                `/api/ipfs/${cid}`,
+                `https://gateway.pinata.cloud/ipfs/${cid}`
+              ]
+            }
+  
+            return [uri]
+          })?.flat()
+        ))
+        
+        const fetchPromises = httpUris.map(async (uri: string) => {
+          const res = await fetch(uri)
+          
+          if (!res.ok) {
+            throw new Error(`Gateway ${uri} returned status ${res.status}`)
           }
-          return uri
+          
+          return res
         })
         
-        const response = await Promise.race(
-          httpUris.map((uri: string) => fetch(uri))
-        )
-        
-        if (!response.ok) throw new Error('Error downloading registry')
+        const response = await Promise.any(fetchPromises)
 
         const registry: Blob = await response.blob();
         const parsedRegistry = await this.parseRegistry(registry, false) as Registry
