@@ -11,7 +11,7 @@ type ProgressErrorListener  = {
   onError?: (msg: string) => void
 }
 
-export type DownloadRegistryParams = ProgressErrorListener & { authbase: string, sync?: boolean } 
+export type DownloadRegistryParams = ProgressErrorListener & { authbase: string, sync?: boolean, contentHash?: string } 
 
 export type GetIdentitiesParams = ProgressErrorListener & { contentHash: string } 
 
@@ -39,7 +39,6 @@ const registryWorker = {
   // eslint-disable-next-line @typescript-eslint/no-inferrable-types
   async parseRegistry(registry: Blob, compact: boolean = true): Promise<CompactRegistry|Registry> {
     const text = await registry.text()
-    console.log('TEXT', text)
     const parsedRegistry = JSON.parse(text)
     if (!parsedRegistry.identities) return parsedRegistry
     if (!compact) return parsedRegistry
@@ -58,7 +57,16 @@ const registryWorker = {
 
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
-      
+      // If a specific contentHash is requested, check DB first (zero network)
+      if (params.contentHash) {
+        const cached = await db.registry.where('contentHash').equals(params.contentHash).first()
+        if (cached?.rawRegistry) {
+          const { rawRegistry, ...rest } = cached
+          const parsedRegistry = await this.parseRegistry(rawRegistry, true)
+          return { ...rest, registry: parsedRegistry as CompactRegistry }
+        }
+      }
+
       if (!params.sync) {
         const existing = await db.registry.where('authbase').equals(params.authbase).first()
         if (existing?.rawRegistry) {
@@ -109,13 +117,17 @@ const registryWorker = {
         ))
         
         const fetchPromises = httpUris.map(async (uri: string) => {
-          const res = await fetch(uri)
-          
-          if (!res.ok) {
-            throw new Error(`Gateway ${uri} returned status ${res.status}`)
+          const controller = new AbortController()
+          const id = setTimeout(() => controller.abort(), 30_000)
+          try {
+            const res = await fetch(uri, { signal: controller.signal })
+            if (!res.ok) {
+              throw new Error(`Gateway ${uri} returned status ${res.status}`)
+            }
+            return res
+          } finally {
+            clearTimeout(id)
           }
-          
-          return res
         })
         
         const response = await Promise.any(fetchPromises)

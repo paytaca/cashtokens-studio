@@ -85,28 +85,25 @@ const calculateSnapshotHash = (snapshot: IdentitySnapshot | null): string => {
 
 watch(
   () => identitySnapshot.value,
-  (newSnapshot) => {
-    if (newSnapshot) {
-      initialSnapshotHash = calculateSnapshotHash(newSnapshot)
+  (currentSnapshot) => {
+    if (!currentSnapshot) return
+    if (!initialSnapshotHash) {
+      initialSnapshotHash = calculateSnapshotHash(currentSnapshot)
       identitySnapshotModified.value = false
       emit('changed', false)
+      console.log('Not Changed', currentSnapshot)
+    } else if (props.mode === 'write' && initialSnapshotHash) {
+      console.log('INITIAL', initialSnapshotHash, currentSnapshot)
+      const currentHash = calculateSnapshotHash(currentSnapshot)
+      const isDifferent = currentHash !== initialSnapshotHash
+      identitySnapshotModified.value = isDifferent
+      emit('changed', isDifferent)
+      console.log('Changed')
     }
+
+
   },
-  { immediate: true }
-)
-
-watch(
-  () => identitySnapshot.value,
-  (currentSnapshot) => {
-    if (props.mode !== 'write' || !currentSnapshot) return
-
-    const currentHash = calculateSnapshotHash(currentSnapshot)
-    const isDifferent = currentHash !== initialSnapshotHash
-
-    identitySnapshotModified.value = isDifferent
-    emit('changed', isDifferent)
-  },
-  { deep: true }
+  { immediate: true, deep: true }
 )
 
 onMounted(() => {

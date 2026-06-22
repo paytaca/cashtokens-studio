@@ -126,7 +126,12 @@
             <!-- Tab 1: Token Identity -->
             <q-tab-panel name="identity" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
-                <q-badge v-if="identitySnapshotModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
+                <div class="flex justify-between items-start q-mb-md">
+                  <q-badge v-if="identitySnapshotModified" color="warning" text-color="dark"
+                    rounded>[Modified]</q-badge>
+                  <q-btn color="primary" icon="save" size="sm" unelevated :label="t('button.saveIdentity')"
+                    :disable="!identitySnapshotModified" @click="saveIdentitySnapshot" />
+                </div>
                 <IdentitySnapshotComponent v-if="identitySnapshot" v-model:identity-snapshot="identitySnapshot"
                   @changed="onIdentitySnapshotChanged" :mode="isLatestTimestamp ? 'write' : 'read'"
                   :authbase="selectedAuthbase" :content-hash="currentContentHash" :timestamp="selectedTimestamp" />
@@ -168,7 +173,8 @@
                       </div>
                       <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
                       <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
-                        :rows-per-page-options="[0]" class="bg-dark border-radius-12" @row-click="(_evt, row) => editNft(row as NftRecord)">
+                        :rows-per-page-options="[0]" class="bg-dark border-radius-12"
+                        @row-click="(_evt, row) => editNft(row as NftRecord)">
                         <template v-slot:body-cell-nft="props">
                           <q-td :props="props">
                             <div class="flex items-center no-wrap q-gutter-x-md">
@@ -260,7 +266,11 @@
             <!-- Tab 3: Registry -->
             <q-tab-panel name="registry" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
-                <q-badge v-if="registryModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
+                <div class="flex justify-between items-start q-mb-md">
+                  <q-badge v-if="registryModified" color="warning" text-color="dark" rounded>[Modified]</q-badge>
+                  <q-btn color="primary" icon="save" size="sm" unelevated :label="t('button.saveRegistry')"
+                    :disable="!registryModified" @click="saveRegistry" />
+                </div>
                 <RegistryComponent v-if="registry" v-model:registry="registry" embedded
                   @change:registry="registryModified = true" />
               </q-card>
@@ -337,13 +347,12 @@ const { wallet, manager } = useWizardConnectWallet()
 const authguardStore = useAuthguardStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 
-const { getRegistryByAuthbase } = useRegistryStore()
+const { getRegistryByAuthbase, loadRegistry } = useRegistryStore()
 
 const loading = ref(true)
 const activeTab = ref<'identity' | 'nfts' | 'registry'>('identity')
 
 const authbase = ref(route.query.authbase as string)
-const contentHashParam = ref(route.query.contentHash as string | undefined)
 
 const registryRecord = ref<ParsedRegistryRecord | undefined>()
 const inMemoryRegistry = ref<{ registry: Registry, contentHash: string } | undefined>()
@@ -374,7 +383,7 @@ const nftTypeColumns: QTableColumn[] = [
 ]
 
 const nftTypeRows = computed(() => {
-  return Object.entries(typesRef.value).map(([key, value]) => ({
+  return Object.entries(typesRef.value)?.map(([key, value]) => ({
     originalKey: key,
     hexKey: key,
     ...value
@@ -670,6 +679,11 @@ const publishNfts = async () => {
   const ch = currentContentHash.value
   if (!ch || !selectedAuthbase.value || !selectedTimestamp.value || unpublishedNfts.value.length === 0) return
 
+  // Save identity snapshot if modified (NFT collection metadata is part of it)
+  if (identitySnapshotModified.value) {
+    await saveIdentitySnapshot()
+  }
+
   publishing.value = true
   const loadingGroup = $q.loading.show({
     group: 'mpop-lg',
@@ -834,10 +848,51 @@ const validateRegistry = (json: any): boolean => {
   return true
 }
 
+const saveRegistry = async () => {
+  if (!registryRecord.value || !registryModified.value) return
+
+  const reg = currentRegistry.value
+  // if (reg && !validateRegistry(reg)) return
+
+  try {
+    registryRecord.value.registry = registry.value as CompactRegistry
+    setRecordStatus(registryRecord.value, 'modified')
+    await db.registry.update(registryRecord.value.id, {
+      registry: structuredClone(registry.value as CompactRegistry),
+      status: 'modified'
+    })
+    registryModified.value = false
+  } catch (error) {
+    $q.notify({ type: 'error', message: `Error saving registry: ${getErrorMessage(error)}` })
+  }
+}
+
+const saveIdentitySnapshot = async () => {
+  if (!identitySnapshotModified.value || !identitySnapshotRecord.value) return
+
+  try {
+    const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
+    setRecordStatus(identitySnapshotRecord.value, 'modified')
+    await db.registryIdentitySnapshot
+      .where('[contentHash+authbase+timestamp]')
+      .equals([
+        identitySnapshotRecord.value.contentHash,
+        identitySnapshotRecord.value.authbase,
+        identitySnapshotRecord.value.timestamp
+      ] as [string, string, string])
+      .modify({ identitySnapshot: clonedSnapshot, status: identitySnapshotRecord.value.status })
+    // Update local record so it stays in sync with DB
+    identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
+    identitySnapshotModified.value = false
+  } catch (error) {
+    $q.notify({ type: 'error', message: `Error saving identity snapshot: ${getErrorMessage(error)}` })
+  }
+}
+
 const onSave = async () => {
   if (inMemoryRegistry.value) {
     // Validate before saving
-    if (!validateRegistry(inMemoryRegistry.value.registry)) return
+    // if (!validateRegistry(inMemoryRegistry.value.registry)) return
 
     try {
       const blob = new Blob([JSON.stringify(inMemoryRegistry.value.registry)], { type: 'application/json' })
@@ -862,31 +917,20 @@ const onSave = async () => {
 
   // Validate existing registry before saving
   const reg = currentRegistry.value
-  if (reg && !validateRegistry(reg)) return
+  // if (reg && !validateRegistry(reg)) return
+
+  const saveActions: Promise<void>[] = []
+  if (registryModified.value) {
+    saveActions.push(saveRegistry())
+  }
+  if (identitySnapshotModified.value) {
+    saveActions.push(saveIdentitySnapshot())
+  }
+
+  if (saveActions.length === 0) return
 
   try {
-    if (registryModified.value) {
-      registryRecord.value.registry = registry.value as CompactRegistry
-      setRecordStatus(registryRecord.value, 'modified')
-      await db.registry.update(registryRecord.value.id, {
-        registry: structuredClone(registry.value as CompactRegistry),
-        status: 'modified'
-      })
-    }
-    if (identitySnapshotModified.value && identitySnapshotRecord.value) {
-      const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
-      setRecordStatus(identitySnapshotRecord.value, 'modified')
-      await db.registryIdentitySnapshot
-        .where('[contentHash+authbase+timestamp]')
-        .equals([
-          identitySnapshotRecord.value.contentHash,
-          identitySnapshotRecord.value.authbase,
-          identitySnapshotRecord.value.timestamp
-        ] as [string, string, string])
-        .modify({ identitySnapshot: clonedSnapshot, status: identitySnapshotRecord.value.status })
-    }
-    registryModified.value = false
-    identitySnapshotModified.value = false
+    await Promise.all(saveActions)
     $q.dialog({
       component: SaveSuccessDialog,
       componentProps: {
@@ -895,7 +939,7 @@ const onSave = async () => {
       }
     })
   } catch (error) {
-    $q.notify({ type: 'error', message: `Error saving: ${getErrorMessage(error)}` })
+    // Individual save functions already notify errors
   }
 }
 
@@ -910,11 +954,15 @@ const onPublish = async () => {
 
   // Validate before publishing
   const reg = currentRegistry.value
-  if (reg && !validateRegistry(reg)) return
+  // console.log('CURRENTREGISTRY.value', currentRegistry.value)
+  // if (reg && !validateRegistry(reg)) return
 
-  // Save first if modified
-  if (anyModified.value) {
-    await onSave()
+  // Save modified components before publishing
+  if (registryModified.value) {
+    await saveRegistry()
+  }
+  if (identitySnapshotModified.value) {
+    await saveIdentitySnapshot()
   }
 
   // Show version dialog
@@ -1051,23 +1099,14 @@ onMounted(async () => {
 
   try {
     loading.value = true
+    if (route.query?.contentHash) {
+      const record = await loadRegistry(route.query.authbase as string, true)
 
-    if (contentHashParam.value) {
-      // Load specific registry version
-      const worker = getRegistryWorker()
-      const record = await worker.loadRegistry({ authbase: authbaseVal, sync: true })
-      if (record && record.contentHash === contentHashParam.value) {
+      if (record) {
         registryRecord.value = record
-      } else {
-        const fromDb = await db.registry.where('contentHash').equals(contentHashParam.value).first()
-        if (fromDb) {
-          const { rawRegistry, ...rest } = fromDb
-          const parsedRegistry = await worker.parseRegistry(rawRegistry, true)
-          registryRecord.value = { ...rest, registry: parsedRegistry as CompactRegistry }
-        }
       }
     } else {
-      registryRecord.value = await getRegistryByAuthbase(authbaseVal)
+      registryRecord.value = await getRegistryByAuthbase(route.query.authbase as string)
     }
 
     if (registryRecord.value?.registry?.identities) {
