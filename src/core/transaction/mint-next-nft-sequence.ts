@@ -41,6 +41,7 @@ export type MintNextNftSequence = {
 }
 
 export function mintNextNftSequence(params: MintNextNftSequence): SignTransactionRequest & { mintOutputs: TransactionOutput[]} {
+    console.log('Minting next sequence', params)
     if (!params.minterUtxo?.token) throw new Error(`Minting requires a token of the same category.`)
     if (params.authkeyUtxo && params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
 
@@ -90,7 +91,6 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
     ]
 
     if (authguard && authkeyReturnAddress) {
-        
         transaction.addInput(params.minterUtxo, authguard.unlock.unlockWithNft!(true) as any)
         transaction.addInput(params.authkeyUtxo!, placeholderP2PKHUnlocker(params.authkeyUtxo!.address))
         transaction.addOutput({
@@ -156,6 +156,8 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
     })
 
     const endSequence = sequenceNo
+    
+    transaction.outputs[0]!.token!.nft!.commitment = binToHex(bigIntToVmNumber(endSequence))
     
     let transactionHex = transaction.build()
     const minOutputCount = authguard ? 3: 2
@@ -239,7 +241,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         })
         minterTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
     }
-
+    console.log('Minting transactionHex', transactionHex)
     return {
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
