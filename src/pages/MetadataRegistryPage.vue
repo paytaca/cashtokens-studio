@@ -87,13 +87,16 @@
                 @update:model-value="onAuthbaseChange" />
             </div>
             <div class="col-12">
-              <q-select v-model="selectedTimestamp" :options="timestampOptions" label="Timestamp" dark filled
-                @update:model-value="onTimestampChange">
-                <template v-slot:append>
-                  <q-badge v-if="isLatestTimestamp" color="green-9" text-color="green-3">Latest</q-badge>
-                  <q-badge v-else color="grey-8" text-color="grey-4">Read-only</q-badge>
-                </template>
-              </q-select>
+              <FormField>
+                <label for="timestamp">History</label>
+                <q-select name="timestamp" v-model="selectedTimestamp" :options="timestampOptions" label="Timestamp"
+                  dark filled @update:model-value="onTimestampChange">
+                  <template v-slot:append>
+                    <q-badge v-if="isLatestTimestamp" color="green-9" text-color="green-3">Latest</q-badge>
+                    <q-badge v-else color="grey-8" text-color="grey-4">Read-only</q-badge>
+                  </template>
+                </q-select>
+              </FormField>
             </div>
           </div>
         </div>
@@ -172,8 +175,8 @@
                         </div>
                       </div>
                       <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
-                      <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
-                        :rows-per-page-options="[0]" class="bg-dark border-radius-12"
+                      <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat dark
+                        :rows-per-page-options="[0]" class="bg-dark"
                         @row-click="(_evt, row) => editNft(row as NftRecord)">
                         <template v-slot:body-cell-nft="props">
                           <q-td :props="props">
@@ -224,8 +227,9 @@
                         <q-btn flat dense round icon="refresh" size="md" :loading="publishedLoading"
                           @click="loadPublishedNfts(0, 10)" class="q-mr-xs" />
                       </div>
-                      <div class="text-caption text-grey-6 q-mb-md">NFT types currently in the registry</div>
-                      <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
+                      <div class="text-caption text-grey-6 q-mb-md">NFT metadata currently on the published registry.
+                      </div>
+                      <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat dark
                         :loading="publishedLoading" v-model:pagination="publishedPagination"
                         @request="onPublishedRequest" @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
                         <template v-slot:body-cell-nft="props">

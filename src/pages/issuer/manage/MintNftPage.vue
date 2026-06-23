@@ -186,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -410,12 +410,12 @@ const mint = async () => {
 
         if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
 
-        await db.setNftRecordsPublished({
-            contentHash,
-            authbase,
-            timestamp,
-            types
-        })
+        // await db.setNftRecordsPublished({
+        //     contentHash,
+        //     authbase,
+        //     timestamp,
+        //     types
+        // })
 
         loadingGroup({
             message: 'Broadcast success, awaiting tx propagation...'
@@ -434,14 +434,19 @@ const mint = async () => {
             }
         }).onDismiss(() => {
 
-            return router.push({
-                name: 'nft-category',
-                query: {
-                    timestamp,
-                    contentHash,
-                    authbase
-                }
-            })
+            authguardStore.setActiveAuthhead(activeMinter.value as DecoratedUtxo)
+            if (activeMinter.value?.isAuthhead) {
+                return router.push(`/issuer/nft-collections/${activeMinter.value.token!.category}`)
+            }
+
+            // return router.push({
+            //     name: 'nft-category',
+            //     query: {
+            //         timestamp,
+            //         contentHash,
+            //         authbase
+            //     }
+            // })
             if (wallet.value.receive!.getTokenDepositAddress(0) === recipient.value) {
                 return router.push({
                     name: 'nft-category',
@@ -471,6 +476,10 @@ onMounted(async () => {
     if (wallet.value) {
         recipient.value = wallet.value.getTokenDepositAddress(0)
     }
+})
+
+onBeforeUnmount(() => {
+    appStore.setActiveMinter(undefined)
 })
 </script>
 

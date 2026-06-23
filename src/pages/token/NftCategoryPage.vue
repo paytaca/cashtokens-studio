@@ -393,7 +393,7 @@ onMounted(async () => {
         loading.value = true
         const authbaseVal = authbase.value
         if (!authbaseVal) {
-            router.push({ path: '/token/metadata-registry' })
+            router.push({ path: '/dashboard' })
             return
         }
 

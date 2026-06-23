@@ -59,9 +59,7 @@
                 </q-item>
                 <q-separator inset class="q-my-md" />
                 <q-item>
-                  <q-btn v-if="wallet.ready" @click="onDisconnectClick">Disconnect</q-btn>
-                  <paytaca-connect v-else-if="user.walletType == 'paytaca'" variant="button" class="full-width" />
-                  <wallet-connect v-else-if="user.walletType == 'walletconnect'" variant="button" />
+                  <q-btn @click="onDisconnectClick">Disconnect</q-btn>
                 </q-item>
               </q-list>
             </q-btn-dropdown>
