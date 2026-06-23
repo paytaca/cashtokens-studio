@@ -65,21 +65,25 @@
         <div class="avatar-banner-wrapper">
           <div class="row items-center q-gutter-y-md q-mb-lg">
             <div class="col-12">
-              <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
-                <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
-                  fit="cover" />
-                <q-icon v-else name="token" color="primary" size="32px" />
-              </q-avatar>
-              <div>
-                <div class="text-h6 text-weight-medium">
-                  {{ identitySnapshot?.name || 'Unnamed Token' }}
+              <div class="row items-center no-wrap q-gutter-x-md">
+                <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
+                  <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
+                    fit="cover" />
+                  <q-icon v-else name="token" color="primary" size="32px" />
+                </q-avatar>
+                <div class="col">
+                  <div class="text-h6 text-weight-medium">
+                    {{ identitySnapshot?.name || 'Unnamed Token' }}
+                  </div>
+                  <div class="flex items-center q-gutter-x-xs text-caption">
+                    <span class="text-grey-5">{{ identitySnapshot?.token?.symbol || '?' }}</span>
+                    <span class="text-grey-7">-</span>
+                    <span class="text-mono text-grey-5">{{ shortenTokenId(authbase) }}</span>
+                    <CopyText :text="authbase" />
+                  </div>
                 </div>
-                <div class="flex items-center q-gutter-x-xs text-caption">
-                  <span class="text-grey-5">{{ identitySnapshot?.token?.symbol || '?' }}</span>
-                  <span class="text-grey-7">-</span>
-                  <span class="text-mono text-grey-5">{{ shortenTokenId(authbase) }}</span>
-                  <CopyText :text="authbase" />
-                </div>
+                <q-space />
+                <q-btn flat dense round icon="refresh" size="md" :loading="refreshing" @click="refreshRegistry" />
               </div>
             </div>
             <div class="col-12">
@@ -354,6 +358,7 @@ const { activeAuthhead } = storeToRefs(authguardStore)
 const { getRegistryByAuthbase, loadRegistry } = useRegistryStore()
 
 const loading = ref(true)
+const refreshing = ref(false)
 const activeTab = ref<'identity' | 'nfts' | 'registry'>('identity')
 
 const authbase = ref(route.query.authbase as string)
@@ -730,6 +735,7 @@ const publishNfts = async () => {
       const broadcastResult = await broadcastResponse.json()
       if (broadcastResult.success) {
         await getRegistryWorker().commitBumpRegistry(ch, `${broadcastResult.txid}:0`)
+        registryRecord.value = await loadRegistry(selectedAuthbase.value, true)
         loadingGroup()
         $q.dialog({
           component: TransactionStatusDialog,
@@ -750,6 +756,38 @@ const publishNfts = async () => {
   } finally {
     publishing.value = false
     loadingGroup()
+  }
+}
+
+const refreshRegistry = async () => {
+  if (!authbase.value) return
+  refreshing.value = true
+  try {
+    identitySnapshotModified.value = false
+    registryModified.value = false
+    const record = await loadRegistry(authbase.value, true)
+    if (record) {
+      registryRecord.value = record
+      if (record.registry?.identities) {
+        const timestamps = record.registry.identities[selectedAuthbase.value]
+        if (timestamps && timestamps.length > 0) {
+          selectedTimestamp.value = timestamps[0]
+        }
+      }
+    } else {
+      registryRecord.value = undefined
+      selectedTimestamp.value = undefined
+    }
+    await Promise.all([
+      loadIdentitySnapshot(),
+      loadNftTypes(0, nftTypesPagination.value.rowsPerPage),
+      loadUnpublishedNfts(),
+      loadPublishedNfts(0, 10),
+    ])
+  } catch (error) {
+    $q.notify({ type: 'error', message: getErrorMessage(error) })
+  } finally {
+    refreshing.value = false
   }
 }
 
@@ -1024,6 +1062,7 @@ const onPublish = async () => {
         const broadcastResult = await broadcastResponse.json()
         if (broadcastResult.success) {
           await getRegistryWorker().commitBumpRegistry(originalContentHash, `${broadcastResult.txid}:0`)
+          registryRecord.value = await loadRegistry(registryRecord.value!.authbase, true)
           loadingGroup()
           $q.dialog({
             component: TransactionStatusDialog,
