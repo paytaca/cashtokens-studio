@@ -1,33 +1,27 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
 
-    <!-- 1. Profile Banner -->
-    <div class="row relative-position bg-gradient-to-r from-blue-700 to-purple-800" style="height: 10rem;">
-      <q-avatar size="128px" class="profile-avatar z-top bg-grey-9">
-        <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="Avatar">
-      </q-avatar>
-    </div>
-    <!-- 2. Main Content Container -->
-    <div class="q-pt-xl q-px-md q-px-md-xl content-container">
-      <div class="dashboard-header-wrapper">
+    <div class="q-px-md q-px-md-xl content-container">
+      <div class="avatar-banner-wrapper">
         <!-- Header Row -->
         <div class="row justify-between items-start q-col-gutter-md q-pt-md">
-          <div class="col-12 col-md-8">
-            <div class="flex items-center text-caption">
-              <q-icon name="account_balance_wallet" size="md" color="grey-5" class="q-mr-xs" />
-              <div class="ellipsis wallet-max-width text-caption">{{ primaryXPub }}</div>
-            </div>
+          <div class="col-12">
+            <q-avatar size="128px" class="profile-avatar">
+              <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="Avatar">
+            </q-avatar>
           </div>
-
-          <div class="col-12 col-md-4 row justify-end items-center q-gutter-sm">
+          <div class="col-12 flex justify-between">
+            <div v-if="primaryXPub" class="flex items-center text-caption">
+              <q-icon name="account_balance_wallet" size="md" color="grey-5" class="q-mr-xs" />
+              <div class="ellipsis text-caption" style="max-width: 90vm;">
+                {{ primaryXPub.replace(primaryXPub.substring(8, 80), '...') }}
+              </div>
+            </div>
             <div class="flex items-center q-gutter-x-xs text-grey-4 q-mr-md">
               <q-icon name="img:/images/bitcoin-cash-circle.svg" size="md" color="bch"
                 style="transform: rotate(-15deg);" />
               <span class="text-weight-bold text-mono">{{ formatBch(bchBalance) }}</span>
             </div>
-            <q-btn outline round color="grey-8" text-color="grey-4" icon="share" class="bg-grey-9" />
-            <q-btn outline round color="grey-8" text-color="grey-4" icon="more_horiz" class="bg-grey-9" />
-            <q-btn outline round color="grey-8" text-color="grey-4" icon="settings" class="bg-grey-9" />
           </div>
         </div>
       </div>
@@ -419,17 +413,21 @@
               Your recent token transaction history.
             </div>
             <div class="row q-gutter-sm q-mb-md items-center">
-              <q-input v-model="activitySearchQuery" dark dense outlined placeholder="Search by event or txid..." class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px;">
+              <q-input v-model="activitySearchQuery" dark dense outlined placeholder="Search by event or txid..."
+                class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px;">
                 <template v-slot:prepend>
                   <q-icon name="search" color="grey-6" size="xs" />
                 </template>
                 <template v-slot:append v-if="activitySearchQuery">
-                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="activitySearchQuery = ''" />
+                  <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer"
+                    @click="activitySearchQuery = ''" />
                 </template>
               </q-input>
               <q-btn flat color="grey-6" label="Clear Activities" @click="clearActivities" class="q-ml-sm" />
             </div>
-            <q-table :rows="filteredActivities" :columns="activityColumns" :row-key="(row: any) => row.id" :pagination="{ rowsPerPage: 5 }" :loading="activityLoading" flat class="border-radius-12 token-reserves-table">
+            <q-table :rows="filteredActivities" :columns="activityColumns" :row-key="(row: any) => row.id"
+              :pagination="{ rowsPerPage: 5 }" :loading="activityLoading" flat
+              class="border-radius-12 token-reserves-table">
               <template v-slot:body-cell-activityEvent="props">
                 <q-td :props="props">
                   <span class="text-weight-bold text-white">{{ props.value }}</span>
@@ -437,15 +435,23 @@
               </template>
               <template v-slot:body-cell-activityTxid="props">
                 <q-td :props="props">
-                  <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value) }}<CopyText :text="props.value" /></span>
+                  <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value) }}
+                    <CopyText :text="props.value" />
+                  </span>
                   <span v-else class="text-grey-6 text-caption">—</span>
                 </q-td>
               </template>
               <template v-slot:body-cell-activityStatus="props">
                 <q-td :props="props">
-                  <q-badge v-if="props.value === 'success'" color="green-9" text-color="green-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
-                  <q-badge v-else-if="props.value === 'failed'" color="red-9" text-color="red-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
-                  <q-badge v-else color="blue-9" text-color="blue-3" class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{ props.value }}</q-badge>
+                  <q-badge v-if="props.value === 'success'" color="green-9" text-color="green-3"
+                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{
+                      props.value }}</q-badge>
+                  <q-badge v-else-if="props.value === 'failed'" color="red-9" text-color="red-3"
+                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{
+                      props.value }}</q-badge>
+                  <q-badge v-else color="blue-9" text-color="blue-3"
+                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">{{
+                      props.value }}</q-badge>
                 </q-td>
               </template>
               <template v-slot:body-cell-activityDate="props">
@@ -464,14 +470,14 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { ref, computed, onMounted, watch, triggerRef } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
 import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo } from 'src/core/types'
-import { shortenTokenId } from 'src/core/utils'
+import { shortenCashAddress, shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
@@ -483,6 +489,7 @@ import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { BaseWallet } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
+import { shortenAddress } from 'src/apps/utils';
 
 const $q = useQuasar()
 const router = useRouter()
@@ -570,7 +577,19 @@ const clearActivities = async () => {
   }
 }
 
-const activeTab = ref<'collected' | 'created' | 'activity'>('created')
+const VALID_TABS = ['created', 'collected', 'activity'] as const
+type TabName = typeof VALID_TABS[number]
+
+const getTabFromHash = (): TabName => {
+  const hash = window.location.hash.replace('#', '')
+  return VALID_TABS.includes(hash as TabName) ? (hash as TabName) : 'created'
+}
+
+const activeTab = ref<TabName>(getTabFromHash())
+
+const handleHashChange = () => {
+  activeTab.value = getTabFromHash()
+}
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 const collectedTokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 const createdSearchQuery = ref('')
@@ -1082,11 +1101,20 @@ watch(activeTab, async (newTab) => {
   }
 })
 
+watch(activeTab, (newTab) => {
+  window.location.hash = newTab
+})
+
 onMounted(async () => {
+  window.addEventListener('hashchange', handleHashChange)
   await loadAuthkeys(wallet.value, true)
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
   await loadActivities()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('hashchange', handleHashChange)
 })
 </script>
 
@@ -1108,7 +1136,7 @@ onMounted(async () => {
 }
 
 /* Dashboard header: translucent gradient from blue-10, fading to dark */
-.dashboard-header-wrapper {
+.avatar-banner-wrapper {
   background: linear-gradient(180deg,
       rgba(21, 101, 192, 0.04) 0%,
       /* blue-10 at 4% — subtle top glow */
@@ -1122,17 +1150,6 @@ onMounted(async () => {
   margin-bottom: 0.5rem;
 }
 
-/* Avatar positioning */
-.profile-avatar {
-  bottom: -4rem;
-  left: 1rem;
-}
-
-@media (min-width: 768px) {
-  .profile-avatar {
-    left: 4rem;
-  }
-}
 
 /* Wallet address truncation */
 .wallet-max-width {
