@@ -106,16 +106,23 @@ class CashtokensStudioDB extends Dexie {
   constructor() {
 
     super('CashtokensStudioDB');
+    // this.version(1).stores({
+    //   registry: '++id, contentHash, authbase',
+    //   registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
+    //   nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
+    //   utxo: 'id, walletId'
+    // })
+    // this.version(2).stores({
+    //   registry: '++id, contentHash, authbase',
+    //   registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
+    //   nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
+    //   utxo: 'id, walletId',
+    //   activity: '++id, event, timestamp, status'
+    // })
     this.version(1).stores({
       registry: '++id, contentHash, authbase',
-      registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
-      nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
-      utxo: 'id, walletId'
-    })
-    this.version(2).stores({
-      registry: '++id, contentHash, authbase',
-      registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
-      nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
+      registryIdentitySnapshot: '++id, contentHash, [contentHash+authbase+timestamp], authbase, timestamp, category',
+      nfts: '++id, contentHash, [contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
       utxo: 'id, walletId',
       activity: '++id, event, timestamp, status'
     })

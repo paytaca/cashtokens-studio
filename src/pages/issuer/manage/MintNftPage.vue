@@ -50,10 +50,12 @@
                             </div>
                             <div v-if="isSequentialNftCollection && lastMintedCommitment !== undefined" class="q-mt-xs">
                                 <span class="text-caption text-grey-5">
-                                    Last minted seq: {{ lastMintedCommitment || 'None' }}
+                                    Last minted seq:
                                 </span>
                                 <span class="text-caption text-mono text-white">
-                                    {{ formatCommitmentValue(lastMintedCommitment) }}
+                                    {{
+                                        formatCommitmentValue(lastMintedCommitment) }} <{{ lastMintedCommitment || 'None'
+                                    }}>
                                 </span>
                             </div>
                         </div>
@@ -196,10 +198,10 @@ import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { AuthheadUtxo, DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
-import { mintNextNftSequence, mintNftSequence, mintNftMinters } from 'src/core/transaction'
+import { mintNextNftSequence, mintNftSequence, mintNftMinters, isBroadcastSuccess } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { decodeCashAddress, vmNumberToBigInt } from '@bitauth/libauth'
-import { delay, hexToBin } from 'mainnet-js-v3'
+import { BaseWallet, delay, hexToBin } from 'mainnet-js-v3'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { NftType, ParsableNftCollection, SequentialNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import { type SignTransactionRequest } from '@wizardconnect/core'
@@ -327,6 +329,10 @@ const mintMinter = async (): Promise<SignTransactionRequest & { mintOutputs: Tra
 }
 
 const mint = async () => {
+    const loadingGroup = $q.loading.show({
+        group: 'mnpm-lg',
+        message: 'Uploading registry to IPFS...'
+    })
 
     try {
         const decodedRecipient = decodeCashAddress(recipient.value)
@@ -393,38 +399,67 @@ const mint = async () => {
             })
         }
 
+        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
         const response = await manager.value!.signTransaction(restOfSignRequest)
+
         const broadcastResponse = await broadcast(response.signedTransaction)
 
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
-            if (broadcastResult.success) {
-                await db.setNftRecordsPublished({
-                    contentHash,
-                    authbase,
-                    timestamp,
-                    types
-                })
-                await delay(2000)
-                $q.dialog({
-                    component: TransactionStatusDialog,
-                    componentProps: {
-                        statusType: 'success',
-                        statusText: `${mintQuantity.value} NFT(s) minted successfully`,
-                        txid: broadcastResult.txid
-                    }
-                }).onDismiss(() => {
-                    router.push('/issuer/nft-collection/' + minter.value!.token!.category)
-                })
-            } else {
-                throw new Error(broadcastResult.error)
+        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+
+        const broadcastResult = await broadcastResponse.json()
+
+        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+
+        await db.setNftRecordsPublished({
+            contentHash,
+            authbase,
+            timestamp,
+            types
+        })
+
+        loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+        })
+
+        await new BaseWallet(import.meta.env.VITE_BCH_NETWORK).waitForTransaction({
+            txHash: broadcastResult.txid
+        })
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: `${mintQuantity.value} NFT(s) minted successfully`,
+                txid: broadcastResult.txid
             }
-        }
+        }).onDismiss(() => {
+
+            return router.push({
+                name: 'nft-category',
+                query: {
+                    timestamp,
+                    contentHash,
+                    authbase
+                }
+            })
+            if (wallet.value.receive!.getTokenDepositAddress(0) === recipient.value) {
+                return router.push({
+                    name: 'nft-category',
+                    query: {
+                        timestamp,
+                        contentHash,
+                        authbase
+                    }
+                })
+            }
+
+            router.push('/dashboard')
+        })
     } catch (error: any) {
-        console.log('mint error', error)
         $q.notify({ type: 'Error', message: error.message })
     } finally {
         minting.value = false
+        loadingGroup()
     }
 }
 
