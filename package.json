@@ -47,7 +47,7 @@
     "quasar": "^2.19.3",
     "vue": "^3.4.0",
     "vue-router": "^4.0.0",
-    "wizardconnect-vue": "git+https://github.com/paytaca/wizardconnect-vue"
+    "wizardconnect-vue": "paytaca/wizardconnect-vue"
   },
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^11.2.0",
@@ -66,6 +66,7 @@
     "mocha": "^10.2.0",
     "patch-package": "^8.0.1",
     "prettier": "^2.5.1",
+    "typescript": "^6.0.3",
     "vite-plugin-node-polyfills": "^0.26.0"
   },
   "resolutions": {

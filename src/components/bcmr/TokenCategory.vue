@@ -19,7 +19,7 @@
       </FormField>
       <FormField>
         <label>Decimals</label>
-        <q-input v-model="token.decimals" class="full-width" filled></q-input>
+        <q-input v-model.number="token.decimals" type="number" class="full-width" filled></q-input>
       </FormField>
       <FormField v-if="token.nfts && Object.keys(token.nfts).length > 0">
         <label>NFT Category</label>

@@ -149,7 +149,7 @@ import CopyText from 'src/components/CopyText.vue';
 import { useTokenStore } from 'src/stores/token';
 import { useRouter } from 'vue-router';
 import { useUI } from 'src/stores/ui';
-import { useAuthhead } from 'src/stores/authhead';
+// import { useAuthguardStore } from 'src/stores/authhead';
 import { ipfsToGatewayUrl, shortenTx } from 'src/apps/utils';
 import { useMetadataStore } from 'src/stores/metadata';
 
@@ -158,7 +158,7 @@ const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
 const user = useUser()
-const authhead = useAuthhead()
+// const authhead = useAuthguardStore()
 const tokenStore = useTokenStore()
 const metadataStore = useMetadataStore()
 const eventBus = inject<EventBus>('eventBus')
@@ -231,7 +231,7 @@ const populateAuthheads = async () => {
         // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
         if (token?.tokenId) {
           ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
-          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.loadIdentitySnapshot(token.tokenId)
           ownedAuthHeads.value.results[i].processing = ''
         }
       })

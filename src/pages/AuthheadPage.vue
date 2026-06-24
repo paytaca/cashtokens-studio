@@ -132,13 +132,16 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useAppStore } from 'src/stores/app'
 import type { IdentitySnapshot, ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
+import type { DecoratedUtxo } from 'src/core/types'
 import { shortenTokenId, getTokenType } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
 
 const router = useRouter()
 const authguardStore = useAuthguardStore()
+const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
@@ -227,6 +230,9 @@ watch(localSnapshot, () => {
 }, { deep: true })
 
 const mintNft = () => {
+    if (activeAuthhead.value) {
+        appStore.setActiveMinter(activeAuthhead.value as DecoratedUtxo)
+    }
     router.push({ name: 'nft-collection-mint', params: { category: category.value } })
 }
 

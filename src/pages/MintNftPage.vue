@@ -55,7 +55,7 @@
                                 <span class="text-caption text-mono text-white">
                                     {{
                                         formatCommitmentValue(lastMintedCommitment) }} <{{ lastMintedCommitment || 'None'
-                                    }}>
+                                        }}>
                                 </span>
                             </div>
                         </div>
@@ -449,7 +449,7 @@ const mint = async () => {
             // })
             if (wallet.value.receive!.getTokenDepositAddress(0) === recipient.value) {
                 return router.push({
-                    name: 'nft-category',
+                    name: 'nfts',
                     query: {
                         timestamp,
                         contentHash,

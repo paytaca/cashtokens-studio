@@ -807,12 +807,8 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
 }
 
 const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
-  console.log('row', row)
-  const type = getTokenType(row)
-  console.log('TYPE', type)
-  if (type !== 'nft') return
-  // appStore.setActiveUtxo(null as any)
-  // router.push(`/token/${row.token!.category}/nfts`)
+  authguardStore.setActiveAuthhead(row)
+  router.push(`/authhead?authkey=${row.authkey.txid}:${row.authkey.vout}`)
 }
 
 const sendCollectedTokens = (row: any) => {

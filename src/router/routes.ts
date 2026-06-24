@@ -111,7 +111,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'nft-collection-mint',
         path: 'nft-collections/:category/mint',
-        component: () => import('pages/issuer/manage/MintNftPage.vue'),
+        component: () => import('pages/MintNftPage.vue'),
       },
       {
         name: 'nft-detail',
@@ -164,14 +164,25 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/token/RegistryPage.vue'),
       },
       {
-        name: 'nft-category',
-        path: 'nft-category',
-        component: () => import('pages/token/NftCategoryPage.vue'),
+        name: 'nfts',
+        path: ':category/nfts',
+        component: () => import('pages/NftCategoryPage.vue'),
       },
       {
         name: 'metadata-registry',
         path: 'metadata-registry',
         component: () => import('pages/MetadataRegistryPage.vue'),
+      },
+    ]
+  },
+  {
+    path: '/authhead',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        name: 'authhead',
+        path: '',
+        component: () => import('pages/AuthheadPage.vue'),
       },
     ]
   },

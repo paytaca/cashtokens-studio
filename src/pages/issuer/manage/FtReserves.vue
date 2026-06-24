@@ -40,7 +40,9 @@
                     <q-skeleton v-if="!!value.row.processing && populatingTable" type="circle" bordered></q-skeleton>
                     <div v-else>
                       <q-avatar v-if="value.row.identitySnapshot?.uris?.icon">
-                        <q-img :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon)" />
+                        <q-img v-if="value.row.identitySnapshot?.uris?.icon"
+                          :src="ipfsToGatewayUrl(value.row.identitySnapshot.uris.icon) as string" />
+                        <q-icon v-else="token"></q-icon>
                       </q-avatar>
                       <q-icon v-else name="token" size="xl" color="grey-8"></q-icon>
                     </div>
@@ -220,7 +222,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
         // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
         if (token?.tokenId) {
           ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
-          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.loadIdentitySnapshot(token.tokenId)
           ownedAuthHeads.value.results[i].processing = ''
         }
       })
@@ -304,91 +306,94 @@ const openBurnFtDialog = (v: AuthchainIdentity, identitySnapshot: IdentitySnapsh
   })
 }
 
-const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
-  const originalBalance = v.token.amount
+const openIssueFtDialog = (v: UtxoI, identitySnapshot: IdentitySnapshot) => {
+  const originalBalance = v.token!.amount
+  console.log('V', v, JSON.parse(JSON.stringify(v), (k, v) => typeof (v) === 'bigint' ? v.toString() : v))
+
   $q.dialog({
     component: FTIssuerDialog,
     componentProps: {
       token: v.token,
+      issuerUtxo: JSON.parse(JSON.stringify(v), (k, v) => typeof (v) === 'bigint' ? v.toString() : v),
       identitySnapshot,
       wallet: user?.wallet
     },
     focus: 'none'
   }).onOk(async (value: { amountToSend: string, newBalance: string, decimals: number, recipient: string }) => {
     try {
-      progress.value = 'Processing...'
-      const amountToSendRaw = (new BigNumber(value.amountToSend).toFixed(value.decimals)).toString()
-      const burnTx = await buildIssueFtReserveTx({
-        authUtxo: v,
-        authKey: v.authKey,
-        amount: amountToSendRaw.replace('.', ''),
-        recipient: value.recipient,
-        wallet: user.wallet
-      })
-      progress.value = 'Waiting for signature. Pls check your wallet!'
-      const signingResult = await signTx({
-        signer: user.transactionSigner!,
-        decodedTx: burnTx.decoded, sourceOutputs: burnTx.sourceOutputs,
-        prompt: `Issue ${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} to ${shortenAddress(value.recipient)}`
-      })
+      //   progress.value = 'Processing...'
+      //   const amountToSendRaw = (new BigNumber(value.amountToSend).toFixed(value.decimals)).toString()
+      //   const burnTx = await buildIssueFtReserveTx({
+      //     authUtxo: v,
+      //     authKey: v.authKey,
+      //     amount: amountToSendRaw.replace('.', ''),
+      //     recipient: value.recipient,
+      //     wallet: user.wallet
+      //   })
+      //   progress.value = 'Waiting for signature. Pls check your wallet!'
+      //   const signingResult = await signTx({
+      //     signer: user.transactionSigner!,
+      //     decodedTx: burnTx.decoded, sourceOutputs: burnTx.sourceOutputs,
+      //     prompt: `Issue ${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} to ${shortenAddress(value.recipient)}`
+      //   })
 
-      if (signingResult && signingResult.walletType === 'p2shMultisig') {
-        $ebus?.emit('transaction', {
-          txid: signingResult.unsignedHash,
-          unsignedHash: signingResult.unsignedHash,
-          txType: 'ft-issuance',
-          timestamp: new Date().getTime(),
-          successMsg: signingResult.message,
-          statusUrl: signingResult.statusUrl
-        })
+      //   if (signingResult && signingResult.walletType === 'p2shMultisig') {
+      //     $ebus?.emit('transaction', {
+      //       txid: signingResult.unsignedHash,
+      //       unsignedHash: signingResult.unsignedHash,
+      //       txType: 'ft-issuance',
+      //       timestamp: new Date().getTime(),
+      //       successMsg: signingResult.message,
+      //       statusUrl: signingResult.statusUrl
+      //     })
 
-        await new Promise((resolve) => {
-          $q.dialog({
-            component: TransactionStatusDialog,
-            componentProps: {
-              statusType: 'pending',
-              statusText: signingResult.message,
-              statusUrl: signingResult.statusUrl,
-              txid: null,
+      //     await new Promise((resolve) => {
+      //       $q.dialog({
+      //         component: TransactionStatusDialog,
+      //         componentProps: {
+      //           statusType: 'pending',
+      //           statusText: signingResult.message,
+      //           statusUrl: signingResult.statusUrl,
+      //           txid: null,
 
-            }
-          }).onOk(() => {
-            resolve(true)
+      //         }
+      //       }).onOk(() => {
+      //         resolve(true)
 
-          }).onDismiss(() => {
-            resolve(true)
-          })
-        })
-        return router.push({ name: 'recent-transactions' })
-      }
+      //       }).onDismiss(() => {
+      //         resolve(true)
+      //       })
+      //     })
+      //     return router.push({ name: 'recent-transactions' })
+      //   }
 
-      if (signingResult?.signedTransaction) {
-        progress.value = 'Submitting transaction, please wait...'
-        const tx = await broadcastTx(signingResult)
-        if (tx) {
-          progress.value = 'Transaction submitted, awaiting propagation...'
-          await user.wallet?.waitForTransaction({ txHash: tx })
-          $ebus?.emit('transaction', {
-            txid: tx,
-            txType: 'ft-issuance',
-            timestamp: new Date().getTime(),
-            successMsg: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`
-          })
-          progress.value = false
-          populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, true)
-          $q.dialog({
-            component: TransactionStatusDialog,
-            componentProps: {
-              statusType: 'success',
-              statusText: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`,
-              txid: tx
-            }
-          })
-        }
-      } else {
-        progress.value = false
-        v.token.amount = originalBalance
-      }
+      //   if (signingResult?.signedTransaction) {
+      //     progress.value = 'Submitting transaction, please wait...'
+      //     const tx = await broadcastTx(signingResult)
+      //     if (tx) {
+      //       progress.value = 'Transaction submitted, awaiting propagation...'
+      //       await user.wallet?.waitForTransaction({ txHash: tx })
+      //       $ebus?.emit('transaction', {
+      //         txid: tx,
+      //         txType: 'ft-issuance',
+      //         timestamp: new Date().getTime(),
+      //         successMsg: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`
+      //       })
+      //       progress.value = false
+      //       populateOwnedAuthHeads(user.wallet as Wallet, user.transactionSigner!, true)
+      //       $q.dialog({
+      //         component: TransactionStatusDialog,
+      //         componentProps: {
+      //           statusType: 'success',
+      //           statusText: `${value.amountToSend} ${identitySnapshot?.token?.symbol || 'FTs'} sent to ${shortenAddress(value.recipient)}!`,
+      //           txid: tx
+      //         }
+      //       })
+      //     }
+      //   } else {
+      //     progress.value = false
+      //     v.token.amount = originalBalance
+      //   }
     } catch (error: any) {
       $q.dialog({
         message: error.message?.toString(),
@@ -396,14 +401,14 @@ const openIssueFtDialog = (v: any, identitySnapshot: IdentitySnapshot) => {
         focus: 'ok',
         class: 'q-pa-lg'
       })
-      v.token.amount = originalBalance
+      // v.token.amount = originalBalance
     } finally {
       progress.value = false
     }
 
 
   }).onCancel(() => {
-    v.token.amount = originalBalance
+    // v.token.amount = originalBalance
   })
 }
 

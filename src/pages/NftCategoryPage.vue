@@ -135,8 +135,6 @@
                                 </SequentialNftCollection>
                             </template>
                         </FormField>
-
-
                         <div class="flex justify-end q-gutter-md q-mt-lg">
                             <q-btn icon="mdi-undo" color="warning" :disable="!modified" @click="reset">
                                 {{ t('button.reset') }}

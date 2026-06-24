@@ -23,6 +23,8 @@ export type DecoratedUtxo = UtxoWithAuthKey & {
     isAuthhead?: boolean
 }
 
+export type DecoratedTokenUtxo = Omit<DecoratedUtxo, 'token'> & { token: TokenI }
+
 export type DecoratedUtxoFormSafe = Omit<DecoratedUtxo, 'token' & 'satoshis'> & {
     satoshis: string,
     token?: Omit<TokenI, 'amount'> & { amount: string }

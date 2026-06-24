@@ -3,7 +3,7 @@ import { UtxoI, Wallet } from 'mainnet-js';
 import { PaginatedData, TransactionSigner } from 'src/apps/types';
 import { CashToken, Watchtower } from 'src/apps';
 import { createTemplate } from 'src/apps/utils/createMultisigWalletTemplate';
-import { walletTemplateP2pkh } from 'bitauth-libauth-v3';
+import { walletTemplateP2pkh } from '@bitauth/libauth';
 import { isMultisigWallet } from 'src/apps/utils';
 import ClientDB from 'src/apps/clientonly/ClientDB';
 

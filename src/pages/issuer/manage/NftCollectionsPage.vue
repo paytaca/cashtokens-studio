@@ -1,3 +1,4 @@
+<!-- this was the supposed replacement of nftreserves page  -->
 <template>
     <q-page class="bg-black text-white">
         <div class="row justify-center q-pa-md">

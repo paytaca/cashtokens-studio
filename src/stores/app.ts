@@ -1,22 +1,30 @@
-import * as Comlink from 'comlink'
 import { defineStore } from 'pinia'
-import { ParsedRegistryRecord, RegistryRecord } from 'src/core/client-db';
 import { ref } from 'vue';
+import type { DecoratedTokenUtxo, DecoratedUtxo } from 'src/core/types';
 
-import { type RegistryWorkerAPI } from 'src/workers/registry-worker';
-import { Registry } from 'src/core/bcmr/bcmr-v2.schema';
-import type { DecoratedUtxo } from 'src/core/types';
-let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
 
 export const useAppStore = defineStore('app-store', () => {
 
     const activeMinter = ref<DecoratedUtxo | undefined>()
+    const activeToken = ref<DecoratedUtxo|undefined>()
+    const activeUtxo = ref<DecoratedUtxo|undefined>()
+
     function setActiveMinter(minter: DecoratedUtxo | undefined) {
         activeMinter.value = minter
+    }
+
+    function setActiveToken(token: DecoratedTokenUtxo | undefined) {
+        activeToken.value = token
+    }
+
+    function setActiveUtxo(utxo: DecoratedUtxo | undefined) {
+        activeUtxo.value = utxo
     }
     
     return {
         activeMinter,
-        setActiveMinter
+        setActiveMinter,
+        activeUtxo,
+        setActiveUtxo
     }
 })

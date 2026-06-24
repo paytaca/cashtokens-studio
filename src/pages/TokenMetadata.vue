@@ -583,7 +583,7 @@ import { useLocalForage } from 'src/composables/useLocalForage';
 import PublishRevisionOption from 'src/components/dialogs/PublishRevisionOption.vue';
 import AuthbasePromptDialog from 'src/components/dialogs/AuthbasePromptDialog.vue';
 import NftTypeDialog from 'src/components/dialogs/NftTypeDialog.vue'
-import { useAuthhead } from 'src/stores/authhead';
+// import { useAuthguardStore } from 'src/stores/authhead';
 import { useEventBus } from 'src/composables';
 import { useUser } from 'src/stores/user';
 import { upload as uploadToIPFS } from 'src/apps/ipfs'
@@ -593,7 +593,7 @@ const $q = useQuasar()
 const ui = useUI()
 const router = useRouter()
 const route = useRoute()
-// const authhead = useAuthhead()
+// const authhead = useAuthguardStore()
 const user = useUser()
 const localForage = useLocalForage()
 const tokenStore = useTokenStore()
