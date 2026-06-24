@@ -6,6 +6,20 @@ export type BaseParams = {
     chainGraphUrl?: string
 }
 
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 15_000): Promise<Response> {
+    return new Promise((resolve, reject) => {
+        const controller = new AbortController()
+        const id = setTimeout(() => {
+            controller.abort()
+            reject(new Error(`Chaingraph query timed out after ${timeoutMs}ms`))
+        }, timeoutMs)
+        fetch(url, { ...options, signal: controller.signal })
+            .then(resolve)
+            .catch(reject)
+            .finally(() => clearTimeout(id))
+    })
+}
+
 export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
     
     const url = params.chainGraphUrl || import.meta.env.VITE_CHAINGRAPH_URL
@@ -30,7 +44,7 @@ export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
         }),
     }
 
-    const response: any = await fetch(url, payload);
+    const response: any = await fetchWithTimeout(url, payload);
     const responseJson = await response.json();
     const authhead = responseJson?.data?.transaction[0]?.authchains[0].authhead;
     return authhead.hash.replace('\\x', '');
@@ -62,7 +76,7 @@ export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
         }),
       }
 
-    let response: any = await fetch(url, payload);
+    let response: any = await fetchWithTimeout(url, payload);
 
     if (response.status >= 400) {
     throw response.statusText;
@@ -203,7 +217,7 @@ export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
         }),
       };
 
-    let response: any = await fetch(url, payload);
+    let response: any = await fetchWithTimeout(url, payload);
 
     if (response.status >= 400) {
         throw response.statusText;
