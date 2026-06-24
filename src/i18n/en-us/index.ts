@@ -60,6 +60,8 @@ export default {
         upload: 'Upload',
         reset: 'Reset',
         save: 'Save',
+        saveIdentity: 'Save Identity',
+        saveRegistry: 'Save Registry',
         issueTokens: 'Issue Tokens'
     },
     label: {
