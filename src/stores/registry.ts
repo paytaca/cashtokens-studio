@@ -43,18 +43,12 @@ export const useRegistryStore = defineStore('registry-store', () => {
     }
 
     const loadRegistry = async (authbase: string, sync?: boolean) => {
-        try {
-            const result = await worker?.loadRegistry({ authbase, sync })
-            console.log('Result load regisry', result)
-            if (result) {
-                const i = registries.value?.findIndex((r) => { r.id === result!.id })
-                if (i === -1) registries.value.push(result as ParsedRegistryRecord)
-            }
-            return result
-        } catch (error) {
-            console.log('ERROR LAODING REGISTRY', error)
+        const result = await worker?.loadRegistry({ authbase, sync })
+        if (result) {
+            const i = registries.value?.findIndex((r) => r.id === result!.id)
+            if (i === -1) registries.value.push(result as ParsedRegistryRecord)
         }
-        
+        return result
     }
 
     const fetchIdentitySnapshot = async (category: string) => {
@@ -64,7 +58,6 @@ export const useRegistryStore = defineStore('registry-store', () => {
         const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/tokens/${category}`);
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
-        console.log(`Identity snapshot for ${category}:`, data)
         identitySnapshotCache.value[category] = data
         return data;
       }
@@ -92,7 +85,10 @@ export const useRegistryStore = defineStore('registry-store', () => {
     }
 
     const getRegistryByAuthbase = async(authbase: string) => {
-        const registryRecord = await worker?.loadRegistry({ authbase })
+        const registryRecord = await worker?.loadRegistry({
+            authbase,
+            onError: (msg) => console.error('Registry worker error:', msg)
+        })
         return registryRecord
     }
 
