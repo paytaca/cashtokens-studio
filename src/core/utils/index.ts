@@ -1,3 +1,5 @@
+import type { DecoratedUtxo } from '../types'
+
 export function shortenTokenId(tokenId: string) {
     return (tokenId || '').replace(tokenId.substring(5, 60), '...')
 }
@@ -43,5 +45,17 @@ export function getErrorMessage(error: unknown): string {
     if (error instanceof Error) return error.message;
     return String(error);
 }
-  
+
+export function getTokenType(utxo: DecoratedUtxo): 'fungible' | 'nft' | 'mixed' {
+  const hasAmount = !!utxo.token?.amount
+  const capability = utxo.token?.nft?.capability
+  if (hasAmount && capability === 'minting') return 'mixed'
+  if (hasAmount && (capability === 'mutable' || capability === 'none')) return 'fungible'
+  if (!hasAmount) return 'nft'
+  return 'fungible'
+}
+
+export function isPureFungible(utxo: DecoratedUtxo): boolean {
+  return getTokenType(utxo) === 'fungible'
+}
   

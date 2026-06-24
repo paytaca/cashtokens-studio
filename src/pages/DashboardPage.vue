@@ -92,7 +92,8 @@
               </q-input>
             </div>
             <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
-              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table">
+              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table"
+              @row-click="onAuthheadsRowClick">
               <template v-slot:body-cell-token="props">
                 <q-td :props="props">
                   <div class="flex items-center no-wrap q-gutter-x-md">
@@ -477,7 +478,7 @@ import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
 import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo } from 'src/core/types'
-import { shortenCashAddress, shortenTokenId } from 'src/core/utils'
+import { shortenCashAddress, shortenTokenId, getTokenType, isPureFungible } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
@@ -594,20 +595,6 @@ const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 const collectedTokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all')
 const createdSearchQuery = ref('')
 const collectedSearchQuery = ref('')
-
-function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
-  const hasAmount = !!row.token?.amount
-  const capability = row.token?.nft?.capability
-
-  if (hasAmount && capability === 'minting') return 'mixed'
-  if (hasAmount && (capability === 'mutable' || capability === 'none')) return 'fungible'
-  if (!hasAmount) return 'nft'
-  return 'fungible'
-}
-
-function isPureFungible(row: any): boolean {
-  return getTokenType(row) === 'fungible'
-}
 
 function formatAmount(value: any): string {
   if (value == null || value === '') return '—'
@@ -817,6 +804,15 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
   })
 
   router.push(`/issuer/nft-collections/${row.token?.category}/nft`)
+}
+
+const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
+  console.log('row', row)
+  const type = getTokenType(row)
+  console.log('TYPE', type)
+  if (type !== 'nft') return
+  // appStore.setActiveUtxo(null as any)
+  // router.push(`/token/${row.token!.category}/nfts`)
 }
 
 const sendCollectedTokens = (row: any) => {

@@ -147,7 +147,7 @@ import { useRegistryStore } from 'src/stores/registry'
 import { createAuthguardContract } from 'src/core/authguard/create-authguard-contract'
 import { unguardAuthhead, burnAuthhead } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
-import { shortenTokenId } from 'src/core/utils'
+import { shortenTokenId, getTokenType } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useQuasar } from 'quasar'
@@ -176,15 +176,6 @@ const identitySnapshot = ref<any>(null)
 const showUnguardDialog = ref(false)
 const showBurnDialog = ref(false)
 const selectedRow = ref<any>(null)
-
-function getTokenType(row: any): 'fungible' | 'nft' | 'mixed' {
-  const hasAmount = !!row.token?.amount
-  const capability = row.token?.nft?.capability
-  if (hasAmount && capability === 'minting') return 'mixed'
-  if (hasAmount && (capability === 'mutable' || capability === 'none')) return 'fungible'
-  if (!hasAmount) return 'nft'
-  return 'fungible'
-}
 
 const columns: QTableColumn[] = [
   {
