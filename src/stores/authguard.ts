@@ -19,50 +19,49 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeysLoading = ref<boolean>()
   const activeAuthhead = ref<DecoratedUtxo>()
 
+  
   async function loadAuthheads(sync?: boolean) {
-  try {
-    authheadsLoading.value = true;
-    authheads.value = await getLockedAuthheadUtxos(authkeys.value);
-    // Create a pipeline task for each individual authhead
-    const tasks = authheads.value.map(async (authhead) => {
-      if (!authhead.token) return;
+    try {
+      authheadsLoading.value = true;
+      authheads.value = await getLockedAuthheadUtxos(authkeys.value);
+      // Create a pipeline task for each individual authhead
+      const tasks = authheads.value.map(async (authhead) => {
+        if (!authhead.token) return;
 
-      const authbase = authhead.token.category;
+        const authbase = authhead.token.category;
 
-      try {
-        const registryRecord = await loadRegistry(authbase, sync);
+        try {
+          const registryRecord = await loadRegistry(authbase, sync);
 
-        if (!registryRecord) return;
+          if (!registryRecord) return;
 
-        if (!registryRecord.registry.identities?.[authbase]?.[0]) {
-          return;
-        }
-
-        const identity = {
-          contentHash: registryRecord.contentHash,
-          identity: {
-            authbase,
-            timestamp: registryRecord.registry.identities![authbase]![0]!
+          if (!registryRecord.registry.identities?.[authbase]?.[0]) {
+            return;
           }
-        };
 
-        const identitySnapshot = await getIdentitySnapshot(identity);
-        if (identitySnapshot) {
-          authhead.identitySnapshot = identitySnapshot;
-          authhead.identitySnapshotIdentifier = identity;
+          const identity = {
+            contentHash: registryRecord.contentHash,
+            identity: {
+              authbase,
+              timestamp: registryRecord.registry.identities![authbase]![0]!
+            }
+          };
+
+          const identitySnapshot = await getIdentitySnapshot(identity);
+          if (identitySnapshot) {
+            authhead.identitySnapshot = identitySnapshot;
+            authhead.identitySnapshotIdentifier = identity;
+          }
+        } catch (error) {
+          console.error(`Error processing authhead for category ${authbase}:`, error);
         }
-      } catch (error) {
-        console.error(`Error processing authhead for category ${authbase}:`, error);
-      }
-    });
+      });
 
-    await Promise.allSettled(tasks);
+      await Promise.allSettled(tasks);
 
-  } catch (error) {
-    throw error;
-  } finally {
-    authheadsLoading.value = false;
-  }
+    } finally {
+      authheadsLoading.value = false;
+    }
   } 
 
 
@@ -75,8 +74,6 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
           authkeysLastSync.value = Date.now()
         }
         
-    } catch (error) {
-        throw error
     } finally {
         authkeysLoading.value = false
     }
@@ -88,16 +85,13 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {
-        try {
-          authheadsLoading.value = true
-          await loadAuthheads(true)
-        } catch (error) {
-            console.log(error)
-        } finally {
-            authheadsLoading.value = false
-        }
+      try {
+        await loadAuthheads(true)
+      } catch (error) {
+        console.log(error)
+      }
     }
-})
+  })
 
 
   return {
