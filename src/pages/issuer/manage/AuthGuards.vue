@@ -252,7 +252,7 @@ const populateOwnedAuthHeads = async (wallet: Wallet, transactionSigner: Transac
         // await ownedAuthHeads.value.results[i].resolveIdentitySnapshot()
         if (token?.tokenId) {
           ownedAuthHeads.value.results[i].processing = 'Resolving identity snapshot'
-          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.resolveIdentitySnapshot(token.tokenId)
+          ownedAuthHeads.value.results[i].identitySnapshot = await metadataStore.loadIdentitySnapshot(token.tokenId)
           ownedAuthHeads.value.results[i].processing = ''
         }
       })
