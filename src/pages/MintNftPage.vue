@@ -54,11 +54,10 @@
                     </div>
                     <FormField>
                         <label>Category</label>
-                        <q-input :model-value="minter?.token?.category" dark outlined readonly>
-                            <template v-slot:append>
-                                <CopyText :text="minter?.token?.category || ''" />
-                            </template>
-                        </q-input>
+                        <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                            {{ minter.token!.category }}
+                            <CopyText :text="minter.token!.category" />
+                        </div>
                     </FormField>
                     <FormField v-if="isSequentialNftCollection && lastMintedCommitment !== undefined">
                         <label>Last Minted Sequence #</label>
@@ -173,8 +172,7 @@
                         </FormField>
                         <div class="flex justify-end q-gutter-x-sm q-mt-lg">
                             <q-btn label="Cancel" flat text-color="primary" @click="router.back()" />
-                            <q-btn unelevated color="primary" label="Mint" icon="construction" :loading="minting"
-                                @click="mint" />
+                            <q-btn color="primary" label="Mint" icon="mdi-pickaxe" :loading="minting" @click="mint" />
                         </div>
                     </q-form>
 
