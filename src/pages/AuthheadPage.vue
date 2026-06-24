@@ -58,6 +58,14 @@
                             </q-menu>
                         </q-btn>
                     </div>
+
+                    <FormField>
+                        <label>Category</label>
+                        <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                            {{ activeAuthhead?.token?.category || localSnapshot.token?.category }}
+                            <CopyText :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
+                        </div>
+                    </FormField>
                     <FormField v-if="showReleaseReserves">
                         <label>Reserved Supply</label>
                         <div class="q-field__inner bg-dark rounded-borders q-px-md"
@@ -70,7 +78,6 @@
                             </q-btn>
                         </div>
                     </FormField>
-
                     <FormField v-if="hasNfts">
                         <label>NFT Collection</label>
                         <div class="q-field__inner bg-dark rounded-borders"
@@ -86,15 +93,7 @@
                         </div>
                     </FormField>
 
-                    <FormField>
-                        <label>Category</label>
-                        <q-input v-model="localSnapshot.token!.category" dark outlined readonly>
-                            <template v-slot:append>
-                                <q-btn flat dense round icon="content_copy" color="grey-5" size="sm"
-                                    @click="copyCategory" />
-                            </template>
-                        </q-input>
-                    </FormField>
+
                     <FormField>
                         <label>Name</label>
                         <q-input v-model="localSnapshot.name" dark outlined />
@@ -143,6 +142,7 @@ import type { DecoratedUtxo } from 'src/core/types'
 import { shortenTokenId, getTokenType } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
+import CopyText from 'src/components/CopyText.vue'
 
 const router = useRouter()
 const authguardStore = useAuthguardStore()
@@ -206,9 +206,14 @@ const nftCollectionType = computed(() => {
 })
 
 const viewNfts = () => {
+
     const category = activeAuthhead?.value?.identitySnapshot?.token?.category || activeAuthhead.value?.token?.category
     if (category) {
-        router.push(`/token/${category}/nfts`)
+        appStore.setActiveMinter(activeAuthhead.value)
+        router.push({
+            name: 'authhead-nft-collection',
+            params: { category },
+        })
     }
 }
 
