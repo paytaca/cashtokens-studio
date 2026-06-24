@@ -3,15 +3,18 @@
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back to Collections" color="grey-4"
-                        @click="router.push('/issuer/nft-collections')" />
+                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
                 </div>
-                <q-card v-if="authhead" flat class="bg-dark">
-                    <div class="q-pa-lg">
+                <q-card v-if="authhead" flat class="bg-dark q-pa-lg rounded-borders">
+                    <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
+                        <span>NFT Collection</span>
+                        <q-icon name="mdi-image-multiple" size="lg" />
+                    </q-card-title>
+                    <div>
                         <div class="row items-center q-gutter-x-md q-mb-lg">
-                            <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
+                            <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
                                 <q-img v-if="authhead.identitySnapshot?.uris?.icon"
-                                    :src="ipfsToGatewayUrl(authhead.identitySnapshot?.uris?.icon)!" fit="cover" />
+                                    :src="ipfsToGatewayUrl(authhead.identitySnapshot?.uris.icon)!" fit="cover" />
                                 <q-icon v-else name="token" color="primary" size="32px" />
                             </q-avatar>
                             <div>
@@ -21,75 +24,45 @@
                                 <div class="text-caption">
                                     {{ authhead.identitySnapshot?.name || 'Unnamed Collection' }}
                                 </div>
+
                             </div>
                             <q-space />
                             <q-btn flat dense round icon="refresh" size="lg" :loading="refreshing" @click="refresh" />
                         </div>
+                        <div class="row"><q-btn class="text-caption link-style" text-color="secondary"
+                                icon="description" @click="viewRegistry" no-caps dense>
+                                View Metadata Registry
+                            </q-btn></div>
                         <div class="row">
                             <div class="col-12">
-                                <div class="text-caption text-grey-5 text-uppercase q-mb-xs"
-                                    style="letter-spacing: 1px;">
-                                    Token ID
-                                </div>
-                                <div
-                                    class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                    {{ authhead.token!.category }}
-                                    <CopyText :text="authhead.token!.category" />
-                                </div>
-                                <div class="q-mt-xs">
-                                    <a class="text-caption link-style cursor-pointer" @click="viewRegistry">
-                                        <q-icon name="description" size="14px" class="q-mr-xs" />
-                                        View Registry
-                                    </a>
-                                </div>
+                                <FormField>
+                                    <label for="">Category</label>
+                                    <div
+                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                                        {{ authhead.token!.category }}
+                                        <CopyText :text="authhead.token!.category" />
+                                    </div>
+                                </FormField>
                             </div>
-
-                            <div class="col-12 col-sm-6">
-                                <div class="flex items-center q-gutter-x-md">
-                                    <FormField>
-                                        <label class="text-caption text-grey-5 text-uppercase">
-                                            Capability
-                                        </label>
-                                        <q-chip v-if="authhead.token?.nft?.capability === 'minting'" color="purple-10"
-                                            text-color="purple-2"
-                                            class="text-uppercase text-caption q-px-sm q-py-xs border-radius-4">
-                                            <q-icon name="auto_awesome" size="14px" class="q-mr-xs" />
-                                            Minting
-                                        </q-chip>
-                                        <q-chip v-else-if="authhead.token?.nft?.capability === 'mutable'"
-                                            color="teal-10" text-color="teal-2"
-                                            class="text-uppercase text-caption q-px-sm q-py-xs border-radius-4">
-                                            <q-icon name="published_with_changes" size="14px" class="q-mr-xs" />
-                                            Mutable
-                                        </q-chip>
-                                        <q-chip v-else-if="authhead.token?.nft?.capability === 'none'" color="grey-9"
-                                            text-color="grey-4"
-                                            class="text-uppercase text-caption q-px-sm q-py-xs border-radius-4">
-                                            <q-icon name="lock_outline" size="14px" class="q-mr-xs" />
-                                            Immutable
-                                        </q-chip>
-                                    </FormField>
-                                    <FormField>
-                                        <label class="text-caption text-grey-5 text-uppercase"
-                                            style="letter-spacing: 1px;">
-                                            Collection Type
-                                        </label>
+                            <div class="col-12">
+                                <FormField>
+                                    <label>NFT Collection Type</label>
+                                    <div class="q-field__inner bg-dark rounded-borders flex justify-between"
+                                        style="min-height: 3em; display: flex; align-items: center;">
                                         <q-chip
                                             v-if="(authhead.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection)?.bytecode"
-                                            color="green-10" text-color="green-2"
-                                            class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
-
-                                            Parsable
-                                        </q-chip>
-                                        <q-chip v-else color="yellow-10" text-color="yellow-2"
-                                            class="text-uppercase text-caption q-py-xs border-radius-4 text-center">
-                                            <q-icon name="pin" size="xs" class="q-mr-xs" dense />
-                                            Sequential
-                                        </q-chip>
-                                    </FormField>
-                                </div>
-
+                                            dark outline icon="mdi-counter" label="Sequential NFT Collection" />
+                                        <q-chip v-else dark outline icon="mdi-hexadecimal"
+                                            label="Parsable NFT Collection" />
+                                        <q-space />
+                                        <q-btn v-if="authhead.token?.nft?.capability === 'minting'" dense no-wrap
+                                            icon="mdi-pickaxe" text-color="primary" size="md" @click="openMintPage">
+                                            <span class="gt-xs q-ml-xs">Mint</span>
+                                        </q-btn>
+                                    </div>
+                                </FormField>
                             </div>
+
 
                             <div v-if="authhead.identitySnapshot?.description" class="col-12">
                                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs"
@@ -114,23 +87,18 @@
                             </div>
                         </div>
 
-                        <div class="row justify-end q-mt-lg q-gutter-x-sm">
-                            <q-btn color="primary" icon="mdi-send" label="Mint" unelevated @click="openMintPage" />
-                            <q-btn color="orange" icon="mdi-fire" label="Burn" unelevated outline
-                                @click="openMintChildNftDialog('burn')" />
-                        </div>
                     </div>
                 </q-card>
 
                 <q-card v-if="authhead && unpublishedNfts.length > 0" flat class="bg-dark q-mt-lg">
                     <div class="q-pa-lg">
                         <div class="row items-center justify-between q-mb-xs">
-                            <div class="table-header text-h6 text-weight-medium">
-                                <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
-                                {{ t('label.registry.unpublishedNfts') }}
+                            <div class="table-header text-h6 text-weight-medium flex items-center">
+                                <q-icon name="priority_hight" color="warning" />
+                                <span>{{ t('label.registry.unpublishedNfts') }}</span>
                             </div>
-                            <q-btn color="primary" icon="mdi-publish" :label="t('button.publish')" unelevated
-                                :loading="publishing" @click="publishNfts" size="sm" />
+                            <q-btn text-color="primary" icon="mdi-publish" :label="t('button.publish')" unelevated
+                                :loading="publishing" @click="publishNfts" />
                         </div>
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.unpublishedCaption') }}</div>
                         <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
@@ -202,7 +170,6 @@
                         </q-table>
                     </div>
                 </q-card>
-
                 <div v-else class="flex flex-center q-py-xl">
                     <q-spinner color="primary" size="48px" />
                 </div>
@@ -245,6 +212,7 @@ const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
+
 const {
     manager,
     wallet,
