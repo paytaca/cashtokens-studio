@@ -172,8 +172,7 @@
                             </q-input>
                         </FormField>
                         <div class="flex justify-end q-gutter-x-sm q-mt-lg">
-                            <q-btn outline label="Cancel" color="grey-4"
-                                @click="router.push('/issuer/nft-collection/' + minter.token!.category)" />
+                            <q-btn label="Cancel" flat text-color="primary" @click="router.back()" />
                             <q-btn unelevated color="primary" label="Mint" icon="construction" :loading="minting"
                                 @click="mint" />
                         </div>
@@ -189,9 +188,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, triggerRef } from 'vue'
 import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { type Output as TransactionOutput } from 'cashscript'
 import { useAuthguardStore } from 'src/stores/authguard'
@@ -215,10 +214,13 @@ const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
 
 const $q = useQuasar()
+const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
+
 const authguardStore = useAuthguardStore()
+const { loadAuthkeys, loadAuthheads } = authguardStore
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { activeMinter } = storeToRefs(appStore)
@@ -401,6 +403,7 @@ const mint = async () => {
         }
 
         loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+
         const response = await manager.value!.signTransaction(restOfSignRequest)
 
         const broadcastResponse = await broadcast(response.signedTransaction)
@@ -426,6 +429,19 @@ const mint = async () => {
             txHash: broadcastResult.txid
         })
 
+        loadingGroup()
+
+
+
+        await db.saveActivity({
+            event: `Mint ${mintOutputs.length} ${activeMinter.value?.identitySnapshot?.token?.symbol || activeMinter.value!.token!.category} NFT ${mintOutputs.length > 1 ? 's' : ''}`,
+            txid: broadcastResult.txid,
+            status: 'success'
+        })
+
+        loadAuthkeys(wallet.value, true)
+        triggerRef(wallet)
+
         $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
@@ -435,19 +451,10 @@ const mint = async () => {
             }
         }).onDismiss(() => {
 
-            authguardStore.setActiveAuthhead(activeMinter.value as DecoratedUtxo)
             if (activeMinter.value?.isAuthhead) {
                 return router.push(`/issuer/nft-collections/${activeMinter.value.token!.category}`)
             }
 
-            // return router.push({
-            //     name: 'nft-category',
-            //     query: {
-            //         timestamp,
-            //         contentHash,
-            //         authbase
-            //     }
-            // })
             if (wallet.value.receive!.getTokenDepositAddress(0) === recipient.value) {
                 return router.push({
                     name: 'nfts',
@@ -471,7 +478,7 @@ const mint = async () => {
 
 onMounted(async () => {
     if (!minter.value) {
-        router.push('/issuer/nft-collections')
+        router.back()
         return
     }
     if (wallet.value) {

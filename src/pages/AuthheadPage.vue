@@ -3,7 +3,7 @@
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
                 <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
-                <q-card class="bg-dark q-pa-lg rounded borders">
+                <q-card class="bg-dark q-pa-lg rounded borders" flat>
                     <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
                         <span>Token Identity </span>
                         <q-icon name="mdi-information-variant" size="lg" />
@@ -238,7 +238,7 @@ const mintNft = () => {
     if (activeAuthhead.value) {
         appStore.setActiveMinter(activeAuthhead.value as DecoratedUtxo)
     }
-    router.push({ name: 'nft-collection-mint', params: { category: category.value } })
+    router.push({ name: 'authhead-mint-nft', params: { category: category.value } })
 }
 
 const releaseReserves = () => {
@@ -269,9 +269,7 @@ onMounted(() => {
     originalSnapshotJson.value = JSON.stringify(localSnapshot.value)
 })
 
-onBeforeRouteLeave(() => {
-    authguardStore.setActiveAuthhead(null as any)
-})
+
 </script>
 
 <style scoped lang="scss">

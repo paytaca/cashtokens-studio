@@ -184,6 +184,11 @@ const routes: RouteRecordRaw[] = [
         path: '',
         component: () => import('pages/AuthheadPage.vue'),
       },
+      {
+        name: 'authhead-mint-nft',
+        path: ':category/mint',
+        component: () => import('pages/MintNftPage.vue'),
+      },
     ]
   },
   {
