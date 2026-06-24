@@ -3,7 +3,12 @@
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
                 <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
-                <q-card flat class="bg-dark q-pa-lg">
+                <q-card class="bg-dark q-pa-lg rounded borders">
+                    <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
+                        <span>Token Identity </span>
+                        <q-icon name="mdi-information-variant" size="lg" />
+
+                    </q-card-title>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
                         <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
                             <q-img v-if="localSnapshot.uris?.icon" :src="ipfsToGatewayUrl(localSnapshot.uris.icon)!"
@@ -67,12 +72,12 @@
                     </FormField>
 
                     <FormField v-if="hasNfts">
-                        <label>NFT Collection Type</label>
-                        <div class="q-field__inner bg-dark rounded-borders q-px-md"
-                            style="min-height: 56px; display: flex; align-items: center;">
+                        <label>NFT Collection</label>
+                        <div class="q-field__inner bg-dark rounded-borders"
+                            style="min-height: 3em; display: flex; align-items: center;">
                             <q-chip v-if="nftCollectionType === 'Sequential'" dark outline icon="mdi-counter"
-                                label="Sequential" />
-                            <q-chip v-else dark outline icon="mdi-hexadecimal" label="Parsable" />
+                                label="Sequential NFT Collection" />
+                            <q-chip v-else dark outline icon="mdi-hexadecimal" label="Parsable NFT Collection" />
                             <q-space />
                             <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary" size="md"
                                 @click="mintNft">

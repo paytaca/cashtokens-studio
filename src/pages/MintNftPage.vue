@@ -1,93 +1,103 @@
 <template>
-    <q-page class="bg-dark-page text-white">
+    <q-page class="bg-dark-page text-grey-2">
         <div class="row justify-center q-pa-md">
-            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-                <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back to Collection" color="grey-4"
-                        @click="router.push('/issuer/nft-collections/' + minter?.token?.category)" />
-                </div>
+            <div class="col-xs-12 col-sm-8">
+                <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
 
-                <div v-if="minter" class="bg-dark border-radius-12 q-pa-lg">
-                    <div class="row items-center q-gutter-x-md q-mb-lg">
-                        <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
+                <q-card v-if="minter" flat class="bg-dark q-pa-lg rounded-borders">
+                    <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
+                        <span>Mint NFT</span>
+                        <q-icon name="mdi-pickaxe" size="lg" />
+
+                    </q-card-title>
+                    <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
+                        <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
                             <q-img v-if="minter.identitySnapshot?.uris?.icon"
                                 :src="ipfsToGatewayUrl(minter.identitySnapshot?.uris?.icon)!" fit="cover" />
                             <q-icon v-else name="token" color="primary" size="32px" />
                         </q-avatar>
-                        <div>
-                            <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                                <span class="text-h6 text-weight-medium text-primary token-symbol">
-                                    {{ minter.identitySnapshot?.token?.symbol || '?' }}
-                                </span>
+                        <div class="col">
+                            <div class="flex items-center q-gutter-x-xs q-mb-xs">
+                                <span class="text-h6 text-weight-medium text-grey-2">{{
+                                    minter.identitySnapshot?.token?.symbol || '?' }}</span>
                             </div>
-                            <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                                <span class="text-caption">{{ shortenTokenId(minter.token!.category) }}</span>
-                                <CopyText :text="minter.token!.category" />
-                            </div>
-                            <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                                <q-badge v-if="minter.token?.nft?.capability === 'minting'" color="purple-10"
-                                    text-color="purple-2"
-                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                            <div class="flex items-center q-gutter-x-xs">
+                                <q-badge v-if="minter.token?.nft?.capability === 'minting'" color="dark"
+                                    text-color="purple-4"
+                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                    <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                                     Minting
                                 </q-badge>
-                                <q-badge v-else-if="minter.token?.nft?.capability === 'mutable'" color="teal-10"
-                                    text-color="teal-2"
-                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                <q-badge v-else-if="minter.token?.nft?.capability === 'mutable'" color="dark"
+                                    text-color="teal-4"
+                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                    <q-icon name="edit" size="10px" class="q-mr-xs" />
                                     Mutable
                                 </q-badge>
-                                <q-badge v-else color="grey-9" text-color="grey-4"
-                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                <q-badge v-else color="dark" text-color="grey-4"
+                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                    <q-icon name="lock" size="10px" class="q-mr-xs" />
                                     Immutable
                                 </q-badge>
-                                <q-badge v-if="isSequentialNftCollection" color="yellow-10" text-color="yellow-2"
-                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                <q-badge v-if="isSequentialNftCollection" color="dark" text-color="orange-4"
+                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                    <q-icon name="mdi-counter" size="10px" class="q-mr-xs" />
                                     Sequential
                                 </q-badge>
-                                <q-badge v-else color="green-10" text-color="green-2"
-                                    class="text-uppercase text-caption q-px-xs q-py-xs border-radius-4">
+                                <q-badge v-else color="dark" text-color="blue-6"
+                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                    <q-icon name="mdi-hexadecimal" size="10px" class="q-mr-xs" />
                                     Parsable
                                 </q-badge>
                             </div>
-                            <div v-if="isSequentialNftCollection && lastMintedCommitment !== undefined" class="q-mt-xs">
-                                <span class="text-caption text-grey-5">
-                                    Last minted seq:
-                                </span>
-                                <span class="text-caption text-mono text-white">
-                                    {{
-                                        formatCommitmentValue(lastMintedCommitment) }} <{{ lastMintedCommitment || 'None'
-                                        }}>
-                                </span>
-                            </div>
                         </div>
                     </div>
+                    <FormField>
+                        <label>Category</label>
+                        <q-input :model-value="minter?.token?.category" dark outlined readonly>
+                            <template v-slot:append>
+                                <CopyText :text="minter?.token?.category || ''" />
+                            </template>
+                        </q-input>
+                    </FormField>
+                    <FormField v-if="isSequentialNftCollection && lastMintedCommitment !== undefined">
+                        <label>Last Minted Sequence #</label>
+                        <div class="row items-center bg-dark rounded-borders q-px-md q-py-xs font-mono"
+                            style="min-height: 40px;">
+                            <q-chip color="accent" text-color="white" class="text-weight-bold">
+                                {{ formatCommitmentValue(lastMintedCommitment) }}
+                            </q-chip>
+
+                            <div class="row items-center text-caption text-grey-5 q-ml-sm">
+                                <span class="icon-badge-hex">
+                                    <0x{{ lastMintedCommitment }}>
+                                </span>
+                                <q-tooltip class="bg-grey-9 text-white">Raw on-chain state value</q-tooltip>
+                            </div>
+                        </div>
+
+                    </FormField>
+
                     <q-form v-if="isParsableNftCollection">
                         <!-- TODO -->
                         <FormField>
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                NFT Type (Hex)
-                            </label>
+                            <label>NFT Type (Hex)</label>
                             <q-input v-model="customHex" placeholder="Enter bottom altstack hex" outlined dark
                                 :rules="[v => !v || /^[0-9a-fA-F]+$/.test(v) || 'Must be hex']" />
                         </FormField>
                     </q-form>
-                    <q-form v-else class="q-gutter-y-md">
+                    <q-form v-else>
                         <FormField>
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Mint Option
-                            </label>
-                            <q-select v-model="mintStrategy" :options="strategyOptions" outlined dark class="q-mb-sm"
-                                label="I want to" stack-label emit-value map-options />
+                            <label>Mint Option</label>
+                            <q-select v-model="mintStrategy" :options="strategyOptions" outlined dark label="I want to"
+                                stack-label emit-value map-options />
                         </FormField>
                         <FormField>
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Number of NFTs to mint
-                            </label>
+                            <label>Number of NFTs to mint</label>
                             <q-input v-model.number="mintQuantity" type="number" :min="1" outlined dark />
                         </FormField>
                         <FormField v-if="mintStrategy === MINT_NEXT_SEQUENCE">
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Sequence #
-                            </label>
+                            <label>Sequence #</label>
                             <q-input v-if="mintQuantity === 1" :model-value="`#${mintRange.start}`" outlined dark
                                 disable>
                                 <template v-slot:hint>
@@ -115,10 +125,7 @@
 
                         <template v-else-if="mintStrategy === MINT_A_SEQUENCE_NUMBER">
                             <FormField>
-                                <label class="text-caption text-grey-5 text-uppercase q-mb-xs"
-                                    style="letter-spacing: 1px;">
-                                    Sequence #
-                                </label>
+                                <label>Sequence #</label>
                                 <q-input v-model.number="customSequence" type="number"
                                     placeholder="Enter sequence number" outlined dark>
                                     <template v-slot:hint>
@@ -147,9 +154,7 @@
                         </template>
 
                         <FormField>
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Capability
-                            </label>
+                            <label>Capability</label>
                             <q-input :model-value="resolvedCapability" outlined dark disable>
                                 <template v-slot:append>
                                     <q-icon name="edit_off" color="grey-6" />
@@ -158,9 +163,7 @@
                         </FormField>
 
                         <FormField>
-                            <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Recipient
-                            </label>
+                            <label>Recipient</label>
                             <q-input v-model="recipient" outlined dark placeholder="Enter token address" clearable>
                                 <template v-slot:append>
                                     <q-btn v-if="!recipient" dense flat label="Self" color="warning"
@@ -176,7 +179,7 @@
                         </div>
                     </q-form>
 
-                </div>
+                </q-card>
                 <div v-else class="flex flex-center q-py-xl">
                     <q-spinner color="primary" size="48px" />
                 </div>
@@ -194,10 +197,9 @@ import { type Output as TransactionOutput } from 'cashscript'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { storeToRefs } from 'pinia'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
-import { shortenTokenId } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
-import { AuthheadUtxo, DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
+import { DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { mintNextNftSequence, mintNftSequence, mintNftMinters, isBroadcastSuccess } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { decodeCashAddress, vmNumberToBigInt } from '@bitauth/libauth'
@@ -207,7 +209,6 @@ import { NftType, ParsableNftCollection, SequentialNftCollection } from 'src/cor
 import { type SignTransactionRequest } from '@wizardconnect/core'
 import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
-import { setNftUnrevealedCtsExtension } from 'src/core/bcmr/utils'
 import { db } from 'src/core/client-db'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
@@ -242,7 +243,7 @@ const lastMintedCommitment = computed(() => {
 
 const formatCommitmentValue = (commitment: string) => {
     const num = parseInt(commitment, 16)
-    if (!isNaN(num)) return `#${num}`
+    if (!isNaN(num)) return `${num}`
     return commitment
 }
 
@@ -488,12 +489,12 @@ onBeforeUnmount(() => {
     border-radius: 8px;
 }
 
-.border-radius-12 {
-    border-radius: 12px;
-}
-
 .text-mono {
     font-family: 'Courier New', Courier, monospace;
+}
+
+.styled-capability-badge {
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .q-form>div {
