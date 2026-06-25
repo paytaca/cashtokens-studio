@@ -3,26 +3,61 @@
 
     <div class="q-px-md q-px-md-xl content-container">
       <div class="avatar-banner-wrapper">
-        <!-- Header Row -->
-        <div class="row justify-between items-start q-col-gutter-md q-pt-md">
-          <div class="col-12">
+        <!-- items-sm-end aligns the text column to the bottom of the avatar on sm+ screens -->
+        <div class="row items-end items-sm-end q-col-gutter-md q-pt-md">
+
+          <!-- Avatar Column -->
+          <div class="col-12 col-sm-auto flex justify-center justify-sm-start">
             <q-avatar size="128px" class="profile-avatar">
               <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="Avatar">
             </q-avatar>
           </div>
-          <div class="col-12 flex justify-between">
-            <div v-if="primaryXPub" class="flex items-center text-caption">
-              <q-icon name="account_balance_wallet" size="md" color="grey-5" class="q-mr-xs" />
-              <div class="ellipsis text-caption" style="max-width: 90vm;">
-                {{ primaryXPub.replace(primaryXPub.substring(8, 80), '...') }}
+
+          <!-- Text Group Column: Aligned to bottom on sm+, column layout for items -->
+          <div class="col-12 col-sm flex flex-column q-gutter-y-sm q-mb-xs">
+
+            <!-- Extended Pubkey Entry -->
+            <div v-if="primaryXPub" class="full-width">
+              <div class="flex items-center no-wrap q-gutter-x-xs text-caption word-break-all">
+                <q-icon name="account_balance_wallet" size="xs" color="grey-5" />
+                <!-- Enforced fixed min-width to vertically line up all starting text values -->
+                <span class="text-grey-5 text-weight-medium text-no-wrap" style="min-width: 120px;">Extended
+                  Pubkey:</span>
+                <span class="ellipsis" style="max-width: 50vw;">
+                  {{ primaryXPub.replace(primaryXPub.substring(8, 105), '...') }}
+                </span>
+                <CopyText :text="primaryXPub" />
               </div>
             </div>
-            <div class="flex items-center q-gutter-x-xs text-grey-4 q-mr-md">
-              <q-icon name="img:/images/bitcoin-cash-circle.svg" size="md" color="bch"
-                style="transform: rotate(-15deg);" />
-              <span class="text-weight-bold text-mono">{{ formatBch(bchBalance) }}</span>
+
+            <!-- Deposit Address 0 Entry -->
+            <div class="full-width">
+              <div class="flex items-center no-wrap q-gutter-x-xs text-caption word-break-all">
+                <q-icon name="qr_code" size="xs" color="grey-5" />
+                <!-- Enforced matching fixed min-width -->
+                <span class="text-grey-5 text-weight-medium text-no-wrap" style="min-width: 120px;">Deposit Address
+                  0:</span>
+                <span class="ellipsis" style="max-width: 50vw;">
+                  {{ shortenCashAddress(primaryAddress || '') }}
+                </span>
+                <CopyText :text="primaryAddress || ''" />
+              </div>
             </div>
+
+            <!-- BCH Balance Entry -->
+            <div class="full-width">
+              <div class="flex items-center no-wrap q-gutter-x-xs text-caption">
+                <!-- Swapped to a standard icon setup to match layout structural width constraints -->
+                <q-icon name="img:/images/bitcoin-cash-circle.svg" color="bch" size="xs" />
+                <!-- Enforced matching fixed min-width -->
+                <span class="text-grey-5 text-weight-medium text-no-wrap" style="min-width: 120px;">BCH Balance:</span>
+                <span class="text-weight-bold text-mono text-grey-4 q-mr-xs">{{ formatBch(bchBalance) }}</span>
+                <CopyText :text="formatBch(bchBalance)" />
+              </div>
+            </div>
+
           </div>
+
         </div>
       </div>
 
@@ -507,6 +542,10 @@ const { loadRegistry, fetchIdentitySnapshot } = useRegistryStore()
 const primaryXPub = computed(() =>
   wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
 )
+
+const primaryAddress = computed(() => {
+  return wallet.value.getDepositAddress(0)
+})
 
 const activities = ref<any[]>([])
 const activityLoading = ref(false)
@@ -1103,6 +1142,7 @@ onMounted(async () => {
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
   await loadActivities()
+  console.log('wallet.value.getDepositAddress(0)', wallet.value.getDepositAddress(0))
 })
 
 onUnmounted(() => {
