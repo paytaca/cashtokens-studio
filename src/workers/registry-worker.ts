@@ -176,7 +176,9 @@ const registryWorker = {
 
           const id = await db.registry.put(registryRecord)
 
-          return { id, ...registryRecord }
+          console.log('REGISTRY RECORD', registryRecord)
+          const { rawRegistry, ...restOfRegistryRecord } = registryRecord
+          return { id, ...restOfRegistryRecord }
         })
       
 
