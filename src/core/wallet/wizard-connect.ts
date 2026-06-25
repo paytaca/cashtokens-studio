@@ -1,7 +1,8 @@
-import { HDWallet, Utxo } from "mainnet-js-v3";
+import { HDWallet, NetworkType, Utxo } from "mainnet-js-v3";
 import { ExternalWallet, UtxoWithPath } from "./types";
 import { PathXpub } from "@wizardconnect/core";
 import { getHDWalletClass } from "src/apps/utils";
+import { CashAddressNetworkPrefix, decodeHdPublicKey, encodeHdPublicKey, HdKeyParameters, HdPublicNode } from "@bitauth/libauth";
 
 
 export type WZWalletPath = { name: string, xpub: string }
@@ -15,9 +16,11 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     balance: bigint | undefined 
     utxos: UtxoWithPath[] | undefined
     session: any | undefined
+    network: 'chipnet' | 'mainnet' | 'testnet'
 
-    constructor(options?: { ready?: boolean }) {
+    constructor(options?: { ready?: boolean, network?: 'chipnet' | 'mainnet' | 'testnet'}) {
         this.ready = options?.ready
+        this.network = options?.network || 'mainnet'
     }
 
     async initWallet(session: {paths?: PathXpub[]}) {
@@ -29,16 +32,34 @@ export class WizardConnectExternalWallet implements ExternalWallet {
         const receiveXPub = session.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
         const changeXPub = session.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
         const defiXPub = session.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
-        const HDWalletClass = await getHDWalletClass()
-        if (receiveXPub) {
-            this.receive = await HDWalletClass.fromXPub(receiveXPub)
+        
+        let network: string  = this.network
+
+        if (this.network === 'chipnet') {
+            network = 'testnet'
         }
+        const HDWalletClass = await getHDWalletClass()
+
+        const decodedReceiveXPub = decodeHdPublicKey(receiveXPub as string) as HdKeyParameters<HdPublicNode>
+        const encodedReceiveXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedReceiveXPub.node })
+        const decodedChangeXPub = decodeHdPublicKey(changeXPub as string) as HdKeyParameters<HdPublicNode>
+        const encodedChangeXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedChangeXPub.node })
+        const decodedDefiXPub = decodeHdPublicKey(defiXPub as string) as HdKeyParameters<HdPublicNode>
+        const encodedDefiXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedDefiXPub.node })
+
+        if (receiveXPub) {
+            this.receive =  await HDWalletClass.fromXPub(encodedReceiveXPub)
+        }
+        
         if (changeXPub) {
-            this.change = await HDWalletClass.fromXPub(changeXPub)
+            this.change = await HDWalletClass.fromXPub(encodedChangeXPub)
+            // this.receive = new HDWallet(network as NetworkType)
         }
         if (defiXPub) {
-            this.defi = await HDWalletClass.fromXPub(defiXPub)
+            this.defi = await HDWalletClass.fromXPub(encodedDefiXPub)
+            // this.receive = new HDWallet(network as NetworkType)
         }
+
         await this.getUtxos({ sync: true })
         this.ready = true         
         return this
@@ -72,7 +93,6 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     }
 
     async getUtxos(options?: { sync?: boolean }): Promise<UtxoWithPath[]> {
-        
         if (!options?.sync && this.utxos !== undefined) {
             return this.utxos
         }
@@ -80,7 +100,7 @@ export class WizardConnectExternalWallet implements ExternalWallet {
         const utxoRequests: { name: string, req: Promise<Utxo[]>}[] = []
 
         let utxos: Utxo[] = []
-          
+
         if (this.receive) utxoRequests.push({ name: 'receive', req: this.receive.getUtxos() })
         if (this.change) utxoRequests.push({ name: 'change', req: this.change.getUtxos() })
         if (this.defi) utxoRequests.push({ name: 'defi', req: this.defi.getUtxos() })
