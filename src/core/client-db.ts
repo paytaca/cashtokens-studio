@@ -103,9 +103,9 @@ class CashtokensStudioDB extends Dexie {
   utxo!: EntityTable<UtxoRecord, 'id'>
   activity!: EntityTable<ActivityRecord, 'id'>
 
-  constructor() {
+  constructor(network: 'chipnet'|'mainnet') {
 
-    super('CashtokensStudioDB');
+    super(`CashtokensStudioDB${network}`);
     // this.version(1).stores({
     //   registry: '++id, contentHash, authbase',
     //   registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
@@ -330,9 +330,7 @@ class CashtokensStudioDB extends Dexie {
 
 }
 
-
-
-export const db = new CashtokensStudioDB()
+export const db = new CashtokensStudioDB(import.meta.env.VITE_BCH_NETWORK)
 
 
 
