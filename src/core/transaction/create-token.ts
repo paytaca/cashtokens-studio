@@ -34,7 +34,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
 
     const genesisInput = sourceUtxos.splice(genesisInputIndex, 1)[0] as UtxoWithPath
 
-    const authkeyInputIndex = params.sourceUtxos.findIndex(u => {
+    const authkeyInputIndex = sourceUtxos.findIndex(u => {
         return (
             params.authkeyUtxoId === `${u.txid}:${u.vout}`
         )
