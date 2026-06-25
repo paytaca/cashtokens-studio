@@ -2,7 +2,7 @@ import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetail
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
-import { getMinimumFee, hexToBin } from "@bitauth/libauth"
+import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "@bitauth/libauth"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 
@@ -73,7 +73,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         network: params.network
     })
 
-    const remainingUtxos = sourceUtxos.filter(u => !u.token).sort((u1, u2) => Number(u2.satoshis) - Number(u1.satoshis))
+    const funderUtxos = sourceUtxos.filter(u => !u.token).sort((u1, u2) => Number(u2.satoshis) - Number(u1.satoshis))
 
     const transaction = new TransactionBuilder({
         provider: new ElectrumNetworkProvider(params.network)
@@ -102,56 +102,54 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
 
     let totalFunds = spentUtxos.reduce((acc, u) => acc + u.satoshis, 0n)
     let transactionHex = transaction.build()
-    const authkeyOutputAmount = authkeyInput.satoshis || DEFAULT_TOKEN_VALUE
-    const fixedCost = DEFAULT_TOKEN_VALUE + authkeyOutputAmount
-    const minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+    const fixedCost = DEFAULT_TOKEN_VALUE * 2n
+
+    const opReturnOutput: Output = {
+        lockingBytecode: transaction.outputs[2]!.to as Uint8Array,
+        valueSatoshis: 0n
+    }
+    const opReturnOutputByteSize = encodeTransactionOutput(opReturnOutput)
+
+    let minimumFee = getMinimumFee(
+        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE + opReturnOutputByteSize.byteLength),
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
     let estimatedCost = fixedCost + minimumFee
-    let enoughFunds = totalFunds > estimatedCost
-    let changeOutputIndex = -1
-
-    if (!enoughFunds) {
-        while (remainingUtxos.length > 0) {
-            const funderInput = remainingUtxos.shift() as UtxoWithPath
-            transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
-            spentUtxos.push(funderInput)
-            totalFunds += funderInput.satoshis
-            transactionHex = transaction.build()
-
-            const newMinimumFee = getMinimumFee(
-                BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
-                DEFAULT_FEE_RATE_SATS_PER_KB
-            )
-            const newEstimatedCost = fixedCost + newMinimumFee
-            enoughFunds = totalFunds > newEstimatedCost
-
-            if (enoughFunds) {
-                estimatedCost = newEstimatedCost
-                break
-            }
-        }
-    }
-
-    if (!enoughFunds) {
-        throw new Error('Insufficient BCH balance to fund the transaction')
-    }
-
-    const change = totalFunds - estimatedCost
-    if (change > 546n) {
-        if (changeOutputIndex === -1) {
-            transaction.addOutput({
-                to: params.changeRecipientAddress || params.authkeyRecipientAddress,
-                amount: change
-            })
-            changeOutputIndex = transaction.outputs.length - 1
-        } else {
-            transaction.outputs[changeOutputIndex]!.amount = change
-        }
+    let hasEnoughFunds = totalFunds > estimatedCost
+    
+    while(funderUtxos.length > 0 && !hasEnoughFunds) {
+        const additionalFunderInput = funderUtxos.shift() as UtxoWithPath
+        transaction.addInput(
+            additionalFunderInput,
+            placeholderP2PKHUnlocker(additionalFunderInput.address)
+        )
+        spentUtxos.push(additionalFunderInput)
+        totalFunds += additionalFunderInput.satoshis
         transactionHex = transaction.build()
+
+        minimumFee = getMinimumFee(
+            // Taking change into consideration
+            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            DEFAULT_FEE_RATE_SATS_PER_KB
+        )
+        estimatedCost = fixedCost + minimumFee
+        hasEnoughFunds = totalFunds > estimatedCost
+        
+        if (hasEnoughFunds) break
     }
 
+    if (!hasEnoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
+
+    const change = totalFunds - estimatedCost 
+
+    if (change > 546n) { 
+        transaction.addOutput({
+            to: params.changeRecipientAddress || params.authkeyRecipientAddress, // Return to owner of authKey
+            amount: change
+        })
+        transactionHex = transaction.build()  // Rebuild with change
+    }
+    
     const sourceOutputs = spentUtxos.map((utxo) => {
         const args: UtxoToWcSourceOutputParams = {
             utxo
@@ -164,7 +162,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         transaction: {
             transaction: transactionHex,
             sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
-            userPrompt: 'Issue FTs from reserves',
+            userPrompt: 'Create New Token',
             broadcast: false
         },
         inputPaths: spentUtxos.map((utxo, inputIndex) => {
