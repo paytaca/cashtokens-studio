@@ -207,6 +207,7 @@ import { type SignTransactionRequest } from '@wizardconnect/core'
 import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { db } from 'src/core/client-db'
+import { getLockedAuthheadUtxos } from 'src/core/authguard'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
@@ -335,6 +336,7 @@ const mint = async () => {
         message: 'Uploading registry to IPFS...'
     })
 
+
     try {
         const decodedRecipient = decodeCashAddress(recipient.value)
         if (typeof decodedRecipient === 'string') {
@@ -404,6 +406,8 @@ const mint = async () => {
 
         const response = await manager.value!.signTransaction(restOfSignRequest)
 
+        loadingGroup({ message: 'Broadcasting, please wait...' })
+
         const broadcastResponse = await broadcast(response.signedTransaction)
 
         if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
@@ -427,9 +431,8 @@ const mint = async () => {
             txHash: broadcastResult.txid
         })
 
+
         loadingGroup()
-
-
 
         await db.saveActivity({
             event: `Mint ${mintOutputs.length} ${activeMinter.value?.identitySnapshot?.token?.symbol || activeMinter.value!.token!.category} NFT ${mintOutputs.length > 1 ? 's' : ''}`,
@@ -437,8 +440,31 @@ const mint = async () => {
             status: 'success'
         })
 
-        loadAuthkeys(wallet.value, true)
+        await loadAuthkeys(wallet.value, true)
+
         triggerRef(wallet)
+
+        let newAuthhead: DecoratedUtxo | undefined
+
+        if (activeAuthhead.value?.authkey) {
+            newAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value?.authkey]))?.find((utxo) => {
+                return `${utxo.txid}:${0}` === `${broadcastResult.txid}:${0}`
+            })
+
+        } else {
+            newAuthhead = (await wallet.value?.getUtxos({ sync: true })).find((utxo) => {
+                return `${utxo.txid}:${0}` === `${broadcastResult.txid}:${0}`
+            })
+        }
+
+        if (!newAuthhead) {
+            throw new Error(`The Authguard Vault failed to update it's contents (UTXOs). Please wait a few minutes before creating another transaction.`)
+        }
+
+        newAuthhead.identitySnapshot = activeAuthhead.value?.identitySnapshot
+        newAuthhead.identitySnapshotIdentifier = activeAuthhead.value?.identitySnapshotIdentifier
+
+        authguardStore.setActiveAuthhead(newAuthhead)
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -463,7 +489,6 @@ const mint = async () => {
                     }
                 })
             }
-
             router.push('/dashboard')
         })
     } catch (error: any) {
