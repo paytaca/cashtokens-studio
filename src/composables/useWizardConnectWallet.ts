@@ -3,7 +3,7 @@ import { useWizardConnect } from 'wizardconnect-vue'
 import { ref, shallowRef, watch } from 'vue'
 import { WizardConnectExternalWallet } from 'src/core/wallet'
 
-const wallet = shallowRef(new WizardConnectExternalWallet())
+const wallet = shallowRef(new WizardConnectExternalWallet({ network: import.meta.env.VITE_BCH_NETWORK}))
 const walletLasySync = ref<number>()
 const showQR = ref(false)
 const qrURI = ref<string | null>(null)
@@ -18,9 +18,7 @@ export const useWizardConnectWallet = () => {
         _wc = useWizardConnect({
             dappName: import.meta.env.VITE_APP_NAME as string,
             dappIcon: import.meta.env.VITE_APP_ICON_URL as string,
-            relayUrls: ['wss://relay.riften.net:443', 'wss://relay.cauldron.quest:443'],
-            maxReconnectAttempts: 10,
-            reconnectInterval: 10000,
+            relayUrls: ['wss://relay.riften.net:443', 'wss://relay.cauldron.quest:443']
         })
     }
 
@@ -54,13 +52,14 @@ export const useWizardConnectWallet = () => {
             const mgr = manager.value
             if (mgr) {
                 mgr.on('disconnect', (reason: DisconnectReason, message: string | undefined) => {
-                    console.log('Handle disconnect', reason, message)
-                    wallet.value = new WizardConnectExternalWallet()
+                    wallet.value = new WizardConnectExternalWallet({
+                        network: import.meta.env.VITE_BCH_NETWORK
+                    })
                 })
 
                 mgr.on('walletready', async (message: WalletReadyMessage) => {
-                    console.log('Handle wallet ready', message)
                     const session = message.session?.hdwalletv1 as { paths?: PathXpub[] } | undefined
+
                     if (session) {
                         await wallet.value!.initWallet(session)
                         wallet.value.getBalance({ sync: true })
@@ -81,10 +80,11 @@ export const useWizardConnectWallet = () => {
     }
 
     watch(state, async (newState, oldState) => {
-        console.log('manager', manager.value)
         if(newState === 'connected') {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
-                wallet.value = new WizardConnectExternalWallet()
+                wallet.value = new WizardConnectExternalWallet({
+                    network: import.meta.env.VITE_BCH_NETWORK
+                })
                 await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
                 await wallet.value.getBalance({ sync: true })
                 walletLasySync.value = Date.now()
