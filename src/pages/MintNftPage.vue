@@ -200,7 +200,7 @@ import { DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { mintNextNftSequence, mintNftSequence, mintNftMinters, isBroadcastSuccess } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { decodeCashAddress, vmNumberToBigInt } from '@bitauth/libauth'
-import { BaseWallet, delay, hexToBin } from 'mainnet-js-v3'
+import { BaseWallet, delay, hexToBin, NetworkType } from 'mainnet-js-v3'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { NftType, ParsableNftCollection, SequentialNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import { type SignTransactionRequest } from '@wizardconnect/core'
@@ -427,9 +427,11 @@ const mint = async () => {
             message: 'Broadcast success, awaiting tx propagation...'
         })
 
-        await new BaseWallet(import.meta.env.VITE_BCH_NETWORK).waitForTransaction({
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({
             txHash: broadcastResult.txid
         })
+
 
 
         loadingGroup()

@@ -50,7 +50,7 @@
                                     <div class="q-field__inner bg-dark rounded-borders flex justify-between"
                                         style="min-height: 3em; display: flex; align-items: center;">
                                         <q-chip
-                                            v-if="(authhead.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection)?.bytecode"
+                                            v-if="!(authhead.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection)?.bytecode"
                                             dark outline icon="mdi-counter" label="Sequential NFT Collection" />
                                         <q-chip v-else dark outline icon="mdi-hexadecimal"
                                             label="Parsable NFT Collection" />
@@ -102,9 +102,37 @@
                         </div>
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.unpublishedCaption') }}</div>
                         <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
-                            :rows-per-page-options="[0]" class="bg-dark border-radius-12">
+                            :rows-per-page-options="[0]" class="bg-dark border-radius-12" @row-click="onNftRowClick">
                             <template v-slot:body-cell-type="props">
-                                <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
+                                <q-td :props="props" class="text-mono">
+                                    <div class="flex items-center no-wrap q-gutter-x-md">
+                                        <div class="flex column items-center">
+                                            <q-avatar size="md">
+                                                <q-img v-if="props.row.nft?.uris?.icon"
+                                                    :src="ipfsToGatewayUrl(props.row.nft?.uris?.icon)!" fit="cover">
+                                                </q-img>
+                                                <q-img v-else
+                                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                                    fit="cover">
+                                                    <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon —
+                                                        generated
+                                                        placeholder</q-tooltip>
+                                                </q-img>
+                                            </q-avatar>
+                                            <span v-if="!props.row.nft?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                                style="line-height: 1;">No Icon</span>
+                                            <span v-else class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;"
+                                                </span>
+                                        </div>
+                                        <div>
+                                            <div class="text-bold">{{ props.row.nft.name }}</div>
+                                            <div class="icon-badge-hex text-grey-8">
+                                                <{{ props.row.type }}>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                </q-td>
                             </template>
                             <template v-slot:body-cell-name="props">
                                 <q-td :props="props">{{ props.row.nft.name }}</q-td>
@@ -154,15 +182,42 @@
                                 @click="refresh" class="q-mr-xs" />
                         </div>
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.publishedCaption') }}</div>
-                        <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat bordered dark
+                        <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat dark
                             :loading="publishedLoading" v-model:pagination="publishedPagination"
-                            @request="onPublishedRequest" @row-click="onPublishedRowClick"
-                            class="bg-dark border-radius-12">
+                            @request="onPublishedRequest" @row-click="onNftRowClick" class="bg-dark border-radius-12">
                             <template v-slot:body-cell-type="props">
-                                <q-td :props="props" class="text-mono">{{ props.row.type }}</q-td>
+                                <q-td :props="props" class="text-mono">
+                                    <div class="flex items-center no-wrap q-gutter-x-md">
+                                        <div class="flex column items-center">
+                                            <q-avatar size="md">
+                                                <q-img v-if="props.row.nft?.uris?.icon"
+                                                    :src="ipfsToGatewayUrl(props.row.nft?.uris?.icon)!" fit="cover">
+                                                </q-img>
+                                                <q-img v-else
+                                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                                    fit="cover">
+                                                    <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon —
+                                                        generated
+                                                        placeholder</q-tooltip>
+                                                </q-img>
+                                            </q-avatar>
+                                            <span v-if="!props.row.nft?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                                style="line-height: 1;">No Icon</span>
+                                            <span v-else class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;"
+                                                </span>
+                                        </div>
+                                        <div>
+                                            <div class="text-bold">{{ props.row.nft.name }}</div>
+                                            <div class="icon-badge-hex text-grey-8">
+                                                <{{ props.row.type }}>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </q-td>
                             </template>
                             <template v-slot:body-cell-name="props">
-                                <q-td :props="props">{{ props.row.nft.name }}</q-td>
+                                <q-td :props="props">{{ props.row.nft.name }} </q-td>
+
                             </template>
                             <template v-slot:no-data>
                                 <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
@@ -179,7 +234,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -196,7 +251,7 @@ import { decodeCashAddress } from '@bitauth/libauth'
 import { broadcast } from 'src/core/transaction/broadcast'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
-import { delay } from 'mainnet-js-v3'
+import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
@@ -208,11 +263,10 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const appStore = useAppStore()
-
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-
+const { loadAuthkeys, loadAuthheads } = authguardStore
 const {
     manager,
     wallet,
@@ -259,12 +313,14 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
             offset,
             limit
         })
+        console.log('RESULT', result)
         if (result) {
             publishedNfts.value = result.items
             publishedTotal.value = result.total
         }
     }
     catch (error) {
+        console.log('ERROR', error)
         $q.notify({
             type: 'warning',
             message: t('warning.errorLoadingPublishedNfts')
@@ -276,9 +332,11 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
 
 const refresh = async () => {
     try {
+        console.log('authhead', authhead.value)
         if (!authhead.value?.identitySnapshotIdentifier) return
         refreshing.value = true
         const { identity } = authhead.value.identitySnapshotIdentifier
+        console.log('identity', identity)
         await registryStore.loadRegistry(identity.authbase, true)
         await Promise.allSettled([
             loadUnpublishedNfts(),
@@ -323,8 +381,11 @@ const deleteNft = (nft: NftRecord) => {
 }
 
 const publishNfts = async () => {
+
     if (!authhead.value?.identitySnapshotIdentifier || unpublishedNfts.value.length === 0) return
+
     publishing.value = true
+
     const loadingGroup = $q.loading.show({
         group: 'mpop-lg',
         message: t('info.uploadingRegistryToIpfs')
@@ -333,7 +394,7 @@ const publishNfts = async () => {
     try {
 
         const { contentHash, identity } = authhead.value.identitySnapshotIdentifier
-        const types = unpublishedNfts.value.map(n => n.type)
+
         const bumpArtifact = await getRegistryWorker().bumpRegistry({
             originalContentHash: contentHash,
             bumpType: 'patch',
@@ -351,6 +412,8 @@ const publishNfts = async () => {
             message: t('transaction.waitingForSignature')
         })
 
+        await wallet.value.sync()
+
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
             funderUtxos: wallet.value.utxos as UtxoWithPath[],
@@ -361,51 +424,67 @@ const publishNfts = async () => {
             }
         })
 
+        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+
         const response = await manager.value!.signTransaction(publishRegistryRequest);
 
+        loadingGroup({ message: 'Broadcasting, please wait...' })
+
+        const broadcastResponse = await broadcast(response.signedTransaction)
+
+        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+
+        const broadcastResult = await broadcastResponse.json()
+
+        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+
+        await getRegistryWorker().commitBumpRegistry(contentHash, `${broadcastResult.txid}:0`)
+
         loadingGroup({
-            message: t('transaction.broadcasting')
+            message: 'Broadcast success, awaiting tx propagation...'
         })
 
-        const broadcastResponse = await broadcast(response.signedTransaction as string)
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({
+            txHash: broadcastResult.txid
+        })
 
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
-            if (isBroadcastSuccess(broadcastResult)) {
-                await getRegistryWorker().commitBumpRegistry(contentHash, `${broadcastResult.txid}:0`)
-                // await delay(2000)
-                const waitResult = await wallet.value.receive?.waitForTransaction({
-                    txHash: broadcastResult.txid
-                })
 
-                loadingGroup()
+        wallet.value.sync().then(async () => {
+            await loadAuthheads(true)
+            triggerRef(wallet)
+        })
 
-                $q.dialog({
-                    component: TransactionStatusDialog,
-                    componentProps: {
-                        statusType: 'success',
-                        statusText: t('success.registryPublication'),
-                        txid: broadcastResult.txid
-                    }
-                }).onOk(async () => {
-                    await registryStore.loadRegistry(identity.authbase, true)
-                    await loadPublishedNfts(0, 10)
-                    router.back()
-                })
-            } else {
-                throw new Error(broadcastResult.error)
+        await db.saveActivity({
+            event: `Published NFT metadata of ${authhead.value?.identitySnapshot?.token?.category || authhead.value.token?.category}`,
+            txid: broadcastResult.txid,
+            status: 'success'
+        })
+
+        loadingGroup()
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: t('success.registryPublication'),
+                txid: broadcastResult.txid
             }
-        }
+        }).onOk(async () => {
+            registryStore.loadRegistry(identity.authbase, true).then(async () => {
+                await onPublishedRequest({ pagination: { page: 1, rowsPerPage: 5 } })
+            })
+        })
     } catch (error: any) {
         $q.notify({ type: 'Error', message: error.message })
     } finally {
         publishing.value = false
+        loadingGroup()
     }
 }
 
 const publishedColumns: QTableColumn[] = [
-    { name: 'type', label: 'Type', field: 'type', align: 'left', sortable: true },
-    { name: 'name', label: 'Name', field: 'name', align: 'left', sortable: false },
+    { name: 'type', label: 'NFT', field: 'type', align: 'left', sortable: true },
 ]
 
 const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
@@ -428,7 +507,7 @@ const openMintPage = () => {
     router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/mint')
 }
 
-const onPublishedRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
+const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
     const id = authhead.value?.identitySnapshotIdentifier
     const bytecode = (authhead.value?.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection | undefined)?.bytecode
     registryStore.setActiveNft({
