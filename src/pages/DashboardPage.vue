@@ -103,6 +103,7 @@
             <div class="q-mb-sm text-grey-5 text-caption">
               Tokens you have authority and control over, including their metadata.
             </div>
+            <template v-if="authheads.length > 0">
             <div class="row q-gutter-sm q-mb-md">
               <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                 :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
@@ -286,6 +287,26 @@
                 </q-td>
               </template>
             </q-table>
+          </template>
+          <template v-else>
+            <div class="bg-dark q-pa-lg rounded-borders">
+              <div class="flex flex-center column q-py-lg">
+                <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px;">
+                  <div class="playing-card" style="z-index: 1; transform: rotate(-12deg) translateX(22px); margin-right: -30px;">
+                    <q-icon name="brush" size="32px" color="grey-5" />
+                  </div>
+                  <div class="playing-card" style="z-index: 2; transform: rotate(-2deg);">
+                    <q-icon name="token" size="32px" color="grey-5" />
+                  </div>
+                  <div class="playing-card" style="z-index: 3; transform: rotate(8deg) translateX(-22px); margin-left: -30px;">
+                    <q-icon name="auto_awesome" size="32px" color="grey-5" />
+                  </div>
+                </div>
+                <div class="text-grey-5 text-h6 q-mb-lg">No created tokens yet</div>
+                <q-btn color="primary" icon="add" label="Create Token" unelevated size="lg" @click="router.push({ name: 'create-token' })" />
+              </div>
+            </div>
+          </template>
           </q-tab-panel>
 
           <!-- Collected: Wallet Token UTXOs Table -->
@@ -1356,5 +1377,18 @@ onUnmounted(() => {
 
 .border-grey-8 {
   border: 1px solid #424242;
+}
+
+.playing-card {
+  width: 80px;
+  height: 110px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #1e1e1e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  flex-shrink: 0;
 }
 </style>
