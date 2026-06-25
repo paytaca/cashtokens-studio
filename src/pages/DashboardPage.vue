@@ -53,6 +53,7 @@
                 <span class="text-grey-5 text-weight-medium text-no-wrap" style="min-width: 120px;">BCH Balance:</span>
                 <span class="text-weight-bold text-mono text-grey-4 q-mr-xs">{{ formatBch(bchBalance) }}</span>
                 <CopyText :text="formatBch(bchBalance)" />
+                <q-btn icon="refresh" @click=""></q-btn>
               </div>
             </div>
 
@@ -539,6 +540,18 @@ const appStore = useAppStore()
 
 const { loadRegistry, fetchIdentitySnapshot } = useRegistryStore()
 
+
+
+
+const activities = ref<any[]>([])
+const activityLoading = ref(false)
+const activitySearchQuery = ref('')
+const walletWatchers = ref<{
+  stopWatchingReceiveWallet?: Function,
+  stopWatchingChangeWallet?: Function,
+  stopWatchingDefiWallet?: Function,
+}>({})
+
 const primaryXPub = computed(() =>
   wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
 )
@@ -547,9 +560,6 @@ const primaryAddress = computed(() => {
   return wallet.value.getDepositAddress(0)
 })
 
-const activities = ref<any[]>([])
-const activityLoading = ref(false)
-const activitySearchQuery = ref('')
 
 const activityColumns: QTableColumn[] = [
   {
@@ -1142,11 +1152,17 @@ onMounted(async () => {
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
   await loadActivities()
-  console.log('wallet.value.getDepositAddress(0)', wallet.value.getDepositAddress(0))
+  walletWatchers.value.stopWatchingReceiveWallet = await wallet.value?.receive?.watchStatus(async (status, address) => {
+    await wallet.value?.sync()
+    triggerRef(wallet)
+  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', handleHashChange)
+  walletWatchers.value?.stopWatchingReceiveWallet?.()
+  walletWatchers.value?.stopWatchingChangeWallet?.()
+  walletWatchers.value?.stopWatchingDefiWallet?.()
 })
 </script>
 
