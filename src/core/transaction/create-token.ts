@@ -131,6 +131,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         spentUtxos.push(additionalFunderInput)
         totalFunds += additionalFunderInput.satoshis
         transactionHex = transaction.build()
+
         unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
 
         minimumFee = getMinimumFee(
