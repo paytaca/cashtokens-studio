@@ -107,8 +107,7 @@
                                         class="full-width" />
 
                                     <q-input v-if="tokenType === 'Fungible' || tokenType === 'Mixed'"
-                                        v-model.number="token.amount" type="number" label="Token Amount *" filled
-                                        :rules="[
+                                        v-model="token.amount" label="Token Amount *" filled :rules="[
                                             val => !!val || 'Amount is required',
                                             val => val >= 0 || 'Invalid amount',
                                             validateVmNumber
@@ -421,7 +420,6 @@ const onGenerateGenesisInput = async () => {
 
         triggerRef(wallet)
 
-        console.log('Wallet.Utxos', filterGenesisInputs(wallet.value.utxos || []))
         $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
@@ -483,6 +481,8 @@ const onSubmit = async () => {
             delete identitySnapshot.value.token!.nfts
         }
         identitySnapshot.value.token!.category = authbase
+        identitySnapshot.value.token!.decimals = computedDecimals.value ?? 0
+        identitySnapshot.value.token!.decimals = Number(identitySnapshot.value.token!.decimals)
 
         const { contentHash: ch, registry } = createTokenRegistry({
             authbase,
@@ -490,7 +490,6 @@ const onSubmit = async () => {
             authKeyNftCategory: authKeyInput.token?.category || authKeyInput.txid
         })
 
-        console.log('REGISTRY', registry)
         const validatedRegistryOrError = importMetadataRegistry(registry)
 
         if (typeof (validatedRegistryOrError) === 'string') throw new Error(validatedRegistryOrError)
@@ -519,7 +518,6 @@ const onSubmit = async () => {
                     message: `Upload success, uri = ${uris[0]}`
                 })
             } catch (error) {
-                console.log('ERROR', error)
                 loadingGroup()
                 return $q.notify({
                     type: 'Error',
@@ -541,16 +539,21 @@ const onSubmit = async () => {
             message: 'Preparing transaction...'
         })
 
+        if (uris.length === 0) throw new Error('Error uploading registry to IPFS')
+
+        const tokenSupply = BigInt(token.value.amount.replace('.', ''))
+
         const createTokenArgs = {
             genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
             authkeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
             authkeyRecipientAddress: wallet.value.getTokenDepositAddress(0) as string,
-            tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
+            tokenSpec: { ...token.value, amount: tokenSupply },
             sourceUtxos: wallet.value.utxos,
             registryPublicationData: {
                 contentHash,
                 uris
-            }
+            },
+            feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
         }
 
         loadingGroup({
@@ -559,8 +562,6 @@ const onSubmit = async () => {
         let response: any = {}
 
         const createTokenSignRequest = createToken(createTokenArgs)
-
-        console.log('CREATE TOKEN')
 
         response = await manager.value?.signTransaction(createTokenSignRequest);
 
@@ -612,7 +613,6 @@ const onSubmit = async () => {
         })
 
     } catch (error) {
-        console.log('Error', error)
         if (contentHash) {
             await db.registry.where('contentHash').equals(contentHash).delete()
         }
@@ -680,7 +680,6 @@ watch(() => wallet.value.ready, (ready, readyPrev) => {
 onMounted(async () => {
     await wallet.value.sync()
     triggerRef(wallet)
-    console.log('wallet utxos', wallet.value.utxos)
     if (route.query.iconCid) {
         identitySnapshot.value.uris = {
             icon: `ipfs://${route.query.iconCid}`
