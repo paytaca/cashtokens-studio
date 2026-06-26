@@ -1,7 +1,7 @@
 import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "@bitauth/libauth"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
@@ -17,10 +17,13 @@ export type CreateTokenParams = {
     registryPublicationData: {
         contentHash: string,
         uris: string[]
-    }
+    },
+    feeRateSatsPerKb?: bigint
 }
 
 export function createToken(params: CreateTokenParams): SignTransactionRequest {
+
+    const feeRateSatsPerKb = params.feeRateSatsPerKb || DEFAULT_FEE_RATE_SATS_PER_KB
 
     const sourceUtxos = [...params.sourceUtxos] as UtxoWithPath[]
 
@@ -110,9 +113,11 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
     }
     const opReturnOutputByteSize = encodeTransactionOutput(opReturnOutput)
 
+    let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
+
     let minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE + opReturnOutputByteSize.byteLength),
-        DEFAULT_FEE_RATE_SATS_PER_KB
+        BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE + opReturnOutputByteSize.byteLength),
+        feeRateSatsPerKb
     )
     let estimatedCost = fixedCost + minimumFee
     let hasEnoughFunds = totalFunds > estimatedCost
@@ -126,11 +131,12 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         spentUtxos.push(additionalFunderInput)
         totalFunds += additionalFunderInput.satoshis
         transactionHex = transaction.build()
+        unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
 
         minimumFee = getMinimumFee(
             // Taking change into consideration
-            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
-            DEFAULT_FEE_RATE_SATS_PER_KB
+            BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            feeRateSatsPerKb
         )
         estimatedCost = fixedCost + minimumFee
         hasEnoughFunds = totalFunds > estimatedCost
