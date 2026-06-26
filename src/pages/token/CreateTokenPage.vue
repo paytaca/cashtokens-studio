@@ -2,103 +2,182 @@
     <q-page class="bg-dark-page">
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat class="bg-dark">
+                <q-card flat class="bg-dark rounded-borders">
+                    {{ stringify(genesisInputs) }}
+                    <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
+                        <span>Create Token</span>
+                        <q-icon name="mdi-creation" size="lg" />
+                    </q-card-title>
                     <q-card-section>
-                        <div class="text-h5">Create Token</div>
-                    </q-card-section>
-                    <q-card-section v-if="genesisInputs.length === 0">
-                        <q-banner class="text-justify">
-                            Creating a new token (token genesis) requires a `genesis input`. A valid genesis input is
-                            just unspent BCH which is the 1st output of a previous transaction. <q-btn no-caps dense
-                                text-color="primary" @click="onGenerateGenesisInput">Click here to generate</q-btn>
-                        </q-banner>
-                    </q-card-section>
-                    <q-card-section v-else-if="authkeys.length === 0 && genesisInputs.length < 2">
-                        <q-banner>
-                            Creating a new token in CashTokens Studio requires an AuthKey. CashTokens Studio didn't find
-                            any
-                            AuthKey NFT from your wallet. We need to generate an AuthKey on the fly, this is a `token
-                            genesis`
-                            transaction so it also need an unspent BCH that was the first output of a previous
-                            transaction (genesis input).<q-btn no-caps dense text-color="primary"
-                                @click="onGenerateGenesisInput">Click here to generate</q-btn>
-                        </q-banner>
-                    </q-card-section>
-                    <q-card-section>
-                        <q-form class="q-gutter-y-md" greedy>
-                            <q-select v-model="authKeySelected" :options="authKeyOptions" label="AuthKey *" filled
-                                emit-value map-options :rules="[val => !!val || 'Type is required']"
-                                class="full-width" />
+                        <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-dark" class="bg-dark">
+                            <q-step :name="1" title="Token ID" icon="vpn_key" :done="genesisInputs.length >= 1"
+                                header-nav>
+                                <q-separator class="q-my-lg" />
+                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
+                                    The Token ID/Category comes from one of your unspent BCH's txid.
+                                </q-banner>
+                                <div v-if="genesisInputs.length === 0">
+                                    <FormField>
+                                        <label>Token ID/Category candidate</label>
+                                        <div class="flex items-center q-gutter-x-md">
+                                            <span class="text-caption grey-6">No available Token ID/Category
+                                                candidate <q-icon name="info"></q-icon></span>
+                                            <q-btn flat no-caps dense color="secondary" @click="onGenerateGenesisInput">
+                                                Click Here to Generate
+                                            </q-btn>
+                                        </div>
+                                    </FormField>
+                                </div>
+                                <div v-else>
+                                    <FormField>
+                                        <label>Token ID/Category candidate</label>
+                                        <q-input :model-value="genesisInputs[0]!.txid" readonly outlined>
+                                            <template v-slot:prepend>
+                                                <q-icon name="done_all" color="bch"></q-icon>
+                                            </template>
+                                            <template v-slot:append>
+                                                <CopyText :text="genesisInputs[0]!.txid" />
 
-                            <q-select v-model="tokenType" :options="typeOptions" label="Type *" filled emit-value
-                                map-options :rules="[val => !!val || 'Type is required']" class="full-width" />
+                                            </template>
+                                        </q-input>
+                                    </FormField>
+                                </div>
+                                <q-stepper-navigation class="flex justify-end q-gutter-sm">
+                                    <q-btn :disable="genesisInputs.length === 0" @click="step = 2" color="primary"
+                                        label="Next" />
+                                </q-stepper-navigation>
+                            </q-step>
 
-                            <!-- Fungible Logic -->
-                            <q-input v-if="tokenType === 'Fungible' || tokenType === 'Mixed'"
-                                v-model.number="token.amount" type="number" label="Token Amount *" filled :rules="[
-                                    val => !!val || 'Amount is required',
-                                    val => val >= 0 || 'Invalid amount',
-                                    validateVmNumber
-                                ]" class="full-width" clearable>
-                                <template v-slot:append>
-                                    <q-btn @click="token.amount = MAX_VM_NUMBER.toString()"
-                                        text-color="warning">Max</q-btn>
+                            <q-step :name="2" title="Storage" icon="lock" :done="isStep2Done" header-nav dense>
+                                <q-separator class="q-my-lg" />
+                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
+                                    Choose where to store your token's identity — either in a new Authguard Vault or an
+                                    existing one.
+                                </q-banner>
+                                <FormField>
+                                    <label>Token Identity Storage Option</label>
+                                    <q-option-group v-model="vaultMode" :options="[
+                                        { label: 'New (Recommended)', value: 'new' },
+                                        { label: 'Existing', value: 'existing', disable: authkeys.length === 0 },
+                                    ]" type="radio" inline dense class="text-caption" />
+                                </FormField>
+
+                                <template v-if="vaultMode === 'new'">
+                                    <FormField class="q-mt-md">
+                                        <label>Authguard Vault Key ID</label>
+                                        <div v-if="genesisInputs.length < 2" class="flex items-center q-gutter-x-md">
+                                            <span class="text-caption grey-6">No available Key candidate <q-icon
+                                                    name="info"></q-icon></span>
+                                            <q-btn flat no-caps dense color="secondary" @click="onGenerateGenesisInput">
+                                                Click Here to Generate
+                                            </q-btn>
+                                        </div>
+                                        <q-input v-else :model-value="genesisInputs[1]!.txid" readonly>
+                                            <template v-slot:prepend>
+                                                <q-icon name="done_all" color="bch"></q-icon>
+                                            </template>
+                                            <template v-slot:append>
+                                                <CopyText :text="genesisInputs[1]!.txid" />
+                                            </template>
+                                        </q-input>
+                                    </FormField>
                                 </template>
-                            </q-input>
-
-                            <!-- Show Decimals only if > 0 -->
-                            <q-input v-if="computedDecimals > 0" :model-value="computedDecimals" label="Decimals" filled
-                                readonly hint="Auto-computed" class="full-width" />
-
-                            <!-- Non-Fungible Logic -->
-                            <template v-if="tokenType.startsWith('Non-Fungible') || tokenType === 'Mixed'">
-                                <q-select v-model="token.nft.capability" :options="['none', 'mutable', 'minting']"
-                                    label="Capability *" filled :rules="[val => !!val || 'Capability is required']"
-                                    class="full-width" />
-
-                                <q-input v-model="token.nft.commitment" label="Commitment (Optional)" filled
-                                    hint="Hex String" class="full-width" />
-                            </template>
-
-                            <q-input v-model="identitySnapshot.name" label="Name *" filled
-                                :rules="[val => !!val || 'Name is required']" class="full-width" />
-
-                            <q-input v-model="identitySnapshot.description" label="Description" filled
-                                class="full-width" />
-
-                            <q-input v-model="identitySnapshot.token!.symbol" label="Token Symbol *" filled type="text"
-                                @update:model-value="val => identitySnapshot.token!.symbol = (val as string)?.toUpperCase()"
-                                :rules="[val => !!val || 'Symbol is required']" class="full-width" />
-
-                            <q-input v-model="identitySnapshot.uris!.icon" filled label="Icon"
-                                placeholder="Enter icon's URL or upload an icon" class="full-width">
-                                <template v-slot:prepend>
-                                    <q-avatar>
-                                        <q-img v-if="tokenIconPreviewUri" :src="tokenIconPreviewUri">
-                                        </q-img>
-                                        <q-icon v-else name="broken_image"></q-icon>
-                                    </q-avatar>
+                                <template v-else>
+                                    <FormField class="q-mt-md">
+                                        <label for="">Authguard Vault Address</label>
+                                        <q-select v-model="authKeySelected" :options="existingVaultOptions" outlined
+                                            emit-value map-options />
+                                    </FormField>
                                 </template>
-                                <template v-slot:append>
-                                    <div @click.stop="iconFileRef.pickFiles()">
-                                        <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
-                                        <span v-else>
-                                            <q-btn icon="upload_file" class="cursor-pointer" text-color="warning"
-                                                label="Upload Icon" />
-                                        </span>
+                                <q-stepper-navigation class="flex justify-end q-gutter-sm">
+                                    <q-btn flat @click="step = 1" label="Back" />
+                                    <q-btn @click="step = 3" color="primary" label="Next"
+                                        :disable="vaultMode === 'new' ? genesisInputs.length < 2 : !authKeySelected" />
+                                </q-stepper-navigation>
+                            </q-step>
+
+                            <q-step :name="3" title="Spec" icon="token" header-nav>
+                                <q-separator class="q-my-lg" />
+                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
+                                    Configure your token's specifications including type, amount, name, and metadata.
+                                </q-banner>
+                                <div class="q-gutter-y-md">
+                                    <q-select v-model="tokenType" :options="typeOptions" label="Type *" filled
+                                        emit-value map-options :rules="[val => !!val || 'Type is required']"
+                                        class="full-width" />
+
+                                    <q-input v-if="tokenType === 'Fungible' || tokenType === 'Mixed'"
+                                        v-model.number="token.amount" type="number" label="Token Amount *" filled
+                                        :rules="[
+                                            val => !!val || 'Amount is required',
+                                            val => val >= 0 || 'Invalid amount',
+                                            validateVmNumber
+                                        ]" class="full-width" clearable>
+                                        <template v-slot:append>
+                                            <q-btn @click="token.amount = MAX_VM_NUMBER.toString()"
+                                                text-color="warning">Max</q-btn>
+                                        </template>
+                                        <template v-slot:hint>
+                                            Example: 1000(No decimals), 2000.00 (2 decimals)
+                                        </template>
+                                    </q-input>
+
+                                    <q-input v-if="computedDecimals > 0" :model-value="computedDecimals"
+                                        label="Decimals" filled readonly hint="Auto-computed" class="full-width" />
+
+                                    <template v-if="tokenType.startsWith('Non-Fungible') || tokenType === 'Mixed'">
+                                        <q-select v-model="token.nft.capability"
+                                            :options="['none', 'mutable', 'minting']" label="Capability *" filled
+                                            :rules="[val => !!val || 'Capability is required']" class="full-width" />
+                                        <q-input v-model="token.nft.commitment" label="Commitment (Optional)" filled
+                                            hint="Hex String" class="full-width" />
+                                    </template>
+
+                                    <q-input v-model="identitySnapshot.name" label="Name *" filled
+                                        :rules="[val => !!val || 'Name is required']" class="full-width" />
+
+                                    <q-input v-model="identitySnapshot.description" label="Description" filled
+                                        class="full-width" />
+
+                                    <q-input v-model="identitySnapshot.token!.symbol" label="Token Symbol *" filled
+                                        type="text"
+                                        @update:model-value="val => identitySnapshot.token!.symbol = (val as string)?.toUpperCase()"
+                                        :rules="[val => !!val || 'Symbol is required']" class="full-width" />
+
+                                    <q-input v-model="identitySnapshot.uris!.icon" filled label="Icon"
+                                        placeholder="Enter icon's URL or upload an icon" class="full-width">
+                                        <template v-slot:prepend>
+                                            <q-avatar>
+                                                <q-img v-if="tokenIconPreviewUri" :src="tokenIconPreviewUri">
+                                                </q-img>
+                                                <q-icon v-else name="broken_image"></q-icon>
+                                            </q-avatar>
+                                        </template>
+                                        <template v-slot:append>
+                                            <div @click.stop="iconFileRef.pickFiles()">
+                                                <q-spinner-box v-if="iconFileUploading" color="warning"></q-spinner-box>
+                                                <span v-else>
+                                                    <q-btn icon="upload_file" class="cursor-pointer"
+                                                        text-color="warning" label="Upload Icon" />
+                                                </span>
+                                            </div>
+                                        </template>
+                                    </q-input>
+
+                                    <q-file ref="iconFileRef" v-model="iconFile"
+                                        @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
+                                        :disable="iconFileUploading" outlined bottom-slots class="hidden">
+                                    </q-file>
+                                </div>
+                                <q-stepper-navigation>
+                                    <div class="flex justify-end q-gutter-sm">
+                                        <q-btn flat @click="step = 2" label="Back" />
+                                        <q-btn @click="onSubmit" color="primary" label="Create Token" />
                                     </div>
-                                </template>
-                            </q-input>
-                        </q-form>
-                        <q-file ref="iconFileRef" v-model="iconFile"
-                            @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
-                            :disable="iconFileUploading" outlined bottom-slots class="hidden">
-                        </q-file>
+                                </q-stepper-navigation>
+                            </q-step>
+                        </q-stepper>
                     </q-card-section>
-                    <q-card-actions>
-                        <q-btn label="Create Token" @click="onSubmit" color="primary" class="full-width"
-                            :disable="genesisInputs.length === 0 || authkeys.length === 0" />
-                    </q-card-actions>
                 </q-card>
             </div>
         </div>
@@ -107,35 +186,45 @@
 
 <script setup lang="ts">
 
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { MAX_VM_NUMBER } from 'src/core/constants'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
 import { uploadFile } from 'src/core/ipfs/upload-file'
-import { useWizardConnect } from 'src/composables/useWizardConnect_'
 import { NFTCapability, Utxo } from 'mainnet-js-v3'
 import { shortenTokenId } from 'src/core/utils'
 import { UtxoWithPath } from 'src/core/types'
-import { createToken } from 'src/core/transaction'
+import { createToken, isBroadcastSuccess } from 'src/core/transaction'
 import { createTokenRegistry } from 'src/core/bcmr'
 import { db } from 'src/core/client-db'
 import { useRoute, useRouter } from 'vue-router'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { createGenesisInput } from 'src/core/transaction/create-genesis-input'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { filterAuthKeys } from 'src/core/authguard'
+import { filterAuthKeys, getAuthguardContractAddress } from 'src/core/authguard'
+import { shortenCashAddress } from 'src/core/utils'
+import FormField from 'src/components/FormField.vue'
 import { filterGenesisInputs } from 'src/core/wallet'
 import { TokenType } from 'src/core/types'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { BaseWallet } from 'mainnet-js-v3'
+import { useAuthguardStore } from 'src/stores/authguard'
+import { stringify, importMetadataRegistry } from 'bitauth-libauth-v3'
+import { NetworkType } from 'mainnet-js'
+import CopyText from 'src/components/CopyText.vue'
+import { DEFAULT_TOKEN_VALUE } from 'src/apps'
 
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const {
-    wzDappMgr,
-    externalWallet
-} = useWizardConnect()
+    manager,
+    wallet
+} = useWizardConnectWallet()
 
+const authguardStore = useAuthguardStore()
+const { loadAuthkeys } = authguardStore
 
 const typeOptions: TokenType[] = ['Fungible', 'NonFungible', 'Mixed']
 
@@ -176,6 +265,9 @@ const token = ref({
     }
 })
 
+const vaultMode = ref<'new' | 'existing'>('new')
+const step = ref(1)
+const stepperRef = ref()
 const tokenType = ref<TokenType>(typeOptions[0]!)
 const iconFile = ref()
 const iconFileRef = ref()
@@ -198,6 +290,22 @@ const authKeyOptions = computed(() => {
     }
     return options
 })
+
+const isStep2Done = computed(() =>
+    vaultMode.value === 'new'
+        ? genesisInputs.value.length >= 2
+        : !!authKeySelected.value
+)
+
+const existingVaultOptions = computed(() =>
+    authkeys.value.map(u => ({
+        label: shortenCashAddress(getAuthguardContractAddress({
+            authkeyTokenId: u.token!.category as string,
+            network: import.meta.env.VITE_BCH_NETWORK as any
+        })),
+        value: u
+    }))
+)
 
 const authkeys = ref<UtxoWithPath[]>([])
 const genesisInputs = ref<UtxoWithPath[]>([])
@@ -236,40 +344,100 @@ const validateVmNumber = (val: string) => {
 }
 
 const onGenerateGenesisInput = async () => {
-    try {
-        if (!externalWallet.value.ready) {
-            $q.notify({ message: 'Wallet Not Initialized' })
-            return
-        }
+    const loadingGroup = $q.loading.show({
+        group: 'ctlg',
+        message: 'Preparing. Checking wallet for inputs...'
+    })
 
-        const funderUtxos = (externalWallet.value.utxos || []) as UtxoWithPath[]
+    try {
+
+        loadingGroup({
+            message: 'Checking wallet for inputs...'
+        })
+
+        const genesisInputCandidates = new Set()
+
+        genesisInputs.value.forEach((utxo) => {
+            genesisInputCandidates.add(`$${utxo.txid}:0`)
+        })
+
+        const funderUtxos = ((wallet.value.utxos || []) as UtxoWithPath[]).filter((utxo) => {
+            return !genesisInputCandidates.has(`${utxo.txid}:0`) || utxo.satoshis > DEFAULT_TOKEN_VALUE
+        })
+
         if (funderUtxos.length === 0) {
             $q.notify({ type: 'Error', message: 'Insufficient BCH balance' })
             return
         }
 
-        const signRequest = createGenesisInput({
-            funderUtxos,
-            network: import.meta.env.VITE_BCH_NETWORK as any
+        loadingGroup({
+            message: 'Preparing transaction...'
         })
 
-        const response = await wzDappMgr.value.signTransaction(signRequest)
+        const signRequest = createGenesisInput({
+            recipientAddress: wallet.value.getDepositAddress(0),
+            funderUtxos,
+            network: import.meta.env.VITE_BCH_NETWORK as any,
+            feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
+        })
+
+        loadingGroup({
+            message: 'Waiting for approval. Please check your wallet...'
+        })
+        let response: any = {}
+
+        response = await manager.value?.signTransaction(signRequest);
+
+        loadingGroup({
+            message: 'Broadcasting transaction, please wait...'
+        })
+
         const broadcastResponse = await broadcast(response.signedTransaction)
 
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
-            if (broadcastResult.success) {
-                $q.notify({
-                    type: 'positive',
-                    message: `Genesis input created: ${shortenTokenId(broadcastResult.txid)}`
-                })
-                await externalWallet.value.sync()
-                genesisInputs.value = filterGenesisInputs(externalWallet.value.utxos || [])
-                authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as UtxoWithPath[]
+        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+
+        const broadcastResult = await broadcastResponse.json()
+
+        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+
+        loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+        })
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({
+            txHash: broadcastResult.txid
+        })
+
+        loadingGroup()
+
+        await db.saveActivity({
+            event: `Created genesis input`,
+            txid: broadcastResult.txid,
+            status: 'success'
+        })
+
+        await wallet.value.sync()
+
+        triggerRef(wallet)
+
+        console.log('Wallet.Utxos', filterGenesisInputs(wallet.value.utxos || []))
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: `Successfully created genesis input!`,
+                txid: broadcastResult.txid
             }
-        }
+        }).onOk(() => {
+            genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
+            authkeys.value = filterAuthKeys(wallet.value.utxos || []) as UtxoWithPath[]
+        })
+
     } catch (error) {
         $q.notify({ type: 'Error', message: `Error: ${error}` })
+    } finally {
+        loadingGroup()
     }
 }
 
@@ -284,7 +452,7 @@ const onSubmit = async () => {
 
     try {
 
-        if (!externalWallet?.value?.utxos || externalWallet.value?.utxos?.length === 0) {
+        if (!wallet?.value?.utxos || wallet.value?.utxos?.length === 0) {
             return $q.notify({
                 type: 'Error',
                 message: 'Insufficient balance'
@@ -315,11 +483,17 @@ const onSubmit = async () => {
             delete identitySnapshot.value.token!.nfts
         }
         identitySnapshot.value.token!.category = authbase
+
         const { contentHash: ch, registry } = createTokenRegistry({
             authbase,
             identitySnapshot: JSON.parse(JSON.stringify(identitySnapshot.value)),
             authKeyNftCategory: authKeyInput.token?.category || authKeyInput.txid
         })
+
+        console.log('REGISTRY', registry)
+        const validatedRegistryOrError = importMetadataRegistry(registry)
+
+        if (typeof (validatedRegistryOrError) === 'string') throw new Error(validatedRegistryOrError)
 
         contentHash = ch
 
@@ -333,7 +507,6 @@ const onSubmit = async () => {
         const registryJson = JSON.stringify(registry)
 
         if (uris?.length === 0) {
-
             loadingGroup({
                 message: 'Uploading token registry to IPFS...'
             })
@@ -371,9 +544,9 @@ const onSubmit = async () => {
         const createTokenArgs = {
             genesisInputUtxoId: `${genesisInput.txid}:${genesisInput.vout}` as `${string}:${number}`,
             authkeyUtxoId: `${authKeyInput.txid}:${authKeyInput.vout}` as `${string}:${number}`,
-            authkeyRecipientAddress: externalWallet.value.getTokenDepositAddress(0) as string,
+            authkeyRecipientAddress: wallet.value.getTokenDepositAddress(0) as string,
             tokenSpec: { ...token.value, amount: BigInt(token.value.amount) },
-            sourceUtxos: externalWallet.value.utxos,
+            sourceUtxos: wallet.value.utxos,
             registryPublicationData: {
                 contentHash,
                 uris
@@ -387,7 +560,9 @@ const onSubmit = async () => {
 
         const createTokenSignRequest = createToken(createTokenArgs)
 
-        response = await wzDappMgr.value.signTransaction(createTokenSignRequest);
+        console.log('CREATE TOKEN')
+
+        response = await manager.value?.signTransaction(createTokenSignRequest);
 
         loadingGroup({
             message: 'Broadcasting transaction, please wait...'
@@ -395,23 +570,49 @@ const onSubmit = async () => {
 
         const broadcastResponse = await broadcast(response.signedTransaction)
 
+        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
 
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
+        const broadcastResult = await broadcastResponse.json()
 
-            await db.setRegistryPublished(authbase, contentHash)
+        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
 
-            $q.dialog({
-                component: TransactionStatusDialog,
-                componentProps: {
-                    statusType: 'success',
-                    statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make Sure you don't lose it.`,
-                    txid: broadcastResult.txid
-                }
-            })
-        }
+        await db.setRegistryPublished(authbase, contentHash)
+
+        loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+        })
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({
+            txHash: broadcastResult.txid
+        })
+
+
+        loadingGroup()
+
+        await db.saveActivity({
+            event: `Created ${identitySnapshot.value.token!.symbol} Token`,
+            txid: broadcastResult.txid,
+            status: 'success'
+        })
+
+        await loadAuthkeys(wallet.value, true)
+
+        triggerRef(wallet)
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make Sure you don't lose it.`,
+                txid: broadcastResult.txid
+            }
+        }).onOk(() => {
+            router.push('/dashboard#created')
+        })
 
     } catch (error) {
+        console.log('Error', error)
         if (contentHash) {
             await db.registry.where('contentHash').equals(contentHash).delete()
         }
@@ -470,22 +671,36 @@ watch(() => authKeyOptions.value, (options) => {
     }
 })
 
-watch(() => externalWallet.value.ready, (ready, readyPrev) => {
+watch(() => wallet.value.ready, (ready, readyPrev) => {
     if (ready !== readyPrev) {
-        authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as Utxo[]
+        authkeys.value = filterAuthKeys(wallet.value.utxos || []) as Utxo[]
     }
 })
 
-onMounted(() => {
+onMounted(async () => {
+    await wallet.value.sync()
+    triggerRef(wallet)
+    console.log('wallet utxos', wallet.value.utxos)
     if (route.query.iconCid) {
         identitySnapshot.value.uris = {
             icon: `ipfs://${route.query.iconCid}`
         }
     }
-    if (externalWallet.value.ready) {
-        authkeys.value = filterAuthKeys(externalWallet.value.utxos || []) as UtxoWithPath[]
-        genesisInputs.value = filterGenesisInputs(externalWallet.value.utxos || [])
+    if (wallet.value.ready) {
+        authkeys.value = filterAuthKeys(wallet.value.utxos || []) as UtxoWithPath[]
+        genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
     }
 })
 
 </script>
+
+<style lang="scss" scoped>
+:deep(.q-stepper__header) {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+:deep(.q-stepper--horizontal .q-stepper__step-inner) {
+    padding: 0px
+}
+</style>
