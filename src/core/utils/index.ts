@@ -5,9 +5,8 @@ export function shortenTokenId(tokenId: string) {
 }
 
 export function shortenCashAddress(address: string) {
-    return (address || '').replace(address.substring(15, 50), '...')
+    return (address || '').replace(address.substring(15, 45), '...')
 }
-
 
 export function formatCurrency(amount: number|bigint, customSymbol: string, decimals?: number) {
 

@@ -52,6 +52,14 @@ export const useRegistryStore = defineStore('registry-store', () => {
     }
 
     const fetchIdentitySnapshot = async (category: string) => {
+
+        const identitySnapshot = await getIdentitySnapshotByCategory(category)
+
+        if (identitySnapshot) {
+            identitySnapshotCache.value[category] = identitySnapshot
+            return identitySnapshot
+        }
+
         if (identitySnapshotCache.value[category]) {
             return identitySnapshotCache.value[category]
         }

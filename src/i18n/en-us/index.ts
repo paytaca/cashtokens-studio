@@ -115,9 +115,9 @@ export default {
             versionMinorUpgrade: 'Minor Change',
             versionMajorUpgrade: 'Major Change',
             unpublishedNfts: 'Unpublished NFTs',
-            unpublishedCaption: 'These NFTs are not yet published on chain',
+            unpublishedCaption: 'These are the NFT metadata are not yet published.',
             published: 'Published NFTs',
-            publishedCaption: 'These NFTs are published on chain',
+            publishedCaption: 'These are the NFT metadata you have revelealed/published on chain',
             nftCategory: 'NFT Category'
         }
     },
