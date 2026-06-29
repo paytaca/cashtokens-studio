@@ -50,14 +50,22 @@
                                     <q-item v-if="showMint" clickable @click="mintNft">
                                         <q-item-section style="white-space: nowrap;">Mint NFT</q-item-section>
                                     </q-item>
-                                    <q-item v-if="showReleaseReserves" clickable @click="releaseReserves">
-                                        <q-item-section style="white-space: nowrap;">Release FT
-                                            Reserves</q-item-section>
+                                    <q-item v-if="showReleaseReserves" clickable
+                                        @click="() => releaseReserves('issuance')">
+                                        <q-item-section style="white-space: nowrap;">Release</q-item-section>
+                                    </q-item>
+                                    <q-item v-if="showReleaseReserves" clickable @click="() => releaseReserves('burn')">
+                                        <q-item-section style="white-space: nowrap;">Burn</q-item-section>
                                     </q-item>
                                 </q-list>
                             </q-menu>
                         </q-btn>
                     </div>
+
+                    <div class="row"><q-btn class="text-caption link-style" text-color="secondary" icon="description"
+                            @click="viewRegistry" no-caps dense>
+                            View Metadata Registry
+                        </q-btn></div>
 
                     <FormField>
                         <label>Category</label>
@@ -73,8 +81,12 @@
                             <span class="tabular-nums text-grey-5">{{ reservedSupply }}</span>
                             <q-space />
                             <q-btn flat dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
-                                @click="releaseReserves">
+                                @click="() => releaseReserves('issuance')">
                                 <span class="gt-xs q-ml-xs">Release</span>
+                            </q-btn>
+                            <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
+                                @click="() => releaseReserves('burn')">
+                                <span class="gt-xs q-ml-xs">Burn</span>
                             </q-btn>
                         </div>
                     </FormField>
@@ -118,8 +130,6 @@
                             <q-btn flat no-caps color="primary" icon="token" label="View NFTs" @click="viewNfts" />
                         </div>
                     </template>
-
-
                 </q-card>
 
                 <div v-if="snapshotModified" class="flex flex-wrap q-gutter-sm justify-end q-mt-md">
@@ -132,22 +142,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, triggerRef } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useAppStore } from 'src/stores/app'
 import type { IdentitySnapshot, ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
-import type { DecoratedUtxo } from 'src/core/types'
+import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
 import { shortenTokenId, getTokenType } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
 import CopyText from 'src/components/CopyText.vue'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useQuasar } from 'quasar'
+import { decodeCashAddress } from '@bitauth/libauth'
+import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
+import { broadcast, isBroadcastSuccess, jsonFormSafeUtxoReviver, jsonReplacer, transferFungibleReserves } from 'src/core/transaction'
+import { Network } from 'cashscript'
+import { BaseWallet, NetworkType } from 'mainnet-js-v3'
+import { db } from 'src/core/client-db'
 
+const $q = useQuasar()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
+const { loadAuthkeys } = authguardStore
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
+const { wallet, manager } = useWizardConnectWallet()
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
 
@@ -246,8 +268,123 @@ const mintNft = () => {
     router.push({ name: 'authhead-mint-nft', params: { category: category.value } })
 }
 
-const releaseReserves = () => {
-    // placeholder
+const releaseReserves = (action: 'issuance' | 'burn') => {
+    console.log(activeAuthhead.value)
+    if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
+        return $q.notify({
+            type: 'Error',
+            message: 'Insufficient BCH balance'
+        })
+    }
+
+    const componentProps: Record<string, any> = {
+        transferType: action,
+        tokenCategory: activeAuthhead.value!.token!.category,
+        balance: BigInt(activeAuthhead.value!.token!.amount),
+        decimals: activeAuthhead.value!.identitySnapshot?.token?.decimals ?? 0,
+        identitySnapshot: activeAuthhead.value!.identitySnapshot,
+    }
+    console.log('Action', action)
+    if (action === 'issuance') {
+        componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
+    } else if (action === 'burn') {
+        const sampleAddress = wallet.value.getTokenDepositAddress(0)
+        const sampleDecodedAddress = decodeCashAddress(sampleAddress)
+        if (typeof (sampleDecodedAddress) === 'string') {
+            throw new Error(sampleDecodedAddress)
+        }
+        componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+    }
+
+    $q.dialog({
+        component: FungibleTransferDialog,
+        componentProps,
+        focus: 'none'
+    }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
+
+        console.log('user inputs', userInputs)
+
+        const loadingGroup = $q.loading.show({
+            group: 'issue-fungible-reserves-loading-group',
+            message: 'Preparing. Checking wallet for inputs...'
+        })
+
+        const issuerTokenUtxo = activeAuthhead.value as DecoratedUtxo
+        try {
+            let recipientAddress = userInputs.recipient
+            if (action === 'burn') {
+                recipientAddress = componentProps.burnAddress
+            }
+            const signRequest = transferFungibleReserves({
+                issuerTokenUtxo,
+                authkeyUtxo: issuerTokenUtxo.authkey as DecoratedUtxo,
+                recipientAddress: recipientAddress,
+                transferTokenAmount: userInputs.tokenAmount,
+                network: import.meta.env.VITE_BCH_NETWORK as Network,
+                funderUtxos: (wallet.value.utxos || []) as UtxoWithPath[],
+                transferType: action,
+                feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
+            })
+
+            loadingGroup({
+                message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
+            })
+            const response = await manager.value!.signTransaction(signRequest);
+
+            loadingGroup({
+                message: 'Broadcasting transaction, please wait...'
+            })
+
+            const broadcastResponse = await broadcast(response.signedTransaction)
+
+            if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+
+            const broadcastResult = await broadcastResponse.json()
+
+            if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+
+            loadingGroup({
+                message: 'Broadcast success, awaiting tx propagation...'
+            })
+
+            const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+            await (new BaseWallet(networkType)).waitForTransaction({
+                txHash: broadcastResult.txid
+            })
+
+            loadingGroup()
+
+            await db.saveActivity({
+                event: `Released ${activeAuthhead.value!.identitySnapshot?.token!.symbol || activeAuthhead.value?.token?.category} Tokens from reserves`,
+                txid: broadcastResult.txid,
+                status: 'success'
+            })
+
+            await loadAuthkeys(wallet.value, true)
+
+            triggerRef(wallet)
+
+            $q.dialog({
+                component: TransactionStatusDialog,
+                componentProps: {
+                    statusType: 'success',
+                    statusText: `Released ${activeAuthhead.value!.identitySnapshot?.token!.symbol || activeAuthhead.value?.token?.category} Tokens from reserves`,
+                    txid: broadcastResult.txid
+                }
+            }).onOk(() => {
+                router.push('/dashboard#collected')
+            })
+
+        } catch (error: any) {
+            console.log('error', error)
+            $q.notify({
+                type: 'Error',
+                message: error.message
+            })
+        } finally {
+            loadingGroup()
+        }
+    })
 }
 
 const saveSnapshot = () => {
@@ -256,6 +393,10 @@ const saveSnapshot = () => {
 
 const publishSnapshot = () => {
     // placeholder
+}
+
+const viewRegistry = () => {
+    router.push({ path: '/token/metadata-registry', query: { authbase: activeAuthhead.value?.token?.category } })
 }
 
 const copyCategory = () => {
