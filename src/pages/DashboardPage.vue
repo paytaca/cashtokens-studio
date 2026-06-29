@@ -53,7 +53,6 @@
                 <span class="text-grey-5 text-weight-medium text-no-wrap" style="min-width: 120px;">BCH Balance:</span>
                 <span class="text-weight-bold text-mono text-grey-4 q-mr-xs">{{ formatBch(bchBalance) }}</span>
                 <CopyText :text="formatBch(bchBalance)" />
-                <q-btn icon="refresh" @click=""></q-btn>
               </div>
             </div>
 
@@ -108,7 +107,18 @@
               <q-btn color="primary" icon="mdi-creation" label="Create Token"
                 @click="router.push({ name: 'create-token' })"></q-btn>
             </div>
-            <template v-if="authheads.length > 0">
+            <template v-if="authkeysLoading || authheadsLoading">
+              <div v-for="i in 3" :key="i"
+                class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+                <q-skeleton type="rect" size="36px" class="rounded-borders" />
+                <div class="column q-gutter-y-xs" style="flex: 1;">
+                  <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
+                  <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+                </div>
+                <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
+              </div>
+            </template>
+            <template v-else-if="authheads.length > 0">
               <div class="row q-gutter-sm q-mb-md">
                 <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                   :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
@@ -134,8 +144,7 @@
                 </q-input>
               </div>
               <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
-                :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table"
-                @row-click="onAuthheadsRowClick">
+                flat class="border-radius-12 token-reserves-table" @row-click="onAuthheadsRowClick">
                 <template v-slot:body-cell-token="props">
                   <q-td :props="props">
                     <div class="flex items-center no-wrap q-gutter-x-md">
@@ -210,7 +219,7 @@
                   <q-td :props="props" class="text-right">
                     <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                       class="text-subtitle1 text-weight-bold text-mono text-white">
-                      {{ formatAmount(props.value) }}
+                      {{ formatCurrency(props.value, props.row.identitySnapshot?.token?.decimals) }}
                     </div>
                     <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
                     <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
@@ -277,9 +286,7 @@
                             </q-item-section>
                             <q-item-section class="text-caption text-grey-3">Burn</q-item-section>
                           </q-item>
-
                           <q-separator dark inset />
-
                           <q-item clickable @click="refreshCache(value.row.token!.category as string)">
                             <q-item-section avatar>
                               <q-icon name="refresh" color="grey-5" size="xs" />
@@ -347,130 +354,142 @@
                 </template>
               </q-input>
             </div>
-            <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
-              :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`"
-              :loading="authkeysLoading || authheadsLoading" flat class="border-radius-12 token-reserves-table"
-              @row-click="onCollectedRowClick">
-              <template v-slot:body-cell-collectedToken="props">
-                <q-td :props="props">
-                  <div class="flex items-center no-wrap q-gutter-x-md">
-                    <div class="flex column items-center">
-                      <q-avatar size="md">
-                        <q-img v-if="props.row.identitySnapshot?.uris?.icon"
-                          :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
-                        <q-img v-else
-                          :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
-                          fit="cover">
-                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
-                            placeholder</q-tooltip>
-                        </q-img>
-                      </q-avatar>
-                      <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
-                        style="line-height: 1;">No Icon</span>
+            <template v-if="authkeysLoading || authheadsLoading">
+              <div v-for="i in 3" :key="i"
+                class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+                <q-skeleton type="rect" size="36px" class="rounded-borders" />
+                <div class="column q-gutter-y-xs" style="flex: 1;">
+                  <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
+                  <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+                </div>
+                <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
+              </div>
+            </template>
+            <template v-else>
+              <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
+                :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`" flat
+                class="border-radius-12 token-reserves-table" @row-click="onCollectedRowClick">
+                <template v-slot:body-cell-collectedToken="props">
+                  <q-td :props="props">
+                    <div class="flex items-center no-wrap q-gutter-x-md">
+                      <div class="flex column items-center">
+                        <q-avatar size="md">
+                          <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                            :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                          <q-img v-else
+                            :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
+                            fit="cover">
+                            <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
+                              placeholder</q-tooltip>
+                          </q-img>
+                        </q-avatar>
+                        <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                          style="line-height: 1;">No Icon</span>
+                      </div>
+                      <div>
+                        <div class="flex items-center q-gutter-x-xs">
+                          <span class="text-caption  token-symbol">
+                            {{ props.row.identitySnapshot?.token?.symbol || '?' }} {{ props.row.token?.nft?.commitment ?
+                              `- ${props.row.token?.nft?.commitment}` : ''
+                            }}
+                          </span>
+                        </div>
+                        <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                          <span class="text-caption text-grey-5 text-mono">
+                            {{ shortenTokenId(props.row.token!.category) }}
+                            <CopyText :text="props.row.token!.category" />
+                          </span>
+                        </div>
+                        <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                          <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                            Mixed
+                          </q-badge>
+                          <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="token" size="10px" class="q-mr-xs" />
+                            NFT
+                          </q-badge>
+                          <q-badge v-else color="dark" text-color="green-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="money" size="10px" class="q-mr-xs" />
+                            Fungible
+                          </q-badge>
+
+                          <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
+                            text-color="purple-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                            Minting
+                          </q-badge>
+                          <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                            text-color="teal-10"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
+                            Mutable
+                          </q-badge>
+                          <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
+                            text-color="grey-6"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                            <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
+                            Immutable
+                          </q-badge>
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div class="flex items-center q-gutter-x-xs">
-                        <span class="text-caption  token-symbol">
-                          {{ props.row.identitySnapshot?.token?.symbol || '?' }} {{ props.row.token?.nft?.commitment ?
-                            `- ${props.row.token?.nft?.commitment}` : ''
-                          }}
-                        </span>
-                      </div>
-                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <span class="text-caption text-grey-5 text-mono">
-                          {{ shortenTokenId(props.row.token!.category) }}
-                          <CopyText :text="props.row.token!.category" />
-                        </span>
-                      </div>
-                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="purple-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                          Mixed
-                        </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="token" size="10px" class="q-mr-xs" />
-                          NFT
-                        </q-badge>
-                        <q-badge v-else color="dark" text-color="green-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="money" size="10px" class="q-mr-xs" />
-                          Fungible
-                        </q-badge>
+                  </q-td>
+                </template>
 
-                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
-                          text-color="purple-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                          Minting
-                        </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
-                          text-color="teal-10"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
-                          Mutable
-                        </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
-                          text-color="grey-6"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
-                          <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
-                          Immutable
-                        </q-badge>
-                      </div>
+                <template v-slot:body-cell-collectedAmount="props">
+                  <q-td :props="props" class="text-right">
+                    <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                      class="text-subtitle1 text-weight-bold text-mono text-white">
+                      {{ formatAmount(props.row.token?.amount, props.row.identitySnapshot?.token?.decimals) }}
                     </div>
-                  </div>
-                </q-td>
-              </template>
+                    <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
+                    <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                      class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                      <span>Decimals:</span>
+                      <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                        {{ props.row.identitySnapshot?.token?.decimals === undefined ? '?' :
+                          props.row.identitySnapshot?.token?.decimals }}
+                      </q-badge>
+                      <q-badge v-if="props.row.isAggregated" color="blue-grey-8" text-color="grey-3"
+                        class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
+                        {{ props.row.utxoCount }} UTXO{{ props.row.utxoCount !== 1 ? 's' : '' }}
+                      </q-badge>
+                    </div>
+                  </q-td>
+                </template>
 
-              <template v-slot:body-cell-collectedAmount="props">
-                <q-td :props="props" class="text-right">
-                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                    class="text-subtitle1 text-weight-bold text-mono text-white">
-                    {{ formatAmount(props.row.token?.amount) }}
-                  </div>
-                  <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
-                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                    class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
-                    <span>Decimals:</span>
-                    <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
-                      {{ props.row.identitySnapshot?.token?.decimals === undefined ? '?' :
-                        props.row.identitySnapshot?.token?.decimals }}
-                    </q-badge>
-                    <q-badge v-if="props.row.isAggregated" color="blue-grey-8" text-color="grey-3"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8">
-                      {{ props.row.utxoCount }} UTXO{{ props.row.utxoCount !== 1 ? 's' : '' }}
-                    </q-badge>
-                  </div>
-                </q-td>
-              </template>
+                <template v-slot:body-cell-collectedActions="value">
+                  <q-td :props="value">
+                    <q-btn round icon="more_vert" size="sm">
+                      <q-menu dark auto-close class="bg-dark-2 shadow-2">
+                        <q-list dark class="bg-dark" dense style="min-width: 180px">
+                          <q-item clickable @click="sendCollectedTokens(value.row)">
+                            <q-item-section avatar>
+                              <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                            </q-item-section>
+                            <q-item-section class="text-caption text-grey-3">Send Tokens</q-item-section>
+                          </q-item>
 
-              <template v-slot:body-cell-collectedActions="value">
-                <q-td :props="value">
-                  <q-btn round icon="more_vert" size="sm">
-                    <q-menu dark auto-close class="bg-dark-2 shadow-2">
-                      <q-list dark class="bg-dark" dense style="min-width: 180px">
-                        <q-item clickable @click="sendCollectedTokens(value.row)">
-                          <q-item-section avatar>
-                            <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
-                          </q-item-section>
-                          <q-item-section class="text-caption text-grey-3">Send Tokens</q-item-section>
-                        </q-item>
+                          <q-separator dark inset />
 
-                        <q-separator dark inset />
-
-                        <q-item clickable @click="burnCollectedTokens(value.row)">
-                          <q-item-section avatar>
-                            <q-icon name="mdi-fire" color="orange" size="xs" />
-                          </q-item-section>
-                          <q-item-section class="text-caption text-grey-3">Burn Tokens</q-item-section>
-                        </q-item>
-                      </q-list>
-                    </q-menu>
-                  </q-btn>
-                </q-td>
-              </template>
-            </q-table>
+                          <q-item clickable @click="burnCollectedTokens(value.row)">
+                            <q-item-section avatar>
+                              <q-icon name="mdi-fire" color="orange" size="xs" />
+                            </q-item-section>
+                            <q-item-section class="text-caption text-grey-3">Burn Tokens</q-item-section>
+                          </q-item>
+                        </q-list>
+                      </q-menu>
+                    </q-btn>
+                  </q-td>
+                </template>
+              </q-table>
+            </template>
           </q-tab-panel>
 
           <!-- Activity Table -->
@@ -543,7 +562,7 @@ import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
 import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo } from 'src/core/types'
-import { shortenCashAddress, shortenTokenId, getTokenType, isPureFungible } from 'src/core/utils'
+import { shortenCashAddress, shortenTokenId, getTokenType, isPureFungible, formatCurrency } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
@@ -569,16 +588,13 @@ const appStore = useAppStore()
 
 const { loadRegistry, fetchIdentitySnapshot } = useRegistryStore()
 
-
-
-
 const activities = ref<any[]>([])
 const activityLoading = ref(false)
 const activitySearchQuery = ref('')
 const walletWatchers = ref<{
-  stopWatchingReceiveWallet?: Function,
-  stopWatchingChangeWallet?: Function,
-  stopWatchingDefiWallet?: Function,
+  stopWatchingReceiveWallet?: () => void,
+  stopWatchingChangeWallet?: () => void,
+  stopWatchingDefiWallet?: () => void,
 }>({})
 
 const primaryXPub = computed(() =>
@@ -660,8 +676,11 @@ const VALID_TABS = ['created', 'collected', 'activity'] as const
 type TabName = typeof VALID_TABS[number]
 
 const getTabFromHash = (): TabName => {
-  const hash = window.location.hash.replace('#', '')
-  return VALID_TABS.includes(hash as TabName) ? (hash as TabName) : 'created'
+  if (typeof (window) !== 'undefined') {
+    const hash = window.location.hash.replace('#', '')
+    if (VALID_TABS.includes(hash as TabName)) return hash as TabName
+  }
+  return 'created'
 }
 
 const activeTab = ref<TabName>(getTabFromHash())
@@ -674,15 +693,18 @@ const collectedTokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all'
 const createdSearchQuery = ref('')
 const collectedSearchQuery = ref('')
 
-function formatAmount(value: any): string {
+// eslint-disable-next-line @typescript-eslint/no-inferrable-types
+function formatAmount(value: any, decimals: number = 0): string {
   if (value == null || value === '') return '—'
-  try {
-    if (typeof value === 'bigint') return value.toLocaleString()
-    if (typeof value === 'number') return value.toLocaleString()
-    return BigInt(value).toLocaleString()
-  } catch {
-    return String(value)
+  let formattedValue = value
+  if (typeof formattedValue === 'bigint' || typeof formattedValue === 'number') {
+    if (decimals > 0) {
+      formattedValue = Number(formattedValue) / Math.pow(10, decimals)
+    }
+  } else if (!isNaN(Number(formattedValue)) && decimals > 0) {
+    formattedValue = Number(formattedValue) / Math.pow(10, decimals)
   }
+  return formattedValue.toLocaleString()
 }
 
 function formatBch(satoshis: bigint): string {
@@ -1172,11 +1194,16 @@ watch(activeTab, async (newTab) => {
 })
 
 watch(activeTab, (newTab) => {
-  window.location.hash = newTab
+  if (typeof (window) !== 'undefined') {
+    window.location.hash = newTab
+  }
+
 })
 
 onMounted(async () => {
-  window.addEventListener('hashchange', handleHashChange)
+  if (typeof (window) !== 'undefined') {
+    window.addEventListener('hashchange', handleHashChange)
+  }
   await loadAuthkeys(wallet.value, true)
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
@@ -1188,7 +1215,9 @@ onMounted(async () => {
 })
 
 onUnmounted(() => {
-  window.removeEventListener('hashchange', handleHashChange)
+  if (typeof (window) !== 'undefined') {
+    window.removeEventListener('hashchange', handleHashChange)
+  }
   walletWatchers.value?.stopWatchingReceiveWallet?.()
   walletWatchers.value?.stopWatchingChangeWallet?.()
   walletWatchers.value?.stopWatchingDefiWallet?.()
