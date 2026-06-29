@@ -1,7 +1,7 @@
 import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
@@ -15,10 +15,12 @@ export type TransferFungibleReservesParams = {
     funderUtxos: UtxoWithPath[],
     authKeyRecipientAddress?: string,
     network?: Network,
-    transferType: 'issuance' | 'burn'
+    transferType: 'issuance' | 'burn',
+    feeRateSatsPerKb?: bigint
 }
 
 export function transferFungibleReserves(params: TransferFungibleReservesParams): SignTransactionRequest {
+    const feeRateSatsPerKb = params.feeRateSatsPerKb || DEFAULT_FEE_RATE_SATS_PER_KB
 
     if (!params.issuerTokenUtxo?.token) throw new Error(`Transferring tokens requires a token of the same category.`)
     if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
@@ -93,9 +95,10 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 3n
+    let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * 2
     const minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
-        DEFAULT_FEE_RATE_SATS_PER_KB
+        BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
+        feeRateSatsPerKb
     )
     const estimatedCost = fixedCost + minimumFee
     let totalSatoshiFunds = funderInput.satoshis
@@ -120,11 +123,11 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
         spentUtxos.push(additionalFunderInput)
         totalSatoshiFunds += additionalFunderInput.satoshis
         transactionHex = transaction.build()
-
+        const unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length - 1
         const newMinimumFee = getMinimumFee(
             // Taking change into consideration
-            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
-            DEFAULT_FEE_RATE_SATS_PER_KB
+            BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            feeRateSatsPerKb
         )
         const newEstimatedCost = fixedCost + newMinimumFee
         enoughFunds = totalSatoshiFunds > newEstimatedCost
