@@ -5,8 +5,8 @@
                 <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
                 <q-card class="bg-dark q-pa-lg rounded borders" flat>
                     <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
-                        <span>Token Identity </span>
-                        <q-icon name="mdi-information-variant" size="lg" />
+                        <span>Token </span>
+                        <q-icon name="mdi-information" size="lg" />
 
                     </q-card-title>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
@@ -17,8 +17,12 @@
                         </q-avatar>
                         <div class="col">
                             <div class="flex items-center q-gutter-x-xs q-mb-xs">
-                                <span class="text-h6 text-weight-medium text-grey-2">{{ localSnapshot.token?.symbol ||
-                                    '?' }}</span>
+                                <span class="text-h6 text-weight-medium text-grey-2">
+                                    {{
+                                        localSnapshot.token?.symbol ||
+                                        '?'
+                                    }}
+                                </span>
                             </div>
                             <div class="flex items-center q-gutter-x-xs">
                                 <q-badge v-if="tokenType === 'mixed'" color="dark" text-color="orange-4"
@@ -74,22 +78,6 @@
                             <CopyText :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
                         </div>
                     </FormField>
-                    <FormField v-if="showReleaseReserves">
-                        <label>Reserved Supply</label>
-                        <div class="q-field__inner bg-dark rounded-borders q-px-md"
-                            style="min-height: 56px; display: flex; align-items: center;">
-                            <span class="tabular-nums text-grey-5">{{ reservedSupply }}</span>
-                            <q-space />
-                            <q-btn flat dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
-                                @click="() => releaseReserves('issuance')">
-                                <span class="gt-xs q-ml-xs">Release</span>
-                            </q-btn>
-                            <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
-                                @click="() => releaseReserves('burn')">
-                                <span class="gt-xs q-ml-xs">Burn</span>
-                            </q-btn>
-                        </div>
-                    </FormField>
                     <FormField v-if="hasNfts">
                         <label>NFT Collection</label>
                         <div class="q-field__inner bg-dark rounded-borders"
@@ -104,25 +92,19 @@
                             </q-btn>
                         </div>
                     </FormField>
-
-
                     <FormField>
-                        <label>Name</label>
-                        <q-input v-model="localSnapshot.name" dark outlined />
+                        <label>Name / Description</label>
+                        <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                            {{ localSnapshot.name }} - {{ localSnapshot.description }}
+                        </div>
                     </FormField>
-                    <FormField>
-                        <label>Description</label>
-                        <q-input v-model="localSnapshot.description" dark outlined type="textarea" autogrow />
-                    </FormField>
-                    <FormField>
-                        <label>Symbol</label>
-                        <q-input v-model="localSnapshot.token!.symbol" dark outlined />
-                    </FormField>
-
                     <FormField v-if="showDecimals">
-                        <label>Decimals</label>
-                        <q-input v-model.number="localSnapshot.token!.decimals" dark outlined type="number" min="0"
-                            max="18" />
+                        <div class="flex items-center q-gutter-x-md"><label for="">Decimals</label>
+                            <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                                {{ localSnapshot.token!.decimals === undefined ? '?' :
+                                    localSnapshot.token!.decimals }}
+                            </q-badge>
+                        </div>
                     </FormField>
                     <template v-if="hasNfts">
                         <q-separator dark class="q-my-md" />
@@ -130,6 +112,29 @@
                             <q-btn flat no-caps color="primary" icon="token" label="View NFTs" @click="viewNfts" />
                         </div>
                     </template>
+
+                    <FormField v-if="showReleaseReserves && activeAuthhead">
+                        <label class="text-bold text-h6">Fungible Reserves</label>
+                        <q-input :model-value="formatCurrency(
+                            activeAuthhead.token?.amount ?? 0,
+                            localSnapshot.token!.symbol || '?',
+                            localSnapshot.token!.decimals,
+                            'none'
+                        )" input-class="text-h6 text-weight-bold text-white" class="text-mono">
+                            <template v-slot:append>
+                                <div class="flex no-wrap">
+                                    <q-btn flat dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
+                                        @click="() => releaseReserves('issuance')">
+                                        <span class="gt-xs q-ml-xs">Release</span>
+                                    </q-btn>
+                                    <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
+                                        @click="() => releaseReserves('burn')">
+                                        <span class="gt-xs q-ml-xs">Burn</span>
+                                    </q-btn>
+                                </div>
+                            </template>
+                        </q-input>
+                    </FormField>
                 </q-card>
 
                 <div v-if="snapshotModified" class="flex flex-wrap q-gutter-sm justify-end q-mt-md">
@@ -149,7 +154,7 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { useAppStore } from 'src/stores/app'
 import type { IdentitySnapshot, ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
-import { shortenTokenId, getTokenType } from 'src/core/utils'
+import { shortenTokenId, getTokenType, formatCurrency } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
 import CopyText from 'src/components/CopyText.vue'
@@ -211,13 +216,16 @@ const tokenType = computed(() => {
 })
 
 const reservedSupply = computed(() => {
-    const amount = activeAuthhead.value?.token?.amount
-    if (amount == null) return null
-    try {
-        return BigInt(amount).toLocaleString()
-    } catch {
-        return String(amount)
-    }
+    console.log('activeAuthhead.value?.token?.amount', activeAuthhead.value?.token?.amount)
+    let amount: string | bigint = activeAuthhead.value?.token?.amount ?? 0n
+    let decimals = localSnapshot.value.token?.decimals ?? 0
+    return formatCurrency(amount ?? 0, localSnapshot.value.token?.symbol || '', decimals)
+    // if (amount == null) return null
+    // try {
+    //     return BigInt(amount).toLocaleString()
+    // } catch {
+    //     return String(amount)
+    // }
 })
 
 const hasNfts = computed(() => !!localSnapshot.value?.token?.nfts)
