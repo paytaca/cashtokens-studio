@@ -219,7 +219,7 @@
                   <q-td :props="props" class="text-right">
                     <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                       class="text-subtitle1 text-weight-bold text-mono text-white">
-                      {{ formatCurrency(props.value, props.row.identitySnapshot?.token?.symbol || '',
+                      {{ formatTokenAmount(props.value, props.row.identitySnapshot?.token?.symbol || '',
                         props.row.identitySnapshot?.token?.decimals, 'none') }}
                     </div>
                     <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
@@ -563,7 +563,7 @@ import { useAppStore } from 'src/stores/app'
 import { storeToRefs } from 'pinia'
 import { QTableColumn, useQuasar } from 'quasar'
 import type { DecoratedUtxoFormSafe, UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo } from 'src/core/types'
-import { shortenCashAddress, shortenTokenId, getTokenType, isPureFungible, formatCurrency } from 'src/core/utils'
+import { shortenCashAddress, shortenTokenId, getTokenType, isPureFungible, formatTokenAmount } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { transferFungibleReserves, transferFts, jsonFormSafeUtxoReviver, jsonReplacer } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
