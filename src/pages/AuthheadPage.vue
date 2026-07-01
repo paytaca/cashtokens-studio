@@ -93,64 +93,80 @@
                             </q-badge>
                         </div>
                     </FormField>
-                    <FormField v-if="hasNfts">
-                        <label>NFT Collection</label>
-                        <div class="q-field__inner bg-dark rounded-borders"
-                            style="min-height: 3em; display: flex; align-items: center;">
-                            <q-chip v-if="nftCollectionType === 'Sequential'" dark outline icon="mdi-counter"
-                                label="Sequential NFT Collection" />
-                            <q-chip v-else dark outline icon="mdi-hexadecimal" label="Parsable NFT Collection" />
-                            <q-space />
-                            <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary" size="md"
-                                @click="mintNft">
-                                <span class="gt-xs q-ml-xs">Mint</span>
-                            </q-btn>
-                        </div>
-                    </FormField>
-                    <FormField v-if="hasNfts">
-                        <label>NFT Collection</label>
 
-                        <q-input :model-value="nftCollectionType">
+                    <FormField v-if="hasNfts">
+                        <label>NFT Collection</label>
+                        <!-- <q-input :model-value="nftCollectionType" input-class="text-h6 text-weight-bold text-white"
+                            class="text-mono">
                             <template v-slot:append>
-                                <div class="flex no-wrap">
-                                    <q-btn flat no-caps color="primary" icon="token" label="View NFTs"
-                                        @click="viewNfts" />
-                                    <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary"
-                                        size="md" @click="mintNft">
+                                <div class="flex no-wrap q-gutter-x-sm">
+                                    <q-btn no-caps color="primary" icon="token" label="View NFTs" @click="viewNfts"
+                                        dense />
+                                    <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" size="md" @click="mintNft"
+                                        dense no-wrap>
                                         <span class="gt-xs q-ml-xs">Mint</span>
                                     </q-btn>
                                 </div>
                             </template>
-                        </q-input>
-                    </FormField>
-                    <template v-if="hasNfts">
-                        <q-separator dark class="q-my-md" />
-                        <div class="flex justify-start">
-                            <q-btn flat no-caps color="primary" icon="token" label="View NFTs" @click="viewNfts" />
+</q-input> -->
+                        <div class="flex justify-between">
+                            <div
+                                class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                                {{ nftCollectionType
+                                }}</div>
+                            <div class="flex no-wrap q-gutter-x-sm">
+                                <q-btn text-color="secondary" icon="preview" label="View NFTs" @click="viewNfts" />
+                                <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
+                                    <span class="gt-xs q-ml-xs">Mint</span>
+                                </q-btn>
+                            </div>
                         </div>
-                    </template>
+                    </FormField>
 
                     <FormField v-if="showReleaseReserves && activeAuthhead">
                         <label class="text-bold text-h6">Fungible Reserves</label>
-                        <q-input :model-value="formatTokenAmount(
+                        <!-- <q-input :model-value="formatTokenAmount(
                             activeAuthhead.token?.amount ?? 0,
                             localSnapshot.token!.symbol || '?',
                             localSnapshot.token!.decimals,
                             'none'
                         )" input-class="text-h6 text-weight-bold text-white" class="text-mono">
                             <template v-slot:append>
-                                <div class="flex no-wrap">
-                                    <q-btn flat dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
-                                        @click="() => releaseReserves('issuance')">
-                                        <span class="gt-xs q-ml-xs">Release</span>
-                                    </q-btn>
+                                <div class="flex no-wrap q-gutter-sm">
                                     <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
                                         @click="() => releaseReserves('burn')">
                                         <span class="gt-xs q-ml-xs">Burn</span>
                                     </q-btn>
+                                    <q-btn dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
+                                        @click="() => releaseReserves('issuance')">
+                                        <span class="gt-xs q-ml-xs">Release</span>
+                                    </q-btn>
+
                                 </div>
                             </template>
-                        </q-input>
+                        </q-input> -->
+                        <div class="flex justify-between no-wrap">
+                            <div
+                                class="text-mono text-h6 text-bold  text-bch bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                                {{ formatTokenAmount(
+                                    activeAuthhead.token?.amount ?? 0,
+                                    localSnapshot.token!.symbol || '?',
+                                    localSnapshot.token!.decimals,
+                                    'suffix'
+                                )
+                                }}
+                            </div>
+                            <div class="flex no-wrap q-gutter-sm">
+                                <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
+                                    @click="() => releaseReserves('burn')">
+                                    <span class="gt-xs q-ml-xs">Burn</span>
+                                </q-btn>
+                                <q-btn dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
+                                    @click="() => releaseReserves('issuance')">
+                                    <span class="gt-xs q-ml-xs">Release</span>
+                                </q-btn>
+                            </div>
+                        </div>
                     </FormField>
                 </q-card>
             </div>
@@ -306,12 +322,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
     if (action === 'issuance') {
         componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
     } else if (action === 'burn') {
-        const sampleAddress = wallet.value.getTokenDepositAddress(0)
-        const sampleDecodedAddress = decodeCashAddress(sampleAddress)
-        if (typeof (sampleDecodedAddress) === 'string') {
-            throw new Error(sampleDecodedAddress)
-        }
-        componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+        componentProps.burnAddress = import.meta.env.VITE_BURN_ADDRESS
     }
 
     $q.dialog({
