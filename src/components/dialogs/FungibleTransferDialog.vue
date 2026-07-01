@@ -1,5 +1,5 @@
 <template>
-  <q-dialog ref="dialogRef" @hide="onDialogHide" class="text-title" :title="transferType" full-width>
+  <q-dialog ref="dialogRef" @hide="onDialogHide" class="text-title" :title="transferType">
     <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
@@ -62,8 +62,8 @@
           icon="send" @click.stop="(e) => transferForm.submit(e)" size="lg"
           :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
         </q-btn>
-        <q-btn v-else-if="transferType === 'burn'" text-color="orange" label="Burn" icon="local_fire_department"
-          @click.stop="(e) => transferForm.submit(e)" size="lg"
+        <q-btn v-else-if="transferType === 'burn'" color="orange" text-color="dark" label="Burn"
+          icon="local_fire_department" @click.stop="(e) => transferForm.submit(e)" size="lg"
           :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
         </q-btn>
       </q-card-actions>
