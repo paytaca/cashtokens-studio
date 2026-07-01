@@ -219,7 +219,8 @@
                   <q-td :props="props" class="text-right">
                     <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                       class="text-subtitle1 text-weight-bold text-mono text-white">
-                      {{ formatCurrency(props.value, props.row.identitySnapshot?.token?.decimals) }}
+                      {{ formatCurrency(props.value, props.row.identitySnapshot?.token?.symbol || '',
+                        props.row.identitySnapshot?.token?.decimals, 'none') }}
                     </div>
                     <div v-else class="text-grey-6 text-caption text-mono">N/A</div>
                     <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
@@ -1197,7 +1198,6 @@ watch(activeTab, (newTab) => {
   if (typeof (window) !== 'undefined') {
     window.location.hash = newTab
   }
-
 })
 
 onMounted(async () => {
