@@ -513,6 +513,9 @@ const onSubmit = async () => {
             try {
                 const registryBlob = new Blob([registryJson], { type: 'application/json' })
                 const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
+                if (!uploadResult.cid) {
+                    throw new Error(`Error uploading registry to IPFS`)
+                }
                 uris = [`ipfs://${uploadResult.cid}`]
                 loadingGroup({
                     message: `Upload success, uri = ${uris[0]}`
@@ -525,7 +528,6 @@ const onSubmit = async () => {
                 })
             }
         }
-
         if (!savedRegistry) {
             await db.createNewRegistry({
                 publicationUris: uris,
