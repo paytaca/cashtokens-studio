@@ -78,20 +78,7 @@
                             <CopyText :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
                         </div>
                     </FormField>
-                    <FormField v-if="hasNfts">
-                        <label>NFT Collection</label>
-                        <div class="q-field__inner bg-dark rounded-borders"
-                            style="min-height: 3em; display: flex; align-items: center;">
-                            <q-chip v-if="nftCollectionType === 'Sequential'" dark outline icon="mdi-counter"
-                                label="Sequential NFT Collection" />
-                            <q-chip v-else dark outline icon="mdi-hexadecimal" label="Parsable NFT Collection" />
-                            <q-space />
-                            <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary" size="md"
-                                @click="mintNft">
-                                <span class="gt-xs q-ml-xs">Mint</span>
-                            </q-btn>
-                        </div>
-                    </FormField>
+
                     <FormField>
                         <label>Name / Description</label>
                         <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
@@ -106,6 +93,36 @@
                             </q-badge>
                         </div>
                     </FormField>
+                    <FormField v-if="hasNfts">
+                        <label>NFT Collection</label>
+                        <div class="q-field__inner bg-dark rounded-borders"
+                            style="min-height: 3em; display: flex; align-items: center;">
+                            <q-chip v-if="nftCollectionType === 'Sequential'" dark outline icon="mdi-counter"
+                                label="Sequential NFT Collection" />
+                            <q-chip v-else dark outline icon="mdi-hexadecimal" label="Parsable NFT Collection" />
+                            <q-space />
+                            <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary" size="md"
+                                @click="mintNft">
+                                <span class="gt-xs q-ml-xs">Mint</span>
+                            </q-btn>
+                        </div>
+                    </FormField>
+                    <FormField v-if="hasNfts">
+                        <label>NFT Collection</label>
+
+                        <q-input :model-value="nftCollectionType">
+                            <template v-slot:append>
+                                <div class="flex no-wrap">
+                                    <q-btn flat no-caps color="primary" icon="token" label="View NFTs"
+                                        @click="viewNfts" />
+                                    <q-btn v-if="showMint" dense no-wrap icon="mdi-pickaxe" text-color="primary"
+                                        size="md" @click="mintNft">
+                                        <span class="gt-xs q-ml-xs">Mint</span>
+                                    </q-btn>
+                                </div>
+                            </template>
+                        </q-input>
+                    </FormField>
                     <template v-if="hasNfts">
                         <q-separator dark class="q-my-md" />
                         <div class="flex justify-start">
@@ -115,7 +132,7 @@
 
                     <FormField v-if="showReleaseReserves && activeAuthhead">
                         <label class="text-bold text-h6">Fungible Reserves</label>
-                        <q-input :model-value="formatCurrency(
+                        <q-input :model-value="formatTokenAmount(
                             activeAuthhead.token?.amount ?? 0,
                             localSnapshot.token!.symbol || '?',
                             localSnapshot.token!.decimals,
@@ -136,11 +153,6 @@
                         </q-input>
                     </FormField>
                 </q-card>
-
-                <div v-if="snapshotModified" class="flex flex-wrap q-gutter-sm justify-end q-mt-md">
-                    <q-btn color="positive" icon="save" label="Save" @click="saveSnapshot" />
-                    <q-btn color="primary" icon="cloud_upload" label="Publish" @click="publishSnapshot" />
-                </div>
             </div>
         </div>
     </q-page>
@@ -154,7 +166,7 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { useAppStore } from 'src/stores/app'
 import type { IdentitySnapshot, ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
-import { shortenTokenId, getTokenType, formatCurrency } from 'src/core/utils'
+import { shortenTokenId, getTokenType, formatTokenAmount } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
 import CopyText from 'src/components/CopyText.vue'
@@ -219,7 +231,7 @@ const reservedSupply = computed(() => {
     console.log('activeAuthhead.value?.token?.amount', activeAuthhead.value?.token?.amount)
     let amount: string | bigint = activeAuthhead.value?.token?.amount ?? 0n
     let decimals = localSnapshot.value.token?.decimals ?? 0
-    return formatCurrency(amount ?? 0, localSnapshot.value.token?.symbol || '', decimals)
+    return formatTokenAmount(amount ?? 0, localSnapshot.value.token?.symbol || '', decimals)
     // if (amount == null) return null
     // try {
     //     return BigInt(amount).toLocaleString()
@@ -277,7 +289,6 @@ const mintNft = () => {
 }
 
 const releaseReserves = (action: 'issuance' | 'burn') => {
-    console.log(activeAuthhead.value)
     if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
         return $q.notify({
             type: 'Error',
@@ -292,7 +303,6 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
         decimals: activeAuthhead.value!.identitySnapshot?.token?.decimals ?? 0,
         identitySnapshot: activeAuthhead.value!.identitySnapshot,
     }
-    console.log('Action', action)
     if (action === 'issuance') {
         componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
     } else if (action === 'burn') {
@@ -309,8 +319,6 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
         componentProps,
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
-
-        console.log('user inputs', userInputs)
 
         const loadingGroup = $q.loading.show({
             group: 'issue-fungible-reserves-loading-group',
@@ -395,24 +403,15 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
     })
 }
 
-const saveSnapshot = () => {
-    // placeholder
-}
-
-const publishSnapshot = () => {
-    // placeholder
-}
-
 const viewRegistry = () => {
-    router.push({ path: '/token/metadata-registry', query: { authbase: activeAuthhead.value?.token?.category } })
+    router.push({
+        path: '/token/metadata-registry', query: {
+            authbase: activeAuthhead.value?.token?.category,
+            contentHash: activeAuthhead.value?.identitySnapshotIdentifier?.contentHash
+        }
+    })
 }
 
-const copyCategory = () => {
-    const text = localSnapshot.value.token?.category || activeAuthhead.value?.token?.category || ''
-    if (text) {
-        navigator.clipboard.writeText(text)
-    }
-}
 
 onMounted(() => {
     if (!activeAuthhead.value) {
