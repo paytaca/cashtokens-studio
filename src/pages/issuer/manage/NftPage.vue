@@ -17,8 +17,8 @@
             </div>
           </q-card>
         </div>
-        <div v-else-if="activeNft && !activeNft.nftType"
-          class="bg-dark border-radius-12 q-pa-lg flex flex-center" style="min-height: 200px;">
+        <div v-else-if="activeNft && !activeNft.nftType" class="bg-dark border-radius-12 q-pa-lg flex flex-center"
+          style="min-height: 200px;">
           <div class="text-center text-grey-5">
             <q-icon name="info" size="48px" class="q-mb-sm block" />
             <div class="text-caption">No NFT metadata available for this UTXO</div>
@@ -43,6 +43,8 @@ import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
 import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
 import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { db } from 'src/core/client-db'
+import { vmNumberToBigInt } from '@bitauth/libauth'
+import { hexToBin } from 'bitauth-libauth-v3'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -64,62 +66,70 @@ const goBack = () => {
 }
 
 const handleSave = async (rawNft: NftType) => {
-  const a = activeNft.value
-  if (!a || !activeAuthhead.value) return
+  if (!activeNft.value || !activeAuthhead.value) return
 
   const nft = JSON.parse(JSON.stringify(rawNft))
 
   const existing = await db.nfts
     .where('[contentHash+authbase+timestamp+type]')
-    .equals([a.contentHash, a.authbase, a.timestamp, a.commitmentOrBottomAltStack])
+    .equals([
+      activeNft.value.contentHash,
+      activeNft.value.authbase,
+      activeNft.value.timestamp,
+      activeNft.value.commitmentOrBottomAltStack
+    ])
     .first()
 
   if (existing) {
-
     const status = existing.status === 'published' ? 'modified' : existing.status
     await db.nfts.update(existing.id!, { nft, status })
 
   } else {
-    const status = a.isNew ? 'new' : 'modified'
+    const status = activeNft.value.isNew ? 'new' : 'modified'
     await db.nfts.put({
-      contentHash: a.contentHash,
-      authbase: a.authbase,
-      timestamp: a.timestamp,
-      category: a.category,
-      type: a.commitmentOrBottomAltStack,
+      contentHash: activeNft.value.contentHash,
+      authbase: activeNft.value.authbase,
+      timestamp: activeNft.value.timestamp,
+      category: activeNft.value.category,
+      type: activeNft.value.commitmentOrBottomAltStack,
       nft,
       status
     })
   }
 
   saveKey.value++
-
   $q.notify({ type: 'positive', message: 'NFT saved' })
 }
 
 onMounted(async () => {
-  const a = activeNft.value
-  if (!a) {
+  if (!activeNft.value) {
     goBack()
     return
   }
 
-  if (!a.nftType) {
-    a.nftType = { name: '', description: '' }
-    try {
-      const result = await registryStore.fetchNftType(a.category, a.commitmentOrBottomAltStack)
-      if (result) {
-        a.nftType = result
-      }
-    } catch (e) {
-      console.log('Failed to fetch NFT type for', a.category, a.commitmentOrBottomAltStack, e)
+  let name = `${activeAuthhead.value?.identitySnapshot?.token?.symbol} #${activeNft.value.commitmentOrBottomAltStack}`
+
+  activeNft.value.nftType = { name, description: '', uris: {}, extensions: {} }
+
+  if (!activeNft.value.bytecode) {
+    activeNft.value.nftType.name = name.replace(`${activeNft.value.commitmentOrBottomAltStack}`, Number(vmNumberToBigInt(hexToBin(activeNft.value.commitmentOrBottomAltStack))).toString())
+  }
+
+  try {
+    const result = await registryStore.fetchNftType(activeNft.value.category, activeNft.value.commitmentOrBottomAltStack)
+    if (result) {
+      activeNft.value.nftType = result
     }
+    return
+  } catch (e) {
+    console.log('No existing NFT Type')
   }
 })
 
 onBeforeRouteLeave(() => {
   registryStore.setActiveNft(null)
 })
+
 </script>
 
 <style scoped lang="scss">
