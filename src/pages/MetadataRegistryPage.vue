@@ -37,6 +37,11 @@
       <!-- No registry state -->
       <div v-else-if="!registryRecord && !inMemoryRegistry" class="col-xs-12 col-sm-8 q-gutter-y-md">
         <q-card flat class="bg-dark q-pa-lg">
+          <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
+            <span>Token Registry </span>
+            <q-icon name="mdi-information" size="lg" />
+
+          </q-card-title>
           <div class="flex items-center q-gutter-x-md q-mb-lg">
             <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
               <q-icon name="token" color="primary" size="32px" />
@@ -112,7 +117,7 @@
             <q-tab name="identity">
               <div class="row items-center q-gutter-xs no-wrap">
                 <q-icon name="mdi-book-clock-outline" size="sm" />
-                <span>Token Identity</span>
+                <span>Token</span>
               </div>
             </q-tab>
             <q-tab name="nfts">
@@ -151,6 +156,10 @@
             <!-- Tab 2: NFTs -->
             <q-tab-panel name="nfts" class="q-pa-none">
               <q-card flat class="bg-dark q-pa-lg">
+                <div class="flex justify-end">
+                  <q-btn label="Add NFT Metadata" text-color="secondary" icon="add" @click="addNft" no-caps
+                    dense></q-btn>
+                </div>
                 <div v-if="!nftCategory" class="text-caption text-grey-5 text-center q-pa-md">
                   This token does not have NFT metadata.
                 </div>
@@ -300,7 +309,6 @@
         </div>
       </div>
     </div>
-    <AddNftDialog v-model="showAddNftDialog" :collection-type="collectionType" @ok="onAddNftOk" />
   </q-page>
 </template>
 
@@ -384,7 +392,6 @@ const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
 const publishedLoading = ref(false)
 const publishing = ref(false)
-const showAddNftDialog = ref(false)
 
 const nftTypeColumns: QTableColumn[] = [
   { name: 'key', align: 'left', label: 'Sequence Number', field: 'hexKey', sortable: true },
@@ -625,31 +632,37 @@ const addNft = () => {
   const ab = selectedAuthbase.value
   const ts = selectedTimestamp.value
   if (!ch || !ab || !ts) return
-  showAddNftDialog.value = true
-}
+  $q.dialog({
+    component: AddNftDialog,
+    componentProps: { collectionType: collectionType.value }
+  }).onOk(async (typeKey: string) => {
+    const ch = currentContentHash.value
+    const ab = selectedAuthbase.value
+    const ts = selectedTimestamp.value
+    if (!ch || !ab || !ts) return
+    const isParsable = collectionType.value === 'parsable'
+    const resolvedKey = isParsable ? typeKey : formatCommitment(typeKey, 'decimal', 'vm-number')
+    const regStore = useRegistryStore()
+    const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
+    regStore.setActiveNft({
+      contentHash: ch,
+      authbase: ab,
+      timestamp: ts,
+      category: ab,
+      bytecode,
+      commitmentOrBottomAltStack: resolvedKey,
+      nftType: undefined,
+      allowEdit: true,
+      isNew: true
+    })
 
-const onAddNftOk = async (typeKey: string) => {
-  const ch = currentContentHash.value
-  const ab = selectedAuthbase.value
-  const ts = selectedTimestamp.value
-  if (!ch || !ab || !ts) return
-  const isParsable = collectionType.value === 'parsable'
-  const resolvedKey = isParsable ? typeKey : formatCommitment(typeKey, 'decimal', 'vm-number')
-  const regStore = useRegistryStore()
-  const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
-  regStore.setActiveNft({
-    contentHash: ch,
-    authbase: ab,
-    timestamp: ts,
-    category: ab,
-    bytecode,
-    commitmentOrBottomAltStack: resolvedKey,
-    nftType: undefined,
-    allowEdit: true,
-    isNew: true
+    if (activeAuthhead.value) {
+      const { setActiveAuthhead } = useAuthguardStore()
+      setActiveAuthhead(activeAuthhead.value)
+    }
+    const returnTo = encodeURIComponent(router.currentRoute.value.fullPath)
+    router.push(`/issuer/nft-collections/${ab}/nft?returnTo=${returnTo}`)
   })
-  const returnTo = encodeURIComponent(router.currentRoute.value.fullPath)
-  router.push(`/issuer/nft-collections/${ab}/nft?returnTo=${returnTo}`)
 }
 
 const editNft = (record: NftRecord) => {
@@ -1003,12 +1016,6 @@ const onPublish = async () => {
     return $q.notify({ type: 'error', message: 'No registry or active authhead available.' })
   }
 
-  // Validate before publishing
-  const reg = currentRegistry.value
-  // console.log('CURRENTREGISTRY.value', currentRegistry.value)
-  // if (reg && !validateRegistry(reg)) return
-
-  // Save modified components before publishing
   if (registryModified.value) {
     await saveRegistry()
   }
@@ -1016,7 +1023,6 @@ const onPublish = async () => {
     await saveIdentitySnapshot()
   }
 
-  // Show version dialog
   $q.dialog({
     component: RegistryVersionOptionsDialog,
     componentProps: {
