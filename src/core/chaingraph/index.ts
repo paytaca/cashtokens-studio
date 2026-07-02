@@ -6,6 +6,7 @@ export type BaseParams = {
     chainGraphUrl?: string
 }
 
+// eslint-disable-next-line @typescript-eslint/no-inferrable-types
 function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 15_000): Promise<Response> {
     return new Promise((resolve, reject) => {
         const controller = new AbortController()
@@ -169,15 +170,11 @@ export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
         },
         method: 'POST',
         body: JSON.stringify({
-          // 1. Label the operation for cleaner network debugging
           operationName: "FindGenesisTransaction",
-          
-          // 2. Safely inject your token identity variable using the single backslash prefix
           variables: {
             category: `\\x${params.category}`
           },
           
-          // 3. Paste your exact functional playground query here
           query: `
             query FindGenesisTransaction($category: bytea!) {
               transaction(
@@ -224,13 +221,55 @@ export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
     }
 
     response = await response.json();
-
-    console.log('Authbase of category', response)
-      
     return response as string
-      // Example execution inside your Pinia store or component:
-      // const response = await fetch('YOUR_CHAINGRAPH_URL', payload);
-      // const { data } = await response.json();
-      
-      
   }
+
+export async function fetchMintedNftsByCategory (params: {category: string, chainGraphUrl?: string}) {
+
+  const url = params.chainGraphUrl || import.meta.env.VITE_CHAINGRAPH_URL
+
+  if (!url)  {
+      throw new Error('ChainGraph url required')
+  }
+  
+  const payload = {
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    method: 'POST',
+    body: JSON.stringify({
+      operationName: "FindGenesisTransaction",
+      variables: {
+        category: `\\x${params.category}`
+      },
+      query: `
+        query GetNFTsByCategory($category: bytea!) {
+          output(
+            where: {
+              token_category: { _eq: $category }
+              # Filters out any outputs that have a matching spent_by transaction entry
+              _not: { spent_by: {} } 
+            }
+          ) {
+            spent_by {
+              outpoint_transaction_hash
+            }
+            transaction_hash
+            output_index
+            fungible_token_amount
+            nonfungible_token_capability
+            nonfungible_token_commitment
+          }
+        }
+      `,
+    }),
+  };
+
+  let response: any = await fetchWithTimeout(url, payload);
+
+  if (response.status >= 400) {
+      throw response.statusText;
+  }
+  response = await response.json();
+  return response
+}
