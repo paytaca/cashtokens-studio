@@ -1,30 +1,21 @@
 <template>
-  <q-dialog :model-value="modelValue" persistent>
+  <q-dialog ref="dialogRef" @hide="onDialogHide" persistent>
     <q-card class="q-px-sm q-py-lg full-width">
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold" style="text-wrap: wrap;">
-          Add NFT Type
+          Add NFT Metadata
         </q-toolbar-title>
       </q-toolbar>
-      <q-card-section class="q-gutter-sm">
-        <div class="q-mx-md text-justify">
-          <q-icon name="info" color="primary" size="sm" />
-          <span class="text-wrap text-justify">
-            Enter the {{ isSequential ? 'sequence/item number' : 'bottom alt stack hex' }}
-            to identify this new NFT type. You'll then be taken to the NFT editor.
-          </span>
-        </div>
-        <div class="q-gutter-sm">
-          <q-input v-model="inputValue" :label="inputLabel" filled dense
-            :type="isSequential ? 'number' : 'text'"
-            :hint="hint"
-            @keyup.enter="onConfirm"
-            autofocus />
-        </div>
+      <q-card-section>
+        <FormField>
+          <label class="q-mb-xs">Enter the {{ isSequential ? 'NFTs sequence number' : 'NFTs hex identifier' }}</label>
+          <q-input v-model="inputValue" outlined :type="isSequential ? 'number' : 'text'" :hint="hint"
+            @keyup.enter="onConfirm" autofocus />
+        </FormField>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn flat label="Cancel" color="grey-6" @click="onCancel" />
-        <q-btn flat icon="add" label="Add" color="primary" @click="onConfirm" :disable="!isValid" />
+        <q-btn flat label="Cancel" @click="onCancel" />
+        <q-btn label="Ok" color="primary" @click="onConfirm" :disable="!isValid" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -32,17 +23,17 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { useDialogPluginComponent } from 'quasar'
 
 const props = defineProps<{
-  modelValue: boolean
   collectionType: 'sequential' | 'parsable'
 }>()
 
-const emit = defineEmits<{
-  'update:modelValue': [value: boolean]
-  cancel: []
-  ok: [typeKey: string]
-}>()
+defineEmits([
+  ...useDialogPluginComponent.emits
+])
+
+const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent()
 
 const inputValue = ref('')
 
@@ -63,15 +54,13 @@ const isValid = computed(() => {
 
 const onCancel = () => {
   inputValue.value = ''
-  emit('update:modelValue', false)
-  emit('cancel')
+  onDialogCancel()
 }
 
 const onConfirm = () => {
   if (!isValid.value) return
   const typeKey = inputValue.value.trim()
   inputValue.value = ''
-  emit('update:modelValue', false)
-  emit('ok', typeKey)
+  onDialogOK(typeKey)
 }
 </script>
