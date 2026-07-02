@@ -1,10 +1,18 @@
 import * as Comlink from 'comlink';
-import { CompactRegistry, db, IdentitySnapshotRecord, ParsedRegistryRecord, RegistryRecord, BumpArtifact, RegistryRecordStatus } from '../core/client-db'
+import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
+import { 
+  CompactRegistry, 
+  db, 
+  IdentitySnapshotRecord, 
+  ParsedRegistryRecord, 
+  RegistryRecordStatus 
+} from '../core/client-db'
 import { retrieveLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
-import { IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues } from 'src/core/bcmr/bcmr-v2.schema';
-import { uploadFile } from 'src/core/ipfs';
-import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
+import type { 
+  IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues 
+} from '../core/bcmr/bcmr-v2.schema';
+import { uploadFile } from '../core/ipfs';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,
@@ -55,14 +63,26 @@ const registryWorker = {
     } as CompactRegistry
   },
 
+  extractTokenCategories(registry: Registry) {
+    const tokenCategories = []
+    for (const authbase of Object.keys(registry.identities || {})) {
+      for (const timestamp of Object.keys(registry.identities?.[authbase] || {})) {
+        const category = registry.identities?.[authbase]?.[timestamp]?.token?.category
+        if (category) {
+          tokenCategories.push(`${category}:${authbase}:${timestamp}`)
+        }
+      }
+    }
+    return tokenCategories
+  },
+
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
-      // If a specific contentHash is requested, check DB first (zero network)
       if (params.contentHash) {
         const cached = await db.registry.where('contentHash').equals(params.contentHash).first()
         if (cached?.rawRegistry) {
-          const { rawRegistry, ...rest } = cached
-          const parsedRegistry = await this.parseRegistry(rawRegistry, true)
+          const { rawRegistry , ...rest } = cached
+          const parsedRegistry = await this.parseRegistry(cached.rawRegistry, true)
           return { ...rest, registry: parsedRegistry as CompactRegistry }
         }
       }
@@ -131,9 +151,9 @@ const registryWorker = {
         })
         
         const response = await Promise.any(fetchPromises)
-
         const registry: Blob = await response.blob();
         const parsedRegistry = await this.parseRegistry(registry, false) as Registry
+        const tokenCategories = this.extractTokenCategories(parsedRegistry)
         const compactParsedRegistry = await this.parseRegistry(registry, true) as CompactRegistry
         return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot], async () => {
           
@@ -171,12 +191,11 @@ const registryWorker = {
             publicationUris: uris,
             rawRegistry: registry,
             registry: compactParsedRegistry as CompactRegistry,
-            status: 'published' as RegistryRecordStatus
+            status: 'published' as RegistryRecordStatus,
+            tokenCategories
           }
 
           const id = await db.registry.put(registryRecord)
-
-          console.log('REGISTRY RECORD', registryRecord)
           const { rawRegistry, ...restOfRegistryRecord } = registryRecord
           return { id, ...restOfRegistryRecord }
         })
@@ -191,6 +210,61 @@ const registryWorker = {
   },
 
   async getIdentitySnapshot(params: GetIdentitySnapshotParams): Promise<IdentitySnapshotRecord|undefined> {
+    try {
+
+      if (params.contentHash && params.identity) {
+        const queryResult = await db.registryIdentitySnapshot
+          .where('[contentHash+authbase+timestamp]')
+          .equals([params.contentHash, params.identity.authbase, params.identity.timestamp])
+          .first();
+
+        if (queryResult) return queryResult
+
+        // Snapshot not cached yet - parse from rawRegistry and store it
+        const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
+        if (registryRecord?.rawRegistry) {
+          const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
+          const identitySnapshot = parsedRegistry.identities?.[params.identity.authbase]?.[params.identity.timestamp]
+
+          if (identitySnapshot) {
+            // Strip nft types from snapshot (matching getRegistry behavior)
+            const snapshot = JSON.parse(JSON.stringify(identitySnapshot)) as IdentitySnapshot
+            if (snapshot.token?.nfts?.parse?.types) {
+              snapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
+            }
+
+            const identitySnapshotRecord = {
+              contentHash: params.contentHash,
+              authbase: params.identity.authbase,
+              timestamp: params.identity.timestamp,
+              identitySnapshot: snapshot
+            } as IdentitySnapshotRecord
+
+            if (snapshot.token?.category) {
+              identitySnapshotRecord.category = snapshot.token.category
+            }
+
+            await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+            return identitySnapshotRecord
+          }
+        }
+      }
+
+      if (!params.category) throw new Error('Identity or category required')
+      
+      // Return identitySnapshot of category with latest timestamp
+      const records = await db.registryIdentitySnapshot
+          .where('category')
+          .equals(params.category)
+          .toArray()
+      records.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
+      return records[0]
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    } 
+  },
+
+  async extractRegistryIdentitySnapshot(params: GetIdentitySnapshotParams): Promise<IdentitySnapshotRecord|undefined> {
     try {
 
       if (params.contentHash && params.identity) {
@@ -378,14 +452,20 @@ const registryWorker = {
       registryCandidate.identities![authbase]![timestampCandidate] = unpublishedIdentities[authbase]![timestamp] as IdentitySnapshot
       // Query NftRecord for this contentHash, authbase, and timestamp
       // Only include those with created or modified attributes
-      const nftCollectionRecords = (await db.nfts
+      const nftRecords = (await db.nfts
         .where('[contentHash+authbase+timestamp]')
         .equals([registryRecord.contentHash, authbase, timestamp])
         .toArray())
         .filter(nft => nft.status === 'new' || nft.status === 'modified');
-      
-      // Populate the snapshot, replace modified, add created
-      nftCollectionRecords.forEach((nftRecord) => {
+        
+      if (nftRecords.length > 0 && !registryCandidate.identities![authbase]![timestampCandidate]?.token!.nfts) {
+        registryCandidate.identities![authbase]![timestampCandidate]!.token!.nfts = {
+              parse: {
+                types: {}
+              }
+            }
+      }
+      nftRecords.forEach((nftRecord) => {
         registryCandidate.identities![authbase]![timestampCandidate]!.token!.nfts!.parse.types[nftRecord.type] = nftRecord.nft
       })
     }
