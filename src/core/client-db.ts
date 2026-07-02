@@ -21,7 +21,8 @@ export type RegistryRecord = {
     rawRegistry: Blob,
     registry: CompactRegistry,
     bumpArtifact?: BumpArtifact,
-    status: RegistryRecordStatus
+    status: RegistryRecordStatus,
+    tokenCategories?: string[]
 }
 
 export type CompactRegistry = Omit<Registry, 'identities'> & { 
