@@ -1204,7 +1204,7 @@ onMounted(async () => {
   if (typeof (window) !== 'undefined') {
     window.addEventListener('hashchange', handleHashChange)
   }
-  await loadAuthkeys(wallet.value, true)
+  await loadAuthkeys(wallet.value)
   triggerRef(wallet)
   await loadCollectedIdentitySnapshots()
   await loadActivities()
