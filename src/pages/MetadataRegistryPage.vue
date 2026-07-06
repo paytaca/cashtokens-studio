@@ -1,13 +1,11 @@
 <template>
   <q-page class="bg-dark-page text-grey-2">
     <div class="row justify-center q-pa-md">
-      <!-- Back button -->
-      <div class="col-xs-12 q-mb-md">
-        <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
-      </div>
-
       <!-- Loading skeleton -->
-      <div v-if="loading" class="col-xs-12 col-sm-10">
+      <div v-if="loading" class="col-xs-12 col-sm-8">
+        <div class="q-mb-md q-px-sm">
+          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+        </div>
         <q-card flat class="bg-dark q-pa-lg q-mb-md">
           <div class="row items-center q-gutter-x-md">
             <q-skeleton type="QAvatar" size="64px" class="bg-grey-9" />
@@ -35,7 +33,11 @@
       </div>
 
       <!-- No registry state -->
-      <div v-else-if="!registryRecord && !inMemoryRegistry" class="col-xs-12 col-sm-8 q-gutter-y-md">
+
+      <div v-else-if="!loading && !registryRecord" class="col-xs-12 col-sm-8 q-gutter-y-md">
+        <div class="q-mb-md q-px-sm">
+          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+        </div>
         <q-card flat class="bg-dark q-pa-lg">
           <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
             <span>Token Registry </span>
@@ -65,8 +67,10 @@
 
 
       <!-- Main content -->
-      <div v-else class="col-xs-12 col-sm-10">
-
+      <div v-else class="col-xs-12 col-sm-8">
+        <div class="q-mb-md q-px-sm">
+          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+        </div>
         <div class="avatar-banner-wrapper">
           <div class="row items-center q-gutter-y-md q-mb-lg">
             <div class="col-12">
@@ -154,129 +158,115 @@
             </q-tab-panel>
 
             <!-- Tab 2: NFTs -->
-            <q-tab-panel name="nfts" class="q-pa-none">
-              <q-card flat class="bg-dark q-pa-lg">
+            <q-tab-panel name="nfts">
+              <q-card flat class="bg-dark">
                 <div class="flex justify-end">
                   <q-btn label="Add NFT Metadata" text-color="secondary" icon="add" @click="addNft" no-caps
                     dense></q-btn>
                 </div>
-                <div v-if="!nftCategory" class="text-caption text-grey-5 text-center q-pa-md">
-                  This token does not have NFT metadata.
-                </div>
-                <template v-else>
-                  <div class="flex items-center q-gutter-x-md q-mb-md">
-                    <div v-if="collectionType === 'sequential'" class="flex items-center q-gutter-x-md">
-                      <q-chip color="grey-8" text-color="grey-3" icon="pin" label="Sequential" dense />
+
+                <!-- Unpublished NFTs -->
+                <q-card v-if="unpublishedNfts.length > 0" flat class="bg-dark q-mt-md">
+                  <div class="q-pa-lg">
+                    <div class="row items-center justify-between q-mb-xs">
+                      <div class="text-h6 text-weight-medium">
+                        <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
+                        Unpublished NFTs
+                      </div>
+                      <div class="q-gutter-x-sm">
+                        <q-btn color="primary" icon="mdi-publish" label="Publish" unelevated :loading="publishing"
+                          @click="publishNfts" size="sm" :disable="unpublishedNfts.length === 0" />
+                      </div>
                     </div>
-                    <div v-else class="flex items-center q-gutter-x-md">
-                      <q-chip color="green-9" text-color="green-3" icon="code" label="Parsable" dense />
-                    </div>
-                    <q-btn color="primary" icon="add" label="Add NFT" unelevated @click="addNft" size="sm" />
+                    <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
+                    <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat dark
+                      :rows-per-page-options="[0]" class="bg-dark"
+                      @row-click="(_evt, row) => editNft(row as NftRecord)">
+                      <template v-slot:body-cell-nft="props">
+                        <q-td :props="props">
+                          <div class="flex items-center no-wrap q-gutter-x-md">
+                            <div class="flex column items-center">
+                              <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                                <q-img v-if="props.row.nft.uris?.icon" :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!"
+                                  fit="cover" />
+                                <q-img v-else
+                                  :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                  fit="cover" />
+                              </q-avatar>
+                              <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                style="line-height: 1;">No Icon</span>
+                            </div>
+                            <div>
+                              <div class="flex items-center q-gutter-x-xs">
+                                <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
+                                <q-badge :color="props.row.status === 'new' ? 'info' : 'warning'">
+                                  {{ props.row.status }}
+                                </q-badge>
+                              </div>
+                              <div class="text-caption text-grey-5 text-mono">
+                                {{ props.row.type }}
+                              </div>
+                            </div>
+                          </div>
+                        </q-td>
+                      </template>
+                      <template v-slot:body-cell-actions="props">
+                        <q-td :props="props">
+                          <q-btn dense flat round icon="delete" color="negative" size="sm"
+                            @click.stop="deleteNft(props.row)" />
+                        </q-td>
+                      </template>
+                      <template v-slot:no-data>
+                        <div class="text-grey-5 text-center q-pa-md">No unpublished NFTs</div>
+                      </template>
+                    </q-table>
                   </div>
+                </q-card>
 
-                  <!-- Unpublished NFTs -->
-                  <q-card v-if="unpublishedNfts.length > 0" flat class="bg-dark q-mt-md">
-                    <div class="q-pa-lg">
-                      <div class="row items-center justify-between q-mb-xs">
-                        <div class="text-h6 text-weight-medium">
-                          <q-icon name="fiber_new" size="20px" class="q-mr-xs" />
-                          Unpublished NFTs
-                        </div>
-                        <div class="q-gutter-x-sm">
-                          <q-btn color="primary" icon="mdi-publish" label="Publish" unelevated :loading="publishing"
-                            @click="publishNfts" size="sm" :disable="unpublishedNfts.length === 0" />
-                        </div>
-                      </div>
-                      <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
-                      <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat dark
-                        :rows-per-page-options="[0]" class="bg-dark"
-                        @row-click="(_evt, row) => editNft(row as NftRecord)">
-                        <template v-slot:body-cell-nft="props">
-                          <q-td :props="props">
-                            <div class="flex items-center no-wrap q-gutter-x-md">
-                              <div class="flex column items-center">
-                                <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                                  <q-img v-if="props.row.nft.uris?.icon"
-                                    :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!" fit="cover" />
-                                  <q-img v-else
-                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
-                                    fit="cover" />
-                                </q-avatar>
-                                <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
-                                  style="line-height: 1;">No Icon</span>
+                <!-- Published NFTs -->
+                <q-card v-if="publishedNfts.length > 0" flat class="bg-dark q-mt-lg">
+                  <div class="q-pa-lg">
+                    <div class="table-header text-h6 text-weight-medium q-mb-xs">
+                      Published NFTs
+                      <q-btn flat dense round icon="refresh" size="md" :loading="publishedLoading"
+                        @click="loadPublishedNfts(0, 10)" class="q-mr-xs" />
+                    </div>
+                    <div class="text-caption text-grey-6 q-mb-md">NFT metadata currently on the published registry.
+                    </div>
+                    <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat dark
+                      :loading="publishedLoading" v-model:pagination="publishedPagination" @request="onPublishedRequest"
+                      @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
+                      <template v-slot:body-cell-nft="props">
+                        <q-td :props="props">
+                          <div class="flex items-center no-wrap q-gutter-x-md">
+                            <div class="flex column items-center">
+                              <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                                <q-img v-if="props.row.nft.uris?.icon" :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!"
+                                  fit="cover" />
+                                <q-img v-else
+                                  :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
+                                  fit="cover" />
+                              </q-avatar>
+                              <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                                style="line-height: 1;">No Icon</span>
+                            </div>
+                            <div>
+                              <div class="flex items-center q-gutter-x-xs">
+                                <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
                               </div>
-                              <div>
-                                <div class="flex items-center q-gutter-x-xs">
-                                  <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
-                                  <q-badge :color="props.row.status === 'new' ? 'info' : 'warning'">
-                                    {{ props.row.status }}
-                                  </q-badge>
-                                </div>
-                                <div class="text-caption text-grey-5 text-mono">
-                                  {{ props.row.type }}
-                                </div>
+                              <div class="text-caption text-grey-5 text-mono">
+                                {{ props.row.type }}
                               </div>
                             </div>
-                          </q-td>
-                        </template>
-                        <template v-slot:body-cell-actions="props">
-                          <q-td :props="props">
-                            <q-btn dense flat round icon="delete" color="negative" size="sm"
-                              @click.stop="deleteNft(props.row)" />
-                          </q-td>
-                        </template>
-                        <template v-slot:no-data>
-                          <div class="text-grey-5 text-center q-pa-md">No unpublished NFTs</div>
-                        </template>
-                      </q-table>
-                    </div>
-                  </q-card>
-
-                  <!-- Published NFTs -->
-                  <q-card flat class="bg-dark q-mt-lg">
-                    <div class="q-pa-lg">
-                      <div class="table-header text-h6 text-weight-medium q-mb-xs">
-                        Published NFTs
-                        <q-btn flat dense round icon="refresh" size="md" :loading="publishedLoading"
-                          @click="loadPublishedNfts(0, 10)" class="q-mr-xs" />
-                      </div>
-                      <div class="text-caption text-grey-6 q-mb-md">NFT metadata currently on the published registry.
-                      </div>
-                      <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type" flat dark
-                        :loading="publishedLoading" v-model:pagination="publishedPagination"
-                        @request="onPublishedRequest" @row-click="onPublishedRowClick" class="bg-dark border-radius-12">
-                        <template v-slot:body-cell-nft="props">
-                          <q-td :props="props">
-                            <div class="flex items-center no-wrap q-gutter-x-md">
-                              <div class="flex column items-center">
-                                <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                                  <q-img v-if="props.row.nft.uris?.icon"
-                                    :src="ipfsToGatewayUrl(props.row.nft.uris.icon)!" fit="cover" />
-                                  <q-img v-else
-                                    :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.type}`"
-                                    fit="cover" />
-                                </q-avatar>
-                                <span v-if="!props.row.nft.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
-                                  style="line-height: 1;">No Icon</span>
-                              </div>
-                              <div>
-                                <div class="flex items-center q-gutter-x-xs">
-                                  <span class="text-caption text-white">{{ props.row.nft.name || 'Unnamed NFT' }}</span>
-                                </div>
-                                <div class="text-caption text-grey-5 text-mono">
-                                  {{ props.row.type }}
-                                </div>
-                              </div>
-                            </div>
-                          </q-td>
-                        </template>
-                        <template v-slot:no-data>
-                          <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
-                        </template>
-                      </q-table>
-                    </div>
-                  </q-card>
-                </template>
+                          </div>
+                        </q-td>
+                      </template>
+                      <template v-slot:no-data>
+                        <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
+                      </template>
+                    </q-table>
+                  </div>
+                </q-card>
               </q-card>
             </q-tab-panel>
 
@@ -368,9 +358,7 @@ const { getRegistryByAuthbase, loadRegistry } = useRegistryStore()
 const loading = ref(true)
 const refreshing = ref(false)
 const activeTab = ref<'identity' | 'nfts' | 'registry'>('identity')
-
 const authbase = ref(route.query.authbase as string)
-
 const registryRecord = ref<ParsedRegistryRecord | undefined>()
 const inMemoryRegistry = ref<{ registry: Registry, contentHash: string } | undefined>()
 
@@ -465,6 +453,7 @@ const canPublish = computed(() => {
 })
 
 const registry = ref<CompactRegistry | undefined>()
+
 watch(currentRegistry, (reg) => {
   registry.value = reg ? toCompactRegistry(reg) : undefined
 }, { immediate: true })
@@ -586,6 +575,7 @@ const onNftTypesRequest = async (props: any) => {
 const loadUnpublishedNfts = async () => {
   try {
     const ch = currentContentHash.value
+    console.log('loading unpublished', ch)
     if (!ch || !selectedAuthbase.value || !selectedTimestamp.value) {
       unpublishedNfts.value = []
       return
@@ -595,6 +585,8 @@ const loadUnpublishedNfts = async () => {
       .equals([ch, selectedAuthbase.value, selectedTimestamp.value] as [string, string, string])
       .filter(n => n.status === 'new' || n.status === 'modified')
       .toArray()
+
+    console.log('unpublishedNfts.value', unpublishedNfts.value)
   } catch (error) {
     $q.notify({ type: 'warning', message: 'Failed to load unpublished NFTs' })
   }
@@ -702,9 +694,9 @@ const publishNfts = async () => {
   if (!ch || !selectedAuthbase.value || !selectedTimestamp.value || unpublishedNfts.value.length === 0) return
 
   // Save identity snapshot if modified (NFT collection metadata is part of it)
-  if (identitySnapshotModified.value) {
-    await saveIdentitySnapshot()
-  }
+  // if (identitySnapshotModified.value) {
+  //   await saveIdentitySnapshot()
+  // }
 
   publishing.value = true
   const loadingGroup = $q.loading.show({
@@ -738,6 +730,8 @@ const publishNfts = async () => {
       }
     })
 
+    console.log('publish registry request', publishRegistryRequest)
+
     const response = await manager.value!.signTransaction(publishRegistryRequest)
 
     loadingGroup({ message: 'Broadcasting...' })
@@ -765,6 +759,7 @@ const publishNfts = async () => {
       }
     }
   } catch (error: any) {
+    console.log('ERROR2', error)
     $q.notify({ type: 'error', message: error.message })
   } finally {
     publishing.value = false
@@ -949,6 +944,7 @@ const saveIdentitySnapshot = async () => {
     identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
     identitySnapshotModified.value = false
   } catch (error) {
+    console.log('ERROR1', error)
     $q.notify({ type: 'error', message: `Error saving identity snapshot: ${getErrorMessage(error)}` })
   }
 }
@@ -1150,6 +1146,7 @@ watch(() => identitySnapshot.value?.token?.nfts, (nfts) => {
 
 onMounted(async () => {
   const authbaseVal = authbase.value
+  console.log('activeauthhead', activeAuthhead.value)
   if (!authbaseVal) {
     router.push('/dashboard')
     return
@@ -1159,13 +1156,14 @@ onMounted(async () => {
     loading.value = true
     if (route.query?.contentHash) {
       const record = await loadRegistry(route.query.authbase as string, true)
-
+      console.log('REGISTRY RECORD', record)
       if (record) {
         registryRecord.value = record
       }
     } else {
       registryRecord.value = await getRegistryByAuthbase(route.query.authbase as string)
     }
+
 
     if (registryRecord.value?.registry?.identities) {
       const timestamps = registryRecord.value.registry.identities[authbaseVal]
