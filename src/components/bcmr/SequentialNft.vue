@@ -216,7 +216,7 @@ const uploadMedia = () => {
             ...nft.value,
             uris: {
               ...nft.value.uris,
-              image: `ipfs://${cid}`,
+              asset: `ipfs://${cid}`,
               icon: `ipfs://${cid}`
             }
           }
@@ -228,7 +228,7 @@ const uploadMedia = () => {
             ...nft.value,
             uris: {
               ...nft.value.uris,
-              image: `ipfs://${cid}`,
+              asset: `ipfs://${cid}`,
               icon: `ipfs://${thumbResult.cid}`
             }
           }
