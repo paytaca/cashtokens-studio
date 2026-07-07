@@ -69,7 +69,7 @@
 
                             <div class="row items-center text-caption text-grey-5 q-ml-sm">
                                 <span class="icon-badge-hex">
-                                    <0x{{ lastMintedCommitment }}>
+                                    &lt;0x{{ lastMintedCommitment }}&gt;
                                 </span>
                                 <q-tooltip class="bg-grey-9 text-white">Raw on-chain state value</q-tooltip>
                             </div>
@@ -207,7 +207,6 @@ import { type SignTransactionRequest } from '@wizardconnect/core'
 import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { db } from 'src/core/client-db'
-import { getLockedAuthheadUtxos } from 'src/core/authguard'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
@@ -219,7 +218,7 @@ const { t } = useI18n()
 
 
 const authguardStore = useAuthguardStore()
-const { loadAuthkeys, loadAuthheads } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { activeMinter } = storeToRefs(appStore)
@@ -428,13 +427,10 @@ const mint = async () => {
         })
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: broadcastResult.txid
         })
-
-
-
-        loadingGroup()
 
         await db.saveActivity({
             event: `Mint ${mintOutputs.length} ${activeMinter.value?.identitySnapshot?.token?.symbol || activeMinter.value!.token!.category} NFT ${mintOutputs.length > 1 ? 's' : ''}`,
@@ -442,31 +438,13 @@ const mint = async () => {
             status: 'success'
         })
 
-        await loadAuthkeys(wallet.value, true)
+        loadAuthkeys(wallet.value, true).then(() => {
+            triggerRef(wallet)
+        })
 
-        triggerRef(wallet)
+        await updateActiveAuthhead()
 
-        let newAuthhead: DecoratedUtxo | undefined
-
-        if (activeAuthhead.value?.authkey) {
-            newAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value?.authkey]))?.find((utxo) => {
-                return `${utxo.txid}:${0}` === `${broadcastResult.txid}:${0}`
-            })
-
-        } else {
-            newAuthhead = (await wallet.value?.getUtxos({ sync: true })).find((utxo) => {
-                return `${utxo.txid}:${0}` === `${broadcastResult.txid}:${0}`
-            })
-        }
-
-        if (!newAuthhead) {
-            throw new Error(`The Authguard Vault failed to update it's contents (UTXOs). Please wait a few minutes before creating another transaction.`)
-        }
-
-        newAuthhead.identitySnapshot = activeAuthhead.value?.identitySnapshot
-        newAuthhead.identitySnapshotIdentifier = activeAuthhead.value?.identitySnapshotIdentifier
-
-        authguardStore.setActiveAuthhead(newAuthhead)
+        loadingGroup()
 
         $q.dialog({
             component: TransactionStatusDialog,
