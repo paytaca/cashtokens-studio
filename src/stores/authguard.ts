@@ -82,7 +82,9 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
         const utxos = await externalWallet.getUtxos({ sync }) as UtxoWithPath[]
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
         if (sync) {
-          authkeysLastSync.value = Date.now()
+          
+          await loadAuthheads(sync)
+          // authkeysLastSync.value = Date.now()
         }
         
     } finally {
