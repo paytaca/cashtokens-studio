@@ -19,6 +19,17 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeysLoading = ref<boolean>()
   const activeAuthhead = ref<DecoratedUtxo>()
 
+  async function updateActiveAuthhead() {
+    if (!activeAuthhead.value || !activeAuthhead.value.authkey?.token?.category) return
+    const latestAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value.authkey]))?.[0]
+    if (!latestAuthhead) return 
+    latestAuthhead.identitySnapshot = activeAuthhead.value.identitySnapshot
+    latestAuthhead.identitySnapshotIdentifier = activeAuthhead.value.identitySnapshotIdentifier
+    latestAuthhead.authkey = activeAuthhead.value.authkey
+    latestAuthhead.authkey.vout = activeAuthhead.value.authkey.vout
+    latestAuthhead.authkey.txid = latestAuthhead.txid
+    activeAuthhead.value = Object.assign({}, latestAuthhead)
+  }
   
   async function loadAuthheads(sync?: boolean) {
     try {
@@ -104,7 +115,8 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     activeAuthhead,
     loadAuthkeys,
     loadAuthheads,
-    setActiveAuthhead
+    setActiveAuthhead,
+    updateActiveAuthhead
   }
 }) 
 
