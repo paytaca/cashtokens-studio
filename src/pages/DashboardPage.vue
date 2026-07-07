@@ -2,56 +2,6 @@
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
 
     <div class="q-px-md q-px-md-xl content-container">
-
-      <template>
-        <div class="row q-my-md">
-
-          <!-- Avatar Column -->
-          <div class="col-xs-12 col-sm-2 flex justify-center items-center">
-            <q-avatar size="8rem" class="profile-avatar">
-              <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="Avatar">
-            </q-avatar>
-          </div>
-
-          <!-- Text Group Column: Aligned to bottom on sm+, column layout for items -->
-          <div class="col-12 col-sm-10 row">
-            <!-- Extended Pubkey Entry -->
-            <div v-if="primaryXPub" class="col-12 row items-center text-caption">
-              <div class="col-2 q-gutter-x-sm" :class="$q.screen.gt.xs ? 'col-2' : 'col-5'">
-                <q-icon name="account_balance_wallet" size="xs" color="grey-5" /><span>Extended Pubkey:</span>
-              </div>
-              <div class="col-8 flex items-center" :class="$q.screen.gt.xs ? 'col-8' : 'col-5'">
-                <span class="ellipsis" style="max-width: 50vw;">
-                  {{ primaryXPub.replace(primaryXPub.substring(8, 105), '...') }}
-                </span>
-                <CopyText :text="primaryXPub" />
-              </div>
-            </div>
-
-            <div class="col-12 row items-center text-caption">
-              <div class="col-2 q-gutter-x-sm"><q-icon name="qr_code" size="xs" color="grey-5" /><span>Deposit
-                  Address:</span></div>
-              <div class="col-8 flex items-center">
-                <span class="ellipsis" style="max-width: 50vw;">
-                  {{ shortenCashAddress(primaryAddress || '') }}
-                </span>
-                <CopyText :text="primaryAddress" />
-              </div>
-            </div>
-
-            <div class="col-12 row items-center text-caption">
-              <div class="col-2 q-gutter-x-sm"><q-icon name="img:/images/bitcoin-cash-circle.svg" color="bch"
-                  size="xs" /><span>BCH Balance:</span></div>
-              <div class="col-8 flex items-center">
-                <span class="text-weight-bold text-mono text-grey-4 q-mr-xs">{{ formatBch(bchBalance) }}</span>
-                <CopyText :text="formatBch(bchBalance)" />
-              </div>
-            </div>
-          </div>
-        </div>
-      </template>
-
-      <!-- test  -->
       <div class="q-pa-md bg-dark text-white q-gutter-y-md">
         <div class="row q-col-gutter-md justify-center" style="max-width: 75rem; margin: 0 0;">
 
@@ -76,28 +26,17 @@
             </q-card>
           </div>
 
-          <!-- 2. USER NAME AND DETAILS (DARK STYLE) -->
           <div class="col-12 text-center q-mt-lg">
-            <div class="text-h5 text-weight-bold text-white">{{ primaryXPub.replace(primaryXPub.substring(8, 105),
+            <div class="text-h5 text-weight-bold text-white">{{ primaryXPub?.replace(primaryXPub.substring(8, 105),
               '...') }}
             </div>
-            <!-- <div class="text-subtitle2 text-grey-4">Senior Frontend Developer</div>
-            <div class="text-caption text-grey-5 q-mt-xs">
-              <q-icon name="place" size="1.2em" color="grey-5" /> San Francisco, CA
-            </div> -->
             <div class="flex items-center justify-center">
               <q-btn icon="img:/images/bitcoin-cash-circle.svg" flat no-caps>
                 <div class="q-px-sm">{{ formatBch(bchBalance) }}</div>
               </q-btn>
             </div>
-            <!-- <div class="row justify-center q-gutter-sm q-mt-md">
-              <q-btn outline color="grey-5" label="Message" no-caps class="text-white" />
-              <q-btn color="indigo-7" label="Edit Profile" no-caps />
-            </div> -->
           </div>
-
         </div>
-
         <q-scroll-area style="height: 3rem" :visible="false">
           <q-tabs v-model="activeTab" dense no-caps align="left" active-color="white" indicator-color="blue-5"
             class="text-grey-7 text-weight-bold" style="min-width: max-content;" shrink>
@@ -617,7 +556,6 @@ import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
-import { copyText, shortenAddress } from 'src/apps/utils';
 
 const $q = useQuasar()
 const router = useRouter()
@@ -720,7 +658,7 @@ type TabName = typeof VALID_TABS[number]
 
 const getTabFromHash = (): TabName => {
   if (typeof (window) !== 'undefined') {
-    const hash = window.location.hash.replace('#', '')
+    const hash = window.location?.hash?.replace('#', '')
     if (VALID_TABS.includes(hash as TabName)) return hash as TabName
   }
   return 'created'
@@ -1243,8 +1181,11 @@ watch(activeTab, (newTab) => {
 })
 
 watch(() => walletIsReady.value, async (isReady, prevValue) => {
+  console.log('IS READY', isReady)
   if (isReady && Boolean(prevValue) === false) {
-    await loadAuthkeys(wallet.value, true)
+    console.log('IS READYx', isReady)
+    const authkeys = await loadAuthkeys(wallet.value, true)
+    await loadAuthheads(authkeys)
     triggerRef(wallet)
     await loadCollectedIdentitySnapshots()
     await loadActivities()
@@ -1253,7 +1194,7 @@ watch(() => walletIsReady.value, async (isReady, prevValue) => {
       triggerRef(wallet)
     })
   }
-}, { immediate: true })
+})
 
 onMounted(async () => {
   if (typeof (window) !== 'undefined') {
