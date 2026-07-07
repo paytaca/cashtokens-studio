@@ -95,59 +95,23 @@
                     </FormField>
 
                     <FormField v-if="hasNfts">
-                        <label>NFT Collection</label>
-                        <!-- <q-input :model-value="nftCollectionType" input-class="text-h6 text-weight-bold text-white"
-                            class="text-mono">
-                            <template v-slot:append>
-                                <div class="flex no-wrap q-gutter-x-sm">
-                                    <q-btn no-caps color="primary" icon="token" label="View NFTs" @click="viewNfts"
-                                        dense />
-                                    <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" size="md" @click="mintNft"
-                                        dense no-wrap>
-                                        <span class="gt-xs q-ml-xs">Mint</span>
-                                    </q-btn>
-                                </div>
-                            </template>
-</q-input> -->
+                        <label>NFT Collection <q-btn flat dense icon="preview" color="secondary"
+                                @click="viewNfts"></q-btn></label>
                         <div class="flex justify-between">
                             <div
                                 class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
                                 {{ nftCollectionType
                                 }}</div>
-                            <div class="flex no-wrap q-gutter-x-sm">
-                                <q-btn text-color="secondary" icon="preview" label="View NFTs" @click="viewNfts" />
-                                <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
-                                    <span class="gt-xs q-ml-xs">Mint</span>
-                                </q-btn>
-                            </div>
+                            <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
+                                <span class="gt-xs q-ml-xs">Mint</span>
+                            </q-btn>
                         </div>
                     </FormField>
 
                     <FormField v-if="showReleaseReserves && activeAuthhead">
-                        <label class="text-bold text-h6">Fungible Reserves</label>
-                        <!-- <q-input :model-value="formatTokenAmount(
-                            activeAuthhead.token?.amount ?? 0,
-                            localSnapshot.token!.symbol || '?',
-                            localSnapshot.token!.decimals,
-                            'none'
-                        )" input-class="text-h6 text-weight-bold text-white" class="text-mono">
-                            <template v-slot:append>
-                                <div class="flex no-wrap q-gutter-sm">
-                                    <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
-                                        @click="() => releaseReserves('burn')">
-                                        <span class="gt-xs q-ml-xs">Burn</span>
-                                    </q-btn>
-                                    <q-btn dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
-                                        @click="() => releaseReserves('issuance')">
-                                        <span class="gt-xs q-ml-xs">Release</span>
-                                    </q-btn>
-
-                                </div>
-                            </template>
-                        </q-input> -->
+                        <label>Fungible Reserves</label>
                         <div class="flex justify-between no-wrap">
-                            <div
-                                class="text-mono text-h6 text-bold  text-bch bg-grey-9 q-pa-sm border-radius-8 word-break-all">
+                            <div class="text-mono  text-bold text-bch bg-grey-9 q-pa-sm border-radius-8 word-break-all">
                                 {{ formatTokenAmount(
                                     activeAuthhead.token?.amount ?? 0,
                                     localSnapshot.token!.symbol || '?',
@@ -157,11 +121,11 @@
                                 }}
                             </div>
                             <div class="flex no-wrap q-gutter-sm">
-                                <q-btn flat dense no-wrap icon="mdi-fire" color="orange" size="md"
+                                <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
                                     @click="() => releaseReserves('burn')">
                                     <span class="gt-xs q-ml-xs">Burn</span>
                                 </q-btn>
-                                <q-btn dense no-wrap icon="mdi-send-circle-outline" color="primary" size="md"
+                                <q-btn no-wrap icon="mdi-send-circle-outline" color="primary"
                                     @click="() => releaseReserves('issuance')">
                                     <span class="gt-xs q-ml-xs">Release</span>
                                 </q-btn>
@@ -199,7 +163,7 @@ import { db } from 'src/core/client-db'
 const $q = useQuasar()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
-const { loadAuthkeys } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { wallet, manager } = useWizardConnectWallet()
@@ -244,7 +208,6 @@ const tokenType = computed(() => {
 })
 
 const reservedSupply = computed(() => {
-    console.log('activeAuthhead.value?.token?.amount', activeAuthhead.value?.token?.amount)
     let amount: string | bigint = activeAuthhead.value?.token?.amount ?? 0n
     let decimals = localSnapshot.value.token?.decimals ?? 0
     return formatTokenAmount(amount ?? 0, localSnapshot.value.token?.symbol || '', decimals)
@@ -379,7 +342,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
                 txHash: broadcastResult.txid
             })
 
-            loadingGroup()
+
 
             await db.saveActivity({
                 event: `Released ${activeAuthhead.value!.identitySnapshot?.token!.symbol || activeAuthhead.value?.token?.category} Tokens from reserves`,
@@ -387,10 +350,12 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
                 status: 'success'
             })
 
-            await loadAuthkeys(wallet.value, true)
+            loadAuthkeys(wallet.value, true).then(() => {
+                triggerRef(wallet)
+            })
 
-            triggerRef(wallet)
-
+            await updateActiveAuthhead()
+            loadingGroup()
             $q.dialog({
                 component: TransactionStatusDialog,
                 componentProps: {
@@ -399,11 +364,10 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
                     txid: broadcastResult.txid
                 }
             }).onOk(() => {
-                router.push('/dashboard#collected')
+                // router.push('/dashboard#collected')
             })
 
         } catch (error: any) {
-            console.log('error', error)
             $q.notify({
                 type: 'Error',
                 message: error.message
