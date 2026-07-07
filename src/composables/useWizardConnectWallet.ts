@@ -1,6 +1,6 @@
 import { DisconnectReason, type PathXpub, type ProtocolMessage, type WalletReadyMessage } from '@wizardconnect/core'
 import { useWizardConnect } from 'wizardconnect-vue'
-import { ref, shallowRef, watch } from 'vue'
+import { computed, ref, shallowRef, triggerRef, watch } from 'vue'
 import { WizardConnectExternalWallet } from 'src/core/wallet'
 
 const wallet = shallowRef(new WizardConnectExternalWallet({ network: import.meta.env.VITE_BCH_NETWORK}))
@@ -11,6 +11,10 @@ const qrDataURI = ref<string | null>(null)
 
 let _wc: ReturnType<typeof useWizardConnect> | null = null
 let _watcherSetup = false
+
+const walletIsReady = computed(() => {
+    return wallet.value?.ready
+})
 
 export const useWizardConnectWallet = () => {
 
@@ -80,7 +84,8 @@ export const useWizardConnectWallet = () => {
     }
 
     watch(state, async (newState, oldState) => {
-        if(newState === 'connected') {
+        const sessionPaths = manager.value?.getSessionPaths() || []
+        if(newState === 'connected' || sessionPaths.length > 0) {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
                 wallet.value = new WizardConnectExternalWallet({
                     network: import.meta.env.VITE_BCH_NETWORK
@@ -88,6 +93,7 @@ export const useWizardConnectWallet = () => {
                 await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
                 await wallet.value.getBalance({ sync: true })
                 walletLasySync.value = Date.now()
+                triggerRef(wallet)
             }
         }
     }, { immediate: true })
@@ -100,6 +106,7 @@ export const useWizardConnectWallet = () => {
         qrUri,
         wallet,
         walletLasySync,
+        walletIsReady,
         showQR,
         qrURI,
         qrDataURI,
