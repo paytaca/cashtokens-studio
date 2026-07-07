@@ -60,7 +60,7 @@
 
         <div class="column items-center q-gutter-md full-width" style="max-width: 320px;">
           <div class="spinner-wrapper q-mb-sm">
-            <q-spinner-eclipse size="64px" color="primary" />
+            <!-- <q-spinner-eclipse size="64px" color="primary" /> -->
             <q-icon name="mdi-wizard-hat" size="2em" color="primary" class="absolute-center hat-bounce" />
           </div>
 
@@ -99,12 +99,14 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from 'vue';
 import { delay } from 'mainnet-js';
 import { useQuasar } from 'quasar';
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 
+const { walletIsReady } = useWizardConnectWallet()
 const $q = useQuasar();
 // Set dark mode context globally for this component
 $q.dark.set(true);
@@ -122,19 +124,25 @@ const bannerSize = computed(() => {
 
 const {
   wallet,
-  manager,
   state,
   connect
 } = useWizardConnectWallet()
+
+
+watch(() => walletIsReady.value, (isReady: boolean | undefined, prevValue: boolean | undefined) => {
+  if (isReady && Boolean(prevValue) === false) {
+    router.push({ name: 'dashboard' })
+  }
+})
 
 onMounted(async () => {
   await delay(100);
   isMobileBrowser.value = /Mobi/.test(navigator?.userAgent);
 
   // Optional: Auto-trigger connection if the app launches completely disconnected
-  if (!wallet.value?.ready && state.value === 'idle') {
-    connect();
-  }
+  // if (!wallet.value?.ready && state.value === 'idle') {
+  //   connect();
+  // }
 });
 </script>
 

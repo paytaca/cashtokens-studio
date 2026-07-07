@@ -247,15 +247,6 @@ watch(
   }
 );
 
-watch(() => uri, (v) => { console.log(v) })
-watch(() => qrUri, (v) => { console.log(v) })
-
-watch(state, (newState, oldState) => {
-  if (newState === 'connected' && (oldState === 'connecting' || oldState === 'idle') && route.name !== 'dashboard') {
-    router.push({ name: 'dashboard' })
-  }
-})
-
 onMounted(async () => {
   const db = ClientDB.getInstance();
   pendingMultisigTransactions.value =
