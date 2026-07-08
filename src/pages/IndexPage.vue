@@ -105,6 +105,7 @@ import { useQuasar } from 'quasar';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { WizardConnectState } from 'wizardconnect-vue';
 
 const { walletIsReady } = useWizardConnectWallet()
 const $q = useQuasar();
@@ -131,6 +132,12 @@ const {
 
 watch(() => walletIsReady.value, (isReady: boolean | undefined, prevValue: boolean | undefined) => {
   if (isReady && Boolean(prevValue) === false) {
+    router.push({ name: 'dashboard' })
+  }
+})
+
+watch(() => state.value, (state: WizardConnectState, prevState: WizardConnectState) => {
+  if (state === 'connected' && state !== prevState) {
     router.push({ name: 'dashboard' })
   }
 })
