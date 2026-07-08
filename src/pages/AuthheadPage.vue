@@ -6,13 +6,8 @@
                 <q-card class="bg-dark q-pa-lg rounded borders" flat>
                     <q-card-title class="flex justify-end">
                         <q-btn class="text-caption link-style" text-color="secondary" icon="description"
-                            @click="viewRegistry" no-caps dense>
-                            View Token Identity Details
-                        </q-btn>
-                        <q-btn class="text-caption link-style" text-color="secondary" icon="description"
-                            @click="router.push({ name: 'view-identity-snapshot', params: { registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })"
-                            no-caps dense>
-                            Test Token Identity Details
+                            @click="onViewIdentitySnapshotClick" no-caps dense>
+                            View Token Details
                         </q-btn>
                     </q-card-title>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
@@ -159,6 +154,7 @@ import { broadcast, isBroadcastSuccess, jsonFormSafeUtxoReviver, jsonReplacer, t
 import { Network } from 'cashscript'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
+import { timeStamp } from 'console'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -383,6 +379,18 @@ const viewRegistry = () => {
         path: '/token/metadata-registry', query: {
             authbase: activeAuthhead.value?.token?.category,
             contentHash: activeAuthhead.value?.identitySnapshotIdentifier?.contentHash
+        }
+    })
+}
+
+const onViewIdentitySnapshotClick = () => {
+    router.push({
+        name: 'view-identity-snapshot', query: {
+            registryIdentity: activeAuthhead.value?.identitySnapshotIdentifier?.registryIdentity,
+            authhead: activeAuthhead.value ? `${activeAuthhead.value.txid}:${activeAuthhead.value.vout}` : null,
+            contentHash: activeAuthhead.value?.identitySnapshotIdentifier?.contentHash,
+            timeStamp: activeAuthhead.value?.identitySnapshotIdentifier?.identity?.timestamp,
+            authbase: activeAuthhead.value?.identitySnapshotIdentifier?.identity?.authbase,
         }
     })
 }
