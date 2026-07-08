@@ -3,14 +3,16 @@
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4"
+                        @click="router.push({ name: 'view-identity-snapshot', query: route.query })" />
                 </div>
                 <q-card v-if="authhead" flat class="bg-dark q-pa-lg rounded-borders">
-                    <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between">
-                        <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-text-box" size="lg" /><span
-                                class="text-h5 text-weight-bold text-grey-6 ">Token Identity Information</span></div>
-                        <q-btn icon="edit" label="Edit" dense flat color="secondary"
-                            @click="router.push({ name: 'edit-identity-snapshot', params: { registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })">
+                    <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
+                        <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
+                                size="sm" /><span class="text-h6 text-weight-bold ">Token Identity
+                                Info</span></div>
+                        <q-btn icon="mdi-text-box-edit" :label="$q.screen.gt.xs ? 'Edit' : ''" dense flat
+                            color="secondary" @click="onEditIdentitySnapshotClick">
                         </q-btn>
                     </q-card-title>
                     <div>
@@ -101,40 +103,52 @@
                             </div>
                             <h6 class="q-my-xs">NFTs</h6>
                             <div class="col-12">
-                                <FormField>
 
-                                    <div v-if="publishedNfts.length > 0">
-                                        <q-btn class="text-caption link-style" text-color="secondary" icon="preview"
+                                <FormField>
+                                    <label class="flex justify-between items-center">
+                                        <span>NFT Items</span>
+                                        <q-btn text-color="secondary" icon="preview"
                                             @click="router.push({ name: 'view-identity-snapshot-nfts', query: { contentHash: activeAuthhead?.identitySnapshotIdentifier?.contentHash, timestamp: activeAuthhead?.identitySnapshotIdentifier?.identity?.timestamp, authbase: activeAuthhead?.identitySnapshotIdentifier?.identity.authbase, registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })"
-                                            no-caps dense>
-                                            View NFTs
+                                            no-caps>
+                                            View All Items
                                         </q-btn>
-                                    </div>
+                                    </label>
+                                    <q-scroll-area style="width: 100%; height: 8rem;" :visible="false">
+                                        <div class="flex q-gutter-sm no-wrap q-pt-md">
+                                            <q-card v-for="nft, i in publishedNfts" :key="`nft-${i}`" flat bordered
+                                                style="max-width: 8rem; width:6em; max-height: 5rem;">
+                                                <q-card-section class="row justify-center q-gutter-y-sm">
+                                                    <div class="col-12 text-center">
+                                                        <q-avatar size="md">
+                                                            <q-img v-if="nft.nft.uris?.icon"
+                                                                :src="ipfsToGatewayUrl(nft.nft.uris.icon)!" fit="cover">
+                                                            </q-img>
+                                                            <q-img v-else
+                                                                :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${nft.type}`"
+                                                                fit="cover">
+                                                                <q-tooltip class="bg-grey-9 text-caption text-grey-4">No
+                                                                    Icon —
+                                                                    generated
+                                                                    placeholder</q-tooltip>
+                                                            </q-img>
+                                                        </q-avatar>
+                                                        <q-badge floating color="">{{ nft.type }}</q-badge>
+                                                    </div>
+                                                    <div class="col-12 text-caption text-grey-4 text-center ellipsis">
+                                                        {{ nft.nft.name }}
+                                                    </div>
+                                                </q-card-section>
+                                            </q-card>
+                                        </div>
+                                    </q-scroll-area>
                                 </FormField>
                             </div>
-                            <!-- <div class="col-12">
-                                <FormField>
-                                    <label>NFT Collection Type</label>
-                                    <div class="q-field__inner bg-dark rounded-borders flex justify-between"
-                                        style="min-height: 3em; display: flex; align-items: center;">
-                                        <q-chip
-                                            v-if="!(authhead.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection)?.bytecode"
-                                            dark outline icon="mdi-counter" label="Sequential NFT Collection" />
-                                        <q-chip v-else dark outline icon="mdi-hexadecimal"
-                                            label="Parsable NFT Collection" />
-                                        <q-space />
-                                        <q-btn v-if="authhead.token?.nft?.capability === 'minting'" dense no-wrap
-                                            icon="mdi-pickaxe" text-color="primary" size="md" @click="openMintPage">
-                                            <span class="gt-xs q-ml-xs">Mint</span>
-                                        </q-btn>
-                                    </div>
-                                </FormField>
-                            </div> -->
                         </div>
                     </div>
                 </q-card>
 
-                <q-card v-if="publishedNfts.length > 0" flat class="bg-dark q-mt-lg">
+
+                <!-- <q-card v-if="publishedNfts.length > 0" flat class="bg-dark q-mt-lg">
 
                     <div class="q-pa-lg">
 
@@ -179,19 +193,19 @@
                                     </div>
                                 </q-td>
                             </template>
-                            <template v-slot:body-cell-name="props">
+<template v-slot:body-cell-name="props">
                                 <q-td :props="props">{{ props.row.nft.name }} </q-td>
 
                             </template>
-                            <template v-slot:no-data>
+<template v-slot:no-data>
                                 <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
                             </template>
-                        </q-table>
-                    </div>
-                </q-card>
-                <div v-else class="flex flex-center q-py-xl">
-                    <q-spinner color="primary" size="48px" />
-                </div>
+</q-table>
+</div>
+</q-card>
+<div v-else class="flex flex-center q-py-xl">
+    <q-spinner color="primary" size="48px" />
+</div> -->
             </div>
         </div>
     </q-page>
@@ -589,9 +603,16 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
     })
 }
 
+
+const onEditIdentitySnapshotClick = () => {
+    router.push({
+        name: 'edit-identity-snapshot', query: route.query
+    })
+}
+
 onMounted(async () => {
     if (!authhead.value) {
-        router.push('/issuer/nft-collections')
+        router.back()
         return
     }
 

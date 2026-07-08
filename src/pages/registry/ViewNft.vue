@@ -1,0 +1,151 @@
+<template>
+  <q-page class="bg-dark-page text-white">
+    <div class="row justify-center q-pa-md">
+      <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+        <div class="q-mb-md q-px-sm">
+          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="goBack" />
+        </div>
+        <div v-if="activeNft?.nftType" class="bg-dark border-radius-12 q-pa-lg">
+          <q-card flat class="bg-dark q-mt-lg">
+            <q-card-title class="flex justify-end">
+              <q-btn v-if="activeAuthhead" icon="mdi-text-box-edit" label="Edit" dense flat color="secondary"
+                @click="onEditNftClick">
+              </q-btn>
+            </q-card-title>
+            <div class="q-pa-lg">
+              <SequentialNft v-if="!activeNft.bytecode" :key="'seq-' + saveKey"
+                :commitment="activeNft.commitmentOrBottomAltStack" v-model:nft="activeNft.nftType"
+                :allow-edit="!!activeAuthhead" @save="handleSave" @close="goBack" />
+              <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="activeNft.commitmentOrBottomAltStack"
+                v-model:nft="activeNft.nftType" :allow-edit="!!activeAuthhead" @save="handleSave"
+                :bytecode="activeNft.bytecode" @close="goBack" />
+            </div>
+          </q-card>
+        </div>
+        <div v-else-if="activeNft && !activeNft.nftType" class="bg-dark border-radius-12 q-pa-lg flex flex-center"
+          style="min-height: 200px;">
+          <div class="text-center text-grey-5">
+            <q-icon name="info" size="48px" class="q-mb-sm block" />
+            <div class="text-caption">No NFT metadata found</div>
+          </div>
+        </div>
+        <div v-else class="flex flex-center q-py-xl">
+          <q-spinner color="primary" size="48px" />
+        </div>
+      </div>
+    </div>
+  </q-page>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { onBeforeRouteLeave, useRouter, useRoute } from 'vue-router'
+import { storeToRefs } from 'pinia'
+import { useRegistryStore } from 'src/stores/registry'
+import { useAuthguardStore } from 'src/stores/authguard'
+import { useQuasar } from 'quasar'
+import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
+import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
+import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
+import { db } from 'src/core/client-db'
+import { vmNumberToBigInt } from '@bitauth/libauth'
+import { hexToBin } from 'bitauth-libauth-v3'
+
+const $q = useQuasar()
+const router = useRouter()
+const route = useRoute()
+
+const registryStore = useRegistryStore()
+const authguardStore = useAuthguardStore()
+const { activeNft } = storeToRefs(registryStore)
+const { activeAuthhead } = storeToRefs(authguardStore)
+const saveKey = ref(0)
+
+const goBack = () => {
+  const returnTo = route.query.returnTo as string | undefined
+  if (returnTo) {
+    router.push({ path: returnTo, query: route.query })
+  } else {
+    router.back()
+  }
+}
+
+const handleSave = async (rawNft: NftType) => {
+  if (!activeNft.value || !activeAuthhead.value) return
+
+  const nft = JSON.parse(JSON.stringify(rawNft))
+
+  const existing = await db.nfts
+    .where('[contentHash+authbase+timestamp+type]')
+    .equals([
+      activeNft.value.contentHash,
+      activeNft.value.authbase,
+      activeNft.value.timestamp,
+      activeNft.value.commitmentOrBottomAltStack
+    ])
+    .first()
+
+  if (existing) {
+    const status = existing.status === 'published' ? 'modified' : existing.status
+    await db.nfts.update(existing.id!, { nft, status })
+
+  } else {
+    const status = activeNft.value.isNew ? 'new' : 'modified'
+    await db.nfts.put({
+      contentHash: activeNft.value.contentHash,
+      authbase: activeNft.value.authbase,
+      timestamp: activeNft.value.timestamp,
+      category: activeNft.value.category,
+      type: activeNft.value.commitmentOrBottomAltStack,
+      nft,
+      status
+    })
+  }
+
+  saveKey.value++
+  $q.notify({ type: 'positive', message: 'NFT saved' })
+}
+
+const onEditNftClick = () => {
+  console.log('ROUTE PARAMS', route.params)
+  console.log('Return to', route.path)
+  router.push({
+    name: 'edit-nft',
+    query: { ...route.query, returnTo: route.path },
+    params: route.params
+  })
+}
+
+
+onMounted(async () => {
+  if (!activeNft.value) {
+    goBack()
+    return
+  }
+
+  let name = `${activeAuthhead.value?.identitySnapshot?.token?.symbol} #${activeNft.value.commitmentOrBottomAltStack}`
+
+  activeNft.value.nftType = { name, description: '', uris: {}, extensions: {} }
+
+  if (!activeNft.value.bytecode) {
+    activeNft.value.nftType.name = name.replace(`${activeNft.value.commitmentOrBottomAltStack}`, Number(vmNumberToBigInt(hexToBin(activeNft.value.commitmentOrBottomAltStack))).toString())
+  }
+
+  try {
+    const result = await registryStore.fetchNftType(activeNft.value.category, activeNft.value.commitmentOrBottomAltStack)
+    if (result) {
+      activeNft.value.nftType = result
+    }
+    return
+  } catch (e) {
+    console.log('No existing NFT Type')
+  }
+})
+
+</script>
+
+<style scoped lang="scss">
+.border-radius-12 {
+  border-radius: 12px;
+}
+</style>
