@@ -31,10 +31,10 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     activeAuthhead.value = Object.assign({}, latestAuthhead)
   }
   
-  async function loadAuthheads(sync?: boolean) {
+  async function loadAuthheads(authkeyList?: UtxoWithPath[], sync?: boolean) {
     try {
       authheadsLoading.value = true;
-      authheads.value = await getLockedAuthheadUtxos(authkeys.value);
+      authheads.value = await getLockedAuthheadUtxos(authkeyList || authkeys.value);
       // Create a pipeline task for each individual authhead
       const tasks = authheads.value.map(async (authhead) => {
         if (!authhead.token) return;
@@ -51,11 +51,13 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
           }
 
           const identity = {
+
             contentHash: registryRecord.contentHash,
             identity: {
               authbase,
               timestamp: registryRecord.registry.identities![authbase]![0]!
-            }
+            },
+            registryIdentity: registryRecord.registryIdentity
           };
 
           const identitySnapshot = await getIdentitySnapshot(identity);
@@ -80,16 +82,17 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     try {
         authkeysLoading.value = true
         const utxos = await externalWallet.getUtxos({ sync }) as UtxoWithPath[]
+        console.log('loading authkeys', utxos)
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
-        if (sync) {
-          
-          await loadAuthheads(sync)
-          // authkeysLastSync.value = Date.now()
-        }
-        
+        // if (sync) {
+        //   await loadAuthheads(sync)
+        // }
+        authkeysLastSync.value = Date.now()
+        return authkeys.value
     } finally {
         authkeysLoading.value = false
     }
+
   }
 
   const setActiveAuthhead = (authhead: UtxoWithAuthKey) => {
@@ -99,7 +102,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {
       try {
-        await loadAuthheads(true)
+        await loadAuthheads(authkeys.value || [], true)
       } catch (error) {
         console.log(error)
       }
