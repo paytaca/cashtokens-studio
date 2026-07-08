@@ -4,10 +4,16 @@
             <div class="col-xs-12 col-sm-8">
                 <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
                 <q-card class="bg-dark q-pa-lg rounded borders" flat>
-                    <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-mb-lg">
-                        <span>Token </span>
-                        <q-icon name="mdi-information" size="lg" />
-
+                    <q-card-title class="flex justify-end">
+                        <q-btn class="text-caption link-style" text-color="secondary" icon="description"
+                            @click="viewRegistry" no-caps dense>
+                            View Token Identity Details
+                        </q-btn>
+                        <q-btn class="text-caption link-style" text-color="secondary" icon="description"
+                            @click="router.push({ name: 'view-identity-snapshot', params: { registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })"
+                            no-caps dense>
+                            Test Token Identity Details
+                        </q-btn>
                     </q-card-title>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
                         <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
@@ -65,12 +71,6 @@
                             </q-menu>
                         </q-btn>
                     </div>
-
-                    <div class="row"><q-btn class="text-caption link-style" text-color="secondary" icon="description"
-                            @click="viewRegistry" no-caps dense>
-                            View Metadata Registry
-                        </q-btn></div>
-
                     <FormField>
                         <label>Category</label>
                         <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
@@ -389,6 +389,7 @@ const viewRegistry = () => {
 
 
 onMounted(() => {
+    console.log('Authhead', activeAuthhead)
     if (!activeAuthhead.value) {
         router.back()
         return
