@@ -119,7 +119,7 @@
                   </q-input>
                 </div>
                 <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
-                  flat class="border-radius-12 token-reserves-table" @row-click="onAuthheadsRowClick">
+                  flat class="border-radius-12 token-reserves-table" @row-click.stop="onAuthheadsRowClick">
                   <template v-slot:body-cell-token="props">
                     <q-td :props="props">
                       <div class="flex items-center no-wrap q-gutter-x-md">
@@ -263,6 +263,7 @@
                               <q-item-section class="text-caption text-grey-3">Burn</q-item-section>
                             </q-item>
                             <q-separator dark inset />
+                            <q-separator dark inset />
                             <q-item clickable @click="refreshCache(value.row.token!.category as string)">
                               <q-item-section avatar>
                                 <q-icon name="refresh" color="grey-5" size="xs" />
@@ -346,7 +347,7 @@
               <template v-else>
                 <q-table :rows="collectedUtxosWithIdentity" :columns="collectedColumns"
                   :row-key="(row: any) => row.isAggregated ? row.token.category : `${row.txid}:${row.vout}`" flat
-                  class="border-radius-12 token-reserves-table" @row-click="onCollectedRowClick">
+                  class="border-radius-12 token-reserves-table" @row-click.stop="onCollectedRowClick">
                   <template v-slot:body-cell-collectedToken="props">
                     <q-td :props="props">
                       <div class="flex items-center no-wrap q-gutter-x-md">
@@ -500,7 +501,7 @@
                 <template v-slot:body-cell-activityTxid="props">
                   <q-td :props="props">
                     <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value)
-                      }}
+                    }}
                       <CopyText :text="props.value" />
                     </span>
                     <span v-else class="text-grey-6 text-caption">—</span>
