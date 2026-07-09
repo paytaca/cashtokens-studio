@@ -1,11 +1,73 @@
 <template>
     <q-page>
         <div class="row justify-center q-pa-md">
-            <div v-if="loading" class="col-xs-12 col-sm-8 col-md-6 flex justify-left q-gutter-y-md">
-                <q-skeleton type="QInput" class="full-width" />
-                <q-skeleton type="QInput" class="full-width" />
-                <q-skeleton type="QInput" class="full-width" />
-                <q-skeleton type="QInput" class="full-width" />
+            <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+                <!-- Back Button Placeholder -->
+                <div class="q-mb-md q-px-sm">
+                    <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9" />
+                </div>
+
+                <q-card flat class="bg-dark q-pa-lg">
+                    <!-- Header/Title Placeholder -->
+                    <div class="row items-center justify-between q-mb-lg">
+                        <div class="row items-center q-gutter-x-sm">
+                            <q-skeleton type="rect" width="24px" height="24px" class="bg-grey-9" />
+                            <q-skeleton type="text" width="100px" class="text-h6 bg-grey-9" />
+                        </div>
+                        <q-skeleton type="rect" width="60px" height="28px" class="bg-grey-9" />
+                    </div>
+
+                    <!-- Avatar & Collection Metadata Placeholder -->
+                    <div class="row items-center q-gutter-x-md q-mb-lg">
+                        <q-skeleton type="circle" size="64px" class="bg-grey-9" />
+                        <div class="q-gutter-y-xs" style="width: 150px;">
+                            <q-skeleton type="text" class="text-subtitle1 bg-grey-9" />
+                            <q-skeleton type="text" class="text-caption bg-grey-9" />
+                        </div>
+                    </div>
+
+                    <!-- Token ID Field Placeholder -->
+                    <div class="row q-mb-md">
+                        <div class="col-12 q-gutter-y-xs">
+                            <q-skeleton type="text" width="80px" class="text-caption bg-grey-9" />
+                            <q-skeleton type="rect" height="40px" class="full-width border-radius-8 bg-grey-9" />
+                        </div>
+                    </div>
+
+                    <!-- Form Description Placeholder -->
+                    <div class="row q-mb-md">
+                        <div class="col-12 q-gutter-y-xs">
+                            <q-skeleton type="text" width="160px" class="text-caption bg-grey-9" />
+                            <q-skeleton type="rect" height="56px" class="full-width border-radius-8 bg-grey-9" />
+                        </div>
+                    </div>
+
+                    <!-- Collection Type Placeholder -->
+                    <div class="row q-mb-xl">
+                        <div class="col-12 q-gutter-y-xs">
+                            <q-skeleton type="text" width="120px" class="text-caption bg-grey-9" />
+                            <q-skeleton type="rect" width="100px" height="36px" class="border-radius-8 bg-grey-9" />
+                        </div>
+                    </div>
+
+                    <!-- NFT Items Table Placeholder -->
+                    <q-separator class="q-my-xl" dark></q-separator>
+                    <q-skeleton type="text" width="100px" class="text-h6 q-mb-sm bg-grey-9" />
+                    <q-card class="bg-grey-9 q-pa-md border-radius-12" flat>
+                        <div class="row q-pb-md border-bottom border-grey-8">
+                            <q-skeleton type="text" width="30%" class="bg-grey-8" />
+                            <q-space />
+                            <q-skeleton type="text" width="20%" class="bg-grey-8" />
+                        </div>
+                        <div v-for="i in 3" :key="i" class="row items-center q-py-md q-gutter-x-md">
+                            <q-skeleton type="circle" size="40px" class="bg-grey-8" />
+                            <div class="q-gutter-y-xs" style="width: 120px;">
+                                <q-skeleton type="text" class="bg-grey-8" />
+                                <q-skeleton type="text" width="60px" class="bg-grey-8" />
+                            </div>
+                        </div>
+                    </q-card>
+                </q-card>
             </div>
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <div class="q-mb-md q-px-sm">
