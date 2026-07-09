@@ -98,7 +98,10 @@ const handleSave = async (rawNft: NftType) => {
   }
 
   saveKey.value++
+
   $q.notify({ type: 'positive', message: 'NFT saved' })
+
+  router.back()
 }
 
 onMounted(async () => {
@@ -110,21 +113,10 @@ onMounted(async () => {
 
   let name = `${activeAuthhead.value?.identitySnapshot?.token?.symbol} #${activeNft.value.commitmentOrBottomAltStack}`
 
-  activeNft.value.nftType = { name, description: '', uris: {}, extensions: {} }
-
   if (!activeNft.value.bytecode) {
-    activeNft.value.nftType.name = name.replace(`${activeNft.value.commitmentOrBottomAltStack}`, Number(vmNumberToBigInt(hexToBin(activeNft.value.commitmentOrBottomAltStack))).toString())
+    activeNft.value.nftType!.name = name.replace(`${activeNft.value.commitmentOrBottomAltStack}`, Number(vmNumberToBigInt(hexToBin(activeNft.value.commitmentOrBottomAltStack))).toString())
   }
 
-  try {
-    const result = await registryStore.fetchNftType(activeNft.value.category, activeNft.value.commitmentOrBottomAltStack)
-    if (result) {
-      activeNft.value.nftType = result
-    }
-    return
-  } catch (e) {
-    console.log('No existing NFT Type')
-  }
 })
 
 </script>
