@@ -1,16 +1,26 @@
 <template>
   <q-dialog ref="dialogRef" @hide="onDialogHide" title="Add Link">
     <q-card class="q-dialog-plugin q-pa-md ">
-      <q-card-section class="text-h6">Add Link</q-card-section>
-      <q-form @submit.prevent="onSubmit" class="q-gutter-md">
-        <q-select v-model="uriName" :options="uriOptions" outlined></q-select>
-        <q-input v-model="uriValue" label="Value*" outlined clearable :rules="[(v) => v.length > 1 || 'Required']"
-          bottom-slots></q-input>
-        <q-card-actions align="right">
-          <q-btn color="negative" size="lg" flat label="Cancel" @click="onDialogCancel" />
-          <q-btn color="primary" size="lg" flat label="OK" type="submit" />
-        </q-card-actions>
-      </q-form>
+      Add Link
+      <q-card-section class="text-h6">
+        <div>
+          <FormField>
+            <label class="q-my-sm">Name</label>
+            <q-select v-model="uriName" :options="uriOptions" outlined></q-select>
+          </FormField>
+
+          <FormField>
+            <label class="q-my-sm">Link</label>
+            <q-input v-model="uriValue" outlined clearable :rules="[(v) => v.length > 1 || 'Required']"
+              placeholder="https://" bottom-slots>
+            </q-input>
+          </FormField>
+        </div>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancel" @click="onDialogCancel" />
+        <q-btn color="primary" label="OK" @click="onOkClick" />
+      </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
@@ -18,7 +28,6 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
 import { ref } from 'vue';
-import { stringify } from 'querystring';
 
 const uriOptions = [
   { label: 'Icon', value: 'icon', icon: 'image' },
@@ -45,7 +54,7 @@ defineEmits([
 
 const { dialogRef, onDialogHide, onDialogOK, onDialogCancel } = useDialogPluginComponent()
 
-function onSubmit() {
+function onOkClick() {
   onDialogOK({ [uriName.value.value]: uriValue.value })
 }
 </script>
