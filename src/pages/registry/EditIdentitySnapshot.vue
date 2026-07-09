@@ -47,22 +47,40 @@
                                     <q-input v-model="identitySnapshot.description" outlined></q-input>
                                 </FormField>
                             </div>
-                            <div class="col-12">
-                                <FormField>
-                                    <label for="">Links <q-icon name="link"></q-icon></label>
-                                    <!-- <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.uris }}
-                                    </div> -->
-                                    <div class="flex q-gutter-x-sm">
-                                        <q-btn v-for="key, i in Object.keys(identitySnapshot.uris || {})" :key="i"
-                                            color="secondary" no-caps dense flat
-                                            :href="ipfsToGatewayUrl(activeAuthhead!.identitySnapshot!.uris![key]!)!"
-                                            target="__blank">
-                                            <span class="text-capitalize">{{ key }}</span>
-                                        </q-btn>
-                                    </div>
+                            <div class="col-12 flex justify-between items-center q-mt-sm">
+                                <h6 class="q-my-xs">
+                                    Links<q-icon name="link" class="q-ml-sm">
+                                    </q-icon>
+                                </h6>
+                                <q-btn icon="add" label="Add Link" color="secondary" @click="openAddUriDialog" flat
+                                    no-caps dense></q-btn>
+                            </div>
 
+                            <div class="col-12">
+                                <FormField v-if="Object.keys(identitySnapshot.uris?.['icon'] || {})" key="icon-uri">
+                                    <label class="text-capitalize">Icon</label>
+                                    <q-input v-model="identitySnapshot.uris!['icon']" outlined>
+                                        <template v-slot:prepend>
+                                            <q-avatar>
+                                                <img v-if="identitySnapshot.uris!['icon']"
+                                                    :src="ipfsToGatewayUrl(identitySnapshot.uris!['icon']) as string" />
+                                            </q-avatar>
+                                        </template>
+                                        <template v-slot:append>
+                                            <q-spinner-box v-if="iconUploading" color="warning"></q-spinner-box>
+                                            <q-btn v-else icon="mdi-cloud-upload" @click="uploadIcon()"
+                                                color="secondary" flat>
+                                            </q-btn>
+                                        </template>
+                                    </q-input>
+                                </FormField>
+                                <FormField
+                                    v-for="uriName in Object.keys(identitySnapshot.uris || {}).filter((uriName) => !['icon'].includes(uriName))"
+                                    :key="uriName">
+                                    <label class="text-capitalize">{{ uriName }}</label>
+                                    <q-input v-model="identitySnapshot.uris![uriName]" outlined>
+
+                                    </q-input>
                                 </FormField>
                             </div>
                             <h6 class="q-my-xs">Token</h6>
@@ -175,10 +193,12 @@ import { ParsableNftCollection, NftType, IdentitySnapshot } from 'src/core/bcmr/
 import { db, IdentitySnapshotRecord, NftRecord } from 'src/core/client-db'
 import { getErrorMessage } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
+import { uploadFile } from 'src/core/ipfs'
 
 import { liveQuery } from 'dexie'
 import { useObservable } from '@vueuse/rxjs'
 import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
+import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -201,8 +221,8 @@ const publishedTotal = ref(0)
 const publishedLoading = ref(false)
 const publishing = ref(false)
 const refreshing = ref(false)
-
 const initialSnapshotJson = ref('')
+const iconUploading = ref(false)
 
 const modified = computed(() => {
     if (!initialSnapshotJson.value || !identitySnapshot.value) return false
@@ -265,6 +285,53 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
     } finally {
         publishedLoading.value = false
     }
+}
+
+const loadImage = (src: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+        const img = new Image()
+        img.onload = () => resolve(img)
+        img.onerror = reject
+        img.src = src
+    })
+}
+
+const createSquareThumbnail = async (file: File, maxSize: number): Promise<Blob> => {
+    const url = URL.createObjectURL(file)
+    const img = await loadImage(url)
+    URL.revokeObjectURL(url)
+
+    const size = Math.min(img.width, img.height)
+    const offsetX = (img.width - size) / 2
+    const offsetY = (img.height - size) / 2
+    const targetSize = Math.min(maxSize, size)
+
+    const canvas = document.createElement('canvas')
+    canvas.width = targetSize
+    canvas.height = targetSize
+    const ctx = canvas.getContext('2d')!
+    ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize)
+
+    return new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob!), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9)
+    })
+}
+
+const openAddUriDialog = (uri: any) => {
+    $q.dialog({
+        component: AddUriDialog,
+        componentProps: {
+            name: uri.name,
+            value: uri.value
+        },
+        ok: { label: 'Add' },
+        cancel: { label: 'Cancel' }
+    }).onOk((uri) => {
+        identitySnapshot.value.uris = {
+            ...identitySnapshot.value.uris,
+            ...uri
+        }
+    })
 }
 
 const refresh = async () => {
@@ -417,6 +484,44 @@ const publishNfts = async () => {
     }
 }
 
+const uploadIcon = () => {
+    try {
+        iconUploading.value = true
+        const input = document.createElement('input')
+        input.type = 'file'
+        input.accept = 'image/*'
+        input.onchange = async () => {
+            const file = input.files?.[0]
+            if (!file) return
+            try {
+                const isImage = file.type.startsWith('image/')
+                const isGif = file.type === 'image/gif'
+
+                let icon: File | Blob = file
+                if (isImage && !isGif) {
+                    icon = await createSquareThumbnail(file, 400)
+                }
+                const result = await uploadFile(icon, `thumb_${file.name}`)
+                const { cid } = result
+                if (cid) {
+                    identitySnapshot.value.uris!.icon = `ipfs://${cid}`
+                }
+                $q.notify({ type: 'positive', message: 'Media uploaded successfully' })
+            } catch (e: any) {
+                $q.notify({ type: 'negative', message: e.message || 'Upload failed' })
+            }
+        }
+        input.click()
+    } catch (error) {
+        $q.notify({
+            type: 'error',
+            message: 'Error uploading icon'
+        })
+    } finally {
+        iconUploading.value = false
+    }
+
+}
 
 const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
 
