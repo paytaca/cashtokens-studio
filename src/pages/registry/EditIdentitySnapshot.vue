@@ -178,6 +178,7 @@ import { getRegistryWorker } from 'src/workers'
 
 import { liveQuery } from 'dexie'
 import { useObservable } from '@vueuse/rxjs'
+import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -193,7 +194,7 @@ const {
     wallet,
 } = useWizardConnectWallet()
 
-const identitySnapshot = ref<IdentitySnapshot>()
+const identitySnapshot = ref<IdentitySnapshot>(createIdentitySnapshotTemplate((route.query.authbase || '') as string))
 const unpublishedNfts = ref<NftRecord[]>([])
 const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
@@ -214,7 +215,7 @@ const identitySnapshotRecord = useObservable(
             category: route.query.authbase
         }).first()
     }) as any,
-    { initialValue: activeAuthhead.value?.identitySnapshot } // Added to prevent runtime template rendering crashes
+    { initialValue: {} } // Added to prevent runtime template rendering crashes
 )
 
 const loadUnpublishedNfts = async () => {
@@ -416,9 +417,6 @@ const publishNfts = async () => {
     }
 }
 
-const publishedColumns: QTableColumn[] = [
-    { name: 'type', label: 'Items', field: 'type', align: 'left', sortable: true },
-]
 
 const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
 
@@ -431,10 +429,11 @@ watch(publishedTotal, (total) => {
     publishedPagination.value.rowsNumber = total
 })
 
-watch(() => identitySnapshotRecord.value, (newRecord) => {
-    if (newRecord && !identitySnapshot.value) {
-        identitySnapshot.value = JSON.parse(JSON.stringify(newRecord))
-        initialSnapshotJson.value = JSON.stringify(newRecord)
+watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, (newRecord: IdentitySnapshotRecord, prevRecord) => {
+    console.log('New Record', newRecord, prevRecord)
+    if (Object.keys(newRecord || {}).length > 0) {
+        identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
+        initialSnapshotJson.value = JSON.stringify(newRecord.identitySnapshot)
     }
 }, { immediate: true })
 
@@ -456,6 +455,8 @@ const onSaveClick = async () => {
 }
 
 const onResetClick = () => {
+    console.log(identitySnapshotRecord.value)
+
     if (!initialSnapshotJson.value) return
     identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
 }
