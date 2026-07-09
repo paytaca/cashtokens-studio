@@ -176,6 +176,42 @@ const routes: RouteRecordRaw[] = [
     ]
   },
   {
+    path: '/registry/:registryIdentity',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        name: 'view-identity-snapshot',
+        path: '/identity-snapshot/view',
+        component: () => import('pages/registry/ViewIdentitySnapshot.vue'),
+      },
+      {
+        name: 'edit-identity-snapshot',
+        path: '/identity-snapshot/edit',
+        component: () => import('pages/registry/EditIdentitySnapshot.vue'),
+      },
+      {
+        name: 'view-identity-snapshot-nfts',
+        path: '/identity-snapshot/nfts/view',
+        component: () => import('pages/registry/ViewNftCategory.vue'),
+      },
+      {
+        name: 'edit-identity-snapshot-nfts',
+        path: '/identity-snapshot/nfts/edit',
+        component: () => import('pages/registry/EditNftCategory.vue'),
+      },
+      {
+        name: 'view-nft',
+        path: '/identity-snapshot/nfts/:type/view',
+        component: () => import('pages/registry/ViewNft.vue'),
+      },
+      {
+        name: 'edit-nft',
+        path: '/identity-snapshot/nfts/:type/edit',
+        component: () => import('pages/registry/EditNft.vue'),
+      }
+    ]
+  },
+  {
     path: '/authhead',
     component: () => import('layouts/MainLayout.vue'),
     children: [
