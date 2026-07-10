@@ -74,12 +74,12 @@
                     <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
                 </div>
                 <q-card flat class="bg-dark q-pa-lg">
-                    <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
+                    <!-- <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
                         <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
                                 size="sm" /><span class="text-h6 text-weight-bold ">NFT Info</span></div>
 
-                    </q-card-title>
-                    <div class="row items-center q-gutter-x-md q-mb-lg">
+                    </q-card-title> -->
+                    <!-- <div class="row items-center q-gutter-x-md q-mb-lg">
                         <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
                             <q-img v-if="identitySnapshot.uris?.icon"
                                 :src="ipfsToGatewayUrl(identitySnapshot.uris?.icon)!" fit="cover" />
@@ -95,7 +95,7 @@
                         </div>
                         <q-space />
                         <label v-if="modified" class="text-caption text-warning">[Modified]</label>
-                    </div>
+                    </div> -->
                     <div class="row">
                         <div class="col-12">
                             <div class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
@@ -269,19 +269,19 @@
                                     </SequentialNftCollection>
                                 </template>
                             </FormField>
-                            <div class="flex justify-end q-gutter-md q-mt-lg">
-                                <q-btn icon="mdi-undo" color="warning" :disable="!modified" @click="reset">
-                                    {{ t('button.reset') }}
-                                </q-btn>
-                                <q-btn icon="cloud_upload" color="primary" :disable="!modified" @click="save">
-                                    {{ t('button.save') }}
-                                </q-btn>
-                            </div>
                         </q-card>
                     </template>
                 </q-card>
             </div>
         </div>
+        <q-page-sticky v-if="modified && unpublishedNfts.length > 0" position="bottom" class="q-pa-md items-center"
+            expand>
+            <div class="row justify-end q-gutter-md items-center bg-dark q-pa-md rounded-borders"
+                style="border: 1px solid #555; width: 100%;">
+                <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="reset" />
+                <q-btn color="primary" unelevated label="Save" @click="save" />
+            </div>
+        </q-page-sticky>
     </q-page>
 </template>
 
@@ -311,6 +311,9 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { delay } from 'mainnet-js-v3'
+import { useObservable } from '@vueuse/rxjs'
+import { liveQuery } from 'dexie'
+import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
 
 const DEFAULT_NFT_CATEGORY: NftCategoryI = {
     parse: { types: {} } as SequentialNftCollectionI,
@@ -326,7 +329,17 @@ const registryStore = useRegistryStore()
 
 const loading = ref(true)
 const modified = ref(false)
-const identitySnapshotRecord = ref<IdentitySnapshotRecord>()
+const identitySnapshotRecord = useObservable(
+    liveQuery(async () => {
+        return await db.registryIdentitySnapshot.where({
+            category: route.query.authbase
+        }).first()
+    }) as any,
+    { initialValue: createIdentitySnapshotTemplate((route.query.authbase || '') as string) } // Added to prevent runtime template rendering crashes
+)
+
+const identitySnapshot = ref<IdentitySnapshot>()
+
 const initialSnapshotJson = ref('')
 
 const unpublishedNfts = ref<NftRecord[]>([])
@@ -422,19 +435,6 @@ watch(publishedTotal, (total) => {
 })
 
 
-const authbase = computed(() => route.query.authbase as string)
-
-const identitySnapshot = computed<IdentitySnapshot | null>({
-    get() {
-        return identitySnapshotRecord.value?.identitySnapshot ?? null
-    },
-    set(val) {
-        if (identitySnapshotRecord.value && val) {
-            identitySnapshotRecord.value.identitySnapshot = val
-        }
-    }
-})
-
 const nftCategory = computed<NftCategoryI | null>({
     get() {
         return identitySnapshot.value?.token?.nfts ?? null
@@ -497,15 +497,26 @@ watch(() => nftCategory.value?.parse?.types, (types) => {
     }
 }, { deep: true, immediate: true })
 
+watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
+    if (newRecord && !identitySnapshot.value) {
+        identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
+        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
+        collectionType.value = isParsable ? 'parsable' : 'sequential'
+        initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
+        await loadUnpublishedNfts()
+        await delay(500)
+        await loadPublishedNfts(0, 10)
+    }
+}, { immediate: true })
+
 const loadNftTypes = async (offset: number, limit: number) => {
-    const record = identitySnapshotRecord.value
-    if (!record?.identitySnapshot?.token?.nfts?.parse) return
+    if (!identitySnapshot.value?.token?.nfts?.parse) return
     nftTypesLoading.value = true
     try {
         const result = await getRegistryWorker().getNftTypes({
-            contentHash: record.contentHash,
-            authbase: authbase.value,
-            timestamp: record.timestamp,
+            contentHash: route.query.contentHash as string,
+            authbase: route.query.authbase as string,
+            timestamp: route.query.timestamp as string,
             offset,
             limit
         })
@@ -543,10 +554,10 @@ const showCollectionHelp = () => {
 }
 
 watch(
-    () => identitySnapshotRecord.value,
-    (record) => {
-        if (record?.identitySnapshot) {
-            initialSnapshotJson.value = JSON.stringify(record.identitySnapshot)
+    () => identitySnapshot.value,
+    (identitySnapshot) => {
+        if (identitySnapshot) {
+            initialSnapshotJson.value = JSON.stringify(identitySnapshot)
         }
     },
     { immediate: true }
@@ -565,16 +576,14 @@ const save = async () => {
     if (!identitySnapshotRecord.value || !identitySnapshot.value) return
     try {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
-        identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
-        setRecordStatus(identitySnapshotRecord.value, 'modified')
         await db.registryIdentitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([
-                identitySnapshotRecord.value.contentHash,
-                identitySnapshotRecord.value.authbase,
-                identitySnapshotRecord.value.timestamp
+                route.query.contentHash,
+                route.query.authbase,
+                route.query.timestamp
             ] as [string, string, string])
-            .modify({ identitySnapshot: clonedSnapshot, status: identitySnapshotRecord.value.status })
+            .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
         initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
         modified.value = false
         $q.notify({ type: 'positive', message: t('success.savedDescription') })
@@ -586,12 +595,11 @@ const save = async () => {
 const reset = async () => {
     if (!identitySnapshotRecord.value) return
     try {
-        const contentHash = identitySnapshotRecord.value.contentHash
         const record = await getRegistryWorker().getIdentitySnapshot({
-            contentHash,
+            contentHash: route.query.contentHash as string,
             identity: {
-                authbase: identitySnapshotRecord.value.authbase,
-                timestamp: identitySnapshotRecord.value.timestamp
+                authbase: route.query.authbase as string,
+                timestamp: route.query.timestamp as string,
             }
         })
         if (record) {
@@ -624,55 +632,10 @@ onMounted(async () => {
     console.log('Active Authhead', activeAuthhead)
     try {
         loading.value = true
-        const authbaseVal = authbase.value
-        if (!authbaseVal) {
+        const authbase = route.query.authbase as string
+        if (!authbase) {
             router.push({ path: '/dashboard' })
             return
-        }
-
-        const contentHash = route.query.contentHash as string | undefined
-        const timestamp = route.query.timestamp as string | undefined
-
-        if (contentHash && timestamp) {
-            identitySnapshotRecord.value = await getRegistryWorker().getIdentitySnapshot({
-                contentHash,
-                identity: { authbase: authbaseVal, timestamp }
-            })
-        } else {
-            const registryRecord = await getRegistryWorker().loadRegistry({ authbase: authbaseVal })
-            if (registryRecord?.registry?.identities?.[authbaseVal]) {
-                const timestamps = registryRecord.registry.identities[authbaseVal]
-                const latestTimestamp = timestamps.sort((a, b) => b.localeCompare(a))[0]
-                if (latestTimestamp) {
-                    identitySnapshotRecord.value = await getRegistryWorker().getIdentitySnapshot({
-                        contentHash: registryRecord.contentHash,
-                        identity: { authbase: authbaseVal, timestamp: latestTimestamp }
-                    })
-                }
-            }
-        }
-
-        const rec = identitySnapshotRecord.value
-        if (rec && rec.identitySnapshot.token && !rec.identitySnapshot.token.nfts) {
-            identitySnapshotRecord.value = {
-                ...rec,
-                identitySnapshot: {
-                    ...rec.identitySnapshot,
-                    token: { ...rec.identitySnapshot.token, nfts: { ...DEFAULT_NFT_CATEGORY } }
-                }
-            }
-        }
-
-        const snapshot = identitySnapshotRecord.value?.identitySnapshot
-        const nfts = snapshot?.token?.nfts
-        const isParsable = !!((nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode)
-        collectionType.value = isParsable ? 'parsable' : 'sequential'
-
-        const keyCol = nftTypeColumns[0]
-        if (keyCol) keyCol.label = isParsable ? 'Bottom Alt Stack Hex' : 'Sequence Number'
-
-        if (identitySnapshotRecord.value?.contentHash) {
-            await loadNftTypes(0, 10)
         }
 
         if (activeAuthhead.value?.identitySnapshot) {

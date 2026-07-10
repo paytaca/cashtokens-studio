@@ -1,38 +1,9 @@
 <template>
     <q-page class="bg-dark-page q-pb-xl">
-        <div class="row justify-center q-pa-md">
+        <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-                <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4"
-                        @click="router.push({ path: '/dashboard/#/created' })" />
-                </div>
                 <q-card v-if="identitySnapshot" flat class="bg-dark q-pa-lg rounded-borders">
-                    <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
-                        <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
-                                size="sm" /><span class="text-h6 text-weight-bold ">Token Identity
-                                Info</span></div>
-                        <q-btn icon="mdi-close" :label="$q.screen.gt.xs ? 'Close' : ''" dense flat>
-                        </q-btn>
-                    </q-card-title>
                     <div>
-                        <div class="row items-center q-gutter-x-md q-mb-lg">
-                            <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
-                                <q-img v-if="identitySnapshot.uris?.icon"
-                                    :src="ipfsToGatewayUrl(identitySnapshot.uris.icon)!" fit="cover" />
-                                <q-icon v-else name="token" color="primary" size="32px" />
-                            </q-avatar>
-                            <div>
-                                <div class="flex items-center q-gutter-x-xs q-mt-xs token-symbol">
-                                    {{ identitySnapshot.token?.symbol || "Unknown" }}
-                                </div>
-                                <div class="text-caption">
-                                    {{ identitySnapshot.name || 'Unnamed Collection' }}
-                                </div>
-
-                            </div>
-                            <q-space />
-                            <q-btn flat dense round icon="refresh" size="lg" :loading="refreshing" @click="refresh" />
-                        </div>
                         <div class="row">
                             <h6 class="q-my-xs">Identity</h6>
                             <div class="col-12">
@@ -114,9 +85,9 @@
                                         <label class="flex justify-between items-center">
                                             <span>NFT Items</span>
                                             <q-btn text-color="secondary" icon="preview"
-                                                @click="router.push({ name: 'view-identity-snapshot-nfts', query: { contentHash: activeAuthhead?.identitySnapshotIdentifier?.contentHash, timestamp: activeAuthhead?.identitySnapshotIdentifier?.identity?.timestamp, authbase: activeAuthhead?.identitySnapshotIdentifier?.identity.authbase, registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })"
+                                                @click="router.push({ name: 'edit-identity-snapshot-nfts', query: { contentHash: activeAuthhead?.identitySnapshotIdentifier?.contentHash, timestamp: activeAuthhead?.identitySnapshotIdentifier?.identity?.timestamp, authbase: activeAuthhead?.identitySnapshotIdentifier?.identity.authbase, registryIdentity: activeAuthhead?.identitySnapshotIdentifier?.registryIdentity } })"
                                                 no-caps>
-                                                View All Items
+                                                Edit or Add Items
                                             </q-btn>
                                         </label>
                                         <q-scroll-area style="width: 100%; height: 8rem;" :visible="false">
