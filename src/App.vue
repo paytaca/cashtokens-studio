@@ -5,28 +5,29 @@
 <script setup lang="ts">
 import { watch } from 'vue';
 import { useWizardConnectWallet } from './composables/useWizardConnectWallet';
-import { WizardConnectExternalWallet } from './core/wallet';
-import { PathXpub } from '@wizardconnect/core';
 import { WizardConnectState } from 'wizardconnect-vue';
-import { useRouter } from 'vue-router';
-const { manager, wallet, walletLasySync, state } = useWizardConnectWallet()
+import { useRoute, useRouter } from 'vue-router';
+const { walletIsReady } = useWizardConnectWallet()
+const route = useRoute()
 const router = useRouter()
-
-watch(() => manager.value, async (newV, oldV) => {
-  if (!wallet.value?.ready && !oldV && newV?.getSessionPaths()) {
-    wallet.value = new WizardConnectExternalWallet({
-      network: import.meta.env.VITE_BCH_NETWORK
-    })
-    await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
-    await wallet.value.getBalance({ sync: true })
-    walletLasySync.value = Date.now()
-  }
-})
 
 watch(() => state.value, (v: WizardConnectState) => {
   if (v === 'disconnected') {
-    router.push('/')
+    return router.push('/')
+  }
+  if (v === 'connecting' && !walletIsReady.value) {
+    return router.push('/loading')
+  }
+
+  if (v === 'connected' && walletIsReady.value && route.path === '/loading') {
+    router.push('/dashboard')
   }
 })
+
+watch(() => walletIsReady.value, (ready: boolean | undefined) => {
+  if (ready && route.path !== '/dashboard') {
+    router.push('/dashboard')
+  }
+}, { immediate: true })
 
 </script>
