@@ -33,48 +33,51 @@
             </div>
           </div>
         </div>
-        <q-scroll-area style="height: 3rem" :visible="false">
-          <q-tabs v-model="activeTab" dense no-caps align="left" active-color="white" indicator-color="blue-5"
-            class="text-grey-7 text-weight-bold" style="min-width: max-content;" shrink>
-            <q-tab name="created">
-              <div class="row items-center q-gutter-xs no-wrap">
-                <q-icon name="brush" size="sm" />
-                <span>Created Tokens</span>
-                <q-badge color="grey-6" text-color="grey-3" class="q-ml-xs" rounded>
-                  {{ authheads.length }}
-                </q-badge>
+        <nav class="inline-nav">
+          <div class="row no-wrap items-center q-gutter-x-sm q-mt-sm">
+            <q-item v-for="def in tabDefinitions" :key="def.name" clickable v-ripple
+              :class="['inline-item q-px-md rounded-borders items-center', { 'inline-item-active': activeTab === def.name }]"
+              @click="activeTab = def.name as 'created' | 'collected' | 'activity'">
+              <div>
+                <div class="flex no-wrap">
+                  <q-item-section avatar class="inline-icon-section q-mr-sm">
+                    <q-icon :name="def.icon" size="20px" class="inline-icon" />
+                  </q-item-section>
+                  <q-item-section class="inline-text-section">
+                    <span class="nav-text-wrapper">
+                      <q-item-label class="text-weight-medium">{{ def.label }}</q-item-label>
+                    </span>
+                  </q-item-section>
+                  <q-badge :color="def.count > 0 ? 'warning' : 'grey-6'" text-color="black" rounded flat floating>
+                    <span class="text-bold text-center">{{ def.count }}</span>
+                  </q-badge>
+                </div>
               </div>
-            </q-tab>
-            <q-tab name="collected">
-              <div class="row items-center q-gutter-xs no-wrap">
-                <q-icon name="grid_view" size="sm" />
-                <span>Collected Tokens</span>
-                <q-badge color="grey-6" text-color="grey-4" class="q-ml-xs" rounded>
-                  {{ allCollectedRows.length }}
-                </q-badge>
-              </div>
-            </q-tab>
-            <q-tab name="activity">
-              <div class="row items-center q-gutter-xs no-wrap">
-                <q-icon name="history" size="sm" />
-                <span>Activity</span>
-                <q-badge color="grey-6" text-color="grey-3" class="q-ml-xs" rounded>
-                  {{ activities.length }}
-                </q-badge>
-              </div>
-            </q-tab>
-          </q-tabs>
-        </q-scroll-area>
+            </q-item>
+
+          </div>
+        </nav>
         <q-scroll-area style="max-width: 100vw; height: 100vh;" :visible="false">
 
           <q-tab-panels v-model="activeTab" animated class="bg-transparent text-grey-2">
             <q-tab-panel name="created" class="q-pa-none">
 
-              <div class="q-mb-sm text-grey-5 text-caption flex items-center">
+              <!-- <div class="q-mb-sm text-grey-5 text-caption flex items-center">
                 <div>Tokens you have authority and control over, including their metadata. </div><q-btn
                   v-if="authheads.length > 0" text-color="secondary" icon="mdi-creation" dense no-caps
                   @click="router.push({ name: 'create-token' })">Create New</q-btn>
+              </div> -->
+              <div class="row items-center justify-between q-pa-md q-my-md" style="background-color: #292828; ">
+                <div class="col-xs-12 col-sm-6 text-subtitle1 text-weight-medium"
+                  style=" color: #e0e0e0; word-break: break-all; ">
+                  Tokens you have authority and control over, including their metadata.
+                </div>
+                <div class="col-xs-12 col-sm-6 text-right">
+                  <q-btn v-if="authheads.length > 0" icon="mdi-creation" label="Create New" color="secondary" no-caps
+                    @click="router.push({ name: 'create-token' })" rounded />
+                </div>
               </div>
+
 
               <template v-if="authkeysLoading || authheadsLoading">
                 <div v-for="i in 3" :key="i"
@@ -91,16 +94,17 @@
                 <div class="row q-gutter-sm q-mb-md">
                   <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                     :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'" :label="`All (${authheads.length})`"
-                    @click="tokenTypeFilter = 'all'" class="q-px-sm" />
+                    @click="tokenTypeFilter = 'all'" class="q-px-sm" no-caps />
                   <q-btn flat unelevated :color="tokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
                     :text-color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
-                    :label="`Fungible (${fungibleCount})`" @click="tokenTypeFilter = 'fungible'" class="q-px-sm" />
+                    :label="`Fungible (${fungibleCount})`" @click="tokenTypeFilter = 'fungible'" class="q-px-sm"
+                    no-caps />
                   <q-btn flat unelevated :color="tokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
                     :text-color="tokenTypeFilter === 'nft' ? 'white' : 'grey-5'" :label="`NFT (${nftCount})`"
-                    @click="tokenTypeFilter = 'nft'" class="q-px-sm" />
+                    @click="tokenTypeFilter = 'nft'" class="q-px-sm" no-caps />
                   <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
                     :text-color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-5'" :label="`Mixed (${mixedCount})`"
-                    @click="tokenTypeFilter = 'mixed'" class="q-px-sm" />
+                    @click="tokenTypeFilter = 'mixed'" class="q-px-sm" no-caps />
                   <q-input v-model="createdSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
                     style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
                     <template v-slot:prepend>
@@ -205,7 +209,7 @@
 
                   <template v-slot:body-cell-actions="value">
                     <q-td :props="value">
-                      <q-btn round icon="more_vert" size=" sm">
+                      <q-btn round icon="more_vert" size="sm" @click.stop>
                         <q-menu dark auto-close class="bg-dark-2 shadow-2">
                           <q-list dark class="bg-dark" dense style="min-width: 180px">
                             <q-item clickable @click="viewRegistry(value.row)">
@@ -303,19 +307,20 @@
               <div class="row q-gutter-sm q-mb-md">
                 <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
                   :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
-                  :label="`All (${allCollectedRows.length})`" @click="collectedTokenTypeFilter = 'all'"
-                  class="q-px-sm" />
+                  :label="`All (${allCollectedRows.length})`" @click="collectedTokenTypeFilter = 'all'" class="q-px-sm"
+                  no-caps />
                 <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
                   :text-color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
                   :label="`Fungible (${collectedFungibleCount})`" @click="collectedTokenTypeFilter = 'fungible'"
-                  class="q-px-sm" />
+                  class="q-px-sm" no-caps />
                 <q-btn flat unelevated :color="collectedTokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
                   :text-color="collectedTokenTypeFilter === 'nft' ? 'white' : 'grey-5'"
-                  :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
+                  :label="`NFT (${collectedNftCount})`" @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm"
+                  no-caps />
                 <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
                   :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
-                  :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'"
-                  class="q-px-sm" />
+                  :label="`Mixed (${collectedMixedCount})`" @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm"
+                  no-caps />
                 <q-input v-model="collectedSearchQuery" dark dense outlined placeholder="Search..." class="bg-grey-10"
                   style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
                   <template v-slot:prepend>
@@ -439,7 +444,7 @@
 
                   <template v-slot:body-cell-collectedActions="value">
                     <q-td :props="value">
-                      <q-btn round icon="more_vert" size="sm">
+                      <q-btn round icon="more_vert" size="sm" @click.stop>
                         <q-menu dark auto-close class="bg-dark-2 shadow-2">
                           <q-list dark class="bg-dark" dense style="min-width: 180px">
                             <q-item clickable @click="sendCollectedTokens(value.row)">
@@ -655,6 +660,12 @@ const getTabFromHash = (): TabName => {
 }
 
 const activeTab = ref<TabName>(getTabFromHash())
+
+const tabDefinitions = computed(() => [
+  { name: 'created', icon: 'brush', label: 'Created Tokens', count: authheads.value.length },
+  { name: 'collected', icon: 'grid_view', label: 'Collected Tokens', count: allCollectedRows.value.length },
+  { name: 'activity', icon: 'history', label: 'My Activity', count: activities.value.length },
+])
 
 const handleHashChange = () => {
   activeTab.value = getTabFromHash()
@@ -877,6 +888,7 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
 }
 
 const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
+  _evt.preventDefault()
   authguardStore.setActiveAuthhead(row)
   router.push(`/authhead?authkey=${row.authkey.txid}:${row.authkey.vout}`)
 }
@@ -1202,6 +1214,82 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Inline Navigation (tabs) */
+.inline-nav {
+  background: transparent;
+  width: 100%;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.inline-item {
+  color: rgba(255, 255, 255, 0.6);
+  min-height: auto;
+  min-width: 12em;
+  padding: 8px 16px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.inline-item .inline-icon {
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.inline-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.inline-item:hover .inline-icon {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.inline-item:hover .nav-text-wrapper::after {
+  width: 100%;
+}
+
+.nav-text-wrapper {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 6px;
+}
+
+.nav-text-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background-color: var(--q-primary);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 2px;
+}
+
+.inline-item-active {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+
+.inline-item-active .inline-icon {
+  color: #ffffff !important;
+}
+
+.inline-item-active .nav-text-wrapper::after {
+  width: 100% !important;
+}
+
+.inline-icon-section {
+  min-width: auto !important;
+  padding-right: 0 !important;
+}
+
+.inline-text-section {
+  padding: 0 !important;
+  overflow: visible !important;
+}
+
 /* Prevent the page itself from ever growing wider than the viewport */
 .page-root {
   max-width: 100vw;
