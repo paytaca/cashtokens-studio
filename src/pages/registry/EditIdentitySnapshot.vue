@@ -162,7 +162,8 @@
             <div class="row justify-end items-center bg-dark q-pa-md rounded-borders items-center"
                 style="border: 1px solid #555; width: 100%;">
                 <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="onResetClick" />
-                <q-btn color="primary" unelevated label="Save" @click="onSaveClick" />
+                <!-- <q-btn color="primary" unelevated label="Save" @click="onSaveClick" /> -->
+                <q-btn color="primary" unelevated label="Publish" @click="onPublishClick" />
             </div>
         </q-page-sticky>
     </q-page>
@@ -199,6 +200,7 @@ import { liveQuery } from 'dexie'
 import { useObservable } from '@vueuse/rxjs'
 import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
+import RegistryVersionOptionsDialog from 'src/components/bcmr/RegistryVersionOptionsDialog.vue'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -381,9 +383,7 @@ const deleteNft = (nft: NftRecord) => {
     })
 }
 
-const publishNfts = async () => {
-
-    if (!activeAuthhead.value?.identitySnapshotIdentifier || unpublishedNfts.value.length === 0) return
+const onPublishClick = async () => {
 
     publishing.value = true
 
@@ -394,7 +394,15 @@ const publishNfts = async () => {
 
     try {
 
-        const { contentHash, identity } = activeAuthhead.value.identitySnapshotIdentifier
+        const { contentHash, identity } = activeAuthhead.value!.identitySnapshotIdentifier!
+
+        const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
+
+        await db.registryIdentitySnapshot
+            .where('[contentHash+authbase+timestamp]')
+            .equals([contentHash, identity.authbase, identity.timestamp] as [string, string, string])
+            .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
+        initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
         const bumpArtifact = await getRegistryWorker().bumpRegistry({
             originalContentHash: contentHash,
@@ -446,6 +454,7 @@ const publishNfts = async () => {
         })
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: broadcastResult.txid
         })
@@ -457,7 +466,7 @@ const publishNfts = async () => {
         await updateActiveAuthhead()
 
         await db.saveActivity({
-            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value.token?.category}`,
+            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
             txid: broadcastResult.txid,
             status: 'success'
         })
