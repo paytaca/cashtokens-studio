@@ -7,7 +7,7 @@ import { watch } from 'vue';
 import { useWizardConnectWallet } from './composables/useWizardConnectWallet';
 import { WizardConnectState } from 'wizardconnect-vue';
 import { useRoute, useRouter } from 'vue-router';
-const { walletIsReady } = useWizardConnectWallet()
+const { walletIsReady, state } = useWizardConnectWallet()
 const route = useRoute()
 const router = useRouter()
 
