@@ -10,9 +10,10 @@ import {
 import { retrieveLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
 import type { 
-  IdentitySnapshot, NftType, Registry, RegistryTimestampKeyedValues 
+  IdentitySnapshot, NftType, OffChainRegistryIdentity, Registry, RegistryTimestampKeyedValues 
 } from '../core/bcmr/bcmr-v2.schema';
 import { uploadFile } from '../core/ipfs';
+import { hexToBin } from 'mainnet-js';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,
@@ -156,7 +157,6 @@ const registryWorker = {
         const tokenCategories = this.extractTokenCategories(parsedRegistry)
         const compactParsedRegistry = await this.parseRegistry(registry, true) as CompactRegistry
         return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot], async () => {
-          
           if (parsedRegistry.identities) {
             const identities = Object.keys(parsedRegistry.identities || {})
             for (const authbase of identities) {
@@ -170,7 +170,14 @@ const registryWorker = {
                 identitySnapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
               }
 
+              // Avoid race condition
+              const existingSnapshot = await db.registryIdentitySnapshot
+                .where('[contentHash+authbase+timestamp]')
+                .equals([contentHash, authbase, latest] as [string, string, string])
+                .first()
+
               const identitySnapshotRecord = {
+                id: existingSnapshot?.id,
                 contentHash: contentHash,
                 authbase: authbase,
                 timestamp: latest,
@@ -180,10 +187,23 @@ const registryWorker = {
               if (identitySnapshot.token?.category) {
                 identitySnapshotRecord.category = identitySnapshot.token.category
               }
-              // Just loads the latest
+              
+
               await db.registryIdentitySnapshot.put(identitySnapshotRecord)
             }
           }
+
+          let registryIdentity = compactParsedRegistry.registryIdentity
+
+          if (typeof(compactParsedRegistry.registryIdentity) !== 'string') {
+            registryIdentity = `offchain:${binToHex(sha256.hash(utf8ToBin(JSON.stringify(compactParsedRegistry.registryIdentity))))}`
+          }
+
+          // Avoid race condition
+          const existingRegistry = await db.registryIdentitySnapshot
+          .where('contentHash')
+          .equals(contentHash)
+          .first()
 
           const registryRecord = {
             authbase: params.authbase,
@@ -192,10 +212,11 @@ const registryWorker = {
             rawRegistry: registry,
             registry: compactParsedRegistry as CompactRegistry,
             status: 'published' as RegistryRecordStatus,
-            tokenCategories
+            registryIdentity: registryIdentity as string,
+            categories: tokenCategories
           }
 
-          const id = await db.registry.put(registryRecord)
+          const id = await db.registry.put({ id: existingRegistry?.id, ...registryRecord })
           const { rawRegistry, ...restOfRegistryRecord } = registryRecord
           return { id, ...restOfRegistryRecord }
         })
