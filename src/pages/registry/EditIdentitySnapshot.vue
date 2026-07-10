@@ -158,7 +158,8 @@
                 </q-card>
             </div>
         </div>
-        <q-page-sticky v-if="modified" position="bottom" class="q-pa-md items-center" expand>
+        <q-page-sticky v-if="modified || (identitySnapshotRecord as IdentitySnapshotRecord).status === 'modified'"
+            position="bottom" class="q-pa-md items-center" expand>
             <div class="row justify-end items-center bg-dark q-pa-md rounded-borders items-center"
                 style="border: 1px solid #555; width: 100%;">
                 <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="onResetClick" />
@@ -201,6 +202,7 @@ import { useObservable } from '@vueuse/rxjs'
 import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import RegistryVersionOptionsDialog from 'src/components/bcmr/RegistryVersionOptionsDialog.vue'
+import { broadcastTransaction } from 'src/services/transaction'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -272,14 +274,12 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
             offset,
             limit
         })
-        console.log('RESULT', result)
         if (result) {
             publishedNfts.value = result.items
             publishedTotal.value = result.total
         }
     }
     catch (error) {
-        console.log('ERROR', error)
         $q.notify({
             type: 'warning',
             message: t('warning.errorLoadingPublishedNfts')
@@ -345,7 +345,6 @@ const refresh = async () => {
             loadPublishedNfts(0, 10)
         ])
     } catch (error) {
-        console.log(error)
         $q.notify({
             type: 'warning',
             message: 'Failed to refresh collection data. Please check your connection or try again later.',
@@ -398,11 +397,14 @@ const onPublishClick = async () => {
 
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
 
+        const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
+
         await db.registryIdentitySnapshot
-            .where('[contentHash+authbase+timestamp]')
-            .equals([contentHash, identity.authbase, identity.timestamp] as [string, string, string])
+            .where('id')
+            .equals(id)
             .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
-        initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
+
+        // initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
         const bumpArtifact = await getRegistryWorker().bumpRegistry({
             originalContentHash: contentHash,
@@ -423,6 +425,8 @@ const onPublishClick = async () => {
 
         await wallet.value.sync()
 
+        triggerRef(wallet)
+
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
             funderUtxos: wallet.value.utxos as UtxoWithPath[],
@@ -439,24 +443,28 @@ const onPublishClick = async () => {
 
         loadingGroup({ message: 'Broadcasting, please wait...' })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                loadingGroup({ message: progress })
+            }
+        })
 
-        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+        if (broadcastError) throw broadcastError
 
-        const broadcastResult = await broadcastResponse.json()
-
-        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
-
-        await getRegistryWorker().commitBumpRegistry(contentHash, `${broadcastResult.txid}:0`)
+        await getRegistryWorker().commitBumpRegistry(contentHash, `${txid}:0`)
 
         loadingGroup({
             message: 'Broadcast success, awaiting tx propagation...'
         })
 
+        initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
+
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
 
         await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: broadcastResult.txid
+            txHash: txid
         })
 
         loadAuthkeys(wallet.value, true).then(() => {
@@ -467,7 +475,7 @@ const onPublishClick = async () => {
 
         await db.saveActivity({
             event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
-            txid: broadcastResult.txid,
+            txid,
             status: 'success'
         })
 
@@ -478,10 +486,12 @@ const onPublishClick = async () => {
             componentProps: {
                 statusType: 'success',
                 statusText: t('success.registryPublication'),
-                txid: broadcastResult.txid
+                txid
             }
         }).onOk(async () => {
+
             registryStore.loadRegistry(identity.authbase, true).then(async () => {
+                await loadPublishedNfts(0, 5)
                 await onPublishedRequest({ pagination: { page: 1, rowsPerPage: 5 } })
             })
         })
@@ -544,7 +554,6 @@ watch(publishedTotal, (total) => {
 })
 
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, (newRecord: IdentitySnapshotRecord, prevRecord) => {
-    console.log('New Record', newRecord, prevRecord)
     if (Object.keys(newRecord || {}).length > 0) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         initialSnapshotJson.value = JSON.stringify(newRecord.identitySnapshot)
@@ -569,8 +578,6 @@ const onSaveClick = async () => {
 }
 
 const onResetClick = () => {
-    console.log(identitySnapshotRecord.value)
-
     if (!initialSnapshotJson.value) return
     identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
 }
