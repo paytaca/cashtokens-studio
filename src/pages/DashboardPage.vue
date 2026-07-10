@@ -1,22 +1,18 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
-
     <div class="q-px-md q-px-md-xl content-container">
-      <div class="q-pa-md bg-dark text-white q-gutter-y-md">
+      <div class="q-pa-md bg-dark text-white q-gutter-y-md"
+        style="background: radial-gradient(circle at 50% 45%, #242936 0%, #0d0f13 70%, #050608 100%)">
         <div class="row q-col-gutter-md justify-center" style="max-width: 75rem; margin: 0 0;">
 
-          <!-- 1. TOP HEADER BANNER CARD (DARK STYLE) -->
           <div class="col-12">
-            <q-card flat class="bg-grey-10 relative-position overflow-visible" style=" min-height: 12rem; ">
-              <!-- Subtle Dark Gradient Banner Background -->
-              <div style="
-                height: 12rem; 
+            <q-card flat class="relative-position overflow-visible" style=" min-height: 8rem; ">
+              <div class="rounded-borders" style="
+                height: 8rem; 
                 width: 100%; 
-                background: linear-gradient(135deg, #1e1b4b 0%, #311042 50%, #111827 100%);
+                
               ">
               </div>
-
-              <!-- Floating Avatar Container (Overlapping bottom edge) -->
               <div class="absolute-bottom row justify-center"
                 style="margin-bottom: -2.25rem; left: 0; right: 0; z-index: 10;">
                 <q-avatar size="7rem" class="shadow-2 bg-dark">
@@ -72,8 +68,6 @@
         <q-scroll-area style="max-width: 100vw; height: 100vh;" :visible="false">
 
           <q-tab-panels v-model="activeTab" animated class="bg-transparent text-grey-2">
-
-            <!-- Created: Authheads Table -->
             <q-tab-panel name="created" class="q-pa-none">
 
               <div class="q-mb-sm text-grey-5 text-caption flex items-center">
@@ -501,7 +495,7 @@
                 <template v-slot:body-cell-activityTxid="props">
                   <q-td :props="props">
                     <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value)
-                    }}
+                      }}
                       <CopyText :text="props.value" />
                     </span>
                     <span v-else class="text-grey-6 text-caption">—</span>
@@ -538,7 +532,7 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, triggerRef, onBeforeMount } from 'vue';
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
@@ -582,11 +576,6 @@ const walletWatchers = ref<{
 const primaryXPub = computed(() =>
   wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
 )
-
-const primaryAddress = computed(() => {
-  return wallet.value.getDepositAddress(0)
-})
-
 
 const activityColumns: QTableColumn[] = [
   {
@@ -783,7 +772,6 @@ const loadCollectedIdentitySnapshots = async () => {
     try {
       return await fetchIdentitySnapshot(category as string)
     } catch (e) {
-      console.log('Failed to fetch identity snapshot for', category, e)
       return undefined
     }
   }))
@@ -954,7 +942,6 @@ const sendCollectedTokens = (row: any) => {
         }
       }
     } catch (error: any) {
-      console.log('error', error)
       $q.notify({ type: 'Error', message: error.message })
     } finally {
       loadingGroup()
@@ -1028,7 +1015,6 @@ const burnCollectedTokens = (row: any) => {
         }
       }
     } catch (error: any) {
-      console.log('error', error)
       $q.notify({ type: 'Error', message: error.message })
     } finally {
       loadingGroup()
@@ -1054,7 +1040,6 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
     })
   }
 
-  console.log('issuerTokenUtxo', v)
   const componentProps: Record<string, any> = {
     transferType: action,
     tokenCategory: v.token!.category,
@@ -1152,7 +1137,6 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
         }
       }
     } catch (error: any) {
-      console.log('error', error)
       $q.notify({
         type: 'Error',
         message: error.message
@@ -1163,11 +1147,11 @@ const openTransferDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | 'burn
   })
 }
 
-watch(walletLasySync, async () => {
-  await loadAuthkeys(wallet.value, true)
-  triggerRef(wallet)
-  await loadCollectedIdentitySnapshots()
-})
+// watch(walletLasySync, async () => {
+//   await loadAuthkeys(wallet.value, true)
+//   triggerRef(wallet)
+//   await loadCollectedIdentitySnapshots()
+// })
 
 watch(activeTab, async (newTab) => {
   if (newTab === 'activity') {
@@ -1182,26 +1166,29 @@ watch(activeTab, (newTab) => {
 })
 
 watch(() => walletIsReady.value, async (isReady, prevValue) => {
-  console.log('IS READY', isReady)
   if (isReady && Boolean(prevValue) === false) {
-    console.log('IS READYx', isReady)
-    const authkeys = await loadAuthkeys(wallet.value, true)
-    await loadAuthheads(authkeys)
+    loadAuthkeys(wallet.value).then((authkeys) => {
+      loadAuthheads(authkeys)
+    })
+
     triggerRef(wallet)
-    await loadCollectedIdentitySnapshots()
-    await loadActivities()
+
+    await Promise.allSettled([loadCollectedIdentitySnapshots(), loadActivities()])
     walletWatchers.value.stopWatchingReceiveWallet = await wallet.value?.receive?.watchStatus(async (status, address) => {
       await wallet.value?.sync()
+      loadAuthkeys(wallet.value).then((authkeys) => {
+        loadAuthheads(authkeys)
+      })
       triggerRef(wallet)
     })
   }
-})
+}, { immediate: true })
+
 
 onMounted(async () => {
   if (typeof (window) !== 'undefined') {
     window.addEventListener('hashchange', handleHashChange)
   }
-
 })
 
 onUnmounted(() => {
