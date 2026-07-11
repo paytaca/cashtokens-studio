@@ -6,6 +6,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       { path: '', component: () => import('pages/IndexPage.vue') },
+      { path: '/loading', component: () => import('pages/SplashScreen.vue') },
       {
         path: '/registry',
         component: () => import('layouts/RegistryLayout.vue'),
@@ -39,6 +40,11 @@ const routes: RouteRecordRaw[] = [
             name: 'edit-nft',
             path: 'identity-snapshot/nfts/:type/edit',
             component: () => import('pages/registry/EditNft.vue'),
+          },
+          {
+            name: 'view-registry',
+            path: 'view',
+            component: () => import('pages/registry/ViewRegistry.vue'),
           }
         ]
       }
