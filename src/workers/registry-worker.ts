@@ -1,7 +1,6 @@
 import * as Comlink from 'comlink';
 import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
 import { 
-  CompactRegistry, 
   db, 
   IdentitySnapshotRecord, 
   ParsedRegistryRecord, 
@@ -14,6 +13,9 @@ import type {
 } from '../core/bcmr/bcmr-v2.schema';
 import { uploadFile } from '../core/ipfs';
 import { hexToBin } from 'mainnet-js';
+import { compactRegistry, extractNftTypeKeys, extractTokenCategories, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
+import { type CompactRegistry } from 'src/core/bcmr/types';
+import { NftCollectionType } from 'src/core/bcmr';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,
@@ -45,45 +47,13 @@ export type Authbase = string
 
 const registryWorker = {
 
-  // eslint-disable-next-line @typescript-eslint/no-inferrable-types
-  async parseRegistry(registry: Blob, compact: boolean = true): Promise<CompactRegistry|Registry> {
-    const text = await registry.text()
-    const parsedRegistry = JSON.parse(text)
-    if (!parsedRegistry.identities) return parsedRegistry
-    if (!compact) return parsedRegistry
-
-    const identities = Object.keys(parsedRegistry.identities)
-    const identitiesMap = identities.reduce((acc: { [authbase: string]: string[] }, authbase: string) => {
-      acc[authbase] = Object.keys(parsedRegistry.identities[authbase] || {}).sort((a, b) => b.localeCompare(a))
-      return acc
-    }, {} as { [authbase: string]: string[] }) as { [authbase: string]: string[] }
-
-    return {
-      ...parsedRegistry,
-      identities: identitiesMap
-    } as CompactRegistry
-  },
-
-  extractTokenCategories(registry: Registry) {
-    const tokenCategories = []
-    for (const authbase of Object.keys(registry.identities || {})) {
-      for (const timestamp of Object.keys(registry.identities?.[authbase] || {})) {
-        const category = registry.identities?.[authbase]?.[timestamp]?.token?.category
-        if (category) {
-          tokenCategories.push(`${category}:${authbase}:${timestamp}`)
-        }
-      }
-    }
-    return tokenCategories
-  },
-
   async loadRegistry(params: DownloadRegistryParams): Promise<ParsedRegistryRecord|undefined> {
     try {
       if (params.contentHash) {
         const cached = await db.registry.where('contentHash').equals(params.contentHash).first()
         if (cached?.rawRegistry) {
           const { rawRegistry , ...rest } = cached
-          const parsedRegistry = await this.parseRegistry(cached.rawRegistry, true)
+          const parsedRegistry = compactRegistry(await parseRegistryBlob(cached.rawRegistry))
           return { ...rest, registry: parsedRegistry as CompactRegistry }
         }
       }
@@ -92,7 +62,7 @@ const registryWorker = {
         const existing = await db.registry.where('authbase').equals(params.authbase).first()
         if (existing?.rawRegistry) {
           const { rawRegistry, ...rest } = existing
-          const parsedRegistry = await this.parseRegistry(rawRegistry, true)
+          const parsedRegistry = compactRegistry(await parseRegistryBlob(rawRegistry))
           return { ...rest, registry: parsedRegistry as CompactRegistry }
         }
       }
@@ -105,7 +75,7 @@ const registryWorker = {
       const existing = await db.registry.where('contentHash').equals(contentHash).first();
         if(existing) {
           const { rawRegistry, ...rest } = existing
-          const parsedRegistry = await this.parseRegistry(rawRegistry, true)
+          const parsedRegistry = compactRegistry(await parseRegistryBlob(rawRegistry))
           return { 
             ...rest, registry: parsedRegistry as CompactRegistry
           }
@@ -153,9 +123,9 @@ const registryWorker = {
         
         const response = await Promise.any(fetchPromises)
         const registry: Blob = await response.blob();
-        const parsedRegistry = await this.parseRegistry(registry, false) as Registry
-        const tokenCategories = this.extractTokenCategories(parsedRegistry)
-        const compactParsedRegistry = await this.parseRegistry(registry, true) as CompactRegistry
+        const parsedRegistry = await parseRegistryBlob(registry) as Registry
+        const tokenCategories = extractTokenCategories(parsedRegistry)
+        const compactParsedRegistry = compactRegistry(parsedRegistry)
         return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot], async () => {
           if (parsedRegistry.identities) {
             const identities = Object.keys(parsedRegistry.identities || {})
@@ -165,6 +135,7 @@ const registryWorker = {
               identityHistory.sort((a, b) => b.localeCompare(a)); // latest first
               const latest = identityHistory[0] as string
               const identitySnapshot = parsedRegistry.identities![authbase]![latest] as IdentitySnapshot
+              const nftTypeKeys = extractNftTypeKeys(identitySnapshot)
               if (identitySnapshot.token?.nfts?.parse?.types) {
                 // Remove nfts types from snapshot, it's too expensive, Parse nfts on demand
                 identitySnapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
@@ -181,7 +152,8 @@ const registryWorker = {
                 contentHash: contentHash,
                 authbase: authbase,
                 timestamp: latest,
-                identitySnapshot: identitySnapshot
+                identitySnapshot: identitySnapshot,
+                nftTypeKeys: nftTypeKeys
               } as IdentitySnapshotRecord
                 
               if (identitySnapshot.token?.category) {
@@ -244,10 +216,10 @@ const registryWorker = {
         // Snapshot not cached yet - parse from rawRegistry and store it
         const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
         if (registryRecord?.rawRegistry) {
-          const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
+          const parsedRegistry = await parseRegistryBlob(registryRecord.rawRegistry) as Registry
           const identitySnapshot = parsedRegistry.identities?.[params.identity.authbase]?.[params.identity.timestamp]
-
           if (identitySnapshot) {
+            const nftTypeKeys = extractNftTypeKeys(identitySnapshot)
             // Strip nft types from snapshot (matching getRegistry behavior)
             const snapshot = JSON.parse(JSON.stringify(identitySnapshot)) as IdentitySnapshot
             if (snapshot.token?.nfts?.parse?.types) {
@@ -258,62 +230,8 @@ const registryWorker = {
               contentHash: params.contentHash,
               authbase: params.identity.authbase,
               timestamp: params.identity.timestamp,
-              identitySnapshot: snapshot
-            } as IdentitySnapshotRecord
-
-            if (snapshot.token?.category) {
-              identitySnapshotRecord.category = snapshot.token.category
-            }
-
-            await db.registryIdentitySnapshot.put(identitySnapshotRecord)
-            return identitySnapshotRecord
-          }
-        }
-      }
-
-      if (!params.category) throw new Error('Identity or category required')
-      
-      // Return identitySnapshot of category with latest timestamp
-      const records = await db.registryIdentitySnapshot
-          .where('category')
-          .equals(params.category)
-          .toArray()
-      records.sort((a, b) => b.timestamp.localeCompare(a.timestamp))
-      return records[0]
-    } catch (e) {
-      params.onError?.(getErrorMessage(e))
-    } 
-  },
-
-  async extractRegistryIdentitySnapshot(params: GetIdentitySnapshotParams): Promise<IdentitySnapshotRecord|undefined> {
-    try {
-
-      if (params.contentHash && params.identity) {
-        const queryResult = await db.registryIdentitySnapshot
-          .where('[contentHash+authbase+timestamp]')
-          .equals([params.contentHash, params.identity.authbase, params.identity.timestamp])
-          .first();
-
-        if (queryResult) return queryResult
-
-        // Snapshot not cached yet - parse from rawRegistry and store it
-        const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
-        if (registryRecord?.rawRegistry) {
-          const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
-          const identitySnapshot = parsedRegistry.identities?.[params.identity.authbase]?.[params.identity.timestamp]
-
-          if (identitySnapshot) {
-            // Strip nft types from snapshot (matching getRegistry behavior)
-            const snapshot = JSON.parse(JSON.stringify(identitySnapshot)) as IdentitySnapshot
-            if (snapshot.token?.nfts?.parse?.types) {
-              snapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
-            }
-
-            const identitySnapshotRecord = {
-              contentHash: params.contentHash,
-              authbase: params.identity.authbase,
-              timestamp: params.identity.timestamp,
-              identitySnapshot: snapshot
+              identitySnapshot: snapshot,
+              nftTypeKeys,
             } as IdentitySnapshotRecord
 
             if (snapshot.token?.category) {
@@ -345,7 +263,7 @@ const registryWorker = {
       const existing = await db.registry.where('contentHash').equals(params.contentHash).first();
       if (!existing?.registry) return
 
-      const parsedRegistry = await this.parseRegistry(existing.rawRegistry, false) as Registry
+      const parsedRegistry = await parseRegistryBlob(existing.rawRegistry) as Registry
 
       if (parsedRegistry.identities) {
         const identities = Object.keys(parsedRegistry.identities || {})
@@ -374,7 +292,7 @@ const registryWorker = {
         }
       }
 
-      const compactParsedRegistry = await this.parseRegistry(existing.rawRegistry, true)
+      const compactParsedRegistry = compactRegistry(await parseRegistryBlob(existing.rawRegistry))
 
       await db.registry.update(existing.id!, {
         registry: compactParsedRegistry as CompactRegistry,
@@ -407,7 +325,7 @@ const registryWorker = {
     }
 
     const { identities, ...r } = registryRecord.registry
-    const { identities: originalIdentities } = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
+    const { identities: originalIdentities } = await parseRegistryBlob(registryRecord.rawRegistry) as Registry
     const registryCandidate: Registry = r
     const originalVersion = registryCandidate.version
     registryCandidate.version = params.newVersion || {
@@ -538,8 +456,8 @@ const registryWorker = {
     const newUris = registryRecord.bumpArtifact.uris
     const newRawRegistry = registryRecord.bumpArtifact.registry
 
-    const parsedRegistry = await this.parseRegistry(newRawRegistry, false) as Registry
-    const compactParsedRegistry = await this.parseRegistry(newRawRegistry, true) as CompactRegistry
+    const parsedRegistry = await parseRegistryBlob(newRawRegistry) as Registry
+    const compactParsedRegistry = compactRegistry(await parseRegistryBlob(newRawRegistry)) as CompactRegistry
 
     return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot, db.nfts], async () => {
       // Delete old records with oldContentHash
@@ -599,50 +517,118 @@ const registryWorker = {
     authbase: string,
     timestamp: string,
     offset?: number,
-    limit?: number
+    limit?: number,
+    order?: 'asc' | 'desc',
+    identitySnapshotId?: number
   }): Promise<PaginatedNftTypesResult|undefined> {
     try {
-      const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
-      if (!registryRecord?.rawRegistry) {
-        return { items: [], total: 0 }
-      }
 
-      const parsedRegistry = await this.parseRegistry(registryRecord.rawRegistry, false) as Registry
-      const identitySnapshot = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]
-      if (!identitySnapshot?.token?.nfts?.parse?.types) {
-        return { items: [], total: 0 }
-      }
+        const identitySnapshotRecord = await this.getIdentitySnapshot({
+          contentHash: params.contentHash, 
+          identity: { authbase: params.authbase, timestamp: params.timestamp }
+        })
+        console.log('identitySnapshotRecord', identitySnapshotRecord)
 
-      const types = identitySnapshot.token.nfts.parse.types
-      const isSequential = !(identitySnapshot.token.nfts.parse as any).bytecode
-      const entries = Object.entries(types)
+        const targetNftTypeKeys = identitySnapshotRecord?.nftTypeKeys?.slice(params.offset ?? 0, params.limit || 5) || []
 
-      entries.sort(([a], [b]) => {
-        if (isSequential) {
-          const aBytes = a.match(/.{1,2}/g) || []
-          const bBytes = b.match(/.{1,2}/g) || []
-          const aRev = aBytes.reverse().join('')
-          const bRev = bBytes.reverse().join('')
-          const aInt = BigInt('0x' + aRev)
-          const bInt = BigInt('0x' + bRev)
-          if (aInt < bInt) return -1
-          if (aInt > bInt) return 1
-          return 0
+        const collectionType = !(identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
+        sortNftTypeKeys({ keys: targetNftTypeKeys, order: params.order || 'desc', collectionType })
+        console.log('identitySnapshotRecord targetNftTypeKeys', targetNftTypeKeys)
+        const paginatedNftTypeKeys = targetNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
+
+        const total = identitySnapshotRecord?.nftTypeKeys?.length ?? 0
+        const items = []
+
+        let parsedRegistry = null
+        for (const key of paginatedNftTypeKeys) {
+          const nftRecord = await db.nfts.where('[contentHash+authbase+timestamp+type]')
+                      .equals([params.contentHash, params.authbase, params.timestamp, key])
+                      .first() 
+          if (nftRecord) {
+            items.push({
+              type: nftRecord.type,
+              nft: nftRecord.nft
+            })
+            continue 
+          }
+
+          if (!parsedRegistry) {
+            const rawRegistry = (await db.registry.where('contentHash').equals(params.contentHash).first())?.rawRegistry
+            if (!rawRegistry) break
+            parsedRegistry = await parseRegistryBlob(rawRegistry)
+          }
+
+          console.log('parsedRegistry', parsedRegistry)
+          const nft = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]?.token?.nfts?.parse?.types[key]
+          if (!nft) continue
+          console.log('NFT', nft, identitySnapshotRecord)
+          const newNftRecord = {
+            contentHash: params.contentHash,
+            authbase: params.authbase,
+            timestamp: params.timestamp,
+            category: identitySnapshotRecord?.identitySnapshot.token?.category || '',
+            type: key,
+            nft: nft,
+            status: 'published' as 'published' | 'new'
+          }
+          
+          await db.createNftRecord(newNftRecord)
+          items.push({
+            type: key,
+            nft
+          })          
         }
-        return a.localeCompare(b)
-      })
 
-      const total = entries.length
+        return {
+          items,
+          total
+        }
 
-      const offset = params.offset ?? 0
-      const limit = params.limit ?? entries.length
-      const page = entries.slice(offset, offset + limit)
+        
+        
 
-      return {
-        items: page.map(([type, nft]) => ({ type, nft })),
-        total
-      }
+      // const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
+      // if (!registryRecord?.rawRegistry) {
+      //   return { items: [], total: 0 }
+      // }
+      // const parsedRegistry = await parseRegistryBlob(registryRecord.rawRegistry) as Registry
+      // const identitySnapshot = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]
+      // if (!identitySnapshot?.token?.nfts?.parse?.types) {
+      //   return { items: [], total: 0 }
+      // }
+
+      // const types = identitySnapshot.token.nfts.parse.types
+      // const isSequential = !(identitySnapshot.token.nfts.parse as any).bytecode
+      // const entries = Object.entries(types)
+
+      // entries.sort(([a, va], [b, bv]) => {
+      //   console.log('entry', a, va, b, bv)
+      //   if (isSequential) {
+      //     const aBytes = a.match(/.{1,2}/g) || []
+      //     const bBytes = b.match(/.{1,2}/g) || []
+      //     const aRev = aBytes.reverse().join('')
+      //     const bRev = bBytes.reverse().join('')
+      //     const aInt = BigInt('0x' + aRev)
+      //     const bInt = BigInt('0x' + bRev)
+      //     if (aInt < bInt) return -1
+      //     if (aInt > bInt) return 1
+      //     return 0
+      //   }
+      //   return a.localeCompare(b)
+      // })
+
+      // const total = entries.length
+
+      // const offset = params.offset ?? 0
+      // const limit = params.limit ?? entries.length
+      // const page = entries.slice(offset, offset + limit)
+
+      // return {
+      //   items: page.map(([type, nft]) => ({ type, nft })),
+      //   total
+      // }
     } catch (e) {
+      console.log('ERROR IN getNFttypes', e)
       params.onError?.(getErrorMessage(e))
     }
   },

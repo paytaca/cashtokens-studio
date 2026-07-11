@@ -223,7 +223,8 @@ class CashtokensStudioDB extends Dexie {
     timestamp: string,
     category: string,
     type: string,
-    nft: NftType
+    nft: NftType,
+    status?: 'published' | 'new' 
   }): Promise<NftRecord> {
     const existing = await this.nfts
       .where('[contentHash+authbase+timestamp+type]')
@@ -241,7 +242,7 @@ class CashtokensStudioDB extends Dexie {
       category: params.category,
       type: params.type,
       nft: params.nft,
-      status: 'new'
+      status: params.status || 'new'
     } as NftRecord
 
     await this.nfts.put(record)
