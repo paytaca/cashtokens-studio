@@ -1,7 +1,6 @@
 <template>
     <q-page>
-        <div class="row justify-center q-pa-md">
-            <!-- UI-Matched Loading State -->
+        <div class="row justify-center">
             <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <!-- Back Button Placeholder -->
                 <div class="q-mb-md q-px-sm">
@@ -70,52 +69,13 @@
                     </q-card>
                 </q-card>
             </div>
-
-            <!-- Actual UI State -->
-
-            <!-- (Rest of your existing refactored template code stays exactly the same) -->
-
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-                <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
-                </div>
-                <q-card flat class="bg-dark q-pa-lg">
+                <q-card flat class="bg-dark q-pa-lg rounded-borders">
                     <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
                         <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
                                 size="sm" /><span class="text-h6 text-weight-bold ">NFT Category</span></div>
-                        <q-btn icon="mdi-text-box-edit" :label="$q.screen.gt.xs ? 'Edit' : ''" dense flat
-                            color="secondary" @click="onEditNftCategoryClick">
-                        </q-btn>
                     </q-card-title>
-                    <div class="row items-center q-gutter-x-md q-mb-lg">
-                        <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
-                            <q-img v-if="identitySnapshot.uris?.icon"
-                                :src="ipfsToGatewayUrl(identitySnapshot.uris?.icon)!" fit="cover" />
-                            <q-icon v-else name="token" color="primary" size="32px" />
-                        </q-avatar>
-                        <div>
-                            <div class="flex items-center q-gutter-x-xs q-mt-xs token-symbol">
-                                {{ identitySnapshot.token?.symbol || "Unknown" }}
-                            </div>
-                            <div class="text-caption">
-                                {{ identitySnapshot.name || 'Unnamed Collection' }}
-                            </div>
-                        </div>
-                        <q-space />
-                        <label v-if="modified" class="text-caption text-warning">[Modified]</label>
-                    </div>
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Token ID
-                            </div>
-                            <div
-                                class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                {{ identitySnapshot.token!.category }}
-                                <CopyText :text="identitySnapshot.token!.category" />
-                            </div>
-                        </div>
-                    </div>
+
                     <template v-if="nftCategory">
                         <q-card class="bg-dark q-mt-md" flat>
                             <FormField v-if="nftCategory.description">
@@ -145,11 +105,13 @@
                                         v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionI)"
                                         v-model:fields="nftCategory.fields">
                                         <template #nftTypes>
-                                            <q-separator class="q-my-xl"></q-separator>
                                             <h6 class="q-my-xs">NFT Items</h6>
                                             <NftTable :rows="publishedNfts" :loading="publishedLoading"
                                                 :total="publishedTotal" @request="loadPublishedNfts"
                                                 @row-click="onNftRowClick" />
+                                            <NftTable v-if="unpublishedNfts.length > 0" :rows="unpublishedNfts"
+                                                :loading="unpublishedLoading" :total="unpublishedTotal"
+                                                @request="loadPublishedNfts" @row-click="onNftRowClick" />
                                         </template>
                                     </ParsableNftCollection>
                                 </template>
@@ -157,16 +119,14 @@
                                     <SequentialNftCollection
                                         v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                         <template #nftTypes>
-                                            <q-separator class="q-my-xl"></q-separator>
                                             <h6 class="q-my-xs">NFT Items</h6>
+                                            <NftTable v-if="unpublishedNfts.length > 0" :rows="unpublishedNfts"
+                                                :loading="unpublishedLoading" :total="unpublishedTotal"
+                                                @request="loadPublishedNfts" @row-click="onNftRowClick" />
 
                                             <NftTable :rows="publishedNfts" :loading="publishedLoading"
                                                 :total="publishedTotal" @request="loadPublishedNfts"
                                                 @row-click="onNftRowClick" />
-
-                                            <NftTable v-if="unpublishedNfts.length > 0" :rows="unpublishedNfts"
-                                                :loading="unpublishedLoading" :total="unpublishedTotal"
-                                                @request="loadPublishedNfts" @row-click="onNftRowClick" />
 
 
                                         </template>

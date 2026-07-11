@@ -79,7 +79,7 @@
                                         <q-input v-model="identitySnapshot.token.decimals" outlined></q-input>
                                     </FormField>
                                 </div>
-                                <h6 class="q-my-xs">NFTs</h6>
+                                <!-- <h6 class="q-my-xs">NFTs</h6>
                                 <div class="col-12">
                                     <FormField>
                                         <label class="flex justify-between items-center">
@@ -122,7 +122,7 @@
                                             </div>
                                         </q-scroll-area>
                                     </FormField>
-                                </div>
+                                </div> -->
                             </template>
                         </div>
                     </div>

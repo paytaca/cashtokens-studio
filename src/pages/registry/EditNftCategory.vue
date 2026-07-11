@@ -1,6 +1,6 @@
 <template>
     <q-page>
-        <div class="row justify-center q-pa-md">
+        <div class="row justify-center">
             <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <!-- Back Button Placeholder -->
                 <div class="q-mb-md q-px-sm">
@@ -70,44 +70,7 @@
                 </q-card>
             </div>
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-                <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
-                </div>
-                <q-card flat class="bg-dark q-pa-lg">
-                    <!-- <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
-                        <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
-                                size="sm" /><span class="text-h6 text-weight-bold ">NFT Info</span></div>
-
-                    </q-card-title> -->
-                    <!-- <div class="row items-center q-gutter-x-md q-mb-lg">
-                        <q-avatar size="64px" class="bg-grey-9 border-radius-8 shadow-1">
-                            <q-img v-if="identitySnapshot.uris?.icon"
-                                :src="ipfsToGatewayUrl(identitySnapshot.uris?.icon)!" fit="cover" />
-                            <q-icon v-else name="token" color="primary" size="32px" />
-                        </q-avatar>
-                        <div>
-                            <div class="flex items-center q-gutter-x-xs q-mt-xs token-symbol">
-                                {{ identitySnapshot.token?.symbol || "Unknown" }}
-                            </div>
-                            <div class="text-caption">
-                                {{ identitySnapshot.name || 'Unnamed Collection' }}
-                            </div>
-                        </div>
-                        <q-space />
-                        <label v-if="modified" class="text-caption text-warning">[Modified]</label>
-                    </div> -->
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
-                                Token ID
-                            </div>
-                            <div
-                                class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                {{ identitySnapshot.token!.category }}
-                                <CopyText :text="identitySnapshot.token!.category" />
-                            </div>
-                        </div>
-                    </div>
+                <q-card flat class="bg-dark q-pa-lg rounded-borders">
                     <template v-if="nftCategory">
                         <q-card class="bg-dark q-mt-md" flat>
                             <FormField>
@@ -144,23 +107,8 @@
                                         v-model:parsable-nft-collection="(nftCategory.parse as ParsableNftCollectionI)"
                                         v-model:fields="nftCategory.fields">
                                         <template #nftTypes>
-
                                             <q-separator class="q-my-xl"></q-separator>
                                             <h6 class="q-my-xs">NFT Items</h6>
-                                            <!-- <q-table :rows="nftTypeRows" :columns="nftTypeColumns" row-key="hexKey" flat
-                                                :loading="nftTypesLoading" v-model:pagination="nftTypesPagination"
-                                                @request="onNftTypesRequest" class="q-mt-md">
-                                                <template v-slot:body-cell-key="props">
-                                                    <q-td :props="props" class="text-mono">{{ props.row.hexKey }}</q-td>
-                                                </template>
-<template v-slot:body-cell-name="props">
-                                                    <q-td :props="props">{{ props.row.name }}</q-td>
-                                                </template>
-<template v-slot:no-data>
-                                                    <div class="text-grey-5 text-center q-pa-md">No NFT Types</div>
-                                                </template>
-</q-table> -->
-
                                             <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type"
                                                 flat dark :loading="publishedLoading"
                                                 v-model:pagination="publishedPagination" @request="onPublishedRequest"
@@ -189,7 +137,6 @@
                                                                     style="line-height: 1;">No Icon</span>
                                                                 <span v-else class="text-grey-6 font-8 q-mt-xs"
                                                                     style="line-height: 1;"></span>
-
                                                             </div>
                                                             <div>
                                                                 <div class="text-bold">{{ props.row.nft.name }}</div>
@@ -215,9 +162,7 @@
                                     <SequentialNftCollection
                                         v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                         <template #nftTypes>
-                                            <q-separator class="q-my-xl"></q-separator>
                                             <h6 class="q-my-xs">NFT Items</h6>
-
                                             <q-table :rows="publishedNfts" :columns="publishedColumns" row-key="type"
                                                 flat dark :loading="publishedLoading"
                                                 v-model:pagination="publishedPagination" @request="onPublishedRequest"
