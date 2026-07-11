@@ -179,7 +179,7 @@
                       </div>
                     </div>
                     <div class="text-caption text-grey-6 q-mb-md">NFT types not yet published to the registry</div>
-                    <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat dark
+                    <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="type" flat dark
                       :rows-per-page-options="[0]" class="bg-dark"
                       @row-click="(_evt, row) => editNft(row as NftRecord)">
                       <template v-slot:body-cell-nft="props">

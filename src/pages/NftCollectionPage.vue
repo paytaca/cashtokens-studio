@@ -101,7 +101,7 @@
                                 :loading="publishing" @click="publishNfts" />
                         </div>
                         <div class="text-caption text-grey-6 q-mb-md">{{ t('label.registry.unpublishedCaption') }}</div>
-                        <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="id" flat bordered dark
+                        <q-table :rows="unpublishedNfts" :columns="unpublishedColumns" row-key="type" flat bordered dark
                             :rows-per-page-options="[0]" class="bg-dark border-radius-12" @row-click="onNftRowClick">
                             <template v-slot:body-cell-type="props">
                                 <q-td :props="props" class="text-mono">
@@ -121,13 +121,14 @@
                                             </q-avatar>
                                             <span v-if="!props.row.nft?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
                                                 style="line-height: 1;">No Icon</span>
-                                            <span v-else class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;"
-                                                </span>
+                                            <span v-else class="text-grey-6 font-8 q-mt-xs"
+                                                style="line-height: 1;"></span>
+
                                         </div>
                                         <div>
                                             <div class="text-bold">{{ props.row.nft.name }}</div>
                                             <div class="icon-badge-hex text-grey-8">
-                                                <{{ props.row.type }}>
+                                                &lt;{{ props.row.type }}&gt;
                                             </div>
                                         </div>
                                     </div>
@@ -203,13 +204,14 @@
                                             </q-avatar>
                                             <span v-if="!props.row.nft?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
                                                 style="line-height: 1;">No Icon</span>
-                                            <span v-else class="text-grey-6 font-8 q-mt-xs" style="line-height: 1;"
-                                                </span>
+                                            <span v-else class="text-grey-6 font-8 q-mt-xs"
+                                                style="line-height: 1;"></span>
+
                                         </div>
                                         <div>
                                             <div class="text-bold">{{ props.row.nft.name }}</div>
                                             <div class="icon-badge-hex text-grey-8">
-                                                <{{ props.row.type }}>
+                                                &lt;{{ props.row.type }}&gt;
                                             </div>
                                         </div>
                                     </div>
@@ -266,7 +268,7 @@ const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { loadAuthkeys, loadAuthheads } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const {
     manager,
     wallet,
@@ -343,6 +345,7 @@ const refresh = async () => {
             loadPublishedNfts(0, 10)
         ])
     } catch (error) {
+        console.log(error)
         $q.notify({
             type: 'warning',
             message: 'Failed to refresh collection data. Please check your connection or try again later.',
@@ -449,11 +452,11 @@ const publishNfts = async () => {
             txHash: broadcastResult.txid
         })
 
-
-        wallet.value.sync().then(async () => {
-            await loadAuthheads(true)
+        loadAuthkeys(wallet.value, true).then(() => {
             triggerRef(wallet)
         })
+
+        await updateActiveAuthhead()
 
         await db.saveActivity({
             event: `Published NFT metadata of ${authhead.value?.identitySnapshot?.token?.category || authhead.value.token?.category}`,

@@ -82,7 +82,7 @@ const handleSave = async (rawNft: NftType) => {
 
   if (existing) {
     const status = existing.status === 'published' ? 'modified' : existing.status
-    await db.nfts.update(existing.id!, { nft, status })
+    await db.nfts.put({ ...existing, nft, status })
 
   } else {
     const status = activeNft.value.isNew ? 'new' : 'modified'

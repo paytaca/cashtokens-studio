@@ -2,6 +2,7 @@
 import { Dexie, EntityTable} from 'dexie';
 import { Registry, IdentitySnapshot, NftType } from './bcmr/bcmr-v2.schema';
 import { UtxoTxid, UtxoVout, UtxoWithPath } from './types';
+import { CompactRegistry } from './bcmr/types';
 
 export type BumpArtifact = {
     contentHash: string,
@@ -20,15 +21,11 @@ export type RegistryRecord = {
     authhead?: string,
     rawRegistry: Blob,
     registry: CompactRegistry,
+    registryIdentity: string | `offchain:${string}`; 
     bumpArtifact?: BumpArtifact,
     status: RegistryRecordStatus,
-    tokenCategories?: string[]
-}
-
-export type CompactRegistry = Omit<Registry, 'identities'> & { 
-  identities?: {
-    [authbase: string]: string[] // array of timestamps
-  } 
+    identities?: string[] // [`authbase:timestamp:[category]`, ...]
+    categories?: string[]
 }
 
 export type ParsedRegistryRecord = Omit<RegistryRecord, 'rawRegistry'>
@@ -39,7 +36,12 @@ export type IdentitySnapshotRecord = {
   authbase: string,
   timestamp: string,
   category: string,
+  registryIdentity: string | `offchain:${string}`,
   identitySnapshot: IdentitySnapshot & Record<string, any>,
+  /**
+   * NftType keys found on this identity snapshot
+   */
+  nftTypeKeys: [],
   status: RegistryRecordStatus
 }
 
@@ -103,6 +105,7 @@ class CashtokensStudioDB extends Dexie {
   nfts!: EntityTable<NftRecord, 'id'>
   utxo!: EntityTable<UtxoRecord, 'id'>
   activity!: EntityTable<ActivityRecord, 'id'>
+  authhead!: EntityTable<UtxoRecord, 'id'>
 
   constructor(network: 'chipnet'|'mainnet') {
 
@@ -121,9 +124,9 @@ class CashtokensStudioDB extends Dexie {
     //   activity: '++id, event, timestamp, status'
     // })
     this.version(1).stores({
-      registry: '++id, contentHash, authbase',
+      registry: '++id, contentHash, authbase, *categories, registryIdentity',
       registryIdentitySnapshot: '++id, contentHash, [contentHash+authbase+timestamp], authbase, timestamp, category',
-      nfts: '++id, contentHash, [contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
+      nfts: '[contentHash+authbase+timestamp+type], contentHash, authbase, timestamp, category, type',
       utxo: 'id, walletId',
       activity: '++id, event, timestamp, status'
     })
@@ -285,7 +288,7 @@ class CashtokensStudioDB extends Dexie {
           .equals([params.contentHash, params.authbase, params.timestamp, type] as [string, string, string, string])
           .first()
         if (record) {
-          await this.nfts.update(record.id!, { status: 'published' })
+          await this.nfts.put({ ...record, status: 'published' })
           // await this.nfts.update(
           //   [record.contentHash, record.authbase, record.timestamp, record.type] as [string, string, string, string],
           //   { status: 'published' }
