@@ -1,11 +1,11 @@
 import type { DecoratedUtxo } from '../types'
 
-export function shortenTokenId(tokenId: string) {
-    return (tokenId || '').replace(tokenId.substring(5, 60), '...')
+export function shortenTokenId(tokenId = '') {
+    return tokenId.replace(tokenId.substring(5, 60), '...')
 }
 
-export function shortenCashAddress(address: string) {
-    return (address || '').replace(address.substring(15, 45), '...')
+export function shortenCashAddress(address = '') {
+    return address.replace(address.substring(15, 45), '...')
 }
 
 export function formatTokenAmount(
@@ -79,4 +79,12 @@ export function getTokenType(utxo: DecoratedUtxo): 'fungible' | 'nft' | 'mixed' 
 export function isPureFungible(utxo: DecoratedUtxo): boolean {
   return getTokenType(utxo) === 'fungible'
 }
+  
+export async function safeAsync<T, E = Error>(
+    promise: Promise<T>
+  ): Promise<[E, null] | [null, T]> {
+    return promise
+      .then<[null, T]>((data: T) => [null, data])
+      .catch<[E, null]>((error: E) => [error, null]);
+  };
   
