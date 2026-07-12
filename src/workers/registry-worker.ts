@@ -3,6 +3,7 @@ import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
 import { 
   db, 
   IdentitySnapshotRecord, 
+  NftRecord, 
   ParsedRegistryRecord, 
   RegistryRecordStatus 
 } from '../core/client-db'
@@ -39,8 +40,11 @@ export type GetIdentitySnapshotParams = ProgressErrorListener & {
 }
 
 export type PaginatedNftTypesResult = {
-  items: { type: string, nft: NftType }[],
-  total: number
+  items: NftRecord[],
+  total: number,
+  offset: number,
+  limit: number,
+  lastNftTypeKey: string
 }
 
 export type Authbase = string
@@ -512,30 +516,56 @@ const registryWorker = {
     })
   },
 
-  async getNftTypes(params: ProgressErrorListener & {
+  async getNfts(params: ProgressErrorListener & {
     contentHash: string,
     authbase: string,
     timestamp: string,
     offset?: number,
     limit?: number,
     order?: 'asc' | 'desc',
-    identitySnapshotId?: number
+    identitySnapshotId?: number,
+    status?: RegistryRecordStatus | undefined | ''
   }): Promise<PaginatedNftTypesResult|undefined> {
     try {
-
+      
         const identitySnapshotRecord = await this.getIdentitySnapshot({
           contentHash: params.contentHash, 
           identity: { authbase: params.authbase, timestamp: params.timestamp }
         })
-        console.log('identitySnapshotRecord', identitySnapshotRecord)
 
         const targetNftTypeKeys = identitySnapshotRecord?.nftTypeKeys?.slice(params.offset ?? 0, params.limit || 5) || []
 
         const collectionType = !(identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
-        sortNftTypeKeys({ keys: targetNftTypeKeys, order: params.order || 'desc', collectionType })
-        console.log('identitySnapshotRecord targetNftTypeKeys', targetNftTypeKeys)
-        const paginatedNftTypeKeys = targetNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
+        
+        /**
+         * Pre sort so we can get the last sequence or last type
+         */
+        sortNftTypeKeys({ keys: targetNftTypeKeys, order: 'desc', collectionType })
+        
+        const lastNftTypeKey = targetNftTypeKeys[0] || ''
 
+        if (params.order !== 'desc') {
+          sortNftTypeKeys({ keys: targetNftTypeKeys, order: 'desc', collectionType })
+        }
+
+        if (params.status && params.status !== 'published') {
+          const items = await db.nfts
+              .where('[contentHash+authbase+timestamp+status]')
+              .equals([params.contentHash, params.authbase, params.timestamp, params.status] as string[]) 
+              .toArray()
+
+            return {
+              items,
+              total: items.length,
+              offset: params.offset ?? 0,
+              limit: params.limit || 5,
+              lastNftTypeKey
+            }
+        }
+
+        
+
+        const paginatedNftTypeKeys = targetNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
         const total = identitySnapshotRecord?.nftTypeKeys?.length ?? 0
         const items = []
 
@@ -545,10 +575,7 @@ const registryWorker = {
                       .equals([params.contentHash, params.authbase, params.timestamp, key])
                       .first() 
           if (nftRecord) {
-            items.push({
-              type: nftRecord.type,
-              nft: nftRecord.nft
-            })
+            items.push(nftRecord)
             continue 
           }
 
@@ -558,10 +585,8 @@ const registryWorker = {
             parsedRegistry = await parseRegistryBlob(rawRegistry)
           }
 
-          console.log('parsedRegistry', parsedRegistry)
           const nft = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]?.token?.nfts?.parse?.types[key]
           if (!nft) continue
-          console.log('NFT', nft, identitySnapshotRecord)
           const newNftRecord = {
             contentHash: params.contentHash,
             authbase: params.authbase,
@@ -569,66 +594,23 @@ const registryWorker = {
             category: identitySnapshotRecord?.identitySnapshot.token?.category || '',
             type: key,
             nft: nft,
-            status: 'published' as 'published' | 'new'
+            status: 'published' as RegistryRecordStatus
           }
           
           await db.createNftRecord(newNftRecord)
-          items.push({
-            type: key,
-            nft
-          })          
+
+          items.push(newNftRecord)          
         }
 
         return {
           items,
-          total
+          total,
+          offset: params.offset ?? 0,
+          limit: params.limit || 5,
+          lastNftTypeKey
         }
 
-        
-        
-
-      // const registryRecord = await db.registry.where('contentHash').equals(params.contentHash).first()
-      // if (!registryRecord?.rawRegistry) {
-      //   return { items: [], total: 0 }
-      // }
-      // const parsedRegistry = await parseRegistryBlob(registryRecord.rawRegistry) as Registry
-      // const identitySnapshot = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]
-      // if (!identitySnapshot?.token?.nfts?.parse?.types) {
-      //   return { items: [], total: 0 }
-      // }
-
-      // const types = identitySnapshot.token.nfts.parse.types
-      // const isSequential = !(identitySnapshot.token.nfts.parse as any).bytecode
-      // const entries = Object.entries(types)
-
-      // entries.sort(([a, va], [b, bv]) => {
-      //   console.log('entry', a, va, b, bv)
-      //   if (isSequential) {
-      //     const aBytes = a.match(/.{1,2}/g) || []
-      //     const bBytes = b.match(/.{1,2}/g) || []
-      //     const aRev = aBytes.reverse().join('')
-      //     const bRev = bBytes.reverse().join('')
-      //     const aInt = BigInt('0x' + aRev)
-      //     const bInt = BigInt('0x' + bRev)
-      //     if (aInt < bInt) return -1
-      //     if (aInt > bInt) return 1
-      //     return 0
-      //   }
-      //   return a.localeCompare(b)
-      // })
-
-      // const total = entries.length
-
-      // const offset = params.offset ?? 0
-      // const limit = params.limit ?? entries.length
-      // const page = entries.slice(offset, offset + limit)
-
-      // return {
-      //   items: page.map(([type, nft]) => ({ type, nft })),
-      //   total
-      // }
     } catch (e) {
-      console.log('ERROR IN getNFttypes', e)
       params.onError?.(getErrorMessage(e))
     }
   },
