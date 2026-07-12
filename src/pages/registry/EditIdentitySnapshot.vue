@@ -238,7 +238,7 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
     publishedLoading.value = true
     try {
         const worker = getRegistryWorker()
-        const result = await worker.getNftTypes({
+        const result = await worker.getNfts({
             contentHash: activeAuthhead.value.identitySnapshotIdentifier.contentHash,
             authbase: activeAuthhead.value.identitySnapshotIdentifier.identity.authbase,
             timestamp: activeAuthhead.value.identitySnapshotIdentifier.identity.timestamp,

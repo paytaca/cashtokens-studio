@@ -2,20 +2,14 @@
     <q-page class="bg-dark-page text-white">
         <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-                <!-- <div class="q-mb-md q-px-sm">
-                    <q-btn flat dense icon="arrow_back" label="Back" color="grey-4"
-                        @click="router.push({ path: '/dashboard/#/created' })" />
-                </div> -->
                 <q-card v-if="registry" flat class="bg-dark q-pa-lg rounded-borders">
                     <div class="row">
                         <h6 class="q-my-xs">Registry Info</h6>
                         <div class="col-12">
                             <FormField>
                                 <label class="form-label">Schema</label>
-                                <div
-                                    class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                    {{ registry['$schema'] }}
-                                </div>
+                                <q-input :model-value="registry['$schema']" class="full-width" disable outlined>
+                                </q-input>
                             </FormField>
                         </div>
                         <div class="col-12">
@@ -34,21 +28,21 @@
                         <div class="col-12">
                             <FormField>
                                 <label>{{ t('label.registry.latestRevision') }}</label>
-                                <q-input :model-value="registry.latestRevision" class="full-width" readonly
-                                    outlined></q-input>
+                                <q-input :model-value="registry.latestRevision" class="full-width" disable outlined>
+                                </q-input>
                             </FormField>
                         </div>
                         <div class="col-12">
                             <FormField v-if="isOnchainRegistryIdentity">
                                 <label>{{ t('label.registry.registryIdentity') }}</label>
-                                <q-input v-model="(registry.registryIdentity as string)" readonly autogrow
+                                <q-input v-model="(registry.registryIdentity as string)" disable autogrow
                                     outlined></q-input>
                             </FormField>
                         </div>
                         <div class="col-12">
                             <FormField v-if="isOnchainRegistryIdentity">
                                 <label>{{ t('label.registry.license') }}</label>
-                                <q-input v-model="(registry.license as string)" readonly autogrow outlined></q-input>
+                                <q-input v-model="(registry.license as string)" disable autogrow outlined></q-input>
                             </FormField>
                         </div>
                     </div>
@@ -67,15 +61,13 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
-import { ipfsToGatewayUrl } from 'src/core/ipfs'
-import CopyText from 'components/CopyText.vue'
 
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
-import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
-import { CompactRegistry, db, RegistryRecord } from 'src/core/client-db'
+import { db, RegistryRecord } from 'src/core/client-db'
 import { liveQuery } from 'dexie'
 import { useObservable } from '@vueuse/rxjs'
+import type { CompactRegistry } from 'src/core/bcmr/types'
 
 const $q = useQuasar()
 const route = useRoute()

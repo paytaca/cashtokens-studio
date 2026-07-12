@@ -121,33 +121,40 @@
                                         v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                         <template #nftTypes>
                                             <div class="flex justify-between">
-                                                <h6 class="q-my-xs">NFT Collection</h6>
-                                                <q-btn flat unelevated class="q-px-sm" no-caps
-                                                    icon-right="mdi-table-filter" v-close-popup>
-                                                    <q-menu anchor="bottom left" self="top end" icon="mdi-table-filter">
-                                                        <q-item clickable @click="nftsStatusFilter = ''">
-                                                            <q-item-section>All</q-item-section>
-                                                        </q-item>
-                                                        <q-item clickable @click="nftsStatusFilter = 'published'">
-                                                            <q-item-section>Published</q-item-section>
-                                                        </q-item>
-                                                        <q-item clickable @click="nftsStatusFilter = 'modified'">
-                                                            <q-item-section>Modified/Unpublished</q-item-section>
-                                                        </q-item>
-                                                        <q-item clickable @click="nftsStatusFilter = 'new'">
-                                                            <q-item-section>New/Unpublished</q-item-section>
-                                                        </q-item>
-                                                        <q-item clickable @click="nftsStatusFilter = 'deleted'">
-                                                            <q-item-section>To be deleted</q-item-section>
-                                                        </q-item>
-                                                    </q-menu>
-                                                </q-btn>
+                                                <div class="q-my-xs q-gutter-x-sm">
+                                                    <span class="text-h6">NFT Collection Info</span>
+                                                </div>
+                                                <div class="flex q-gutter-x-sm">
 
+                                                    <q-btn flat no-caps icon="mdi-table-filter" label="Filter"
+                                                        v-close-popup dense>
+                                                        <q-menu anchor="bottom left" self="top end"
+                                                            icon="mdi-table-filter">
+                                                            <q-item clickable @click="nftsStatusFilter = ''">
+                                                                <q-item-section>All</q-item-section>
+                                                            </q-item>
+                                                            <q-item clickable @click="nftsStatusFilter = 'published'">
+                                                                <q-item-section>Published</q-item-section>
+                                                            </q-item>
+                                                            <q-item clickable @click="nftsStatusFilter = 'modified'">
+                                                                <q-item-section>Modified/Unpublished</q-item-section>
+                                                            </q-item>
+                                                            <q-item clickable @click="nftsStatusFilter = 'new'">
+                                                                <q-item-section>New/Unpublished</q-item-section>
+                                                            </q-item>
+                                                            <q-item clickable @click="nftsStatusFilter = 'deleted'">
+                                                                <q-item-section>To be deleted</q-item-section>
+                                                            </q-item>
+                                                        </q-menu>
+                                                    </q-btn>
+                                                    <q-btn icon="mdi-table-plus" color="secondary" label="Add"
+                                                        @click="onAddNftClick" flat no-caps dense>
+                                                    </q-btn>
+                                                </div>
                                             </div>
                                             <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
                                                 @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
                                                 @row-delete="onNftRowDelete" />
-
                                         </template>
                                     </SequentialNftCollection>
                                 </template>
@@ -157,19 +164,19 @@
                 </q-card>
             </div>
         </div>
-        <q-page-sticky v-if="modified && unpublishedNfts.length > 0" position="bottom" class="q-pa-md items-center"
-            expand>
+        <q-page-sticky v-if="modified" position="bottom" class="q-pa-md items-center" expand>
             <div class="row justify-end q-gutter-md items-center bg-dark q-pa-md rounded-borders"
                 style="border: 1px solid #555; width: 100%;">
                 <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="onResetClick" />
-                <q-btn color="primary" unelevated label="Save" @click="save" />
+                <q-btn color="primary" unelevated label="Save" @click="onSaveClick" />
+                <q-btn color="primary" unelevated label="Publish" @click="onPublishClick" />
             </div>
         </q-page-sticky>
     </q-page>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, inject, onMounted, ref, triggerRef, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
@@ -191,21 +198,28 @@ import HelpDialog from 'components/dialogs/HelpDialog.vue'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
-import { delay } from 'mainnet-js-v3'
+import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
 import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 import NftTable from 'src/components/bcmr/NftTable.vue'
+import { publishRegistry } from 'src/core/transaction'
+import { UtxoWithAuthKey } from 'src/core/types'
+import { UtxoWithPath } from 'src/core/wallet'
+import { broadcastTransaction } from 'src/services/transaction'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 
+const ROWS_PER_PAGE = 2
 
+const { wallet, manager } = inject('wizard-connect-wallet') as any
 const $q = useQuasar()
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
+const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const { activeAuthhead } = storeToRefs(authguardStore)
 const registryStore = useRegistryStore()
 
-const loading = ref(true)
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
@@ -221,20 +235,32 @@ const modified = computed(() => {
     if (!initialSnapshotJson.value || !identitySnapshot.value) return false
     return JSON.stringify(identitySnapshot.value) !== initialSnapshotJson.value
 })
-
-const unpublishedNfts = ref<NftRecord[]>([])
-
-const publishedTotal = ref(0)
-const publishedLoading = ref(false)
-
+const loading = ref(true)
 const nfts = ref<NftRecord[]>([])
 const nftsTotal = ref(0)
 const nftsLoading = ref(false)
 const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>()
+const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: ROWS_PER_PAGE, rowsNumber: 0 })
+/**
+ * 
+ * The commitment or bottomAltStackHex
+ * If collection type is 'sequential' this would be the last sequence when 'types' is sorted as numbers sequentially.
+ * If collection type is 'parsable' this would be the last type when when 'types' is sorted using localeCompare.
+ */
+const nftsLastNftTypeKey = ref<string>('')
 
-const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
-const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: 2, rowsNumber: 0 })
-
+const onAddNftClick = () => {
+    console.log('test')
+    const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI)?.bytecode
+    router.push({
+        name: 'add-nft',
+        query: {
+            ...route.query,
+            symbol: identitySnapshot.value?.token?.symbol,
+            bytecode,
+        }
+    })
+}
 
 const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
     const id = activeAuthhead.value?.identitySnapshotIdentifier
@@ -300,6 +326,7 @@ const loadNfts = async (offset: number, limit: number) => {
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
+            nftsLastNftTypeKey.value = result.lastNftTypeKey
         }
     }
     catch (error) {
@@ -312,10 +339,6 @@ const loadNfts = async (offset: number, limit: number) => {
         nftsLoading.value = false
     }
 }
-
-watch(publishedTotal, (total) => {
-    publishedPagination.value.rowsNumber = total
-})
 
 watch(nftsTotal, (total) => {
     nftsPagination.value.rowsNumber = total
@@ -338,21 +361,14 @@ const nftCategory = computed<NftCategoryI | null>({
 
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
-const typesRef = ref<Record<string, NftType>>({})
-
-watch(() => nftCategory.value?.parse?.types, (types) => {
-    if (types) {
-        typesRef.value = types
-    }
-}, { deep: true, immediate: true })
-
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
-    if (newRecord && Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
+    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
-        await loadNfts(0, 2)
+        loading.value = false
+        await loadNfts(0, ROWS_PER_PAGE)
     }
 }, { immediate: true })
 
@@ -378,7 +394,7 @@ watch(
 )
 
 
-const save = async () => {
+const onSaveClick = async () => {
     if (!identitySnapshotRecord.value || !identitySnapshot.value) return
     try {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
@@ -395,6 +411,122 @@ const save = async () => {
         $q.notify({ type: 'positive', message: t('success.savedDescription') })
     } catch (error) {
         $q.notify({ type: 'error', message: getErrorMessage(error) })
+    }
+}
+
+const onPublishClick = async () => {
+
+    const loadingGroup = $q.loading.show({
+        group: 'mpop-lg',
+        message: t('info.uploadingRegistryToIpfs')
+    })
+
+    try {
+
+        const { contentHash, identity } = activeAuthhead.value!.identitySnapshotIdentifier!
+
+        const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
+
+        const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
+
+        await db.registryIdentitySnapshot
+            .where('id')
+            .equals(id)
+            .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
+
+        // initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
+
+        const bumpArtifact = await getRegistryWorker().bumpRegistry({
+            originalContentHash: contentHash,
+            bumpType: 'patch',
+            targetIdentity: {
+                authbase: identity.authbase,
+                timestamp: identity.timestamp
+            }
+        })
+
+        if (!bumpArtifact) {
+            throw new Error('Error uploading registry')
+        }
+
+        loadingGroup({
+            message: t('transaction.waitingForSignature')
+        })
+
+        await wallet.value.sync()
+
+        triggerRef(wallet)
+
+        const publishRegistryRequest = publishRegistry({
+            authhead: activeAuthhead.value as UtxoWithAuthKey,
+            funderUtxos: wallet.value.utxos as UtxoWithPath[],
+            network: import.meta.env.VITE_BCH_NETWORK,
+            registryPublicationData: {
+                contentHash: bumpArtifact.contentHash,
+                uris: bumpArtifact.uris
+            }
+        })
+
+        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+
+        const response = await manager.value!.signTransaction(publishRegistryRequest);
+
+        loadingGroup({ message: 'Broadcasting, please wait...' })
+
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                loadingGroup({ message: progress })
+            }
+        })
+
+        if (broadcastError) throw broadcastError
+
+        await getRegistryWorker().commitBumpRegistry(contentHash, `${txid}:0`)
+
+        loadingGroup({
+            message: 'Broadcast success, awaiting tx propagation...'
+        })
+
+        initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+
+        await (new BaseWallet(networkType)).waitForTransaction({
+            txHash: txid
+        })
+
+        loadAuthkeys(wallet.value, true).then(() => {
+            triggerRef(wallet)
+        })
+
+        await updateActiveAuthhead()
+
+        await db.saveActivity({
+            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
+            txid,
+            status: 'success'
+        })
+
+        loadingGroup()
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: t('success.registryPublication'),
+                txid
+            }
+        }).onOk(async () => {
+            registryStore.loadRegistry(identity.authbase, true).then(async () => {
+                loadNfts(0, ROWS_PER_PAGE)
+            })
+        })
+    } catch (error: any) {
+        $q.notify({ type: 'Error', message: error.message })
+    } finally {
+        loadingGroup()
     }
 }
 
