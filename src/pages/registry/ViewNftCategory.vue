@@ -252,9 +252,7 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
             status: 'deleted',
             type: row.type
         })
-        console.log('row', row)
     } catch (error) {
-
         console.log(error)
     }
 }
@@ -263,7 +261,6 @@ const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
 const nftTypesLoading = ref(false)
 const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: 2, rowsNumber: 0 })
-const nftTypesTotal = ref(0)
 
 const nftTypeColumns: QTableColumn[] = [
     { name: 'key', align: 'left', label: 'Sequence Number', field: 'hexKey', sortable: true },
@@ -298,26 +295,24 @@ watch(() => nftsTotal.value, (total) => {
 })
 
 watch(() => nftsStatusFilter.value, async (v) => {
-    console.log('nftsStatusFilter changed', v)
     await loadNfts(0, nftsPagination.value.rowsPerPage)
 })
 
 
 const onNftsRequest = async (props: any) => {
-    console.log('PROPS', props)
     const { page, rowsPerPage } = props
-    await loadNfts((page - 1) * rowsPerPage, rowsPerPage)
+    let offset = ((page - 1) * rowsPerPage) - 1
+    if (offset < 0) {
+        offset = 0
+    }
+    const limit = offset + rowsPerPage
+    await loadNfts(offset, limit)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
-    console.log('TEzt', offset, limit, activeAuthhead.value)
     if (!activeAuthhead.value?.identitySnapshotIdentifier) return
     nftsLoading.value = true
-    console.log('TEZT', nftsStatusFilter.value)
     try {
-        // const worker = getRegistryWorker()
-        // console.log('TEZT worker', getRegistryWorker())
-
         const result = await getRegistryWorker().getNfts({
             contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
             authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
@@ -356,7 +351,6 @@ const showCollectionHelp = () => {
 }
 
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
-    console.log('newRecord', newRecord)
     if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)

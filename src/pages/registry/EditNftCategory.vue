@@ -273,9 +273,14 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
 }
 
 
-const onNftsRequest = async (pagination: any) => {
-    const { page, rowsPerPage } = pagination
-    await loadNfts((page - 1) * rowsPerPage, rowsPerPage)
+const onNftsRequest = async (props: any) => {
+    const { page, rowsPerPage } = props
+    let offset = ((page - 1) * rowsPerPage) - 1
+    if (offset < 0) {
+        offset = 0
+    }
+    const limit = offset + rowsPerPage
+    await loadNfts(offset, limit)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
@@ -334,47 +339,6 @@ const nftCategory = computed<NftCategoryI | null>({
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
 const typesRef = ref<Record<string, NftType>>({})
-// const nftTypesLoading = ref(false)
-// const nftTypesPagination = ref({ sortBy: 'hexKey', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
-// const nftTypesTotal = ref(0)
-
-// const nftTypeColumns: QTableColumn[] = [
-//     { name: 'key', align: 'left', label: 'Sequence Number', field: 'hexKey', sortable: true },
-//     { name: 'name', align: 'left', label: 'Name', field: 'name', sortable: true },
-// ]
-
-// const nftTypeRows = computed(() => {
-//     return Object.entries(typesRef.value).map(([key, value]) => ({
-//         originalKey: key,
-//         hexKey: key,
-//         ...value
-//     }))
-// })
-
-// watch(collectionType, (type) => {
-//     const keyCol = nftTypeColumns[0]
-//     if (keyCol) keyCol.label = type === 'parsable' ? 'Bottom Alt Stack Hex' : 'Sequence Number'
-//     if (!nftCategory.value) return
-//     const currentParse = nftCategory.value.parse as any
-//     const currentTypes = currentParse.types || {}
-//     if (type === 'parsable') {
-//         nftCategory.value = {
-//             ...nftCategory.value,
-//             parse: { bytecode: currentParse.bytecode ?? '', types: currentTypes }
-//         }
-//     } else {
-//         const { bytecode: _, ...rest } = currentParse
-//         nftCategory.value = {
-//             ...nftCategory.value,
-//             parse: rest
-//         }
-//     }
-//     initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
-// })
-
-// watch(nftTypesTotal, (total) => {
-//     nftTypesPagination.value.rowsNumber = total
-// })
 
 watch(() => nftCategory.value?.parse?.types, (types) => {
     if (types) {
@@ -392,39 +356,6 @@ watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRe
     }
 }, { immediate: true })
 
-// const loadNftTypes = async (offset: number, limit: number) => {
-//     if (!identitySnapshot.value?.token?.nfts?.parse) return
-//     nftTypesLoading.value = true
-//     try {
-//         const result = await getRegistryWorker().getNfts({
-//             contentHash: route.query.contentHash as string,
-//             authbase: route.query.authbase as string,
-//             timestamp: route.query.timestamp as string,
-//             offset,
-//             limit
-//         })
-//         if (result) {
-//             nftTypesTotal.value = result.total
-//             const dict: Record<string, NftType> = {}
-//             for (const item of result.items) {
-//                 dict[item.type] = item.nft
-//             }
-//             typesRef.value = dict
-//             if (nftCategory.value) {
-//                 ; (nftCategory.value.parse as any).types = dict
-//             }
-//         }
-//     } catch (error) {
-//         $q.notify({ type: 'error', message: getErrorMessage(error) })
-//     } finally {
-//         nftTypesLoading.value = false
-//     }
-// }
-
-// const onNftTypesRequest = async (props: any) => {
-//     const { page, rowsPerPage } = props.pagination
-//     // await loadNftTypes((page - 1) * rowsPerPage, rowsPerPage)
-// }
 
 const showCollectionHelp = () => {
     const isParsable = collectionType.value === 'parsable'
@@ -446,14 +377,6 @@ watch(
     { immediate: true }
 )
 
-// watch(
-//     () => identitySnapshot.value,
-//     (snapshot) => {
-//         if (!snapshot || !initialSnapshotJson.value) return
-//         modified.value = JSON.stringify(snapshot) !== initialSnapshotJson.value
-//     },
-//     { deep: true }
-// )
 
 const save = async () => {
     if (!identitySnapshotRecord.value || !identitySnapshot.value) return
