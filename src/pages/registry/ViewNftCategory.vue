@@ -146,7 +146,7 @@
                                             </div>
                                             <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
                                                 @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
-                                                @row-delete="onNftRowDelete" />
+                                                @row-delete="onNftRowDelete" :nfts-pagination="nftsPagination" />
 
                                         </template>
                                     </SequentialNftCollection>
@@ -261,9 +261,7 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
 
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
-const typesRef = ref<Record<string, NftType>>({})
 const nftTypesLoading = ref(false)
-const nftTypesPagination = ref({ sortBy: 'hexKey', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
 const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: 2, rowsNumber: 0 })
 const nftTypesTotal = ref(0)
 
@@ -295,7 +293,7 @@ watch(collectionType, (type) => {
 })
 
 
-watch(nftsTotal, (total) => {
+watch(() => nftsTotal.value, (total) => {
     nftsPagination.value.rowsNumber = total
 })
 
@@ -306,23 +304,29 @@ watch(() => nftsStatusFilter.value, async (v) => {
 
 
 const onNftsRequest = async (props: any) => {
-    const { page, rowsPerPage } = props.pagination
+    console.log('PROPS', props)
+    const { page, rowsPerPage } = props
     await loadNfts((page - 1) * rowsPerPage, rowsPerPage)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
+    console.log('TEzt', offset, limit, activeAuthhead.value)
     if (!activeAuthhead.value?.identitySnapshotIdentifier) return
     nftsLoading.value = true
+    console.log('TEZT', nftsStatusFilter.value)
     try {
-        const worker = getRegistryWorker()
-        const result = await worker.getNfts({
+        // const worker = getRegistryWorker()
+        // console.log('TEZT worker', getRegistryWorker())
+
+        const result = await getRegistryWorker().getNfts({
             contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
             authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
             timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
             offset,
             limit,
-            status: nftsStatusFilter.value
+            status: nftsStatusFilter.value || 'published'
         })
+        console.log('TEZT result', result)
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
@@ -340,11 +344,6 @@ const loadNfts = async (offset: number, limit: number) => {
 }
 
 
-watch(() => nftCategory.value?.parse?.types, (types) => {
-    if (types) {
-        typesRef.value = types
-    }
-}, { deep: true, immediate: true })
 
 const showCollectionHelp = () => {
     const isParsable = collectionType.value === 'parsable'
@@ -358,7 +357,7 @@ const showCollectionHelp = () => {
 
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
     console.log('newRecord', newRecord)
-    if (newRecord && Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
+    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
@@ -377,25 +376,6 @@ watch(
     { deep: true }
 )
 
-
-onMounted(async () => {
-    console.log('Active Authhead', activeAuthhead)
-    try {
-        const authbase = route.query.authbase as string
-        if (!authbase) {
-            router.push({ path: '/dashboard' })
-            return
-        }
-
-        if (activeAuthhead.value?.identitySnapshot) {
-            await loadNfts(0, 2)
-        }
-
-    } catch (error) {
-        $q.notify({ type: 'error', message: t('error.loadingRegistry') })
-    } finally {
-    }
-})
 </script>
 
 <style scoped lang="scss">

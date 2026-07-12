@@ -273,14 +273,12 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
 }
 
 
-const onNftsRequest = async (props: any) => {
-    console.log('Loading nfts props', props)
-    const { page, rowsPerPage } = props.pagination
+const onNftsRequest = async (pagination: any) => {
+    const { page, rowsPerPage } = pagination
     await loadNfts((page - 1) * rowsPerPage, rowsPerPage)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
-    console.log('Loading nfts', nftsStatusFilter.value)
     if (!activeAuthhead.value?.identitySnapshotIdentifier) return
     nftsLoading.value = true
     try {
@@ -319,7 +317,6 @@ watch(nftsTotal, (total) => {
 })
 
 watch(() => nftsStatusFilter.value, async (v) => {
-    console.log('nftsStatusFilter changed', v)
     await loadNfts(0, nftsPagination.value.rowsPerPage)
 })
 
@@ -483,27 +480,6 @@ const onResetClick = () => {
     identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
 }
 
-onMounted(async () => {
-    console.log('Active Authhead', activeAuthhead)
-    try {
-        loading.value = true
-        const authbase = route.query.authbase as string
-        if (!authbase) {
-            router.push({ path: '/dashboard' })
-            return
-        }
-
-        if (activeAuthhead.value?.identitySnapshot) {
-            publishedLoading.value = true
-            await loadNfts(0, 2)
-        }
-
-    } catch (error) {
-        $q.notify({ type: 'error', message: t('error.loadingRegistry') })
-    } finally {
-        loading.value = false
-    }
-})
 </script>
 
 <style scoped lang="scss">

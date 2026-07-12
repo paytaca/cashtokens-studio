@@ -72,7 +72,8 @@ const columns = computed((): QTableColumn[] => {
 })
 
 const emit = defineEmits<{
-    (e: 'request', offset: number, limit: number): void
+    (e: 'request', pagination: any): void
+    // (e: 'request', offset: number, limit: number): void
     (e: 'row-click', evt: Event, row: any, index: number): void
     (e: 'row-delete', evt: Event, row: any, index: number): void
 }>()
@@ -94,7 +95,8 @@ const onRequest = (requestProps: any) => {
     pagination.value.rowsPerPage = rowsPerPage
     pagination.value.page = page
     const offset = (page - 1) * rowsPerPage
-    emit('request', offset, rowsPerPage)
+    // emit('request', offset, rowsPerPage)
+    emit('request', pagination.value)
 }
 
 const onRowClick = (evt: Event, row: any, index: number) => {
@@ -107,6 +109,7 @@ const onRowDelete = (evt: Event, row: any, index: number) => {
 
 onMounted(() => {
     pagination.value.rowsNumber = props.total
-    emit('request', 0, pagination.value.rowsPerPage)
+    // emit('request', 0, pagination.value.rowsPerPage)
+    emit('request', pagination.value)
 })
 </script>
