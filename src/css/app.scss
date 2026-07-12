@@ -174,17 +174,17 @@ textarea {
 //   background-color: red;
 // }
 
-.q-field--disabled .q-field__label {
-  color: rgb(55, 46, 46) !important;
-}
+// .q-field--disabled .q-field__label {
+//   color: rgb(55, 46, 46) !important;
+// }
 
-.q-field--dark.q-field--disabled .q-field__label {
-  color: rgb(228, 201, 201) !important;
-}
+// .q-field--dark.q-field--disabled .q-field__label {
+//   color: rgb(228, 201, 201) !important;
+// }
 
-.q-field__label {
-  color: black;
-}
+// .q-field__label {
+//   color: black;
+// }
 
 i.q-icon.notranslate.material-icons {
   // color: #15416d;
@@ -214,10 +214,10 @@ body.body--dark {
   border-radius: 15px;
 }
 
-.q-field--readonly.q-field--float .q-field__native,
-.q-field--readonly.q-field--float .q-field__input {
-  color: #816f6f;
-}
+// .q-field--readonly.q-field--float .q-field__native,
+// .q-field--readonly.q-field--float .q-field__input {
+//   color: #816f6f;
+// }
 
 // Custom
 .token-symbol {
@@ -258,4 +258,20 @@ body.body--dark {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+// Overrides
+/*
+* Disabled input override
+*/
+.q-field--disabled {
+  .q-field__control > div {
+    opacity: 1 !important;
+  }
+  &.q-field--outlined .q-field__control {
+    background: #2a2a2a; /* your fill color */
+    &:before {
+      border: 1px solid rgba(255,255,255,.3) !important;
+    }
+  }
 }
