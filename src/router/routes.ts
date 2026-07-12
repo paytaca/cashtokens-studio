@@ -32,6 +32,11 @@ const routes: RouteRecordRaw[] = [
             component: () => import('pages/registry/EditNftCategory.vue'),
           },
           {
+            name: 'add-nft',
+            path: 'identity-snapshot/nfts/add',
+            component: () => import('pages/registry/AddNft.vue'),
+          },
+          {
             name: 'view-nft',
             path: 'identity-snapshot/nfts/:type/view',
             component: () => import('pages/registry/ViewNft.vue'),
