@@ -9,28 +9,19 @@
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Name</label>
-                                    <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.name }}
-                                    </div>
+                                    <q-input :model-value="identitySnapshot.name" disable outlined></q-input>
                                 </FormField>
                             </div>
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Description</label>
-                                    <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.description }}
-                                    </div>
+                                    <q-input :model-value="identitySnapshot.description" disable outlined></q-input>
                                 </FormField>
                             </div>
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Links <q-icon name="link"></q-icon></label>
-                                    <!-- <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.uris }}
-                                    </div> -->
+
                                     <div class="flex q-gutter-x-sm">
                                         <q-btn v-for="key, i in Object.keys(identitySnapshot.uris || {})" :key="i"
                                             color="secondary" no-caps dense flat
@@ -46,29 +37,23 @@
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Category</label>
-                                    <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.token!.category }}
-                                        <CopyText :text="identitySnapshot.token!.category" />
-                                    </div>
+                                    <q-input :model-value="identitySnapshot.token!.category" disable outlined>
+                                        <template v-slot:append>
+                                            <CopyText :text="identitySnapshot.token!.category" />
+                                        </template>
+                                    </q-input>
                                 </FormField>
                             </div>
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Symbol</label>
-                                    <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.token?.symbol }}
-                                    </div>
+                                    <q-input :model-value="identitySnapshot.token!.symbol" disable outlined></q-input>
                                 </FormField>
                             </div>
                             <div class="col-12">
                                 <FormField>
                                     <label for="">Decimals</label>
-                                    <div
-                                        class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                        {{ identitySnapshot.token?.decimals }}
-                                    </div>
+                                    <q-input :model-value="identitySnapshot.token!.decimals" disable outlined></q-input>
                                 </FormField>
                             </div>
                         </div>

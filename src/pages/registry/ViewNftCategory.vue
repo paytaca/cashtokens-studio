@@ -1,7 +1,7 @@
 <template>
     <q-page>
         <div class="row justify-center">
-            <div v-if="nftTypesLoading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+            <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <!-- Back Button Placeholder -->
                 <div class="q-mb-md q-px-sm">
                     <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9" />
@@ -259,7 +259,7 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
 
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
-const nftTypesLoading = ref(false)
+const loading = ref(false)
 const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: 2, rowsNumber: 0 })
 
 const nftTypeColumns: QTableColumn[] = [
