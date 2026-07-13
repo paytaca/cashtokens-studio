@@ -5,9 +5,9 @@
                 <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
                 <q-card class="bg-dark q-pa-lg rounded borders" flat>
                     <q-card-title class="flex justify-end">
-                        <q-btn class="text-caption link-style" text-color="secondary" icon="description"
-                            @click="onViewIdentitySnapshotClick" no-caps dense>
-                            View Token Details
+                        <q-btn text-color="secondary" icon="description" @click="onViewIdentitySnapshotClick" no-caps
+                            dense>
+                            View Token Info
                         </q-btn>
                     </q-card-title>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
@@ -134,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, triggerRef } from 'vue'
+import { ref, computed, onMounted, watch, triggerRef, inject } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
@@ -155,14 +155,18 @@ import { Network } from 'cashscript'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
 import { timeStamp } from 'console'
+import { useRegistryStore } from 'src/stores/registry'
 
 const $q = useQuasar()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
-const { loadAuthkeys, updateActiveAuthhead } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead, authheadsLoading } = authguardStore
+const { setActiveIdentitySnapshot } = useRegistryStore()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { wallet, manager } = useWizardConnectWallet()
+const wizardConnectWallet = inject('wizardConnectWallet') as any
+const { wallet, manager, walletIsReady } = wizardConnectWallet
+
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
 
@@ -384,6 +388,7 @@ const viewRegistry = () => {
 }
 
 const onViewIdentitySnapshotClick = () => {
+    setActiveIdentitySnapshot(activeAuthhead.value?.identitySnapshot)
     router.push({
         name: 'view-identity-snapshot', query: {
             registryIdentity: activeAuthhead.value?.identitySnapshotIdentifier?.registryIdentity,
@@ -395,17 +400,17 @@ const onViewIdentitySnapshotClick = () => {
     })
 }
 
+watch(() => walletIsReady.value, (walletIsReady) => {
+    console.log('@authhead', walletIsReady)
+}, { immediate: true })
 
-onMounted(() => {
-    console.log('Authhead', activeAuthhead)
-    if (!activeAuthhead.value) {
-        router.back()
-        return
+
+watch(() => activeAuthhead.value, (v) => {
+    if (v) {
+        localSnapshot.value = cloneSnapshot(v.identitySnapshot)
+        originalSnapshotJson.value = JSON.stringify(localSnapshot.value)
     }
-    localSnapshot.value = cloneSnapshot(activeAuthhead.value.identitySnapshot)
-    originalSnapshotJson.value = JSON.stringify(localSnapshot.value)
-})
-
+}, { immediate: true })
 
 </script>
 

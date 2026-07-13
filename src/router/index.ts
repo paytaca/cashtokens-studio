@@ -6,6 +6,7 @@ import {
   createWebHistory,
 } from 'vue-router';
 import routes from './routes';
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 
 /*
  * If not building with SSR mode, you can
@@ -33,5 +34,14 @@ export default route(function (/* { store, ssrContext } */) {
     ),
   });
 
+  Router.beforeEach((to, from) => {
+      const { walletIsReady } = useWizardConnectWallet()
+      if (!walletIsReady.value && to.path !== '/loading') {
+        return {
+          path: '/loading'
+        }
+      }
+    return true
+  })
   return Router;
 });
