@@ -4,8 +4,9 @@ import { ParsedRegistryRecord, RegistryRecord } from 'src/core/client-db';
 import { ref } from 'vue';
 
 import { type RegistryWorkerAPI } from 'src/workers/registry-worker';
-import { NftType, Registry } from 'src/core/bcmr/bcmr-v2.schema';
+import { IdentitySnapshot, NftType, Registry } from 'src/core/bcmr/bcmr-v2.schema';
 import type { DecoratedUtxo } from 'src/core/types';
+
 let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
 
 export type ActiveNft = {
@@ -36,10 +37,16 @@ export const useRegistryStore = defineStore('registry-store', () => {
 
     const registries = ref<ParsedRegistryRecord[]>([] as any)
     const activeNft = ref<ActiveNft|undefined|null>()
+    const activeIdentitySnapshot = ref<IdentitySnapshot|undefined|null>()
     const identitySnapshotCache = ref<Record<string, any>>({})
 
     const setActiveNft = (newActiveNft: ActiveNft | undefined | null) => {
+        console.log('Setting activeNft', newActiveNft)
         activeNft.value = newActiveNft
+    }
+
+    const setActiveIdentitySnapshot = (identitySnapshot: IdentitySnapshot | undefined | null) => {
+        activeIdentitySnapshot.value = identitySnapshot
     }
 
     const loadRegistry = async (authbase: string, sync?: boolean) => {
@@ -103,7 +110,9 @@ export const useRegistryStore = defineStore('registry-store', () => {
     return {
         registries,
         activeNft,
+        activeIdentitySnapshot,
         setActiveNft,
+        setActiveIdentitySnapshot,
         loadRegistry,
         getRegistryByAuthbase,
         getIdentitySnapshot,
