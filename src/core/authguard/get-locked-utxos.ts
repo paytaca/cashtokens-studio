@@ -1,7 +1,9 @@
 import { createAuthguardContract } from "./create-authguard-contract"
-import type { UtxoWithPath, AuthheadUtxo, DecoratedUtxo} from "../types"
+import type { UtxoWithPath, AuthheadUtxo, DecoratedUtxo, UtxoTxid, UtxoVout} from "../types"
 
-export async function getLockedAuthheadUtxos(authkeys: UtxoWithPath[]): Promise<DecoratedUtxo[]> {
+export type AuthheadId = `${UtxoTxid}:${UtxoVout}`
+
+export async function getLockedAuthheadUtxos(authkeys: UtxoWithPath[], authheadId?: AuthheadId): Promise<DecoratedUtxo[]> {
     const lockedUtxos: DecoratedUtxo[] = []
     for (const authkey of authkeys) {
         const authguard = createAuthguardContract({
@@ -16,5 +18,9 @@ export async function getLockedAuthheadUtxos(authkeys: UtxoWithPath[]): Promise<
         })
         lockedUtxos.push(...utxos)
     }
+    if (authheadId) {
+        return lockedUtxos?.filter((utxo) => `${utxo.txid}:${utxo.vout}` === authheadId)
+    }   
     return lockedUtxos
 }
+
