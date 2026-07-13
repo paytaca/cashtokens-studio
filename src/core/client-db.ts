@@ -11,7 +11,7 @@ export type BumpArtifact = {
     registry: Blob // Release candidate
 }
 
-export type RegistryRecordStatus = 'new' | 'published' | 'modified'
+export type RegistryRecordStatus = 'new' | 'published' | 'modified' | 'deleted'
 
 export type RegistryRecord = {
     id: number,
@@ -91,7 +91,7 @@ export interface Publishable {
   status: RegistryRecordStatus
 }
 
-export function setRecordStatus(record: Publishable, status: 'new'|'modified'|'published') {
+export function setRecordStatus(record: Publishable, status: RegistryRecordStatus) {
   if (status === 'modified') {
     record.status = record.status === 'new' ? record.status : status 
   }
@@ -110,23 +110,10 @@ class CashtokensStudioDB extends Dexie {
   constructor(network: 'chipnet'|'mainnet') {
 
     super(`CashtokensStudioDB${network}`);
-    // this.version(1).stores({
-    //   registry: '++id, contentHash, authbase',
-    //   registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
-    //   nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
-    //   utxo: 'id, walletId'
-    // })
-    // this.version(2).stores({
-    //   registry: '++id, contentHash, authbase',
-    //   registryIdentitySnapshot: '[contentHash+authbase+timestamp], authbase, timestamp, category',
-    //   nfts: '[contentHash+authbase+timestamp+type], authbase, timestamp, category, type',
-    //   utxo: 'id, walletId',
-    //   activity: '++id, event, timestamp, status'
-    // })
     this.version(1).stores({
       registry: '++id, contentHash, authbase, *categories, registryIdentity',
       registryIdentitySnapshot: '++id, contentHash, [contentHash+authbase+timestamp], authbase, timestamp, category',
-      nfts: '[contentHash+authbase+timestamp+type], contentHash, authbase, timestamp, category, type',
+      nfts: '[contentHash+authbase+timestamp+type], [contentHash+authbase+timestamp+status], contentHash, authbase, timestamp, category, type',
       utxo: 'id, walletId',
       activity: '++id, event, timestamp, status'
     })
@@ -224,7 +211,7 @@ class CashtokensStudioDB extends Dexie {
     category: string,
     type: string,
     nft: NftType,
-    status?: 'published' | 'new' 
+    status?: RegistryRecordStatus
   }): Promise<NftRecord> {
     const existing = await this.nfts
       .where('[contentHash+authbase+timestamp+type]')
@@ -276,6 +263,25 @@ class CashtokensStudioDB extends Dexie {
     return existing
   }
 
+  async setNftRecordStatus(params: {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    type: string,
+    status: RegistryRecordStatus
+  }): Promise<void> {
+    const record = await this.nfts
+      .where('[contentHash+authbase+timestamp+type]')
+      .equals([params.contentHash, params.authbase, params.timestamp, params.type] as [string, string, string, string])
+      .first()
+
+    if (!record) return
+
+    setRecordStatus(record, params.status)
+
+    await this.nfts.put(record)
+  }
+
   async setNftRecordsPublished(params: {
     contentHash: string,
     authbase: string,
@@ -290,10 +296,6 @@ class CashtokensStudioDB extends Dexie {
           .first()
         if (record) {
           await this.nfts.put({ ...record, status: 'published' })
-          // await this.nfts.update(
-          //   [record.contentHash, record.authbase, record.timestamp, record.type] as [string, string, string, string],
-          //   { status: 'published' }
-          // )
         }
       }
     })
