@@ -50,7 +50,12 @@ const routes: RouteRecordRaw[] = [
             name: 'view-registry',
             path: 'view',
             component: () => import('pages/registry/ViewRegistry.vue'),
-          }
+          },
+          {
+            name: 'view-authhead',
+            path: 'authhead/view',
+            component: () => import('pages/registry/ViewAuthhead.vue'),
+          },
         ]
       }
     ],
@@ -265,11 +270,6 @@ const routes: RouteRecordRaw[] = [
     path: '/authhead',
     component: () => import('layouts/MainLayout.vue'),
     children: [
-      {
-        name: 'authhead',
-        path: '',
-        component: () => import('pages/AuthheadPage.vue'),
-      },
       {
         name: 'authhead-mint-nft',
         path: ':category/mint',

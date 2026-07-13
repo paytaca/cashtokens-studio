@@ -500,7 +500,7 @@
                 <template v-slot:body-cell-activityTxid="props">
                   <q-td :props="props">
                     <span v-if="props.value" class="text-mono text-caption text-grey-4">{{ shortenTokenId(props.value)
-                      }}
+                    }}
                       <CopyText :text="props.value" />
                     </span>
                     <span v-else class="text-grey-6 text-caption">—</span>
@@ -537,7 +537,7 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { ref, computed, onMounted, onUnmounted, watch, triggerRef, onBeforeMount } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, triggerRef, onBeforeMount, inject } from 'vue';
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { useAppStore } from 'src/stores/app'
@@ -559,7 +559,9 @@ import { db } from 'src/core/client-db'
 
 const $q = useQuasar()
 const router = useRouter()
-const { wallet, walletLasySync, manager, walletIsReady } = useWizardConnectWallet()
+const wizardConnectWallet = inject('wizardConnectWallet') as any
+
+const { wallet, walletLasySync, manager, walletIsReady } = wizardConnectWallet
 
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, loadAuthheads } = authguardStore
@@ -567,7 +569,7 @@ const { authheads, authkeysLoading, authheadsLoading } = storeToRefs(authguardSt
 
 const appStore = useAppStore()
 
-const { loadRegistry, fetchIdentitySnapshot } = useRegistryStore()
+const { loadRegistry, fetchIdentitySnapshot, setActiveIdentitySnapshot } = useRegistryStore()
 
 const activities = ref<any[]>([])
 const activityLoading = ref(false)
@@ -890,7 +892,16 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
 const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
   _evt.preventDefault()
   authguardStore.setActiveAuthhead(row)
-  router.push(`/authhead?authkey=${row.authkey.txid}:${row.authkey.vout}`)
+  setActiveIdentitySnapshot(row.identitySnapshot)
+  router.push({
+    name: 'view-authhead',
+    query: {
+      authkey: `${row.authkey.txid}:${row.authkey.vout}`,
+      authhead: `${row.txid}:${row.vout}`,
+      authbase: row.token!.category,
+      registryIdentity: row.identitySnapshotIdentifier.registryIdentity // TODO: make this robust
+    }
+  })
 }
 
 const sendCollectedTokens = (row: any) => {
@@ -1178,7 +1189,7 @@ watch(activeTab, (newTab) => {
 })
 
 watch(() => walletIsReady.value, async (isReady, prevValue) => {
-  if (isReady && Boolean(prevValue) === false) {
+  if (isReady && !prevValue) {
     loadAuthkeys(wallet.value).then((authkeys) => {
       loadAuthheads(authkeys)
     })
@@ -1186,7 +1197,7 @@ watch(() => walletIsReady.value, async (isReady, prevValue) => {
     triggerRef(wallet)
 
     await Promise.allSettled([loadCollectedIdentitySnapshots(), loadActivities()])
-    walletWatchers.value.stopWatchingReceiveWallet = await wallet.value?.receive?.watchStatus(async (status, address) => {
+    walletWatchers.value.stopWatchingReceiveWallet = await wallet.value?.receive?.watchStatus(async (status: any, address: any) => {
       await wallet.value?.sync()
       loadAuthkeys(wallet.value).then((authkeys) => {
         loadAuthheads(authkeys)

@@ -1,30 +1,56 @@
 <template>
     <q-page class="bg-dark-page text-grey-2">
-        <div class="row justify-center q-pa-md">
-            <div class="col-xs-12 col-sm-8">
-                <q-btn flat icon="arrow_back" label="Back" color="grey-4" @click="router.back()" class="q-mb-md" />
-                <q-card class="bg-dark q-pa-lg rounded borders" flat>
-                    <q-card-title class="flex justify-end">
-                        <q-btn text-color="secondary" icon="description" @click="onViewIdentitySnapshotClick" no-caps
-                            dense>
-                            View Token Info
-                        </q-btn>
-                    </q-card-title>
+        <div class="row justify-center">
+            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+                <q-card v-if="authheadLoading[route.query?.authhead as string]" class="bg-dark q-pa-lg rounded borders"
+                    flat>
+                    <div class="flex justify-end q-mb-lg">
+                        <q-skeleton type="rect" width="120px" height="32px" class="bg-grey-9 border-radius-8" />
+                    </div>
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
-                        <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
-                            <q-img v-if="localSnapshot.uris?.icon" :src="ipfsToGatewayUrl(localSnapshot.uris.icon)!"
-                                fit="cover" />
-                            <q-icon v-else name="token" color="primary" size="32px" />
-                        </q-avatar>
-                        <div class="col">
-                            <div class="flex items-center q-gutter-x-xs q-mb-xs">
-                                <span class="text-h6 text-weight-medium text-grey-2">
-                                    {{
-                                        localSnapshot.token?.symbol ||
-                                        '?'
-                                    }}
-                                </span>
+                        <div class="col q-gutter-x-xs flex items-center">
+                            <q-skeleton type="rect" width="100px" height="22px" class="bg-grey-9 border-radius-4" />
+                            <q-skeleton type="rect" width="70px" height="22px" class="bg-grey-9 border-radius-4" />
+                        </div>
+                        <q-skeleton type="circle" size="32px" class="bg-grey-9" />
+                    </div>
+                    <div class="q-mb-md">
+                        <q-skeleton type="text" width="80px" class="text-caption bg-grey-9 q-mb-xs" />
+                        <q-skeleton type="rect" height="40px" class="full-width border-radius-8 bg-grey-9" />
+                    </div>
+                    <div class="q-mb-md">
+                        <q-skeleton type="text" width="140px" class="text-caption bg-grey-9 q-mb-xs" />
+                        <q-skeleton type="rect" height="40px" class="full-width border-radius-8 bg-grey-9" />
+                    </div>
+                    <div class="q-mb-md">
+                        <q-skeleton type="text" width="80px" class="text-caption bg-grey-9 q-mb-xs" />
+                        <q-skeleton type="rect" width="60px" height="24px" class="bg-grey-9 border-radius-4" />
+                    </div>
+                    <div class="q-mb-md">
+                        <q-skeleton type="text" width="120px" class="text-caption bg-grey-9 q-mb-xs" />
+                        <div class="flex justify-between">
+                            <q-skeleton type="rect" height="36px" class="full-width border-radius-8 bg-grey-9"
+                                style="max-width: 200px" />
+                            <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9 border-radius-8" />
+                        </div>
+                    </div>
+                    <div>
+                        <q-skeleton type="text" width="130px" class="text-caption bg-grey-9 q-mb-xs" />
+                        <div class="flex justify-between no-wrap">
+                            <q-skeleton type="rect" height="36px" class="full-width border-radius-8 bg-grey-9"
+                                style="max-width: 200px" />
+                            <div class="flex no-wrap q-gutter-sm">
+                                <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9 border-radius-8" />
+                                <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9 border-radius-8" />
                             </div>
+                        </div>
+                    </div>
+                </q-card>
+                <q-card v-else class="bg-dark q-pa-lg rounded-borders" flat>
+                    <!-- <q-card-title class="flex justify-end">
+                    </q-card-title> -->
+                    <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
+                        <div class="col">
                             <div class="flex items-center q-gutter-x-xs">
                                 <q-badge v-if="tokenType === 'mixed'" color="dark" text-color="orange-4"
                                     class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
@@ -49,83 +75,59 @@
                                 </q-badge>
                             </div>
                         </div>
-                        <q-btn round dense flat icon="more_vert" color="grey-4" size="sm">
-                            <q-menu dark auto-close>
-                                <q-list dense>
-                                    <q-item v-if="showMint" clickable @click="mintNft">
-                                        <q-item-section style="white-space: nowrap;">Mint NFT</q-item-section>
-                                    </q-item>
-                                    <q-item v-if="showReleaseReserves" clickable
-                                        @click="() => releaseReserves('issuance')">
-                                        <q-item-section style="white-space: nowrap;">Release</q-item-section>
-                                    </q-item>
-                                    <q-item v-if="showReleaseReserves" clickable @click="() => releaseReserves('burn')">
-                                        <q-item-section style="white-space: nowrap;">Burn</q-item-section>
-                                    </q-item>
-                                </q-list>
-                            </q-menu>
-                        </q-btn>
                     </div>
                     <FormField>
-                        <label>Category</label>
-                        <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                            {{ activeAuthhead?.token?.category || localSnapshot.token?.category }}
-                            <CopyText :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
-                        </div>
-                    </FormField>
-
-                    <FormField>
-                        <label>Name / Description</label>
-                        <div class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                            {{ localSnapshot.name }} - {{ localSnapshot.description }}
-                        </div>
-                    </FormField>
-                    <FormField v-if="showDecimals">
-                        <div class="flex items-center q-gutter-x-md"><label for="">Decimals</label>
-                            <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
-                                {{ localSnapshot.token!.decimals === undefined ? '?' :
-                                    localSnapshot.token!.decimals }}
-                            </q-badge>
-                        </div>
+                        <label>Reserve UTXO Id</label>
+                        <q-input :model-value="shortenTokenId(`${activeAuthhead?.txid}:${activeAuthhead?.vout}`)"
+                            disable outlined>
+                            <template v-slot:append>
+                                <CopyText
+                                    :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
+                            </template>
+                        </q-input>
                     </FormField>
 
                     <FormField v-if="hasNfts">
-                        <label>NFT Collection <q-btn flat dense icon="preview" color="secondary"
-                                @click="viewNfts"></q-btn></label>
-                        <div class="flex justify-between">
-                            <div
-                                class="text-body2 text-mono text-white bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                {{ nftCollectionType
-                                }}</div>
-                            <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
-                                <span class="gt-xs q-ml-xs">Mint</span>
-                            </q-btn>
-                        </div>
+                        <label>NFT Collection </label>
+                        <q-input :model-value="nftCollectionType" disable outlined>
+                            <template v-slot:append>
+                                <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
+                                    <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Mint</span>
+                                </q-btn>
+                            </template>
+                        </q-input>
                     </FormField>
 
-                    <FormField v-if="showReleaseReserves && activeAuthhead">
+                    <FormField v-if="showReleaseReserves && activeAuthhead" class="rounded-borders">
                         <label>Fungible Reserves</label>
-                        <div class="flex justify-between no-wrap">
-                            <div class="text-mono  text-bold text-bch bg-grey-9 q-pa-sm border-radius-8 word-break-all">
-                                {{ formatTokenAmount(
-                                    activeAuthhead.token?.amount ?? 0,
-                                    localSnapshot.token!.symbol || '?',
-                                    localSnapshot.token!.decimals,
-                                    'suffix'
-                                )
-                                }}
-                            </div>
-                            <div class="flex no-wrap q-gutter-sm">
-                                <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
-                                    @click="() => releaseReserves('burn')">
-                                    <span class="gt-xs q-ml-xs">Burn</span>
-                                </q-btn>
-                                <q-btn no-wrap icon="mdi-send-circle-outline" color="primary"
-                                    @click="() => releaseReserves('issuance')">
-                                    <span class="gt-xs q-ml-xs">Release</span>
-                                </q-btn>
-                            </div>
-                        </div>
+                        <q-input :model-value="fungibleReserves" disable outlined bottom-slots>
+                            <template v-slot:hint>
+                                <div v-if="showDecimals" class="flex items-center q-gutter-x-md">
+                                    <label>Decimals</label>
+                                    <q-badge outline color="grey-7" class="text-weight-bold text-grey-4" size="lg">
+                                        {{ localSnapshot.token!.decimals === undefined ? '?' :
+                                            localSnapshot.token!.decimals }}
+                                    </q-badge>
+                                </div>
+                            </template>
+                            <template v-slot:prepend>
+
+                            </template>
+                            <template v-slot:append>
+                                <div class="flex no-wrap q-gutter-sm">
+                                    <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
+                                        @click="() => releaseReserves('burn')">
+                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Burn</span>
+                                    </q-btn>
+                                    <q-btn no-wrap icon="mdi-send-circle-outline" color="primary"
+                                        @click="() => releaseReserves('issuance')">
+                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Release</span>
+                                    </q-btn>
+                                </div>
+
+                            </template>
+                        </q-input>
+
                     </FormField>
                 </q-card>
             </div>
@@ -134,8 +136,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, triggerRef, inject } from 'vue'
-import { useRouter, onBeforeRouteLeave } from 'vue-router'
+import { ref, computed, onMounted, watch, triggerRef, inject, defineComponent } from 'vue'
+import { useRouter, onBeforeRouteLeave, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useAppStore } from 'src/stores/app'
@@ -159,16 +161,25 @@ import { useRegistryStore } from 'src/stores/registry'
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 const authguardStore = useAuthguardStore()
-const { loadAuthkeys, updateActiveAuthhead, authheadsLoading } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
 const { setActiveIdentitySnapshot } = useRegistryStore()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const wizardConnectWallet = inject('wizardConnectWallet') as any
-const { wallet, manager, walletIsReady } = wizardConnectWallet
+const { wallet, manager } = wizardConnectWallet
 
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
+const fungibleReserves = computed(() => {
+    return formatTokenAmount(
+        activeAuthhead.value?.token?.amount ?? 0,
+        localSnapshot.value?.token!.symbol || '?',
+        localSnapshot.value?.token!.decimals,
+        'none'
+    )
+})
 
 function cloneSnapshot(source?: IdentitySnapshot): IdentitySnapshot {
     if (source) {
@@ -207,36 +218,14 @@ const tokenType = computed(() => {
     return getTokenType(activeAuthhead.value)
 })
 
-const reservedSupply = computed(() => {
-    let amount: string | bigint = activeAuthhead.value?.token?.amount ?? 0n
-    let decimals = localSnapshot.value.token?.decimals ?? 0
-    return formatTokenAmount(amount ?? 0, localSnapshot.value.token?.symbol || '', decimals)
-    // if (amount == null) return null
-    // try {
-    //     return BigInt(amount).toLocaleString()
-    // } catch {
-    //     return String(amount)
-    // }
-})
 
 const hasNfts = computed(() => !!localSnapshot.value?.token?.nfts)
 
 const nftCollectionType = computed(() => {
     const bytecode = (localSnapshot.value?.token?.nfts?.parse as ParsableNftCollection)?.bytecode
-    return bytecode && bytecode.length > 2 ? 'Parsable' : 'Sequential'
+    return bytecode && bytecode.length > 2 ? 'Parsable Collection' : 'Sequential Collection'
 })
 
-const viewNfts = () => {
-
-    const category = activeAuthhead?.value?.identitySnapshot?.token?.category || activeAuthhead.value?.token?.category
-    if (category) {
-        appStore.setActiveMinter(activeAuthhead.value)
-        router.push({
-            name: 'authhead-nft-collection',
-            params: { category },
-        })
-    }
-}
 
 const showDecimals = computed(() => {
     if (!activeAuthhead.value) return false
@@ -377,33 +366,6 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
         }
     })
 }
-
-const viewRegistry = () => {
-    router.push({
-        path: '/token/metadata-registry', query: {
-            authbase: activeAuthhead.value?.token?.category,
-            contentHash: activeAuthhead.value?.identitySnapshotIdentifier?.contentHash
-        }
-    })
-}
-
-const onViewIdentitySnapshotClick = () => {
-    setActiveIdentitySnapshot(activeAuthhead.value?.identitySnapshot)
-    router.push({
-        name: 'view-identity-snapshot', query: {
-            registryIdentity: activeAuthhead.value?.identitySnapshotIdentifier?.registryIdentity,
-            authhead: activeAuthhead.value ? `${activeAuthhead.value.txid}:${activeAuthhead.value.vout}` : null,
-            contentHash: activeAuthhead.value?.identitySnapshotIdentifier?.contentHash,
-            timeStamp: activeAuthhead.value?.identitySnapshotIdentifier?.identity?.timestamp,
-            authbase: activeAuthhead.value?.identitySnapshotIdentifier?.identity?.authbase,
-        }
-    })
-}
-
-watch(() => walletIsReady.value, (walletIsReady) => {
-    console.log('@authhead', walletIsReady)
-}, { immediate: true })
-
 
 watch(() => activeAuthhead.value, (v) => {
     if (v) {
