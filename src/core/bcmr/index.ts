@@ -1,7 +1,8 @@
 import { binToHex, sha256,utf8ToBin } from '@bitauth/libauth'
 import { IdentitySnapshot, Registry } from './bcmr-v2.schema'
-
+export * from './enum'
 export * from './indexer'
+export * from './utils'
 
 export type CreateBcmrOptions = {
     authbase: string,
@@ -86,3 +87,25 @@ export function updateTokenRegistry(options: UpdateTokenRegistryOptions) {
         contentHash: binToHex(sha256.hash(utf8ToBin(content)))
     }
 }
+
+export function createIdentitySnapshotTemplate(category: string) {
+    return {
+        name: '',
+        description: '',
+        tags: [],
+        token: {
+            category: category,
+            symbol: '',
+            decimals: 0,
+            nfts: {
+                parse: {
+                    bytecode: '',
+                    types: {}
+                }
+            }
+        },
+        uris: { icon: '', web: '' }
+    } as IdentitySnapshot
+}
+
+
