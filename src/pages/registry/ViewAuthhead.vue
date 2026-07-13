@@ -47,8 +47,6 @@
                     </div>
                 </q-card>
                 <q-card v-else class="bg-dark q-pa-lg rounded-borders" flat>
-                    <!-- <q-card-title class="flex justify-end">
-                    </q-card-title> -->
                     <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
                         <div class="col">
                             <div class="flex items-center q-gutter-x-xs">
@@ -77,9 +75,12 @@
                         </div>
                     </div>
                     <FormField>
-                        <label>Reserve UTXO Id</label>
+                        <label>Reserve UTXO</label>
                         <q-input :model-value="shortenTokenId(`${activeAuthhead?.txid}:${activeAuthhead?.vout}`)"
                             disable outlined>
+                            <template v-slot:prepend>
+                                <q-btn icon="lock" flat dense></q-btn>
+                            </template>
                             <template v-slot:append>
                                 <CopyText
                                     :text="activeAuthhead?.token?.category || localSnapshot.token?.category || ''" />
