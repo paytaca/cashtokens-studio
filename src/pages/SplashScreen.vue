@@ -6,7 +6,7 @@
             <div class="logo-wrapper">
                 <div class="logo-pulse-ring"></div>
                 <div class="logo-pulse-ring delay-1"></div>
-                <img src="/images/cts_icon.png" class="logo-image" alt="CTS Logo" />
+                <img src="/images/cts_icon.png" class="logo-image" alt="CTS Logo" style="max-width: 5rem;" />
             </div>
 
             <h1 class="text-h4 text-weight-bold text-white tracking-wide text-glow">
