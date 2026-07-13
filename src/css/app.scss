@@ -274,4 +274,11 @@ body.body--dark {
       border: 1px solid rgba(255,255,255,.3) !important;
     }
   }
+  // Allow click of appended button even when disabled
+  .q-field__append {
+    pointer-events: auto !important;
+  }
+  .q-field__prepend {
+    pointer-events: auto !important;
+  }
 }
