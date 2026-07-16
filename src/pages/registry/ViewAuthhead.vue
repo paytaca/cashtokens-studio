@@ -2,6 +2,7 @@
     <q-page class="bg-dark-page text-grey-2">
         <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+
                 <q-card v-if="authheadLoading[route.query?.authhead as string]" class="bg-dark q-pa-lg rounded borders"
                     flat>
                     <div class="flex justify-end q-mb-lg">
@@ -47,35 +48,31 @@
                     </div>
                 </q-card>
                 <q-card v-else class="bg-dark q-pa-lg rounded-borders" flat>
-                    <div class="row items-center no-wrap q-gutter-x-md q-mb-lg">
-                        <div class="col">
-                            <div class="flex items-center q-gutter-x-xs">
-                                <q-badge v-if="tokenType === 'mixed'" color="dark" text-color="orange-4"
-                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                    <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                                    Mixed Token
-                                </q-badge>
-                                <q-badge v-else-if="tokenType === 'nft'" color="dark" text-color="blue-6"
-                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                    <q-icon name="token" size="10px" class="q-mr-xs" />
-                                    NFT
-                                </q-badge>
-                                <q-badge v-else-if="tokenType === 'fungible'" color="dark" text-color="green-4"
-                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                    <q-icon name="money" size="10px" class="q-mr-xs" />
-                                    Fungible Token
-                                </q-badge>
-                                <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'minting'" color="dark"
-                                    text-color="purple-4"
-                                    class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                    <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                                    Minting
-                                </q-badge>
-                            </div>
-                        </div>
+                    <div class="flex justify-end ">
+                        <q-btn icon="lock" color="secondary"
+                            @click="router.push({ name: 'view-authguard', params: { authkeyCategory: activeAuthhead!.authkey!.token!.category } })"
+                            dense no-caps flat>View Vault</q-btn>
+                        <q-btn icon="help" dense></q-btn>
                     </div>
                     <FormField>
-                        <label>Reserve UTXO</label>
+                        <label class="flex q-gutter-x-sm">
+                            <span>Reserve UTXO</span>
+                            <q-badge v-if="tokenType === 'mixed'" color="dark" text-color="orange-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                                Mixed Token
+                            </q-badge>
+                            <q-badge v-else-if="tokenType === 'nft'" color="dark" text-color="blue-6"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="token" size="10px" class="q-mr-xs" />
+                                NFT
+                            </q-badge>
+                            <q-badge v-else-if="tokenType === 'fungible'" color="dark" text-color="green-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="money" size="10px" class="q-mr-xs" />
+                                Fungible Token
+                            </q-badge>
+                        </label>
                         <q-input :model-value="shortenTokenId(`${activeAuthhead?.txid}:${activeAuthhead?.vout}`)"
                             disable outlined>
                             <template v-slot:prepend>
@@ -89,7 +86,15 @@
                     </FormField>
 
                     <FormField v-if="hasNfts">
-                        <label>NFT Collection </label>
+                        <label class="flex q-gutter-x-sm">
+                            <span>NFT Collection </span>
+                            <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'minting'" color="dark"
+                                text-color="purple-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                                Minting
+                            </q-badge>
+                        </label>
                         <q-input :model-value="nftCollectionType" disable outlined>
                             <template v-slot:append>
                                 <q-btn v-if="showMint" icon="mdi-pickaxe" color="primary" @click="mintNft" no-wrap>
