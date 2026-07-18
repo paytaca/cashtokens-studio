@@ -2,9 +2,8 @@
     <q-page class="bg-dark-page text-grey-2">
         <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
-
-                <q-card v-if="authheadLoading[route.query?.authhead as string]" class="bg-dark q-pa-lg rounded borders"
-                    flat>
+                <q-card v-if="authheadLoading[route.query?.authhead as string] || wallet.initializing"
+                    class="bg-dark q-pa-lg rounded borders" flat>
                     <div class="flex justify-end q-mb-lg">
                         <q-skeleton type="rect" width="120px" height="32px" class="bg-grey-9 border-radius-8" />
                     </div>
@@ -165,6 +164,13 @@ import { db } from 'src/core/client-db'
 import { timeStamp } from 'console'
 import { useRegistryStore } from 'src/stores/registry'
 
+const props = defineProps<{
+    authkey: string,
+    authhead: string,
+    authbase: string,
+    registryIdentity: string
+}>()
+
 const $q = useQuasar()
 const router = useRouter()
 const route = useRoute()
@@ -259,7 +265,11 @@ const mintNft = () => {
     if (activeAuthhead.value) {
         appStore.setActiveMinter(activeAuthhead.value as DecoratedUtxo)
     }
-    router.push({ name: 'authhead-mint-nft', params: { category: category.value } })
+    router.push({
+        name: 'authhead-mint-nft',
+        params: { category: category.value },
+        query: route.query
+    })
 }
 
 const releaseReserves = (action: 'issuance' | 'burn') => {
@@ -380,6 +390,9 @@ watch(() => activeAuthhead.value, (v) => {
     }
 }, { immediate: true })
 
+onMounted(() => {
+    console.log('@props', props)
+})
 </script>
 
 <style scoped lang="scss">
