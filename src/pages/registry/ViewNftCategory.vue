@@ -121,9 +121,6 @@
                                                 <q-btn flat unelevated class="q-px-sm" no-caps
                                                     icon-right="mdi-table-filter" v-close-popup>
                                                     <q-menu anchor="bottom left" self="top end" icon="mdi-table-filter">
-                                                        <q-item clickable @click="nftsStatusFilter = ''" v-close-popup>
-                                                            <q-item-section>All</q-item-section>
-                                                        </q-item>
                                                         <q-item clickable @click="nftsStatusFilter = 'published'"
                                                             v-close-popup>
                                                             <q-item-section>Published</q-item-section>
@@ -295,7 +292,7 @@ watch(() => nftsTotal.value, (total) => {
 })
 
 watch(() => nftsStatusFilter.value, async (v) => {
-    await loadNfts(0, nftsPagination.value.rowsPerPage)
+    await onNftsRequest(nftsPagination.value)
 })
 
 

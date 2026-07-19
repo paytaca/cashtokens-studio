@@ -130,9 +130,6 @@
                                                         v-close-popup dense>
                                                         <q-menu anchor="bottom left" self="top end"
                                                             icon="mdi-table-filter">
-                                                            <q-item clickable @click="nftsStatusFilter = ''">
-                                                                <q-item-section>All</q-item-section>
-                                                            </q-item>
                                                             <q-item clickable @click="nftsStatusFilter = 'published'">
                                                                 <q-item-section>Published</q-item-section>
                                                             </q-item>
@@ -210,7 +207,7 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 
 const ROWS_PER_PAGE = 2
 
-const { wallet, manager } = inject('wizard-connect-wallet') as any
+const { wallet, manager } = inject('wizardConnectWallet') as any
 const $q = useQuasar()
 const { t } = useI18n()
 const route = useRoute()
@@ -344,8 +341,8 @@ watch(nftsTotal, (total) => {
     nftsPagination.value.rowsNumber = total
 })
 
-watch(() => nftsStatusFilter.value, async (v) => {
-    await loadNfts(0, nftsPagination.value.rowsPerPage)
+watch(() => nftsStatusFilter.value, async () => {
+    await onNftsRequest(nftsPagination.value)
 })
 
 const nftCategory = computed<NftCategoryI | null>({
