@@ -17,6 +17,7 @@ import { hexToBin } from 'mainnet-js';
 import { compactRegistry, extractNftTypeKeys, extractTokenCategories, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
 import { type CompactRegistry } from 'src/core/bcmr/types';
 import { NftCollectionType } from 'src/core/bcmr';
+import { vmNumberToBigInt } from '@bitauth/libauth';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,
@@ -46,6 +47,8 @@ export type PaginatedNftTypesResult = {
   limit: number,
   lastNftTypeKey: string
 }
+
+export type GetNftLastTypeResult = { type: undefined|string, sequenceNumber?: number, collectionType: NftCollectionType }
 
 export type Authbase = string
 
@@ -533,21 +536,17 @@ const registryWorker = {
           identity: { authbase: params.authbase, timestamp: params.timestamp }
         })
 
-        const targetNftTypeKeys = identitySnapshotRecord?.nftTypeKeys?.slice(params.offset ?? 0, params.limit || 5) || []
-
         const collectionType = !(identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
-        
-        /**
-         * Pre sort so we can get the last sequence or last type
-         */
-        sortNftTypeKeys({ keys: targetNftTypeKeys, order: 'desc', collectionType })
-        
-        const lastNftTypeKey = targetNftTypeKeys[0] || ''
+        const sortedNftTypeKeys = sortNftTypeKeys({ 
+          keys: identitySnapshotRecord?.nftTypeKeys || [], order: params.order, collectionType 
+        })
 
-        if (params.order !== 'desc') {
-          sortNftTypeKeys({ keys: targetNftTypeKeys, order: 'desc', collectionType })
-        }
+        const lastNftTypeKey = params.order === 'asc' 
+          ? (sortedNftTypeKeys.at(-1) || '') 
+          : (sortedNftTypeKeys[0] || '');
 
+        const targetNftTypeKeys = sortedNftTypeKeys.slice(params.offset ?? 0, params.limit || 5) || []
+        
         if (params.status && params.status !== 'published') {
           const items = await db.nfts
               .where('[contentHash+authbase+timestamp+status]')
@@ -562,8 +561,6 @@ const registryWorker = {
               lastNftTypeKey
             }
         }
-
-        
 
         const paginatedNftTypeKeys = targetNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
         const total = identitySnapshotRecord?.nftTypeKeys?.length ?? 0
@@ -610,6 +607,68 @@ const registryWorker = {
           lastNftTypeKey
         }
 
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    }
+  },
+
+  async getNftsLastType(params: ProgressErrorListener & {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    identitySnapshotId?: number,
+    publishedOnly?: boolean
+  }): Promise<GetNftLastTypeResult|undefined> {
+
+    try {
+        const identitySnapshotRecord = await this.getIdentitySnapshot({
+          contentHash: params.contentHash, 
+          identity: { authbase: params.authbase, timestamp: params.timestamp }
+        })
+
+        const publishedNftTypeKeys: string[] = [...identitySnapshotRecord?.nftTypeKeys || []] 
+
+        const collectionType = (identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
+        
+        console.log('zx publishedNftTypeKeys', publishedNftTypeKeys, collectionType)
+        
+        const sortedPublishedNftTypeKeys = sortNftTypeKeys({ keys: publishedNftTypeKeys, order: 'desc', collectionType })
+        console.log('sortedPublishedNftTypeKeys', sortedPublishedNftTypeKeys)
+        const lastNftTypeKey = sortedPublishedNftTypeKeys.shift()
+
+        const result: GetNftLastTypeResult = {
+          type: lastNftTypeKey,
+          collectionType
+        }
+
+        if (collectionType === NftCollectionType.sequential && lastNftTypeKey) {
+          result.sequenceNumber = Number(vmNumberToBigInt(hexToBin(lastNftTypeKey)))
+        } 
+
+        if (params.publishedOnly) {
+          return result
+        }
+        
+        let nftRecords = await db.nfts
+              .where('[contentHash+authbase+timestamp+status]')
+              .equals([params.contentHash, params.authbase, params.timestamp] as string[]) 
+              .toArray()
+        
+        nftRecords = nftRecords.filter((nftRecord) => {
+          return nftRecord.status !== 'published'
+        })
+
+        if (nftRecords.length > 0) {
+          const loadedNftTypes = nftRecords.map((nft) => nft.type)
+          const nftTypesSet = Array.from(new Set([...publishedNftTypeKeys, ...loadedNftTypes]))
+          const sortedNftTypesSet = sortNftTypeKeys({ keys: nftTypesSet, order: 'desc', collectionType })
+          const lastNftTypeKeyFromAllKeys = sortedNftTypesSet.shift()
+          result.type = lastNftTypeKeyFromAllKeys
+          if (collectionType === NftCollectionType.sequential && result.type) {
+            result.sequenceNumber = Number(vmNumberToBigInt(hexToBin(result.type)))
+          }
+        }
+        return result
     } catch (e) {
       params.onError?.(getErrorMessage(e))
     }
