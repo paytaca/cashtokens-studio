@@ -168,7 +168,7 @@ const props = defineProps<{
     authkey: string,
     authhead: string,
     authbase: string,
-    registryIdentity: string
+    registryIdentity?: string
 }>()
 
 const $q = useQuasar()
