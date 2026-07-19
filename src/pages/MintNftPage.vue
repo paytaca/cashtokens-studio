@@ -186,7 +186,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, triggerRef } from 'vue'
+import { computed, inject, onBeforeUnmount, onMounted, ref, triggerRef } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -207,12 +207,12 @@ import { type SignTransactionRequest } from '@wizardconnect/core'
 import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { db } from 'src/core/client-db'
+import { broadcastTransaction } from 'src/services/transaction'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
 
 const $q = useQuasar()
-const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
@@ -220,12 +220,10 @@ const { t } = useI18n()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const appStore = useAppStore()
-const { activeAuthhead } = storeToRefs(authguardStore)
 const { activeMinter } = storeToRefs(appStore)
-const {
-    manager,
-    wallet,
-} = useWizardConnectWallet()
+const wizardConnectWallet = inject('wizardConnectWallet') as any
+
+const { manager, wallet } = wizardConnectWallet
 
 const minter = computed<DecoratedUtxo | undefined>(() => activeMinter.value)
 
@@ -407,13 +405,18 @@ const mint = async () => {
 
         loadingGroup({ message: 'Broadcasting, please wait...' })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                loadingGroup({ message: progress })
+            }
+        })
 
-        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
+        if (broadcastError) throw broadcastError
 
-        const broadcastResult = await broadcastResponse.json()
 
-        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+
 
         // await db.setNftRecordsPublished({
         //     contentHash,
@@ -429,12 +432,12 @@ const mint = async () => {
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
 
         await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: broadcastResult.txid
+            txHash: txid
         })
 
         await db.saveActivity({
             event: `Mint ${mintOutputs.length} ${activeMinter.value?.identitySnapshot?.token?.symbol || activeMinter.value!.token!.category} NFT ${mintOutputs.length > 1 ? 's' : ''}`,
-            txid: broadcastResult.txid,
+            txid: txid,
             status: 'success'
         })
 
@@ -451,7 +454,7 @@ const mint = async () => {
             componentProps: {
                 statusType: 'success',
                 statusText: `${mintQuantity.value} NFT(s) minted successfully`,
-                txid: broadcastResult.txid
+                txid
             }
         }).onDismiss(() => {
 
