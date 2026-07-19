@@ -101,7 +101,7 @@ export function setRecordStatus(record: Publishable, status: RegistryRecordStatu
 class CashtokensStudioDB extends Dexie {
 
   registry!: EntityTable<RegistryRecord, 'id'> 
-  registryIdentitySnapshot!: EntityTable<IdentitySnapshotRecord, 'id'>
+  identitySnapshot!: EntityTable<IdentitySnapshotRecord, 'id'>
   nfts!: EntityTable<NftRecord, 'id'>
   utxo!: EntityTable<UtxoRecord, 'id'>
   activity!: EntityTable<ActivityRecord, 'id'>
@@ -112,7 +112,7 @@ class CashtokensStudioDB extends Dexie {
     super(`CashtokensStudioDB${network}`);
     this.version(1).stores({
       registry: '++id, contentHash, authbase, *categories, registryIdentity',
-      registryIdentitySnapshot: '++id, contentHash, [contentHash+authbase+timestamp], authbase, timestamp, category',
+      identitySnapshot: '++id, contentHash, [contentHash+authbase+timestamp], authbase, timestamp, category',
       nfts: '[contentHash+authbase+timestamp+type], [contentHash+authbase+timestamp+status], contentHash, authbase, timestamp, category, type',
       utxo: 'id, walletId',
       activity: '++id, event, timestamp, status'

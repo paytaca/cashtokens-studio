@@ -133,7 +133,35 @@ const registryWorker = {
         const parsedRegistry = await parseRegistryBlob(registry) as Registry
         const tokenCategories = extractTokenCategories(parsedRegistry)
         const compactParsedRegistry = compactRegistry(parsedRegistry)
-        return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot], async () => {
+        return await db.transaction('rw', [db.registry, db.identitySnapshot], async () => {
+
+          // Avoid race condition
+          const existingRegistry = await db.registry
+            .where('contentHash')
+            .equals(contentHash)
+            .first()
+          
+          let registryIdentity = compactParsedRegistry.registryIdentity
+
+          if (typeof(compactParsedRegistry.registryIdentity) !== 'string') {
+            registryIdentity = `offchain:${binToHex(sha256.hash(utf8ToBin(JSON.stringify(compactParsedRegistry.registryIdentity))))}`
+          }
+
+          const registryRecord = {
+            id: existingRegistry?.id as number,
+            authbase: params.authbase,
+            contentHash,
+            publicationUris: uris,
+            rawRegistry: registry,
+            registry: compactParsedRegistry as CompactRegistry,
+            status: 'published' as RegistryRecordStatus,
+            registryIdentity: registryIdentity as string,
+            categories: tokenCategories
+          }
+
+          const id = await db.registry.put(registryRecord)
+          const { rawRegistry, ...restOfRegistryRecord } = registryRecord
+
           if (parsedRegistry.identities) {
             const identities = Object.keys(parsedRegistry.identities || {})
             for (const authbase of identities) {
@@ -149,7 +177,7 @@ const registryWorker = {
               }
 
               // Avoid race condition
-              const existingSnapshot = await db.registryIdentitySnapshot
+              const existingSnapshot = await db.identitySnapshot
                 .where('[contentHash+authbase+timestamp]')
                 .equals([contentHash, authbase, latest] as [string, string, string])
                 .first()
@@ -168,36 +196,12 @@ const registryWorker = {
               }
               
 
-              await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+              await db.identitySnapshot.put(identitySnapshotRecord)
             }
           }
 
-          let registryIdentity = compactParsedRegistry.registryIdentity
-
-          if (typeof(compactParsedRegistry.registryIdentity) !== 'string') {
-            registryIdentity = `offchain:${binToHex(sha256.hash(utf8ToBin(JSON.stringify(compactParsedRegistry.registryIdentity))))}`
-          }
-
-          // Avoid race condition
-          const existingRegistry = await db.registryIdentitySnapshot
-          .where('contentHash')
-          .equals(contentHash)
-          .first()
-
-          const registryRecord = {
-            authbase: params.authbase,
-            contentHash,
-            publicationUris: uris,
-            rawRegistry: registry,
-            registry: compactParsedRegistry as CompactRegistry,
-            status: 'published' as RegistryRecordStatus,
-            registryIdentity: registryIdentity as string,
-            categories: tokenCategories
-          }
-
-          const id = await db.registry.put({ id: existingRegistry?.id, ...registryRecord })
-          const { rawRegistry, ...restOfRegistryRecord } = registryRecord
-          return { id, ...restOfRegistryRecord }
+          
+          return restOfRegistryRecord
         })
       
 
@@ -213,7 +217,7 @@ const registryWorker = {
     try {
 
       if (params.contentHash && params.identity) {
-        const queryResult = await db.registryIdentitySnapshot
+        const queryResult = await db.identitySnapshot
           .where('[contentHash+authbase+timestamp]')
           .equals([params.contentHash, params.identity.authbase, params.identity.timestamp])
           .first();
@@ -245,7 +249,7 @@ const registryWorker = {
               identitySnapshotRecord.category = snapshot.token.category
             }
 
-            await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+            await db.identitySnapshot.put(identitySnapshotRecord)
             return identitySnapshotRecord
           }
         }
@@ -254,7 +258,7 @@ const registryWorker = {
       if (!params.category) throw new Error('Identity or category required')
       
       // Return identitySnapshot of category with latest timestamp
-      const records = await db.registryIdentitySnapshot
+      const records = await db.identitySnapshot
           .where('category')
           .equals(params.category)
           .toArray()
@@ -295,7 +299,7 @@ const registryWorker = {
             identitySnapshotRecord.category = identitySnapshot.token.category
           }
 
-          await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+          await db.identitySnapshot.put(identitySnapshotRecord)
         }
       }
 
@@ -350,7 +354,7 @@ const registryWorker = {
 
     if (params.targetIdentity) {
       const identitySnapshotRecord = 
-          await db.registryIdentitySnapshot
+          await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([registryRecord.contentHash, params.targetIdentity.authbase, params.targetIdentity.timestamp] as [string, string, string]).first();
 
@@ -371,7 +375,7 @@ const registryWorker = {
       for (const authbase of Object.keys(registryRecord.registry.identities || {})) {
         const latestTimestamp = registryRecord.registry.identities[authbase]?.sort((a, b) => b.localeCompare(a))![0] as string
         const identitySnapshotRecord = 
-          await db.registryIdentitySnapshot
+          await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([registryRecord.contentHash, authbase, latestTimestamp] as [string, string, string]).first();
         if (identitySnapshotRecord?.status === 'modified') {
@@ -466,9 +470,9 @@ const registryWorker = {
     const parsedRegistry = await parseRegistryBlob(newRawRegistry) as Registry
     const compactParsedRegistry = compactRegistry(await parseRegistryBlob(newRawRegistry)) as CompactRegistry
 
-    return await db.transaction('rw', [db.registry, db.registryIdentitySnapshot, db.nfts], async () => {
+    return await db.transaction('rw', [db.registry, db.identitySnapshot, db.nfts], async () => {
       // Delete old records with oldContentHash
-      await db.registryIdentitySnapshot.where('contentHash').equals(oldContentHash).delete()
+      await db.identitySnapshot.where('contentHash').equals(oldContentHash).delete()
       await db.nfts.where('contentHash').equals(oldContentHash).delete()
 
       if (parsedRegistry.identities) {
@@ -494,7 +498,7 @@ const registryWorker = {
             identitySnapshotRecord.category = identitySnapshot.token.category
           }
 
-          await db.registryIdentitySnapshot.put(identitySnapshotRecord)
+          await db.identitySnapshot.put(identitySnapshotRecord)
         }
       }
 
@@ -645,12 +649,13 @@ const registryWorker = {
           result.sequenceNumber = Number(vmNumberToBigInt(hexToBin(lastNftTypeKey)))
         } 
 
+        console.log('@registry-worker params.publishedOnly', params.publishedOnly)
         if (params.publishedOnly) {
           return result
         }
         
         let nftRecords = await db.nfts
-              .where('[contentHash+authbase+timestamp+status]')
+              .where('[contentHash+authbase+timestamp]')
               .equals([params.contentHash, params.authbase, params.timestamp] as string[]) 
               .toArray()
         
@@ -658,6 +663,7 @@ const registryWorker = {
           return nftRecord.status !== 'published'
         })
 
+        console.log('@registry-worker nftRecords', nftRecords)
         if (nftRecords.length > 0) {
           const loadedNftTypes = nftRecords.map((nft) => nft.type)
           const nftTypesSet = Array.from(new Set([...publishedNftTypeKeys, ...loadedNftTypes]))
