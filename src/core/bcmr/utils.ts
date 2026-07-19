@@ -3,7 +3,7 @@ import { IdentitySnapshot, NftType, Registry } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { hexToBin } from "bitauth-libauth-v3";
-import { binToBigIntUintLE } from "@bitauth/libauth";
+import { binToBigIntUintLE, vmNumberToBigInt } from "@bitauth/libauth";
 
 export function setNftUnrevealedCtsExtension(nft: NftType) {
     nft.extensions = {
@@ -78,24 +78,21 @@ export function extractTokenCategories(registry: Registry) {
     } as CompactRegistry
   }
 
-  export function sortNftTypeKeys(params: { keys: string[], order?: 'asc'|'desc', collectionType: NftCollectionType}): string[] {
+export function sortNftTypeKeys(params: { keys: string[], order?: 'asc'|'desc', collectionType: NftCollectionType}): string[] {
     const { keys, collectionType, order = 'desc' } = params
-    const o = order === 'desc' ? -1 : 1
-    return keys.sort((a, b) => { 
+    return [...keys].sort((a, b) => { 
       if (collectionType === NftCollectionType.sequential) {
-        const aBytes = a.match(/.{1,2}/g) || []
-        const bBytes = b.match(/.{1,2}/g) || []
-        const aRev = aBytes.reverse().join('')
-        const bRev = bBytes.reverse().join('')
-        const aInt = BigInt('0x' + aRev)
-        const bInt = BigInt('0x' + bRev)
-        if (aInt < bInt) return -1 * o
-        if (aInt > bInt) return 1 * o
-        return 0
+        const valA = vmNumberToBigInt(hexToBin(a))
+        const valB = vmNumberToBigInt(hexToBin(b))
+        if (valA === valB) return 0
+        if (order === 'asc') {
+          return valA < valB ? -1 : 1
+        }
+        return valA > valB ? -1 : 1
       }
-      return a.localeCompare(b) * o
+      return order === 'desc' ? b.localeCompare(a) : a.localeCompare(b);
     })
-  }
+}
 
 export function createNftTypeTemplate(params: {commitmentOrBottomAltStackHex: string, tokenSymbol?: string, collectionType?: NftCollectionType }): NftType {
 
