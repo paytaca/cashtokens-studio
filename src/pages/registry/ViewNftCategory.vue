@@ -149,7 +149,6 @@
                                     </SequentialNftCollection>
                                 </template>
                             </FormField>
-
                         </q-card>
                     </template>
                 </q-card>
@@ -183,6 +182,18 @@ import { storeToRefs } from 'pinia'
 import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 
+
+const ROWS_PER_PAGE = 2
+
+const props = defineProps<{
+    authkey: string,
+    authhead: string,
+    authbase: string,
+    registryIdentity?: string,
+    targetNftsStatusFilter?: RegistryRecordStatus
+}>()
+
+
 const $q = useQuasar()
 const { t } = useI18n()
 const route = useRoute()
@@ -195,7 +206,7 @@ const modified = ref(false)
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
-        return await db.registryIdentitySnapshot.where({
+        return await db.identitySnapshot.where({
             category: route.query.authbase
         }).first()
     }) as any,
@@ -206,7 +217,7 @@ const initialSnapshotJson = ref('')
 const nfts = ref<NftRecord[]>([])
 const nftsTotal = ref(0)
 const nftsLoading = ref(false)
-const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>()
+const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>(props.targetNftsStatusFilter)
 
 const nftCategory = computed<NftCategoryI | null>({
     get() {
@@ -353,7 +364,7 @@ watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRe
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
-        await loadNfts(0, 2)
+        await loadNfts(0, ROWS_PER_PAGE)
     }
 }, { immediate: true })
 
