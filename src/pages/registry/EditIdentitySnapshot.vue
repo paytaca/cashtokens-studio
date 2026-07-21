@@ -3,6 +3,9 @@
         <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <q-card v-if="identitySnapshot" flat class="bg-dark q-pa-lg rounded-borders">
+                    <q-banner v-if="identitySnapshotHasNoRegistry">
+                        No published token metadata. Fill up this form and publish.
+                    </q-banner>
                     <div>
                         <div class="row">
                             <h6 class="q-my-xs">Identity</h6>
@@ -189,7 +192,8 @@ const {
     wallet,
 } = useWizardConnectWallet()
 
-const identitySnapshot = ref<IdentitySnapshot>(createIdentitySnapshotTemplate((route.query.authbase || '') as string))
+const identitySnapshot = ref<IdentitySnapshot>()
+const identitySnapshotHasNoRegistry = ref<boolean>()
 const unpublishedNfts = ref<NftRecord[]>([])
 const publishedNfts = ref<{ type: string, nft: NftType }[]>([])
 const publishedTotal = ref(0)
@@ -206,7 +210,7 @@ const modified = computed(() => {
 
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
-        return await db.registryIdentitySnapshot.where({
+        return await db.identitySnapshot.where({
             category: route.query.authbase
         }).first()
     }) as any,
@@ -300,8 +304,8 @@ const openAddUriDialog = (uri: any) => {
         ok: { label: 'Add' },
         cancel: { label: 'Cancel' }
     }).onOk((uri) => {
-        identitySnapshot.value.uris = {
-            ...identitySnapshot.value.uris,
+        identitySnapshot.value!.uris = {
+            ...identitySnapshot.value!.uris,
             ...uri
         }
     })
@@ -370,7 +374,7 @@ const onPublishClick = async () => {
 
         const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
 
-        await db.registryIdentitySnapshot
+        await db.identitySnapshot
             .where('id')
             .equals(id)
             .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
@@ -494,7 +498,7 @@ const uploadIcon = () => {
                 const result = await uploadFile(icon, `thumb_${file.name}`)
                 const { cid } = result
                 if (cid) {
-                    identitySnapshot.value.uris!.icon = `ipfs://${cid}`
+                    identitySnapshot.value!.uris!.icon = `ipfs://${cid}`
                 }
                 $q.notify({ type: 'positive', message: 'Media uploaded successfully' })
             } catch (e: any) {
@@ -537,7 +541,7 @@ const onSaveClick = async () => {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
         const id = activeAuthhead.value?.identitySnapshotIdentifier
         if (!id) return
-        await db.registryIdentitySnapshot
+        await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([id.contentHash, id.identity.authbase, id.identity.timestamp] as [string, string, string])
             .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
@@ -697,6 +701,12 @@ onMounted(async () => {
         await loadUnpublishedNfts()
         await delay(500)
         await loadPublishedNfts(0, 10)
+    }
+
+    if (Object.values(identitySnapshotRecord.value || {}).length === 0) {
+        identitySnapshot.value = createIdentitySnapshotTemplate((route.query.authbase || '') as string)
+        identitySnapshotHasNoRegistry.value = true
+        initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
     }
 })
 

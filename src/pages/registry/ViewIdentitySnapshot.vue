@@ -87,21 +87,14 @@ const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
-const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { loadAuthkeys, updateActiveAuthhead } = authguardStore
-const {
-    manager,
-    wallet,
-} = useWizardConnectWallet()
 
 const identitySnapshot = ref<IdentitySnapshot>()
 
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
-        return await db.registryIdentitySnapshot.where({
+        return await db.identitySnapshot.where({
             category: route.query.authbase
         }).first()
     }) as any,
