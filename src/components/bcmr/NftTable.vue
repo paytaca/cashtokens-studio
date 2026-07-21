@@ -24,7 +24,16 @@
                     <div>
                         <div class="q-gutter-x-sm">
                             <span class="text-bold">{{ props.row.nft.name }}</span>
-                            <q-chip :class="['text-capitalize', statusClass(props.row.status)]" dense>
+
+                            <q-chip v-if="props.row.status === 'new'">
+                                <template v-slot:default>
+                                    <q-icon name="mdi-alert-decagram" color="warning"></q-icon>
+                                    <span :class="['text-capitalize', statusClass(props.row.status)]">{{
+                                        status(props.row.status) }}</span>
+                                </template>
+                            </q-chip>
+
+                            <q-chip v-else :class="['text-capitalize', statusClass(props.row.status)]" dense>
                                 {{ status(props.row.status) }}
                             </q-chip>
                         </div>
@@ -79,7 +88,6 @@ const columns = computed((): QTableColumn[] => {
 const status = computed(() => {
     return (s: string) => {
         if (s === 'deleted') return 'Marked for deletion'
-        if (s === 'modified') return 'Modified'
         return s
     }
 })
@@ -88,6 +96,7 @@ const statusClass = computed(() => {
     return (s: string) => {
         if (s === 'deleted') return 'text-negative'
         if (s === 'modified') return 'text-warning'
+        if (s === 'new') return 'text-warning'
         return 'text-bch'
     }
 })
