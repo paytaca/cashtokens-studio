@@ -1,9 +1,9 @@
 import { NFTCollectionType } from "src/apps/bcmr/types";
-import { IdentitySnapshot, NftType, Registry } from "./bcmr-v2.schema";
+import { IdentitySnapshot, NftType, ParsableNftCollection, Registry } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { hexToBin } from "bitauth-libauth-v3";
-import { binToBigIntUintLE, vmNumberToBigInt } from "@bitauth/libauth";
+import { bigIntToVmNumber, binToBigIntUintLE, binToHex, vmNumberToBigInt } from "@bitauth/libauth";
 
 export function setNftUnrevealedCtsExtension(nft: NftType) {
     nft.extensions = {
@@ -37,6 +37,10 @@ export function extractTokenCategories(registry: Registry) {
     }
     return tokenCategories
   }
+
+export function getNftCollectionType(identitySnapshot: IdentitySnapshot): NftCollectionType {
+  return (identitySnapshot.token?.nfts?.parse as ParsableNftCollection)?.bytecode ? NftCollectionType.parsable: NftCollectionType.sequential 
+}
 
 // eslint-disable-next-line @typescript-eslint/no-inferrable-types
 // export async function parseRegistry(registry: Blob, compact: boolean = true): Promise<Registry> {
@@ -110,7 +114,7 @@ export function createNftTypeTemplate(params: {commitmentOrBottomAltStackHex: st
   nft.name = `${params.tokenSymbol || 'Unknown NFT' }`
 
   if (!params.collectionType || (params.collectionType === NftCollectionType.sequential && params.commitmentOrBottomAltStackHex)) {
-    nft.name = nft.name + `#${binToBigIntUintLE(hexToBin(params.commitmentOrBottomAltStackHex))}`
+    nft.name = nft.name + ` #${binToBigIntUintLE(hexToBin(params.commitmentOrBottomAltStackHex))}`
   }
 
   if (params.collectionType === NftCollectionType.parsable) {
@@ -119,4 +123,12 @@ export function createNftTypeTemplate(params: {commitmentOrBottomAltStackHex: st
   }
 
   return nft
+}
+
+export function commitmentToSequenceNumber(commitment: string) {
+  return vmNumberToBigInt(hexToBin(commitment))
+}
+
+export function sequenceNumberToCommitment(sequenceNumber: string|bigint|number) {
+  return binToHex(bigIntToVmNumber(BigInt(sequenceNumber)))
 }
