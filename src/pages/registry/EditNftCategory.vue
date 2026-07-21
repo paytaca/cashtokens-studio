@@ -74,7 +74,6 @@
                     <template v-if="nftCategory">
                         <div class="bg-dark q-mt-md" flat>
                             <h6 class="q-my-xs">NFT Category Info</h6>
-
                             <FormField>
                                 <label class="q-mb-xs">Description</label>
                                 <q-input v-model="nftCategory.description" class="full-width" outlined />
@@ -204,6 +203,7 @@ import { UtxoWithAuthKey } from 'src/core/types'
 import { UtxoWithPath } from 'src/core/wallet'
 import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import { getNftCollectionType } from 'src/core/bcmr'
 
 const ROWS_PER_PAGE = 2
 
@@ -220,7 +220,7 @@ const registryStore = useRegistryStore()
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
-        return await db.registryIdentitySnapshot.where({
+        return await db.identitySnapshot.where({
             category: route.query.authbase
         }).first()
     }) as any,
@@ -246,15 +246,23 @@ const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerP
  */
 const nftsLastNftTypeKey = ref<string>('')
 
-const onAddNftClick = () => {
-    console.log('test')
-    const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI)?.bytecode
+const onAddNftClick = async () => {
+    console.log('@onAddClick authhead', activeAuthhead.value)
+    const lastKnownType = await getRegistryWorker().getNftsLastType({
+        contentHash: activeAuthhead.value?.identitySnapshotIdentifier!.contentHash as string,
+        authbase: activeAuthhead.value?.identitySnapshotIdentifier!.identity.authbase as string,
+        timestamp: activeAuthhead.value?.identitySnapshotIdentifier!.identity.timestamp as string,
+        publishedOnly: false
+    })
+
+    console.log('@onAddClick', lastKnownType)
     router.push({
         name: 'add-nft',
         query: {
             ...route.query,
-            symbol: identitySnapshot.value?.token?.symbol,
-            bytecode,
+            collectionType: getNftCollectionType(identitySnapshot.value as IdentitySnapshot),
+            tokenSymbol: identitySnapshot.value?.token?.symbol,
+            lastKnownType: lastKnownType?.type
         }
     })
 }
@@ -306,7 +314,7 @@ const onNftsRequest = async (props: any) => {
     await loadNfts(offset, limit)
 }
 
-const loadNfts = async (offset: number, limit: number) => {
+const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRecordStatus) => {
     if (!activeAuthhead.value?.identitySnapshotIdentifier) return
     nftsLoading.value = true
     try {
@@ -317,7 +325,7 @@ const loadNfts = async (offset: number, limit: number) => {
             timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
             offset,
             limit,
-            status: nftsStatusFilter.value
+            status: statusFilter || nftsStatusFilter.value
         })
         console.log('RESULT', result)
         if (result) {
@@ -395,7 +403,7 @@ const onSaveClick = async () => {
     if (!identitySnapshotRecord.value || !identitySnapshot.value) return
     try {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
-        await db.registryIdentitySnapshot
+        await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([
                 route.query.contentHash,
@@ -426,7 +434,7 @@ const onPublishClick = async () => {
 
         const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
 
-        await db.registryIdentitySnapshot
+        await db.identitySnapshot
             .where('id')
             .equals(id)
             .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
