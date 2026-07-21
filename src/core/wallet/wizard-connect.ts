@@ -12,6 +12,7 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     receive?: HDWallet | undefined 
     change?: HDWallet | undefined
     defi?: HDWallet | undefined 
+    initializing?: boolean | undefined
     ready: boolean | undefined;
     balance: bigint | undefined 
     utxos: UtxoWithPath[] | undefined
@@ -24,45 +25,54 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     }
 
     async initWallet(session: {paths?: PathXpub[]}) {
-        if (!session.paths || session.paths.length === 0) {
-            this.ready = false 
-            return 
+        try {
+            this.initializing = true
+            if (!session.paths || session.paths.length === 0) {
+                this.ready = false 
+                return 
+            }
+            this.session = session
+            const receiveXPub = session.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
+            const changeXPub = session.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
+            const defiXPub = session.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
+            
+            let network: string  = this.network
+
+            if (this.network === 'chipnet') {
+                network = 'testnet'
+            }
+            const HDWalletClass = await getHDWalletClass()
+
+            const decodedReceiveXPub = decodeHdPublicKey(receiveXPub as string) as HdKeyParameters<HdPublicNode>
+            const encodedReceiveXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedReceiveXPub.node })
+            const decodedChangeXPub = decodeHdPublicKey(changeXPub as string) as HdKeyParameters<HdPublicNode>
+            const encodedChangeXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedChangeXPub.node })
+            const decodedDefiXPub = decodeHdPublicKey(defiXPub as string) as HdKeyParameters<HdPublicNode>
+            const encodedDefiXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedDefiXPub.node })
+
+            if (receiveXPub) {
+                this.receive =  await HDWalletClass.fromXPub(encodedReceiveXPub)
+            }
+            
+            if (changeXPub) {
+                this.change = await HDWalletClass.fromXPub(encodedChangeXPub)
+                // this.receive = new HDWallet(network as NetworkType)
+            }
+            if (defiXPub) {
+                this.defi = await HDWalletClass.fromXPub(encodedDefiXPub)
+                // this.receive = new HDWallet(network as NetworkType)
+            }
+
+            await this.getUtxos({ sync: true })
+            this.ready = true         
+            this.initializing = false
+            return this
+        } catch (error) {
+            throw error 
+        } finally {
+            this.initializing = false
         }
-        this.session = session
-        const receiveXPub = session.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
-        const changeXPub = session.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
-        const defiXPub = session.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
         
-        let network: string  = this.network
-
-        if (this.network === 'chipnet') {
-            network = 'testnet'
-        }
-        const HDWalletClass = await getHDWalletClass()
-
-        const decodedReceiveXPub = decodeHdPublicKey(receiveXPub as string) as HdKeyParameters<HdPublicNode>
-        const encodedReceiveXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedReceiveXPub.node })
-        const decodedChangeXPub = decodeHdPublicKey(changeXPub as string) as HdKeyParameters<HdPublicNode>
-        const encodedChangeXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedChangeXPub.node })
-        const decodedDefiXPub = decodeHdPublicKey(defiXPub as string) as HdKeyParameters<HdPublicNode>
-        const encodedDefiXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedDefiXPub.node })
-
-        if (receiveXPub) {
-            this.receive =  await HDWalletClass.fromXPub(encodedReceiveXPub)
-        }
-        
-        if (changeXPub) {
-            this.change = await HDWalletClass.fromXPub(encodedChangeXPub)
-            // this.receive = new HDWallet(network as NetworkType)
-        }
-        if (defiXPub) {
-            this.defi = await HDWalletClass.fromXPub(encodedDefiXPub)
-            // this.receive = new HDWallet(network as NetworkType)
-        }
-
-        await this.getUtxos({ sync: true })
-        this.ready = true         
-        return this
     }
 
     getDepositAddress(index?: number): string {
