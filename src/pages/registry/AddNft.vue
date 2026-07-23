@@ -9,7 +9,7 @@
             </q-card-title>
             <div class="q-pa-lg">
               <SequentialNft v-if="!route.query.bytecode" :key="'seq-' + saveKey"
-                :commitment="commitmentOrBottomAltStack" v-model:nft="nft" :allow-edit="true" @save="onSaveClick"
+                v-model:commitment="commitmentOrBottomAltStack" v-model:nft="nft" :allow-edit="true" @save="onSaveClick"
                 @close="goBack" />
               <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="commitmentOrBottomAltStack"
                 v-model:nft="nft" :allow-edit="true" @save="onSaveClick" :bytecode="route.query.bytecode as string"
@@ -29,8 +29,14 @@ import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
 import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
 import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { useRoute, useRouter } from 'vue-router'
-import { createNftTypeTemplate } from 'src/core/bcmr/utils'
+import { commitmentToSequenceNumber, createNftTypeTemplate, sequenceNumberToCommitment } from 'src/core/bcmr/utils'
 import { NftCollectionType } from 'src/core/bcmr'
+
+const props = defineProps<{
+  lastKnownType?: string
+  tokenSymbol?: string
+  collectionType?: string
+}>()
 
 const $q = useQuasar()
 const router = useRouter()
@@ -51,15 +57,24 @@ const goBack = () => {
 }
 
 const onSaveClick = () => {
-  console.log('saving')
+  console.log('saving', nft, commitmentOrBottomAltStack)
 }
 
 onMounted(async () => {
+
+  console.log('@commitmentOrBottomAltStack last', props.lastKnownType)
+  if ((!props.collectionType || props.collectionType === NftCollectionType.sequential) && props.lastKnownType) {
+    const nextSequenceNumber = (commitmentToSequenceNumber(props.lastKnownType) as bigint) + 1n
+    commitmentOrBottomAltStack.value = sequenceNumberToCommitment(nextSequenceNumber)
+    console.log('@commitmentOrBottomAltStack', commitmentOrBottomAltStack.value)
+  }
+
   nft.value = createNftTypeTemplate({
-    commitmentOrBottomAltStackHex: '',
-    tokenSymbol: (route.query.symbol || '') as string,
-    collectionType: route.query.bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
+    commitmentOrBottomAltStackHex: commitmentOrBottomAltStack.value,
+    tokenSymbol: props.tokenSymbol,
+    collectionType: props.collectionType as NftCollectionType || NftCollectionType.sequential
   })
+  console.log('nft.value', nft.value)
 })
 
 </script>
