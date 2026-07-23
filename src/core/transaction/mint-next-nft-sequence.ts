@@ -224,6 +224,8 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
 
     if (minterTokenSourceOutputIndex === -1) throw new Error('Unexpected state, token issuer utxo not found on source output list')
 
+    console.log('Authguard', authguard, sourceOutputs, minterTokenSourceOutputIndex)
+
     if (authguard) {
         // Minter is on authguard
         const minterTokenSourceOutput = sourceOutputs[minterTokenSourceOutputIndex]
@@ -241,7 +243,23 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         })
         minterTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
     }
-    console.log('Minting transactionHex', transactionHex)
+    console.log('Minting transactionHex', transactionHex, JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)))
+    console.log({
+            action: RelayMsgAction.SignTransactionRequest,
+            transaction: {
+                transaction: transactionHex,
+                sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
+                userPrompt: `Mint NFT(s) #${startingSequence} - #${endSequence}`,
+                broadcast: false
+            },
+            inputPaths: spentUtxos.map((utxo, inputIndex) => {
+                if (!utxo.pathName) return []
+                return [inputIndex, utxo.pathName, utxo.addressIndex]
+            }).filter(p => p.length === 3) as [number, string, number][],
+    
+            mintOutputs: outputNfts
+            
+        } as SignTransactionRequest & { mintOutputs: TransactionOutput[] })
     return {
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
