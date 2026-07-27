@@ -375,7 +375,7 @@ const mint = async () => {
         })
 
         const category = minter.value!.token!.category
-        const identitySnapshotRecord = await db.registryIdentitySnapshot
+        const identitySnapshotRecord = await db.identitySnapshot
             .where('category')
             .equals(category)
             .first()
