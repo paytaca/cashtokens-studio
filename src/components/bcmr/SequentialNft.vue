@@ -8,10 +8,10 @@
       </q-avatar>
       <div class="col">
         <div class="text-subtitle1 text-weight-medium">{{ nft.name }}</div>
-        <div class="text-caption text-grey-5 text-mono q-mt-xs">{{ commitment }}</div>
+        <div class="text-caption text-grey-5 text-mono q-mt-xs">&lt;0x{{ commitment }}&gt;</div>
       </div>
       <div class="col text-right">
-        <q-chip round color="accent" size="lg">#{{ Number(binToBigIntUintLE(hexToBin(commitment))) }}</q-chip>
+        <q-chip round color="accent" size="lg">#{{ sequenceNumber }}</q-chip>
       </div>
     </div>
     <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg" :style="{ minHeight: '300px' }"
@@ -34,21 +34,34 @@
     </div>
     <div class="q-gutter-y-md">
       <FormField>
-        <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
+        <label class="text-caption text-grey-5 q-mb-xs" style="letter-spacing: 1px;">
+          Sequence Number
+        </label>
+        <q-input v-model="sequenceNumber" :disable="!allowEdit" :min="0" :step="1" :rules="[
+          (val: string) => {
+            if (val === '' || val === null || val === undefined) return true
+            if (!/^\d+$/.test(val)) return 'Sequence number must be a non-negative integer'
+            if (typeof Number(val) !== 'number' || Number(val) < 0) return 'Sequence number cannot be negative'
+            return true
+          }
+        ]" outlined dark />
+      </FormField>
+      <FormField>
+        <label class="text-caption text-grey-5 q-mb-xs" style="letter-spacing: 1px;">
           Name
         </label>
         <q-input v-model="nft.name" outlined dark placeholder="Name" :disable="!allowEdit" />
       </FormField>
       <FormField>
-        <label class="text-caption text-grey-5 text-uppercase q-mb-xs" style="letter-spacing: 1px;">
+        <label class="text-caption text-grey-5 q-mb-xs" style="letter-spacing: 1px;">
           Description
         </label>
-        <q-input v-model="nft.description" outlined dark placeholder="Description" :disable="!allowEdit" />
+        <q-input v-model="nft.description" outlined dark placeholder="Describe this NFT" :disable="!allowEdit" />
       </FormField>
 
       <FormField>
         <div class="row items-center justify-between q-mb-sm">
-          <label class="text-caption text-grey-5 text-uppercase" style="letter-spacing: 1px;">
+          <label class="text-caption text-grey-5" style="letter-spacing: 1px;">
             Attributes
           </label>
           <q-btn v-if="allowEdit" dense flat icon="add" color="primary" size="sm" label="Add Attribute"
@@ -84,21 +97,24 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { uploadFile } from 'src/core/ipfs'
 import FormField from 'src/components/FormField.vue'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
-import { hexToBin } from 'mainnet-js'
-import { binToBigIntUintLE } from '@bitauth/libauth'
+import { commitmentToSequenceNumber, sequenceNumberToCommitment } from 'src/core/bcmr'
 
 const props = defineProps<{
-  commitment: string
+  // commitment: string
   allowEdit?: boolean
 }>()
+
+const $q = useQuasar()
+
+const sequenceNumber = ref<string>()
 
 const emit = defineEmits<{
   save: [nft: NftType],
   close: []
 }>()
 
+const commitment = defineModel<string>('commitment', { required: true })
 const nft = defineModel<NftType>('nft', { required: true })
-const $q = useQuasar()
 
 const mediaUrl = ref('')
 const mediaType = ref<'image' | 'video' | 'audio' | null>(null)
@@ -256,7 +272,16 @@ watch(() => nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.we
   loadMedia()
 })
 
+watch(() => sequenceNumber.value, (newValue) => {
+  if (newValue) {
+    commitment.value = sequenceNumberToCommitment(newValue)
+  }
+})
+
 onMounted(() => {
+  if (commitment.value) {
+    sequenceNumber.value = String(commitmentToSequenceNumber(commitment.value))
+  }
   initialNft.value = JSON.stringify(nft.value)
   loadMedia()
 })
