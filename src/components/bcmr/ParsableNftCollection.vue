@@ -12,8 +12,8 @@
         <label class="form-label">
           Fields
         </label>
-        <q-btn dense flat icon="add" color="primary" size="sm" label="Add Field"
-          :disable="!parsableNftCollection.bytecode" @click="addField" />
+        <q-btn icon="add" color="secondary" label="Add Field"
+          :disable="!parsableNftCollection.bytecode && mode === 'view'" @click="addField" no-caps dense flat />
       </div>
       <div v-if="fieldEntries.length > 0" class="q-gutter-y-xs">
         <div v-for="entry in fieldEntries" :key="entry.key"
@@ -45,10 +45,16 @@ import type { NftCategoryField as NftCategoryFieldI, ParsableNftCollection } fro
 import NftTypes from './NftTypes.vue'
 import NftCategoryField from './NftCategoryField.vue'
 import FormField from 'components/FormField.vue'
+import { useRoute } from 'vue-router'
 
 const $q = useQuasar()
+const route = useRoute()
 const parsableNftCollection = defineModel<ParsableNftCollection>('parsableNftCollection', { required: true })
 const fields = defineModel<NftCategoryFieldI>('fields')
+
+const mode = computed(() => {
+  return route.path.endsWith('edit') ? 'edit' : 'view'
+})
 
 const fieldsModel = computed({
   get: () => fields.value ?? {},
