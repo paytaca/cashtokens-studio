@@ -1,10 +1,10 @@
 import * as Comlink from 'comlink'
 import { defineStore } from 'pinia'
-import { ParsedRegistryRecord, RegistryRecord } from 'src/core/client-db';
+import { ParsedRegistryRecord } from 'src/core/client-db';
 import { ref } from 'vue';
 
 import { type RegistryWorkerAPI } from 'src/workers/registry-worker';
-import { IdentitySnapshot, NftType, Registry } from 'src/core/bcmr/bcmr-v2.schema';
+import { IdentitySnapshot, NftType } from 'src/core/bcmr/bcmr-v2.schema';
 import type { DecoratedUtxo } from 'src/core/types';
 
 let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
@@ -41,7 +41,6 @@ export const useRegistryStore = defineStore('registry-store', () => {
     const identitySnapshotCache = ref<Record<string, any>>({})
 
     const setActiveNft = (newActiveNft: ActiveNft | undefined | null) => {
-        console.log('Setting activeNft', newActiveNft)
         activeNft.value = newActiveNft
     }
 
@@ -50,10 +49,13 @@ export const useRegistryStore = defineStore('registry-store', () => {
     }
 
     const loadRegistry = async (authbase: string, sync?: boolean) => {
+        const i = registries.value?.findIndex((r) => r.authbase === authbase)
+        if (i !== -1) {
+            return registries.value[i]
+        }
         const result = await worker?.loadRegistry({ authbase, sync })
         if (result) {
-            const i = registries.value?.findIndex((r) => r.id === result!.id)
-            if (i === -1) registries.value.push(result as ParsedRegistryRecord)
+            registries.value.push(result as ParsedRegistryRecord)
         }
         return result
     }
@@ -89,22 +91,9 @@ export const useRegistryStore = defineStore('registry-store', () => {
         return identitySnapshotRecord?.identitySnapshot
     }
 
-    const getIdentitySnapshotRecordByCategory = async(category: string) => {
-        const identitySnapshotRecord = await worker?.getIdentitySnapshot({ category })
-        return identitySnapshotRecord
-    }
-
     const getIdentitySnapshot = async(params: { contentHash: string, identity: { authbase: string, timestamp: string } }) => {
         const identitySnapshotRecord = await worker?.getIdentitySnapshot(params)
         return identitySnapshotRecord?.identitySnapshot
-    }
-
-    const getRegistryByAuthbase = async(authbase: string) => {
-        const registryRecord = await worker?.loadRegistry({
-            authbase,
-            onError: (msg) => console.error('Registry worker error:', msg)
-        })
-        return registryRecord
     }
 
     return {
@@ -114,10 +103,8 @@ export const useRegistryStore = defineStore('registry-store', () => {
         setActiveNft,
         setActiveIdentitySnapshot,
         loadRegistry,
-        getRegistryByAuthbase,
         getIdentitySnapshot,
         getIdentitySnapshotByCategory,
-        getIdentitySnapshotRecordByCategory,
         fetchIdentitySnapshot,
         identitySnapshotCache,
         fetchNftType
