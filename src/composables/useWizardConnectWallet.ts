@@ -37,15 +37,9 @@ export const useWizardConnectWallet = () => {
 
         watch(uri, (newUri) => {
             if (newUri) {
-                qrURI.value = newUri
+                qrURI.value = newUri as any
                 qrDataURI.value = qrUri.value
                 showQR.value = true
-            }
-        })
-
-        watch(state, (newState) => {
-            if (newState === 'connected' || newState === 'disconnected') {
-                showQR.value = false
             }
         })
     }
@@ -54,7 +48,12 @@ export const useWizardConnectWallet = () => {
         const result = connect()
         if (result) {
             const mgr = manager.value
+            if ((manager.value?.getSessionPaths().length ?? 0) === 0) {
+                showQR.value = true
+            }
+
             if (mgr) {
+
                 mgr.on('disconnect', (reason: DisconnectReason, message: string | undefined) => {
                     wallet.value = new WizardConnectExternalWallet({
                         network: import.meta.env.VITE_BCH_NETWORK
@@ -65,27 +64,27 @@ export const useWizardConnectWallet = () => {
                     const session = message.session?.hdwalletv1 as { paths?: PathXpub[] } | undefined
 
                     if (session) {
+                        if (!wallet.value) {
+                            wallet.value = new WizardConnectExternalWallet({
+                                network: import.meta.env.VITE_BCH_NETWORK
+                            })
+                        }
                         await wallet.value!.initWallet(session)
                         wallet.value.getBalance({ sync: true })
                         walletLasySync.value = Date.now()
+                        triggerRef(wallet)
                     }
                 })
 
-                mgr.on('messagereceived', (message: ProtocolMessage) => {
-                    console.log('Handle message received', message)
-                })
 
-                mgr.on('messagesent', (message: ProtocolMessage) => {
-                    console.log('Handle message sent', message)
-                })
             }
         }
         return result
     }
 
-    watch(state, async (newState, oldState) => {
+    watch(() => state.value, async (newState, oldState) => {
         const sessionPaths = manager.value?.getSessionPaths() || []
-        if(newState === 'connected' || sessionPaths.length > 0) {
+        if((newState === 'connected' && newState !== oldState) || sessionPaths.length > 0) {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
                 wallet.value = new WizardConnectExternalWallet({
                     network: import.meta.env.VITE_BCH_NETWORK
