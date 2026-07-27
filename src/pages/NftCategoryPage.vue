@@ -268,7 +268,7 @@ const loadNftTypes = async (offset: number, limit: number) => {
     if (!record?.identitySnapshot?.token?.nfts?.parse) return
     nftTypesLoading.value = true
     try {
-        const result = await getRegistryWorker().getNftTypes({
+        const result = await getRegistryWorker().getNfts({
             contentHash: record.contentHash,
             authbase: authbase.value,
             timestamp: record.timestamp,
@@ -333,7 +333,7 @@ const save = async () => {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
         identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
         setRecordStatus(identitySnapshotRecord.value, 'modified')
-        await db.registryIdentitySnapshot
+        await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([
                 identitySnapshotRecord.value.contentHash,
