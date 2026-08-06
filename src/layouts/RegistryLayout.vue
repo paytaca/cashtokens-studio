@@ -91,10 +91,11 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { shortenTokenId } from 'src/core/utils';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { useRegistryStore } from 'src/stores/registry';
-import { computed, inject, provide, ref } from 'vue';
+import { computed, inject, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CopyText from 'src/components/CopyText.vue';
 import { storeToRefs } from 'pinia';
+import { stringify } from '@bitauth/libauth';
 
 const registryStore = useRegistryStore()
 const { activeIdentitySnapshot } = storeToRefs(registryStore)
@@ -114,6 +115,7 @@ const navModeLinks = {
         { title: 'Registry', caption: 'Collaborate with members', icon: 'people', to: { name: 'view-registry', params: route.params, query: route.query } },
     ],
     edit: [
+        { title: 'Reserves', caption: 'Overview & analytics', icon: 'mdi-bank', to: { name: 'view-authhead', query: route.query } },
         { title: 'Token Identity', caption: 'Overview & analytics', icon: 'dashboard', to: { name: 'edit-identity-snapshot', params: route.params, query: route.query } },
         { title: 'NFTs', caption: 'Manage your tasks', icon: 'assignment', to: { name: 'edit-identity-snapshot-nfts', params: route.params, query: route.query } },
         { title: 'Registry', caption: 'Collaborate with members', icon: 'people', to: { name: 'edit-registry', params: route.params, query: route.query } },
@@ -121,7 +123,12 @@ const navModeLinks = {
 }
 
 const navLinks = computed(() => {
-    const links = mode.value === 'edit' ? navModeLinks.edit : navModeLinks.view
+    let links = mode.value === 'edit' ? navModeLinks.edit : navModeLinks.view
+    if (!activeIdentitySnapshot.value) {
+        links = [...links]
+        links.splice(2, 2)
+    }
+
     return links.map(link => ({
         ...link,
         to: { ...link.to, query: { ...route.query }, params: { ...route.params } }
@@ -139,6 +146,13 @@ const toggleWriteMode = () => {
         }
     })
 }
+
+watch(() => activeAuthhead.value, (value) => {
+    if (value) {
+        mode.value = 'edit'
+    }
+}, { immediate: true })
+
 </script>
 
 <style scoped>
