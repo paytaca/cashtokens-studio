@@ -534,13 +534,13 @@ const registryWorker = {
     status?: RegistryRecordStatus | undefined | ''
   }): Promise<PaginatedNftTypesResult|undefined> {
     try {
-      
+
         const identitySnapshotRecord = await this.getIdentitySnapshot({
           contentHash: params.contentHash, 
           identity: { authbase: params.authbase, timestamp: params.timestamp }
         })
 
-        const collectionType = !(identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
+        const collectionType = (identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
         const sortedNftTypeKeys = sortNftTypeKeys({ 
           keys: identitySnapshotRecord?.nftTypeKeys || [], order: params.order, collectionType 
         })
