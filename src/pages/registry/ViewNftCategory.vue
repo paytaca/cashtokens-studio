@@ -71,11 +71,15 @@
             </div>
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <q-card flat class="bg-dark q-pa-lg rounded-borders">
-                    <q-card-title class="flex items-center q-gutter-x-sm q-mb-lg justify-between text-grey-6">
-                        <div class="q-gutter-x-sm flex items-center"><q-icon name="mdi-information-variant-box"
-                                size="sm" /><span class="text-h6 text-weight-bold ">NFT Category</span></div>
+                    <q-card-title class="q-mb-lg text-grey-6">
+                        <div class="q-gutter-x-sm flex items-center justify-between">
+                            <div class="flex items-center">
+                                <q-icon name="mdi-information-variant-box" size="sm" />
+                                <span class="text-h6 text-weight-bold ">NFTs</span>
+                            </div>
+                            <q-btn icon="refresh" @click="refreshNfts" :loading="nftsLoading"></q-btn>
+                        </div>
                     </q-card-title>
-
                     <template v-if="nftCategory">
                         <q-card class="bg-dark q-mt-md" flat>
                             <FormField v-if="nftCategory.description">
@@ -117,7 +121,9 @@
                                         v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                         <template #nftTypes>
                                             <div class="flex justify-between">
-                                                <h6 class="q-my-xs">NFT Collection</h6>
+                                                <h6 class="q-my-xs">
+                                                    NFT Collection
+                                                </h6>
                                                 <q-btn flat unelevated class="q-px-sm" no-caps
                                                     icon-right="mdi-table-filter" v-close-popup>
                                                     <q-menu anchor="bottom left" self="top end" icon="mdi-table-filter">
@@ -234,12 +240,20 @@ const unpublishedCount = ref(0)
 
 const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
     const id = activeAuthhead.value?.identitySnapshotIdentifier
-    const bytecode = (activeAuthhead.value?.identitySnapshot?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
+    const record = identitySnapshotRecord.value as IdentitySnapshotRecord
+    const contentHash = id?.contentHash || record?.contentHash
+    const authbase = id?.identity?.authbase || record?.authbase || (route.query.authbase as string)
+    const timestamp = id?.identity?.timestamp || record?.timestamp
+    const bytecode = (identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
+    const category = activeAuthhead.value?.token?.category || identitySnapshot.value?.token?.category
+
+    if (!contentHash || !authbase || !timestamp) return
+
     registryStore.setActiveNft({
-        contentHash: id!.contentHash,
-        authbase: id!.identity.authbase,
-        timestamp: id!.identity.timestamp,
-        category: activeAuthhead.value!.token!.category,
+        contentHash,
+        authbase,
+        timestamp,
+        category: category || '',
         bytecode,
         commitmentOrBottomAltStack: row.type,
         nftType: row.nft,
@@ -254,11 +268,19 @@ const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
 }
 
 const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) => {
+    const id = activeAuthhead.value?.identitySnapshotIdentifier
+    const record = identitySnapshotRecord.value as IdentitySnapshotRecord
+    const contentHash = id?.contentHash || record?.contentHash
+    const authbase = id?.identity?.authbase || record?.authbase || (route.query.authbase as string)
+    const timestamp = id?.identity?.timestamp || record?.timestamp
+
+    if (!contentHash || !authbase || !timestamp) return
+
     try {
         await db.setNftRecordStatus({
-            contentHash: activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-            authbase: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-            timestamp: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+            contentHash,
+            authbase,
+            timestamp,
             status: 'deleted',
             type: row.type
         })
@@ -280,22 +302,25 @@ const nftTypeColumns: QTableColumn[] = [
 
 const onNftsRequest = async (props: any) => {
     const { page, rowsPerPage } = props
-    let offset = ((page - 1) * rowsPerPage) - 1
-    if (offset < 0) {
-        offset = 0
-    }
+    const offset = (page - 1) * rowsPerPage
     await loadNfts(offset, rowsPerPage)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
-    if (!activeAuthhead.value?.identitySnapshotIdentifier) return
+    const id = activeAuthhead.value?.identitySnapshotIdentifier
+    const record = identitySnapshotRecord.value as IdentitySnapshotRecord
+    const contentHash = id?.contentHash || record?.contentHash
+    const authbase = id?.identity?.authbase || record?.authbase || (route.query.authbase as string)
+    const timestamp = id?.identity?.timestamp || record?.timestamp
+
+    if (!contentHash || !authbase || !timestamp) return
 
     nftsLoading.value = true
     try {
         const result = await getRegistryWorker().getNfts({
-            contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
-            authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
-            timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
+            contentHash,
+            authbase,
+            timestamp,
             offset,
             limit,
             status: nftsStatusFilter.value || 'published'
@@ -325,13 +350,25 @@ const showCollectionHelp = () => {
     })
 }
 
+const refreshNfts = async () => {
+    await (getRegistryWorker()).getIdentitySnapshot({
+        contentHash: activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+        identity: {
+            authbase: activeAuthhead.value!.identitySnapshotIdentifier!.identity.authbase,
+            timestamp: activeAuthhead.value!.identitySnapshotIdentifier!.identity.timestamp
+        }
+    })
+    await loadNfts(0, ROWS_PER_PAGE)
+
+}
+
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
     if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
-        // await loadNfts(0, ROWS_PER_PAGE)
+        await loadNfts(0, ROWS_PER_PAGE)
     }
 }, { immediate: true })
 
