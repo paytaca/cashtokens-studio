@@ -482,6 +482,7 @@ const registryWorker = {
           identityHistory.sort((a, b) => b.localeCompare(a))
           const latest = identityHistory[0] as string
           const identitySnapshot = parsedRegistry.identities![authbase]![latest] as IdentitySnapshot
+          const nftTypeKeys = extractNftTypeKeys(identitySnapshot)
           if (identitySnapshot.token?.nfts?.parse?.types) {
             identitySnapshot.token.nfts.parse.types = {} as { [key: string]: NftType }
           }
@@ -491,7 +492,8 @@ const registryWorker = {
             authbase: authbase,
             timestamp: latest,
             identitySnapshot: identitySnapshot,
-            status: 'published'
+            status: 'published',
+            nftTypeKeys
           } as IdentitySnapshotRecord
 
           if (identitySnapshot.token?.category) {
