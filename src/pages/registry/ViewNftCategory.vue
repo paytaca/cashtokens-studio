@@ -308,13 +308,12 @@ watch(() => nftsStatusFilter.value, async (v) => {
 
 
 const onNftsRequest = async (props: any) => {
-    const { page, rowsPerPage, rowsNumber } = props
+    const { page, rowsPerPage } = props
     let offset = ((page - 1) * rowsPerPage) - 1
     if (offset < 0) {
         offset = 0
     }
-    const limit = offset + (rowsPerPage || rowsNumber)
-    await loadNfts(offset, limit)
+    await loadNfts(offset, rowsPerPage)
 }
 
 const loadNfts = async (offset: number, limit: number) => {
