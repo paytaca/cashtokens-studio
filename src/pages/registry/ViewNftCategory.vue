@@ -308,12 +308,12 @@ watch(() => nftsStatusFilter.value, async (v) => {
 
 
 const onNftsRequest = async (props: any) => {
-    const { page, rowsPerPage } = props
+    const { page, rowsPerPage, rowsNumber } = props
     let offset = ((page - 1) * rowsPerPage) - 1
     if (offset < 0) {
         offset = 0
     }
-    const limit = offset + rowsPerPage
+    const limit = offset + (rowsPerPage || rowsNumber)
     await loadNfts(offset, limit)
 }
 
@@ -329,14 +329,12 @@ const loadNfts = async (offset: number, limit: number) => {
             limit,
             status: nftsStatusFilter.value || 'published'
         })
-        console.log('TEZT result', result)
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
         }
     }
     catch (error) {
-        console.log('ERROR', error)
         $q.notify({
             type: 'warning',
             message: t('warning.errorLoadingPublishedNfts')
