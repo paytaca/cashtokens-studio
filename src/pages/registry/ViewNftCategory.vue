@@ -217,7 +217,7 @@ const initialSnapshotJson = ref('')
 const nfts = ref<NftRecord[]>([])
 const nftsTotal = ref(0)
 const nftsLoading = ref(false)
-const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>(props.targetNftsStatusFilter)
+const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>()
 
 const nftCategory = computed<NftCategoryI | null>({
     get() {
@@ -229,6 +229,8 @@ const nftCategory = computed<NftCategoryI | null>({
         }
     }
 })
+
+const unpublishedCount = ref(0)
 
 const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
     const id = activeAuthhead.value?.identitySnapshotIdentifier
@@ -276,6 +278,74 @@ const nftTypeColumns: QTableColumn[] = [
 ]
 
 
+const onNftsRequest = async (props: any) => {
+    const { page, rowsPerPage } = props
+    let offset = ((page - 1) * rowsPerPage) - 1
+    if (offset < 0) {
+        offset = 0
+    }
+    await loadNfts(offset, rowsPerPage)
+}
+
+const loadNfts = async (offset: number, limit: number) => {
+    if (!activeAuthhead.value?.identitySnapshotIdentifier) return
+
+    nftsLoading.value = true
+    try {
+        const result = await getRegistryWorker().getNfts({
+            contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
+            authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
+            timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
+            offset,
+            limit,
+            status: nftsStatusFilter.value || 'published'
+        })
+        if (result) {
+            nfts.value = result.items
+            nftsTotal.value = result.total
+        }
+    }
+    catch (error) {
+        $q.notify({
+            type: 'warning',
+            message: t('warning.errorLoadingPublishedNfts')
+        })
+    } finally {
+        nftsLoading.value = false
+    }
+}
+
+const showCollectionHelp = () => {
+    const isParsable = collectionType.value === 'parsable'
+    $q.dialog({
+        component: HelpDialog,
+        componentProps: {
+            message: isParsable ? t('info.parsableCollectionHelp') : t('info.sequentialCollectionHelp')
+        }
+    })
+}
+
+watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
+    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
+        identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
+        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
+        collectionType.value = isParsable ? 'parsable' : 'sequential'
+        initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
+        // await loadNfts(0, ROWS_PER_PAGE)
+    }
+}, { immediate: true })
+
+
+watch(
+    () => identitySnapshot.value,
+    (snapshot) => {
+        if (!snapshot || !initialSnapshotJson.value) return
+        modified.value = JSON.stringify(snapshot) !== initialSnapshotJson.value
+    },
+    { deep: true }
+)
+
+
 watch(collectionType, (type) => {
     const keyCol = nftTypeColumns[0]
     if (keyCol) keyCol.label = type === 'parsable' ? 'Bottom Alt Stack Hex' : 'Sequence Number'
@@ -306,74 +376,49 @@ watch(() => nftsStatusFilter.value, async (v) => {
     await onNftsRequest(nftsPagination.value)
 })
 
+onMounted(async () => {
+    if (activeAuthhead.value?.identitySnapshotIdentifier) {
+        const newNftsCount = await db.nfts
+            .where('[contentHash+authbase+timestamp+status]')
+            .equals([
+                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                'new'
+            ])
+            .or('[contentHash+authbase+timestamp+status]')
+            .equals([
+                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                'new'
+            ])
+            .count()
+        if (newNftsCount > 0) {
+            unpublishedCount.value = newNftsCount
+            nftsStatusFilter.value = 'new'
+        } else {
+            const modifiedNftsCount = await db.nfts
+                .where('[contentHash+authbase+timestamp+status]')
+                .equals([
+                    activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                    'modified'
+                ])
+                .count()
 
-const onNftsRequest = async (props: any) => {
-    const { page, rowsPerPage } = props
-    let offset = ((page - 1) * rowsPerPage) - 1
-    if (offset < 0) {
-        offset = 0
-    }
-    await loadNfts(offset, rowsPerPage)
-}
-
-const loadNfts = async (offset: number, limit: number) => {
-    if (!activeAuthhead.value?.identitySnapshotIdentifier) return
-    nftsLoading.value = true
-    try {
-        const result = await getRegistryWorker().getNfts({
-            contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
-            authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
-            timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
-            offset,
-            limit,
-            status: nftsStatusFilter.value || 'published'
-        })
-        if (result) {
-            nfts.value = result.items
-            nftsTotal.value = result.total
+            if (modifiedNftsCount > 0) {
+                unpublishedCount.value = modifiedNftsCount
+                nftsStatusFilter.value = 'modified'
+            }
         }
     }
-    catch (error) {
-        $q.notify({
-            type: 'warning',
-            message: t('warning.errorLoadingPublishedNfts')
-        })
-    } finally {
-        nftsLoading.value = false
+
+    if (unpublishedCount.value === 0) {
+        nftsStatusFilter.value = 'published'
     }
-}
-
-
-
-const showCollectionHelp = () => {
-    const isParsable = collectionType.value === 'parsable'
-    $q.dialog({
-        component: HelpDialog,
-        componentProps: {
-            message: isParsable ? t('info.parsableCollectionHelp') : t('info.sequentialCollectionHelp')
-        }
-    })
-}
-
-watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
-    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
-        identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
-        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
-        collectionType.value = isParsable ? 'parsable' : 'sequential'
-        initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
-        await loadNfts(0, ROWS_PER_PAGE)
-    }
-}, { immediate: true })
-
-
-watch(
-    () => identitySnapshot.value,
-    (snapshot) => {
-        if (!snapshot || !initialSnapshotJson.value) return
-        modified.value = JSON.stringify(snapshot) !== initialSnapshotJson.value
-    },
-    { deep: true }
-)
+})
 
 </script>
 
