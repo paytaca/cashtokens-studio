@@ -549,8 +549,6 @@ const registryWorker = {
           ? (sortedNftTypeKeys.at(-1) || '') 
           : (sortedNftTypeKeys[0] || '');
 
-        const targetNftTypeKeys = sortedNftTypeKeys.slice(params.offset ?? 0, params.limit || 5) || []
-        
         if (params.status && params.status !== 'published') {
           const items = await db.nfts
               .where('[contentHash+authbase+timestamp+status]')
@@ -566,10 +564,9 @@ const registryWorker = {
             }
         }
 
-        const paginatedNftTypeKeys = targetNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
+        const paginatedNftTypeKeys = sortedNftTypeKeys.slice(params.offset ?? 0, (params.offset ?? 0) + (params.limit || 5))
         const total = identitySnapshotRecord?.nftTypeKeys?.length ?? 0
         const items = []
-
         let parsedRegistry = null
         for (const key of paginatedNftTypeKeys) {
           const nftRecord = await db.nfts.where('[contentHash+authbase+timestamp+type]')
@@ -598,9 +595,8 @@ const registryWorker = {
             status: 'published' as RegistryRecordStatus
           }
           
-          await db.createNftRecord(newNftRecord)
-
-          items.push(newNftRecord)          
+          const createdNftRecord = await db.createNftRecord(newNftRecord)
+          items.push(createdNftRecord)          
         }
 
         return {
@@ -631,13 +627,8 @@ const registryWorker = {
         })
 
         const publishedNftTypeKeys: string[] = [...identitySnapshotRecord?.nftTypeKeys || []] 
-
         const collectionType = (identitySnapshotRecord?.identitySnapshot?.token?.nfts?.parse as any).bytecode ? NftCollectionType.parsable : NftCollectionType.sequential
-        
-        console.log('zx publishedNftTypeKeys', publishedNftTypeKeys, collectionType)
-        
         const sortedPublishedNftTypeKeys = sortNftTypeKeys({ keys: publishedNftTypeKeys, order: 'desc', collectionType })
-        console.log('sortedPublishedNftTypeKeys', sortedPublishedNftTypeKeys)
         const lastNftTypeKey = sortedPublishedNftTypeKeys.shift()
 
         const result: GetNftLastTypeResult = {
@@ -649,7 +640,6 @@ const registryWorker = {
           result.sequenceNumber = Number(vmNumberToBigInt(hexToBin(lastNftTypeKey)))
         } 
 
-        console.log('@registry-worker params.publishedOnly', params.publishedOnly)
         if (params.publishedOnly) {
           return result
         }
@@ -663,7 +653,6 @@ const registryWorker = {
           return nftRecord.status !== 'published'
         })
 
-        console.log('@registry-worker nftRecords', nftRecords)
         if (nftRecords.length > 0) {
           const loadedNftTypes = nftRecords.map((nft) => nft.type)
           const nftTypesSet = Array.from(new Set([...publishedNftTypeKeys, ...loadedNftTypes]))
