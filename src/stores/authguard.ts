@@ -3,6 +3,10 @@ import { ref, watch } from 'vue'
 import { AuthheadId, filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/authguard'
 import type { UtxoWithPath, UtxoWithAuthKey, AuthheadUtxo, DecoratedUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
+import { db } from 'src/core/client-db'
+import { LocalStorage } from 'quasar'
+import { stringify } from '@bitauth/libauth'
+import { parseLibauthStringified } from 'src/core/utils'
 
 export const useAuthguardStore = defineStore('authguard-store', () => {
 
@@ -17,7 +21,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeys = ref<UtxoWithPath[]>([])
   const authkeysLastSync = ref<number>()
   const authkeysLoading = ref<boolean>()
-  const activeAuthhead = ref<DecoratedUtxo>()
+  const activeAuthhead = ref<DecoratedUtxo | null>(LocalStorage.getItem('active_authhead') ? parseLibauthStringified(LocalStorage.getItem('active_authhead') as object) : null)
   const authheadLoading = ref<Record<string, boolean>>({}) // {<txid:vout>: true}
   
 
@@ -31,6 +35,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     latestAuthhead.authkey.vout = activeAuthhead.value.authkey.vout
     latestAuthhead.authkey.txid = latestAuthhead.txid
     activeAuthhead.value = Object.assign({}, latestAuthhead)
+    setActiveAuthhead(activeAuthhead.value)
   }
 
   async function loadAuthhead(params: { authkey: UtxoWithPath, sync?: boolean, authheadId?: AuthheadId }) {
@@ -55,6 +60,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
       const authbase = authhead.token?.category;
 
       try {
+
         const registryRecord = await loadRegistry(authbase, params.sync);
 
         if (!registryRecord) return;
@@ -137,7 +143,6 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     try {
         authkeysLoading.value = true
         const utxos = await externalWallet.getUtxos({ sync }) as UtxoWithPath[]
-        console.log('loading authkeys', utxos)
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
         // if (sync) {
         //   await loadAuthheads(sync)
@@ -152,6 +157,11 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
   const setActiveAuthhead = (authhead: UtxoWithAuthKey) => {
     activeAuthhead.value = authhead
+    if (authhead) {
+      LocalStorage.setItem('active_authhead', JSON.parse(stringify(authhead)))
+    } else {
+      LocalStorage.removeItem('active_authhead')
+    }
   }
 
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
@@ -159,7 +169,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
       try {
         await loadAuthheads(authkeys.value || [], true)
       } catch (error) {
-        console.log(error)
+        console.error(error)
       }
     }
   })
