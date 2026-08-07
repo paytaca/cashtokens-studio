@@ -81,9 +81,10 @@
         <div v-else class="text-caption text-grey-6">No attributes</div>
       </FormField>
 
-      <div v-if="allowEdit" class="row justify-end q-mt-lg q-gutter-x-md">
+      <div class="row justify-end q-mt-lg q-gutter-x-md">
         <q-btn unelevated label="Close" @click="$emit('close')" />
-        <q-btn unelevated color="primary" label="Save" :disable="!isModified" @click="$emit('save', nft)" />
+        <q-btn v-if="mode !== 'view'" unelevated color="primary" label="Save" :disable="disableSave"
+          @click="$emit('save', nft)" />
       </div>
     </div>
   </div>
@@ -102,6 +103,7 @@ import { commitmentToSequenceNumber, sequenceNumberToCommitment } from 'src/core
 const props = defineProps<{
   // commitment: string
   allowEdit?: boolean
+  mode: 'add' | 'edit' | 'view'
 }>()
 
 const $q = useQuasar()
@@ -122,7 +124,13 @@ const loadingMedia = ref(false)
 
 const initialNft = ref('')
 
-const isModified = computed(() => JSON.stringify(nft.value) !== initialNft.value)
+const isModified = computed(() => {
+  return JSON.stringify(nft.value) !== initialNft.value
+})
+
+const disableSave = computed(() => {
+  return props.mode === 'view' || (props.mode === 'edit' && !isModified.value)
+})
 
 const iconUrl = computed(() => {
   const icon = nft.value.uris?.icon
@@ -276,13 +284,13 @@ watch(() => sequenceNumber.value, (newValue) => {
   if (newValue) {
     commitment.value = sequenceNumberToCommitment(newValue)
   }
-})
+}, { immediate: true })
 
 onMounted(() => {
-  if (commitment.value) {
-    sequenceNumber.value = String(commitmentToSequenceNumber(commitment.value))
-  }
   initialNft.value = JSON.stringify(nft.value)
+  if (!commitment.value) {
+    sequenceNumber.value = String(commitmentToSequenceNumber('01'))
+  }
   loadMedia()
 })
 
