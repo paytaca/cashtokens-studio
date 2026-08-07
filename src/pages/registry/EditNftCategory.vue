@@ -160,7 +160,7 @@
                 </q-card>
             </div>
         </div>
-        <q-page-sticky v-if="modified" position="bottom" class="q-pa-md items-center" expand>
+        <q-page-sticky v-if="modified || unpublishedCount > 0" position="bottom" class="q-pa-md items-center" expand>
             <div class="row justify-end q-gutter-md items-center bg-dark q-pa-md rounded-borders"
                 style="border: 1px solid #555; width: 100%;">
                 <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="onResetClick" />
@@ -176,7 +176,6 @@ import { computed, inject, onMounted, ref, triggerRef, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import type { QTableColumn } from 'quasar'
 import type {
     IdentitySnapshot,
     NftType,
@@ -246,8 +245,9 @@ const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerP
  */
 const nftsLastNftTypeKey = ref<string>('')
 
+const unpublishedCount = ref()
+
 const onAddNftClick = async () => {
-    console.log('@onAddClick authhead', activeAuthhead.value)
     const lastKnownType = await getRegistryWorker().getNftsLastType({
         contentHash: activeAuthhead.value?.identitySnapshotIdentifier!.contentHash as string,
         authbase: activeAuthhead.value?.identitySnapshotIdentifier!.identity.authbase as string,
@@ -255,7 +255,6 @@ const onAddNftClick = async () => {
         publishedOnly: false
     })
 
-    console.log('@onAddClick', lastKnownType)
     router.push({
         name: 'add-nft',
         query: {
@@ -288,19 +287,13 @@ const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
 }
 
 const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) => {
-    try {
-        await db.setNftRecordStatus({
-            contentHash: activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-            authbase: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-            timestamp: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
-            status: 'deleted',
-            type: row.type
-        })
-        console.log('row', row)
-    } catch (error) {
-
-        console.log(error)
-    }
+    await db.setNftRecordStatus({
+        contentHash: activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+        authbase: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+        timestamp: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+        status: 'deleted',
+        type: row.type
+    })
 }
 
 
@@ -327,7 +320,6 @@ const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRe
             limit,
             status: statusFilter || nftsStatusFilter.value
         })
-        console.log('RESULT', result)
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
@@ -335,7 +327,6 @@ const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRe
         }
     }
     catch (error) {
-        console.log('ERROR', error)
         $q.notify({
             type: 'warning',
             message: t('warning.errorLoadingPublishedNfts')
@@ -539,6 +530,50 @@ const onResetClick = () => {
     if (!initialSnapshotJson.value) return
     identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
 }
+
+
+onMounted(async () => {
+    if (activeAuthhead.value?.identitySnapshotIdentifier) {
+        const newNftsCount = await db.nfts
+            .where('[contentHash+authbase+timestamp+status]')
+            .equals([
+                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                'new'
+            ])
+            .or('[contentHash+authbase+timestamp+status]')
+            .equals([
+                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                'new'
+            ])
+            .count()
+        if (newNftsCount > 0) {
+            unpublishedCount.value = newNftsCount
+            nftsStatusFilter.value = 'new'
+        } else {
+            const modifiedNftsCount = await db.nfts
+                .where('[contentHash+authbase+timestamp+status]')
+                .equals([
+                    activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
+                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
+                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+                    'modified'
+                ])
+                .count()
+
+            if (modifiedNftsCount > 0) {
+                unpublishedCount.value = modifiedNftsCount
+                nftsStatusFilter.value = 'modified'
+            }
+        }
+
+
+
+    }
+})
 
 </script>
 
