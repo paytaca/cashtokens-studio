@@ -159,7 +159,7 @@ export class GenesisInput implements UtxoI {
   async updateUtxo(ownerWallet: Wallet, txid: string): Promise<boolean> {
     this._processing = 'Updating';
     const utxoToUse = (await ownerWallet.getAddressUtxos()).filter(
-      (u: UtxoI) => (u.txid = txid),
+      (u: UtxoI) => (u.txid === txid),
     );
     if (!utxoToUse) return false;
     this.utxo = utxoToUse[0];
