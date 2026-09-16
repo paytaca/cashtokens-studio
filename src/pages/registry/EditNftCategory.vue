@@ -156,7 +156,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                            }})</span>
+                                                        }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -241,6 +241,7 @@ const identitySnapshotRecord = useObservable(
     }) as any,
     { initialValue: {} }
 )
+
 const initialSnapshotJson = ref('')
 
 const modified = computed(() => {
@@ -374,8 +375,8 @@ const nftCategory = computed<NftCategoryI | null>({
 
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
-watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
-    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
+watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activeAuthhead.value as UtxoWithAuthKey], async ([newRecord, newActiveAuthhead]) => {
+    if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value && newActiveAuthhead) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
@@ -405,6 +406,13 @@ watch(
     },
     { immediate: true }
 )
+
+
+watch(() => nftsStatusFilter.value, async (newNftsStatusFilter) => {
+    if (newNftsStatusFilter) {
+        await loadNfts(0, ROWS_PER_PAGE)
+    }
+})
 
 
 const onSaveClick = async () => {
