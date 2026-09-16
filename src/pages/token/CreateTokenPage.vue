@@ -167,7 +167,10 @@
                                         @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
                                         :disable="iconFileUploading" outlined bottom-slots class="hidden">
                                     </q-file>
+                                    <q-input v-model="identitySnapshot.uris!.web" label="Website" filled type="text"
+                                        placeholder="https://" class="full-width" />
                                 </div>
+
                                 <q-stepper-navigation>
                                     <div class="flex justify-end q-gutter-sm">
                                         <q-btn flat @click="step = 2" label="Back" />
@@ -242,7 +245,8 @@ const identitySnapshot = ref<IdentitySnapshot>({
         }
     },
     uris: {
-        icon: ''
+        icon: '',
+        web: ''
     }
 })
 
@@ -574,13 +578,15 @@ const onSubmit = async () => {
             message: 'Broadcasting transaction, please wait...'
         })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                loadingGroup({ message: progress })
+            }
+        })
 
-        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
-
-        const broadcastResult = await broadcastResponse.json()
-
-        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+        if (broadcastError) throw broadcastError
 
         await db.setRegistryPublished(authbase, contentHash)
 
@@ -590,7 +596,7 @@ const onSubmit = async () => {
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: broadcastResult.txid
+            txHash: txid
         })
 
 
@@ -598,7 +604,7 @@ const onSubmit = async () => {
 
         await db.saveActivity({
             event: `Created ${identitySnapshot.value.token!.symbol} Token`,
-            txid: broadcastResult.txid,
+            txid: txid,
             status: 'success'
         })
 
@@ -611,7 +617,7 @@ const onSubmit = async () => {
             componentProps: {
                 statusType: 'success',
                 statusText: `${identitySnapshot.value.token!.symbol} created successfully. An accompanying NFT was sent to your address. That NFT serves as your token's authentication key. Make Sure you don't lose it.`,
-                txid: broadcastResult.txid
+                txid: txid
             }
         }).onOk(() => {
             router.push('/dashboard#created')
