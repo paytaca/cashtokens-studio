@@ -9,8 +9,8 @@
             </q-card-title>
             <div class="q-pa-lg">
               <SequentialNft v-if="!route.query.bytecode" :key="'seq-' + saveKey"
-                v-model:commitment="commitmentOrBottomAltStack" v-model:nft="nft" :allow-edit="true" @save="onSaveClick"
-                @close="goBack" />
+                v-model:commitment="commitmentOrBottomAltStack" v-model:nft="nft" mode="add" allow-edit
+                @save="onSaveClick" @close="goBack" />
               <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="commitmentOrBottomAltStack"
                 v-model:nft="nft" :allow-edit="true" @save="onSaveClick" :bytecode="route.query.bytecode as string"
                 @close="goBack" />
@@ -25,12 +25,17 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
 import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
 import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
 import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { useRoute, useRouter } from 'vue-router'
 import { commitmentToSequenceNumber, createNftTypeTemplate, sequenceNumberToCommitment } from 'src/core/bcmr/utils'
 import { NftCollectionType } from 'src/core/bcmr'
+import { useAuthguardStore } from 'src/stores/authguard'
+import { db } from 'src/core/client-db'
+import { getErrorMessage } from 'src/core/utils'
 
 const props = defineProps<{
   lastKnownType?: string
@@ -39,8 +44,11 @@ const props = defineProps<{
 }>()
 
 const $q = useQuasar()
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
+const authguardStore = useAuthguardStore()
+const { activeAuthhead } = storeToRefs(authguardStore)
 const saveKey = ref(0)
 
 
@@ -56,8 +64,44 @@ const goBack = () => {
   }
 }
 
-const onSaveClick = () => {
-  console.log('saving', nft, commitmentOrBottomAltStack)
+const onSaveClick = async (rawNft: NftType) => {
+  if (!activeAuthhead.value) return
+
+  const nft = JSON.parse(JSON.stringify(rawNft))
+  const { contentHash, identity } = activeAuthhead.value.identitySnapshotIdentifier!
+
+  const existing = await db.nfts
+    .where('[contentHash+authbase+timestamp+type]')
+    .equals([
+      contentHash,
+      identity.authbase,
+      identity.timestamp,
+      commitmentOrBottomAltStack.value
+    ])
+    .first()
+
+  try {
+    if (existing) {
+      const status = existing.status === 'published' ? 'modified' : existing.status
+      await db.nfts.put({ ...existing, nft, status })
+    } else {
+      const category = activeAuthhead.value.token?.category
+        || activeAuthhead.value.identitySnapshot?.token?.category
+      await db.nfts.put({
+        contentHash,
+        authbase: identity.authbase,
+        timestamp: identity.timestamp,
+        category: category || '',
+        type: commitmentOrBottomAltStack.value,
+        nft,
+        status: 'new'
+      })
+    }
+    $q.notify({ type: 'positive', message: t('success.savedDescription') })
+    goBack()
+  } catch (error) {
+    $q.notify({ type: 'negative', message: getErrorMessage(error) })
+  }
 }
 
 onMounted(async () => {
