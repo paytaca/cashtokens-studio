@@ -213,6 +213,7 @@ import { stringify, importMetadataRegistry } from 'bitauth-libauth-v3'
 import { NetworkType } from 'mainnet-js'
 import CopyText from 'src/components/CopyText.vue'
 import { DEFAULT_TOKEN_VALUE } from 'src/apps'
+import { broadcastTransaction } from 'src/services/transaction'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -391,13 +392,15 @@ const onGenerateGenesisInput = async () => {
             message: 'Broadcasting transaction, please wait...'
         })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                loadingGroup({ message: progress })
+            }
+        })
 
-        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
-
-        const broadcastResult = await broadcastResponse.json()
-
-        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
+        if (broadcastError) throw broadcastError
 
         loadingGroup({
             message: 'Broadcast success, awaiting tx propagation...'
@@ -405,14 +408,14 @@ const onGenerateGenesisInput = async () => {
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: broadcastResult.txid
+            txHash: txid
         })
 
         loadingGroup()
 
         await db.saveActivity({
             event: `Created genesis input`,
-            txid: broadcastResult.txid,
+            txid: txid,
             status: 'success'
         })
 
@@ -425,7 +428,7 @@ const onGenerateGenesisInput = async () => {
             componentProps: {
                 statusType: 'success',
                 statusText: `Successfully created genesis input!`,
-                txid: broadcastResult.txid
+                txid: txid
             }
         }).onOk(() => {
             genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
