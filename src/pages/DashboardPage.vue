@@ -4,13 +4,11 @@
       <div class="q-pa-md bg-dark text-white q-gutter-y-md"
         style="background: radial-gradient(circle at 50% 45%, #242936 0%, #0d0f13 70%, #050608 100%)">
         <div class="row q-col-gutter-md justify-center" style="max-width: 75rem; margin: 0 0;">
-
           <div class="col-12">
             <q-card flat class="relative-position overflow-visible" style=" min-height: 8rem; ">
               <div class="rounded-borders" style="
                 height: 8rem; 
                 width: 100%; 
-                
               ">
               </div>
               <div class="absolute-bottom row justify-center"
@@ -21,7 +19,6 @@
               </div>
             </q-card>
           </div>
-
           <div class="col-12 text-center q-mt-lg">
             <div class="text-h5 text-weight-bold text-white">{{ primaryXPub?.replace(primaryXPub.substring(8, 105),
               '...') }}
@@ -898,8 +895,10 @@ const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
     query: {
       authkey: `${row.authkey.txid}:${row.authkey.vout}`,
       authhead: `${row.txid}:${row.vout}`,
-      authbase: row.token!.category,
-      registryIdentity: row.identitySnapshotIdentifier.registryIdentity // TODO: make this robust
+      authbase: row.identitySnapshotIdentifier?.identity?.authbase || row.token!.category,
+      registryIdentity: row.identitySnapshotIdentifier?.registryIdentity,
+      contentHash: row.identitySnapshotIdentifier?.contentHash,
+      timestamp: row.identitySnapshotIdentifier?.identity?.timestamp,
     }
   })
 }
