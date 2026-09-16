@@ -10,7 +10,7 @@
         <div class="text-subtitle1 text-weight-medium">{{ nft.name }}</div>
         <div class="text-caption text-grey-5 text-mono q-mt-xs">&lt;0x{{ commitment }}&gt;</div>
       </div>
-      <div class="col text-right">
+      <div class="col text-right">SequenceNumber
         <q-chip round color="accent" size="lg">#{{ sequenceNumber }}</q-chip>
       </div>
     </div>
@@ -84,7 +84,7 @@
       <div class="row justify-end q-mt-lg q-gutter-x-md">
         <q-btn unelevated label="Close" @click="$emit('close')" />
         <q-btn v-if="mode !== 'view'" unelevated color="primary" label="Save" :disable="disableSave"
-          @click="$emit('save', nft)" />
+          @click="onSaveClick(nft)" />
       </div>
     </div>
   </div>
@@ -276,6 +276,22 @@ const uploadMedia = () => {
   input.click()
 }
 
+const onSaveClick = (nft: NftType) => {
+  if (nft.name?.startsWith('NFT #')) {
+    $q.dialog({
+      title: 'Confirm',
+      message: 'Are you sure you want to use the default name "' + nft.name + '" for this NFT?',
+      cancel: true,
+      persistent: true
+    }).onOk(() => {
+      emit('save', nft)
+    })
+
+  } else {
+    emit('save', nft)
+  }
+}
+
 watch(() => nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.web, () => {
   loadMedia()
 })
@@ -283,14 +299,13 @@ watch(() => nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.we
 watch(() => sequenceNumber.value, (newValue) => {
   if (newValue) {
     commitment.value = sequenceNumberToCommitment(newValue)
+    nft.value.name = `NFT #${newValue}`
   }
 }, { immediate: true })
 
 onMounted(() => {
   initialNft.value = JSON.stringify(nft.value)
-  if (!commitment.value) {
-    sequenceNumber.value = String(commitmentToSequenceNumber('01'))
-  }
+  sequenceNumber.value = String(commitmentToSequenceNumber(commitment.value || '01'))
   loadMedia()
 })
 
