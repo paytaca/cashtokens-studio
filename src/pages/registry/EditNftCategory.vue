@@ -123,26 +123,42 @@
                                                 <div class="q-my-xs q-gutter-x-sm">
                                                     <span class="text-h6">NFT Collection Info</span>
                                                 </div>
-                                                <div class="flex q-gutter-x-sm">
+                                                <div class="flex q-gutter-x-sm items-center">
 
                                                     <q-btn flat no-caps icon="mdi-table-filter" label="Filter"
                                                         v-close-popup dense>
                                                         <q-menu anchor="bottom left" self="top end"
                                                             icon="mdi-table-filter">
                                                             <q-item clickable @click="nftsStatusFilter = 'published'">
+                                                                <q-item-section avatar><q-icon
+                                                                        v-if="nftsStatusFilter === 'published'"
+                                                                        name="mdi-check" /></q-item-section>
                                                                 <q-item-section>Published</q-item-section>
                                                             </q-item>
                                                             <q-item clickable @click="nftsStatusFilter = 'modified'">
+                                                                <q-item-section avatar><q-icon
+                                                                        v-if="nftsStatusFilter === 'modified'"
+                                                                        name="mdi-check" /></q-item-section>
                                                                 <q-item-section>Modified/Unpublished</q-item-section>
                                                             </q-item>
                                                             <q-item clickable @click="nftsStatusFilter = 'new'">
+                                                                <q-item-section avatar><q-icon
+                                                                        v-if="nftsStatusFilter === 'new'"
+                                                                        name="mdi-check" /></q-item-section>
                                                                 <q-item-section>New/Unpublished</q-item-section>
                                                             </q-item>
                                                             <q-item clickable @click="nftsStatusFilter = 'deleted'">
+                                                                <q-item-section avatar><q-icon
+                                                                        v-if="nftsStatusFilter === 'deleted'"
+                                                                        name="mdi-check" /></q-item-section>
                                                                 <q-item-section>To be deleted</q-item-section>
                                                             </q-item>
                                                         </q-menu>
+                                                        <span class="q-ml-sm text-caption text-grey-6">({{
+                                                            nftsStatusFilter
+                                                            }})</span>
                                                     </q-btn>
+                                                    <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
                                                         @click="onAddNftClick" flat no-caps dense>
                                                     </q-btn>
@@ -320,6 +336,7 @@ const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRe
             limit,
             status: statusFilter || nftsStatusFilter.value
         })
+        console.log('@result, result', result)
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
