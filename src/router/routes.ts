@@ -13,7 +13,10 @@ const registryNftsRoutesProps = (route: any) => ({
   authhead: route.query.authhead,
   authbase: route.query.authbase,
   registryIdentity: route.query.registryIdentity,
-  targetNftsStatusFilter: route.query.nftsStatusFilter
+  targetNftsStatusFilter: route.query.nftsStatusFilter,
+  timestamp: route.query.timestamp,
+  contentHash: route.query.contentHash,
+  category: route.query.category,
 });
 
 const routes: RouteRecordRaw[] = [
