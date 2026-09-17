@@ -1,4 +1,6 @@
+import { binToHex, encodeTransactionOutput, hexToBin, isHex, ReadResult, readTransactionOutput } from 'bitauth-libauth-v3';
 import type { DecoratedUtxo } from '../types'
+import { stringify } from '@bitauth/libauth';
 
 export function shortenTokenId(tokenId = '') {
     return tokenId.replace(tokenId.substring(5, 60), '...')
@@ -88,3 +90,28 @@ export async function safeAsync<T, E = Error>(
       .catch<[E, null]>((error: E) => [error, null]);
   };
   
+export function parseLibauthStringified(stringified: string | object) {
+    const str = typeof(stringified) === 'string'? stringified : JSON.stringify(stringified)
+    // Regex patterns mapping to the template strings libauth generates
+    const bigintRegex = /^<bigint:\s*(-?\d+)n>$/
+    const uint8ArrayRegex = /^<Uint8Array:\s*0x([0-9a-fA-F]*)>$/
+  
+    return JSON.parse(str, (key, value) => {
+      if (typeof value === 'string') {
+        // 1. Revive BigInts
+        const bigintMatch = value.match(bigintRegex)
+        if (bigintMatch) {
+          return BigInt(bigintMatch[1] as string)
+        }
+  
+        // 2. Revive Uint8Arrays using libauth's built-in hex converter
+        const uint8Match = value.match(uint8ArrayRegex)
+        if (uint8Match) {
+          const hexString = uint8Match[1]
+          return hexToBin(hexString as string) // Returns a standard Uint8Array
+        }
+      }
+      
+      return value // Return unchanged for regular primitives, objects, arrays
+    })
+  }
