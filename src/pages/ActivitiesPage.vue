@@ -1,40 +1,9 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
-      <div class="q-pa-md bg-dark text-white q-gutter-y-md"
-        style="background: radial-gradient(circle at 50% 45%, #242936 0%, #0d0f13 70%, #050608 100%)">
-        <div class="row q-col-gutter-md justify-center" style="max-width: 75rem; margin: 0 0;">
-          <div class="col-12">
-            <q-card flat class="relative-position overflow-visible" style=" min-height: 8rem; ">
-              <div class="rounded-borders" style="
-                height: 8rem; 
-                width: 100%; 
-              ">
-              </div>
-              <div class="absolute-bottom row justify-center"
-                style="margin-bottom: -2.25rem; left: 0; right: 0; z-index: 10;">
-                <q-avatar size="7rem" class="shadow-2 bg-dark">
-                  <img :src="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`" alt="avatar">
-                </q-avatar>
-              </div>
-            </q-card>
-          </div>
-          <div class="col-12 text-center q-mt-lg">
-            <div class="text-h5 text-weight-bold text-white">{{ primaryXPub?.replace(primaryXPub.substring(8, 105),
-              '...') }}
-            </div>
-            <div class="flex items-center justify-center">
-              <q-btn icon="img:/images/bitcoin-cash-circle.svg" flat no-caps>
-                <div class="q-px-sm">{{ formatBch(bchBalance) }}</div>
-              </q-btn>
-            </div>
-          </div>
-        </div>
-      </div>
+      <ExplainerBanner class="q-my-md" icon="history" :title="$t('dashboard.pageTitle.activities')"
+        :description="$t('dashboard.activity.caption')" />
 
-      <div class="q-mb-sm text-grey-5 text-caption q-mt-md">
-        {{ $t('dashboard.activity.caption') }}
-      </div>
       <div class="row q-gutter-sm q-mb-md items-center">
         <q-input v-model="activitySearchQuery" dark dense outlined :placeholder="$t('dashboard.activity.searchPlaceholder')"
           class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px;">
@@ -88,41 +57,20 @@
 </template>
 
 <script setup lang="ts">
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n'
 import { QTableColumn, useQuasar } from 'quasar'
 import { shortenTokenId } from 'src/core/utils'
 import CopyText from 'components/CopyText.vue'
+import ExplainerBanner from 'src/components/ExplainerBanner.vue'
 import { db } from 'src/core/client-db'
 
 const { t } = useI18n()
 const $q = useQuasar()
 
-const { wallet } = useWizardConnectWallet()
-
 const activities = ref<any[]>([])
 const activityLoading = ref(false)
 const activitySearchQuery = ref('')
-
-const primaryXPub = computed(() =>
-  wallet.value?.session?.paths?.find((p: any) => p.name === 'receive')?.xpub
-)
-
-function formatBch(satoshis: bigint): string {
-  const bch = Number(satoshis) / 100_000_000
-  return bch.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
-}
-
-const bchBalance = computed(() => {
-  const utxos = wallet.value?.utxos || []
-  return utxos.reduce((sum: bigint, u: any) => {
-    if (!u.token) {
-      return sum + BigInt(u.satoshis)
-    }
-    return sum
-  }, 0n)
-})
 
 const activityColumns: QTableColumn[] = [
   {
