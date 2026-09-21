@@ -2,12 +2,11 @@
     <q-page class="bg-dark-page">
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat class="bg-dark rounded-borders">
-                    {{ stringify(genesisInputs) }}
+                <q-card flat class="bg-dark rounded-borders" bordered>
                     <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
                         <span>Create Token</span>
                         <q-icon name="mdi-creation" size="lg" />
-                    </q-card-title>
+                        </q-card-title>
                     <q-card-section>
                         <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-dark" class="bg-dark">
                             <q-step :name="1" title="Token ID" icon="vpn_key" :done="genesisInputs.length >= 1"
@@ -44,7 +43,7 @@
                                 </div>
                                 <q-stepper-navigation class="flex justify-end q-gutter-sm">
                                     <q-btn :disable="genesisInputs.length === 0" @click="step = 2" color="primary"
-                                        label="Next" />
+                                        label="Next" rounded />
                                 </q-stepper-navigation>
                             </q-step>
 
@@ -82,6 +81,7 @@
                                         </q-input>
                                     </FormField>
                                 </template>
+
                                 <template v-else>
                                     <FormField class="q-mt-md">
                                         <label for="">Authguard Vault Address</label>
@@ -89,6 +89,7 @@
                                             emit-value map-options />
                                     </FormField>
                                 </template>
+
                                 <q-stepper-navigation class="flex justify-end q-gutter-sm">
                                     <q-btn flat @click="step = 1" label="Back" />
                                     <q-btn @click="step = 3" color="primary" label="Next"
@@ -195,7 +196,6 @@ import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
 import { uploadFile } from 'src/core/ipfs/upload-file'
 import { NFTCapability, Utxo } from 'mainnet-js-v3'
-import { shortenTokenId } from 'src/core/utils'
 import { UtxoWithPath } from 'src/core/types'
 import { createToken, isBroadcastSuccess } from 'src/core/transaction'
 import { createTokenRegistry } from 'src/core/bcmr'
@@ -212,7 +212,7 @@ import { TokenType } from 'src/core/types'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { BaseWallet } from 'mainnet-js-v3'
 import { useAuthguardStore } from 'src/stores/authguard'
-import { stringify, importMetadataRegistry } from 'bitauth-libauth-v3'
+import { importMetadataRegistry } from 'bitauth-libauth-v3'
 import { NetworkType } from 'mainnet-js'
 import CopyText from 'src/components/CopyText.vue'
 import { DEFAULT_TOKEN_VALUE } from 'src/apps'
@@ -278,22 +278,6 @@ const iconFileRef = ref()
 const iconPreviewUrl = ref()
 const iconFileUploading = ref<boolean>(false)
 const authKeySelected = ref<Utxo>()
-const authKeyOptions = computed(() => {
-    const options = authkeys.value?.map(u => {
-        return {
-            label: shortenTokenId(u.token!.category as string) + ' [Existing AuthKey]',
-            value: u
-        }
-    })
-    if (genesisInputs.value?.length >= 2) {
-        // Use the 2nd genesis input for authkey
-        options.unshift({
-            label: shortenTokenId(genesisInputs.value[1]!.txid) + ' [Generate New]',
-            value: genesisInputs.value[1]!
-        })
-    }
-    return options
-})
 
 const isStep2Done = computed(() =>
     vaultMode.value === 'new'
@@ -638,7 +622,7 @@ const onSubmit = async () => {
 }
 
 const initializeDefaultAuthKey = () => {
-    authKeySelected.value = authKeyOptions.value?.[0]?.value as Utxo
+    authKeySelected.value = existingVaultOptions.value?.[0]?.value as Utxo
 }
 
 
@@ -676,7 +660,7 @@ watch(() => iconFile.value, async (v) => {
     }
 })
 
-watch(() => authKeyOptions.value, (options) => {
+watch(() => existingVaultOptions.value, (options) => {
     if (options.length > 0) {
         initializeDefaultAuthKey()
     }
@@ -685,6 +669,7 @@ watch(() => authKeyOptions.value, (options) => {
 watch(() => wallet.value.ready, (ready, readyPrev) => {
     if (ready !== readyPrev) {
         authkeys.value = filterAuthKeys(wallet.value.utxos || []) as Utxo[]
+        genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
     }
 })
 
