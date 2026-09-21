@@ -88,7 +88,7 @@ export function createGenesisInput(params: CreateGenesisInputParams): SignTransa
 
     if (!hasEnoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
 
-    let change = totalFunds - estimatedCost 
+    const change = totalFunds - estimatedCost 
 
     if (change > 546n) { 
         transaction.addOutput({
