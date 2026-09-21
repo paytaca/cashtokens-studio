@@ -10,8 +10,7 @@
       </ExplainerBanner>
 
       <template v-if="authkeysLoading || authheadsLoading">
-        <div v-for="i in 3" :key="i"
-          class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+        <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
           <q-skeleton type="rect" size="36px" class="rounded-borders" />
           <div class="column q-gutter-y-xs" style="flex: 1;">
             <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
@@ -22,24 +21,25 @@
       </template>
       <template v-else-if="authheads.length > 0">
         <div class="row q-gutter-sm q-mb-md">
-          <q-btn flat unelevated :color="tokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
-            :text-color="tokenTypeFilter === 'all' ? 'white' : 'grey-5'"
+          <q-btn outline no-caps :color="tokenTypeFilter === 'all' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'all' }"
             :label="$t('dashboard.managed.filterAll', { count: authheads.length })" @click="tokenTypeFilter = 'all'"
-            class="q-px-sm" no-caps />
-          <q-btn flat unelevated :color="tokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
-            :text-color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
-            :label="$t('dashboard.managed.filterFungible', { count: fungibleCount })" @click="tokenTypeFilter = 'fungible'"
-            class="q-px-sm" no-caps />
-          <q-btn flat unelevated :color="tokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
-            :text-color="tokenTypeFilter === 'nft' ? 'white' : 'grey-5'"
+            class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'fungible' }"
+            :label="$t('dashboard.managed.filterFungible', { count: fungibleCount })"
+            @click="tokenTypeFilter = 'fungible'" class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'nft' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'nft' }"
             :label="$t('dashboard.managed.filterNft', { count: nftCount })" @click="tokenTypeFilter = 'nft'"
-            class="q-px-sm" no-caps />
-          <q-btn flat unelevated :color="tokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
-            :text-color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
+            class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'mixed' }"
             :label="$t('dashboard.managed.filterMixed', { count: mixedCount })" @click="tokenTypeFilter = 'mixed'"
-            class="q-px-sm" no-caps />
-          <q-input v-model="createdSearchQuery" dark dense outlined :placeholder="$t('dashboard.managed.searchPlaceholder')"
-            class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
+            class="q-px-sm" />
+          <q-input v-model="createdSearchQuery" dark dense outlined
+            :placeholder="$t('dashboard.managed.searchPlaceholder')" class="bg-grey-10"
+            style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
             <template v-slot:prepend>
               <q-icon name="search" color="grey-6" size="xs" />
             </template>
@@ -48,8 +48,8 @@
             </template>
           </q-input>
         </div>
-        <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`"
-          flat class="border-radius-12 token-reserves-table" @row-click.stop="onAuthheadsRowClick">
+        <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`" flat
+          class="border-radius-12 token-reserves-table" @row-click.stop="onAuthheadsRowClick">
           <template v-slot:body-cell-token="props">
             <q-td :props="props">
               <div class="flex items-center no-wrap q-gutter-x-md">
@@ -58,7 +58,8 @@
                     <q-img v-if="props.row.identitySnapshot?.uris?.icon"
                       :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
                     <q-img v-else
-                      :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`" fit="cover">
+                      :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
+                      fit="cover">
                       <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip') }}
                       </q-tooltip>
                     </q-img>
@@ -99,7 +100,8 @@
                       <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeMinting') }}
                     </q-badge>
-                    <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark" text-color="teal-10"
+                    <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                      text-color="teal-10"
                       class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                       <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeMutable') }}
@@ -121,7 +123,7 @@
               <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
                 class="text-subtitle1 text-weight-bold text-mono text-white">
                 {{ formatTokenAmount(props.value, props.row.identitySnapshot?.token?.symbol || '',
-                props.row.identitySnapshot?.token?.decimals, 'none') }}
+                  props.row.identitySnapshot?.token?.decimals, 'none') }}
               </div>
               <div v-else class="text-grey-6 text-caption text-mono">{{ $t('dashboard.managed.unavailable') }}</div>
               <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
@@ -221,7 +223,8 @@
         <div class="bg-dark q-pa-lg rounded-borders">
           <div class="flex flex-center column q-py-lg">
             <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px;">
-              <div class="playing-card" style="z-index: 1; transform: rotate(-12deg) translateX(22px); margin-right: -30px;">
+              <div class="playing-card"
+                style="z-index: 1; transform: rotate(-12deg) translateX(22px); margin-right: -30px;">
                 <q-icon name="brush" size="32px" color="grey-5" />
               </div>
               <div class="playing-card" style="z-index: 2; transform: rotate(-2deg);">

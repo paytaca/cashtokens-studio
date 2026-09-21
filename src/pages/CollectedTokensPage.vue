@@ -5,22 +5,22 @@
         :description="$t('dashboard.collected.caption')" />
 
       <div class="row q-gutter-sm q-mb-md">
-        <q-btn flat unelevated :color="collectedTokenTypeFilter === 'all' ? 'grey-8' : 'transparent'"
-          :text-color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-5'"
+        <q-btn outline no-caps :color="collectedTokenTypeFilter === 'all' ? 'white' : 'grey-6'"
+          :class="{ 'text-weight-bold': collectedTokenTypeFilter === 'all' }"
           :label="$t('dashboard.managed.filterAll', { count: allCollectedRows.length })"
-          @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" no-caps />
-        <q-btn flat unelevated :color="collectedTokenTypeFilter === 'fungible' ? 'green-4' : 'transparent'"
-          :text-color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-5'"
+          @click="collectedTokenTypeFilter = 'all'" class="q-px-sm" />
+        <q-btn outline no-caps :color="collectedTokenTypeFilter === 'fungible' ? 'white' : 'grey-6'"
+          :class="{ 'text-weight-bold': collectedTokenTypeFilter === 'fungible' }"
           :label="$t('dashboard.managed.filterFungible', { count: collectedFungibleCount })"
-          @click="collectedTokenTypeFilter = 'fungible'" class="q-px-sm" no-caps />
-        <q-btn flat unelevated :color="collectedTokenTypeFilter === 'nft' ? 'blue-6' : 'transparent'"
-          :text-color="collectedTokenTypeFilter === 'nft' ? 'white' : 'grey-5'"
+          @click="collectedTokenTypeFilter = 'fungible'" class="q-px-sm" />
+        <q-btn outline no-caps :color="collectedTokenTypeFilter === 'nft' ? 'white' : 'grey-6'"
+          :class="{ 'text-weight-bold': collectedTokenTypeFilter === 'nft' }"
           :label="$t('dashboard.managed.filterNft', { count: collectedNftCount })"
-          @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" no-caps />
-        <q-btn flat unelevated :color="collectedTokenTypeFilter === 'mixed' ? 'purple-4' : 'transparent'"
-          :text-color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-5'"
+          @click="collectedTokenTypeFilter = 'nft'" class="q-px-sm" />
+        <q-btn outline no-caps :color="collectedTokenTypeFilter === 'mixed' ? 'white' : 'grey-6'"
+          :class="{ 'text-weight-bold': collectedTokenTypeFilter === 'mixed' }"
           :label="$t('dashboard.managed.filterMixed', { count: collectedMixedCount })"
-          @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" no-caps />
+          @click="collectedTokenTypeFilter = 'mixed'" class="q-px-sm" />
         <q-input v-model="collectedSearchQuery" dark dense outlined :placeholder="$t('dashboard.managed.searchPlaceholder')"
           class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px; margin-left: auto;">
           <template v-slot:prepend>

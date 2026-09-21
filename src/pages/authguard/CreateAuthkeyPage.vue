@@ -2,7 +2,7 @@
     <q-page>
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat bordered rounded class="rounded-borders">
+                <q-card flat bordered class="rounded-borders q-py-md">
                     <q-card-section class="flex justify-between items-center">
                         <div class="flex items-center no-wrap">
                             <q-avatar><q-icon name="key" color="warning"></q-icon></q-avatar>
@@ -36,7 +36,8 @@
                         </q-form>
                     </q-card-section>
                     <q-card-actions class="q-mt-lg">
-                        <q-btn label="Create AuthKey" color="primary" class="full-width" @click="onCreateAuthKey" />
+                        <q-btn label="Create AuthKey" color="primary" class="full-width" @click="onCreateAuthKey"
+                            rounded no-caps size="lg" />
                     </q-card-actions>
                 </q-card>
             </div>
