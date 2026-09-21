@@ -2,8 +2,7 @@
   <div class="q-pa-md q-gutter-sm">
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
       <template v-slot:default-header="prop">
-        <div class="row items-center sidebar-link"
-          :class="{ 'sidebar-selected': selected === prop.node.href }">
+        <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
           <q-icon :name="prop.node.icon || 'share'"
             :color="prop.node.label == 'Authguards' || prop.node.label == 'Authguard Keys' ? 'orange' : undefined"
             size="28px" class="q-mr-sm" />
@@ -24,7 +23,6 @@ defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
 const router = useRouter()
 const user = useUser()
-const selected = ref<string | null>(null)
 const hrefs = {
   createAuthKey: '/issuer/tokens/create/authkey',
   manageFTReserves: '/issuer/manage/ft-reserves',
@@ -38,13 +36,21 @@ const hrefs = {
   recentTransactions: '/account/recent-transactions',
   createNewToken: '/issuer/tokens/create',
   importAuthUtxo: '/issuer/tokens/import-auth-utxo',
+  dashboard: '/dashboard',
   managedTokens: '/dashboard/managed-tokens',
   collectedTokens: '/dashboard/collected-tokens',
   activities: '/dashboard/activities',
 }
 
+const selected = ref<string | null>(hrefs.dashboard)
+
 const menu = computed<any[]>(() => {
   return [
+    {
+      label: 'Dashboard',
+      href: hrefs.dashboard,
+      icon: 'dashboard',
+    },
     {
       label: 'Create New Token',
       href: '/token/create',
@@ -55,6 +61,18 @@ const menu = computed<any[]>(() => {
       href: '/authguard/authkeys/create',
       icon: 'add',
     },
+
+    {
+      label: 'Created Tokens',
+      href: hrefs.managedTokens,
+      icon: 'brush',
+    },
+    {
+      label: 'Collected Tokens',
+      href: hrefs.collectedTokens,
+      icon: 'grid_view',
+    },
+
     // {
     //   label: 'Import Auth Utxo',
     //   href: hrefs.importAuthUtxo,
@@ -78,7 +96,7 @@ const menu = computed<any[]>(() => {
     },
     {
       label: 'Authguards',
-      href: hrefs.manageAuthGuards,
+      href: '/authguard/authguards',
       icon: 'lock',
     },
     {
@@ -87,20 +105,11 @@ const menu = computed<any[]>(() => {
       icon: 'key',
     },
     {
-      label: 'Created Tokens',
-      href: hrefs.managedTokens,
-      icon: 'brush',
-    },
-    {
-      label: 'Collected Tokens',
-      href: hrefs.collectedTokens,
-      icon: 'grid_view',
-    },
-    {
       label: 'My Activity',
       href: hrefs.activities,
       icon: 'history',
     },
+
   ]
 })
 
@@ -123,6 +132,10 @@ watch(() => route.path, (currentPath) => {
 .q-tree__node--selected {
   color: rgb(254, 254, 254);
   background: linear-gradient(90deg, rgba(4, 30, 90, 0.9779411764705882) 0%, rgba(7, 41, 102, 1) 42%, rgba(9, 56, 121, 1) 77%, rgba(1, 114, 205, 1) 100%);
+}
+
+.sidebar-link {
+  letter-spacing: 2px;
 }
 
 .sidebar-link:not(.sidebar-selected) {
