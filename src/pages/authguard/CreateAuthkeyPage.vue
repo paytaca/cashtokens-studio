@@ -2,7 +2,7 @@
     <q-page>
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat bordered>
+                <q-card flat bordered rounded class="rounded-borders">
                     <q-card-section class="flex justify-between items-center">
                         <div class="flex items-center no-wrap">
                             <q-avatar><q-icon name="key" color="warning"></q-icon></q-avatar>
@@ -96,6 +96,7 @@ const onGenerateGenesisInput = async () => {
         const utxos = await wallet.value.getUtxos()
         const genesisInputSignReq = createGenesisInput({
             funderUtxos: utxos,
+            recipientAddress: wallet.value.getDepositAddress(0)
         })
 
         loadingGroup({
