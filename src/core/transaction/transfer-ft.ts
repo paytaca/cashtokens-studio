@@ -69,12 +69,12 @@ export function transferFts(params: TransferFtsParams): SignTransactionRequest {
     })
 
     if (tokenChange > 0n) {
-        const firstUtxo = selectedUtxos[0]
+        const firstUtxo = selectedUtxos[0]!
         transaction.addOutput({
             to: params.changeAddress,
             amount: DEFAULT_TOKEN_VALUE,
             token: {
-                ...firstUtxo.token,
+                ...firstUtxo.token!,
                 amount: tokenChange
             }
         })
