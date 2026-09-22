@@ -143,7 +143,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
+import { ref, computed, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { storeToRefs } from 'pinia';
@@ -165,7 +165,7 @@ interface AuthkeyRow {
 const { t } = useI18n();
 const router = useRouter();
 
-const { wallet, walletLasySync, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady } = useWizardConnectWallet();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys } = authguardStore;
@@ -253,16 +253,6 @@ watch(
   },
   { immediate: true }
 );
-
-watch(walletLasySync, async () => {
-  await loadAuthkeys(wallet.value, true);
-});
-
-onMounted(async () => {
-  if (walletIsReady.value) {
-    await loadAuthkeys(wallet.value, true);
-  }
-});
 
 onUnmounted(() => {
   walletWatchers.value?.stopWatchingReceiveWallet?.();

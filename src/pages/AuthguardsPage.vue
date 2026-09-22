@@ -1,53 +1,116 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
-      <ExplainerBanner class="q-my-md authguard-banner" icon="lock" :title="$t('dashboard.authguards.bannerTitle')">
+      <ExplainerBanner
+        class="q-my-md authguard-banner"
+        icon="lock"
+        :title="$t('dashboard.authguards.bannerTitle')"
+      >
         <template #subtitle>
           <div>
-            <div ref="bannerMessageEl" class="banner-message text-body2 text-grey-4"
-              :class="{ clamped: !bannerExpanded }" v-html="$t('dashboard.authguards.bannerMessage')"></div>
-            <q-btn v-if="showBannerToggle && !bannerExpanded" flat dense no-caps size="sm"
-              class="text-primary q-pa-none q-mt-xs" :label="$t('dashboard.authguards.readMore')"
-              icon-right="keyboard_arrow_down" @click="bannerExpanded = true" />
-            <q-btn v-if="bannerExpanded" flat dense no-caps size="sm" class="text-primary q-pa-none q-mt-xs"
-              :label="$t('dashboard.authguards.showLess')" icon-right="keyboard_arrow_up"
-              @click="bannerExpanded = false" />
+            <div
+              ref="bannerMessageEl"
+              class="banner-message text-body2 text-grey-4"
+              :class="{ clamped: !bannerExpanded }"
+              v-html="$t('dashboard.authguards.bannerMessage')"
+            ></div>
+            <q-btn
+              v-if="showBannerToggle && !bannerExpanded"
+              flat
+              dense
+              no-caps
+              size="sm"
+              class="text-primary q-pa-none q-mt-xs"
+              :label="$t('dashboard.authguards.readMore')"
+              icon-right="keyboard_arrow_down"
+              @click="bannerExpanded = true"
+            />
+            <q-btn
+              v-if="bannerExpanded"
+              flat
+              dense
+              no-caps
+              size="sm"
+              class="text-primary q-pa-none q-mt-xs"
+              :label="$t('dashboard.authguards.showLess')"
+              icon-right="keyboard_arrow_up"
+              @click="bannerExpanded = false"
+            />
           </div>
         </template>
       </ExplainerBanner>
 
       <template v-if="authkeysLoading || authheadsLoading">
-        <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+        <div
+          v-for="i in 3"
+          :key="i"
+          class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders"
+        >
           <q-skeleton type="rect" size="36px" class="rounded-borders" />
           <div class="column q-gutter-y-xs" style="flex: 1">
-            <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
-            <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+            <q-skeleton
+              type="rect"
+              height="14px"
+              width="40%"
+              class="rounded-borders"
+            />
+            <q-skeleton
+              type="rect"
+              height="12px"
+              width="25%"
+              class="rounded-borders"
+            />
           </div>
-          <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
+          <q-skeleton
+            type="rect"
+            height="14px"
+            width="80px"
+            class="rounded-borders"
+          />
         </div>
       </template>
       <template v-else-if="rows.length > 0">
         <div class="row justify-end q-gutter-sm q-mb-md">
-          <q-input v-model="searchQuery" dark dense outlined :placeholder="$t('dashboard.authguards.searchPlaceholder')"
-            class="bg-grey-10" style="border-radius: 0.75rem; min-width: 280px">
+          <q-input
+            v-model="searchQuery"
+            dark
+            dense
+            outlined
+            :placeholder="$t('dashboard.authguards.searchPlaceholder')"
+            class="bg-grey-10"
+            style="border-radius: 0.75rem; min-width: 280px"
+          >
             <template v-slot:prepend>
               <q-icon name="search" color="grey-6" size="xs" />
             </template>
             <template v-slot:append v-if="searchQuery">
-              <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="searchQuery = ''" />
+              <q-icon
+                name="close"
+                color="grey-6"
+                size="xs"
+                class="cursor-pointer"
+                @click="searchQuery = ''"
+              />
             </template>
           </q-input>
         </div>
         <div class="table-scroll-wrapper">
-          <q-table :rows="filteredRows" :columns="columns" :row-key="(row: AuthguardRow) => row.authkeyCategory" flat
-            class="border-radius-12 token-reserves-table" style="min-width: 440px" @row-click.stop="onRowClick">
+          <q-table
+            :rows="filteredRows"
+            :columns="columns"
+            :row-key="(row: AuthguardRow) => row.authkeyCategory"
+            flat
+            class="border-radius-12 token-reserves-table"
+            style="min-width: 440px"
+            @row-click.stop="onRowClick"
+          >
             <template v-slot:body-cell-authguardAddress="props">
               <q-td :props="props">
                 <div class="flex items-center q-gutter-x-xs no-wrap">
                   <q-icon name="lock" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenCashAddress(props.row.address)
-                    }}</span>
+                  }}</span>
                   <CopyText :text="props.row.address" />
                 </div>
               </q-td>
@@ -55,18 +118,36 @@
 
             <template v-slot:body-cell-lockedTokens="props">
               <q-td :props="props">
-                <div v-if="props.row.lockAvatars.length > 0" class="flex items-center q-gutter-x-xs flex-wrap">
-                  <q-avatar v-for="av in props.row.lockAvatars" :key="av.key" size="40px"
-                    class="bg-grey-9 shadow-1 token-avatar" :title="shortenTokenId(av.category)">
-                    <img v-if="av.iconSrc" :src="av.iconSrc" alt="" fit="cover" />
-                    <span v-else class="text-grey-5 text-weight-bold text-caption token-placeholder">{{
-                      $t('dashboard.authguards.unknownTokenIcon') }}</span>
+                <div
+                  v-if="props.row.lockAvatars.length > 0"
+                  class="flex items-center q-gutter-x-xs flex-wrap"
+                >
+                  <q-avatar
+                    v-for="av in props.row.lockAvatars"
+                    :key="av.key"
+                    size="40px"
+                    class="bg-grey-9 shadow-1 token-avatar"
+                    :title="shortenTokenId(av.category)"
+                  >
+                    <img
+                      v-if="av.iconSrc"
+                      :src="av.iconSrc"
+                      alt=""
+                      fit="cover"
+                    />
+                    <span
+                      v-else
+                      class="text-grey-5 text-weight-bold text-caption token-placeholder"
+                      >{{ $t('dashboard.authguards.unknownTokenIcon') }}</span
+                    >
                   </q-avatar>
                 </div>
                 <div v-else>
                   <q-avatar size="40px" class="bg-grey-9 shadow-1 token-avatar">
-                    <span class="text-grey-5 text-weight-bold text-caption token-placeholder">{{
-                      $t('dashboard.authguards.unknownTokenIcon') }}</span>
+                    <span
+                      class="text-grey-5 text-weight-bold text-caption token-placeholder"
+                      >{{ $t('dashboard.authguards.unknownTokenIcon') }}</span
+                    >
                     <q-tooltip class="bg-grey-9 text-caption text-grey-4">
                       {{ $t('dashboard.authguards.noLockedTokensTooltip') }}
                     </q-tooltip>
@@ -80,22 +161,34 @@
       <template v-else>
         <div class="bg-dark q-pa-lg rounded-borders">
           <div class="flex flex-center column q-py-lg">
-            <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px">
-              <div class="playing-card" style="
+            <div
+              class="flex flex-center q-mb-lg"
+              style="height: 120px; width: 260px"
+            >
+              <div
+                class="playing-card"
+                style="
                   z-index: 1;
                   transform: rotate(-12deg) translateX(22px);
                   margin-right: -30px;
-                ">
+                "
+              >
                 <q-icon name="key" size="32px" color="grey-5" />
               </div>
-              <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
+              <div
+                class="playing-card"
+                style="z-index: 2; transform: rotate(-2deg)"
+              >
                 <q-icon name="lock" size="32px" color="grey-5" />
               </div>
-              <div class="playing-card" style="
+              <div
+                class="playing-card"
+                style="
                   z-index: 3;
                   transform: rotate(8deg) translateX(-22px);
                   margin-left: -30px;
-                ">
+                "
+              >
                 <q-icon name="token" size="32px" color="grey-5" />
               </div>
             </div>
@@ -150,7 +243,7 @@ interface AuthguardRow {
 const { t } = useI18n();
 const router = useRouter();
 
-const { wallet, walletLasySync, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady } = useWizardConnectWallet();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys, loadAuthheads } = authguardStore;
@@ -290,19 +383,10 @@ watch(
   { immediate: true }
 );
 
-watch(walletLasySync, async () => {
-  await loadAuthkeys(wallet.value, true);
-});
-
 onMounted(async () => {
   await nextTick();
   updateBannerMessageOverflow();
   window.addEventListener('resize', onWindowResize);
-
-  if (walletIsReady.value) {
-    const authkeys = await loadAuthkeys(wallet.value, true);
-    loadAuthheads(authkeys);
-  }
 });
 
 onUnmounted(() => {
