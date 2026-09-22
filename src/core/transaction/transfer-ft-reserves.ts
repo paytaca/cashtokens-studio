@@ -6,6 +6,7 @@ import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddr
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
+import { AbiFunction, scriptToBytecode } from "@cashscript/utils"
 
 export type TransferFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
@@ -48,7 +49,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     })
     
     const spentUtxos = [
-        params.issuerTokenUtxo, 
+        params.issuerTokenUtxo,
         params.authkeyUtxo,
         funderInput
     ]
@@ -95,7 +96,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 3n
-    let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * 2
+    const unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * 2
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         feeRateSatsPerKb
@@ -149,6 +150,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
 
     if (!enoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
     const sourceOutputs = spentUtxos.map((utxo) => {
+        
         const args: UtxoToWcSourceOutputParams = {
             utxo
         }
@@ -161,34 +163,45 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
 
     if (issuerTokenSourceOutputIndex === -1) throw new Error('Unexpected state, token issuer utxo not found on source output list')
 
-    const issuerTokenSourceOutput = sourceOutputs[issuerTokenSourceOutputIndex]
+    // const issuerTokenSourceOutput = sourceOutputs[issuerTokenSourceOutputIndex]
 
-    const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex)) as TransactionCommon
 
-    const unlockingBytecode = transaction.inputs[0]?.unlocker.generateUnlockingBytecode({
-        transaction: decodedTransaction as TransactionCommon,
-        sourceOutputs: sourceOutputs.map((sourceOutput) => {
-            return {
-                lockingBytecode: sourceOutput.lockingBytecode,
-                token:  sourceOutput.token,
-                valueSatoshis: sourceOutput.valueSatoshis
-            }
-        }) as Output[],
-        inputIndex: issuerTokenSourceOutputIndex
-    })
+    // issuerTokenSourceOutput!.contract = {
+    //     abiFunction: authguardContract.artifact.abi[0] as AbiFunction,
+    //     redeemScript: scriptToBytecode(authguardContract.redeemScript),
+    //     artifact: authguardContract.artifact
+    // }
 
-    issuerTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
+    // issuerTokenSourceOutput!.contract = wcPayload.sourceOutputs[0]?.contract
+
+
+    // const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex)) as TransactionCommon
+
+    // const unlockingBytecode = transaction.inputs[0]?.unlocker.generateUnlockingBytecode({
+    //     transaction: decodedTransaction as TransactionCommon,
+    //     sourceOutputs: sourceOutputs.map((sourceOutput) => {
+    //         return {
+    //             lockingBytecode: sourceOutput.lockingBytecode,
+    //             token:  sourceOutput.token,
+    //             valueSatoshis: sourceOutput.valueSatoshis
+    //         }
+    //     }) as Output[],
+    //     inputIndex: issuerTokenSourceOutputIndex
+    // })
+
+    // issuerTokenSourceOutput!.unlockingBytecode = unlockingBytecode as Uint8Array
     let userPrompt = ''
     if (params.transferType === 'issuance') {
         userPrompt = 'Issue FTs from reserves'
     } else if (params.transferType === 'burn') {
         userPrompt = 'Burn FTs from reserves'
     }
+    const wcPayload = transaction.generateWcTransactionObject()
     return {
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
             transaction: transactionHex,
-            sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
+            sourceOutputs: JSON.parse(JSON.stringify(wcPayload.sourceOutputs, jsonReplacer)),
             userPrompt: userPrompt,
             broadcast: false
         },
