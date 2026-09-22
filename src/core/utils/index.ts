@@ -69,6 +69,21 @@ export function getErrorMessage(error: unknown): string {
     return String(error);
 }
 
+export type Debounced<Args extends unknown[]> = ((...args: Args) => void) & { cancel: () => void };
+
+export function debounce<Args extends unknown[]>(fn: (...args: Args) => void, wait = 300): Debounced<Args> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const debounced = (...args: Args) => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    timeoutId = setTimeout(() => fn(...args), wait);
+  };
+  debounced.cancel = () => {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+    timeoutId = undefined;
+  };
+  return debounced;
+}
+
 export function getTokenType(utxo: DecoratedUtxo): 'fungible' | 'nft' | 'mixed' {
   const hasAmount = !!utxo.token?.amount
   const capability = utxo.token?.nft?.capability

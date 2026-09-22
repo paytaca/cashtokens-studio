@@ -92,9 +92,9 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     }
   } 
   
-  async function loadAuthheads(authkeyList?: UtxoWithPath[], sync?: boolean) {
+  async function loadAuthheads(authkeyList?: UtxoWithPath[], sync?: boolean, silent = false) {
     try {
-      authheadsLoading.value = true;
+      if (!silent) authheadsLoading.value = true;
       authheads.value = await getLockedAuthheadUtxos(authkeyList || authkeys.value);
       // Create a pipeline task for each individual authhead
       const tasks = authheads.value.map(async (authhead) => {
@@ -139,9 +139,9 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   } 
 
 
-  const loadAuthkeys = async (externalWallet: any, sync?: boolean) => {
+  const loadAuthkeys = async (externalWallet: any, sync?: boolean, silent = false) => {
     try {
-        authkeysLoading.value = true
+        if (!silent) authkeysLoading.value = true
         const utxos = await externalWallet.getUtxos({ sync }) as UtxoWithPath[]
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
         // if (sync) {
@@ -167,7 +167,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {
       try {
-        await loadAuthheads(authkeys.value || [], true)
+        await loadAuthheads(authkeys.value || [], true, true)
       } catch (error) {
         console.error(error)
       }

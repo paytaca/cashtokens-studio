@@ -1,155 +1,69 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
-      <ExplainerBanner
-        class="q-my-md"
-        icon="brush"
-        :title="$t('dashboard.pageTitle.managedTokens')"
-        :description="$t('dashboard.managed.caption')"
-      >
+      <ExplainerBanner class="q-my-md" icon="brush" :title="$t('dashboard.pageTitle.managedTokens')"
+        :description="$t('dashboard.managed.caption')">
         <template v-if="authheads.length > 0">
-          <q-btn
-            icon="mdi-creation"
-            :label="$t('dashboard.managed.createNew')"
-            color="secondary"
-            no-caps
-            @click="router.push({ name: 'create-token' })"
-            rounded
-          />
+          <q-btn icon="mdi-creation" :label="$t('dashboard.managed.createNew')" color="secondary" no-caps
+            @click="router.push({ name: 'create-token' })" rounded />
         </template>
       </ExplainerBanner>
 
       <template v-if="authkeysLoading || authheadsLoading">
-        <div
-          v-for="i in 3"
-          :key="i"
-          class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders"
-        >
+        <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
           <q-skeleton type="rect" size="36px" class="rounded-borders" />
           <div class="column q-gutter-y-xs" style="flex: 1">
-            <q-skeleton
-              type="rect"
-              height="14px"
-              width="40%"
-              class="rounded-borders"
-            />
-            <q-skeleton
-              type="rect"
-              height="12px"
-              width="25%"
-              class="rounded-borders"
-            />
+            <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
+            <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
           </div>
-          <q-skeleton
-            type="rect"
-            height="14px"
-            width="80px"
-            class="rounded-borders"
-          />
+          <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
         </div>
       </template>
       <template v-else-if="authheads.length > 0">
         <div class="row q-gutter-sm q-mb-md">
-          <q-btn
-            outline
-            no-caps
-            :color="tokenTypeFilter === 'all' ? 'white' : 'grey-6'"
-            :class="{ 'text-weight-bold': tokenTypeFilter === 'all' }"
-            :label="
-              $t('dashboard.managed.filterAll', { count: authheads.length })
-            "
-            @click="tokenTypeFilter = 'all'"
-            class="q-px-sm"
-          />
-          <q-btn
-            outline
-            no-caps
-            :color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-6'"
-            :class="{ 'text-weight-bold': tokenTypeFilter === 'fungible' }"
-            :label="
-              $t('dashboard.managed.filterFungible', { count: fungibleCount })
-            "
-            @click="tokenTypeFilter = 'fungible'"
-            class="q-px-sm"
-          />
-          <q-btn
-            outline
-            no-caps
-            :color="tokenTypeFilter === 'nft' ? 'white' : 'grey-6'"
+          <q-btn outline no-caps :color="tokenTypeFilter === 'all' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'all' }" :label="$t('dashboard.managed.filterAll', { count: authheads.length })
+              " @click="tokenTypeFilter = 'all'" class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'fungible' ? 'white' : 'grey-6'"
+            :class="{ 'text-weight-bold': tokenTypeFilter === 'fungible' }" :label="$t('dashboard.managed.filterFungible', { count: fungibleCount })
+              " @click="tokenTypeFilter = 'fungible'" class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'nft' ? 'white' : 'grey-6'"
             :class="{ 'text-weight-bold': tokenTypeFilter === 'nft' }"
-            :label="$t('dashboard.managed.filterNft', { count: nftCount })"
-            @click="tokenTypeFilter = 'nft'"
-            class="q-px-sm"
-          />
-          <q-btn
-            outline
-            no-caps
-            :color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-6'"
+            :label="$t('dashboard.managed.filterNft', { count: nftCount })" @click="tokenTypeFilter = 'nft'"
+            class="q-px-sm" />
+          <q-btn outline no-caps :color="tokenTypeFilter === 'mixed' ? 'white' : 'grey-6'"
             :class="{ 'text-weight-bold': tokenTypeFilter === 'mixed' }"
-            :label="$t('dashboard.managed.filterMixed', { count: mixedCount })"
-            @click="tokenTypeFilter = 'mixed'"
-            class="q-px-sm"
-          />
-          <q-input
-            v-model="createdSearchQuery"
-            dark
-            dense
-            outlined
-            :placeholder="$t('dashboard.managed.searchPlaceholder')"
-            class="bg-grey-10"
-            style="border-radius: 0.75rem; min-width: 200px; margin-left: auto"
-          >
+            :label="$t('dashboard.managed.filterMixed', { count: mixedCount })" @click="tokenTypeFilter = 'mixed'"
+            class="q-px-sm" />
+          <q-input v-model="createdSearchQuery" dark dense outlined
+            :placeholder="$t('dashboard.managed.searchPlaceholder')" class="bg-grey-10"
+            style="border-radius: 0.75rem; min-width: 200px; margin-left: auto">
             <template v-slot:prepend>
               <q-icon name="search" color="grey-6" size="xs" />
             </template>
             <template v-slot:append v-if="createdSearchQuery">
-              <q-icon
-                name="close"
-                color="grey-6"
-                size="xs"
-                class="cursor-pointer"
-                @click="createdSearchQuery = ''"
-              />
+              <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="createdSearchQuery = ''" />
             </template>
           </q-input>
         </div>
-        <q-table
-          :rows="filteredAuthheads"
-          :columns="columns"
-          :row-key="(row: any) => `${row.txid}:${row.vout}`"
-          flat
-          class="border-radius-12 token-reserves-table"
-          @row-click.stop="onAuthheadsRowClick"
-        >
+        <q-table :rows="filteredAuthheads" :columns="columns" :row-key="(row: any) => `${row.txid}:${row.vout}`" flat
+          class="border-radius-12 token-reserves-table" @row-click.stop="onAuthheadsRowClick">
           <template v-slot:body-cell-token="props">
             <q-td :props="props">
               <div class="flex items-center no-wrap q-gutter-x-md">
                 <div class="flex column items-center">
-                  <q-avatar
-                    size="36px"
-                    class="bg-grey-9 border-radius-8 shadow-1"
-                  >
-                    <q-img
-                      v-if="props.row.identitySnapshot?.uris?.icon"
-                      :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!"
-                      fit="cover"
-                    ></q-img>
-                    <q-img
-                      v-else
+                  <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                    <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                      :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                    <q-img v-else
                       :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
-                      fit="cover"
-                    >
-                      <q-tooltip class="bg-grey-9 text-caption text-grey-4"
-                        >{{ $t('dashboard.managed.noIconTooltip') }}
+                      fit="cover">
+                      <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip') }}
                       </q-tooltip>
                     </q-img>
                   </q-avatar>
-                  <span
-                    v-if="!props.row.identitySnapshot?.uris?.icon"
-                    class="text-grey-6 font-8 q-mt-xs"
-                    style="line-height: 1"
-                    >{{ $t('dashboard.managed.noIcon') }}</span
-                  >
+                  <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                    style="line-height: 1">{{ $t('dashboard.managed.noIcon') }}</span>
                 </div>
                 <div>
                   <div class="flex items-center q-gutter-x-xs">
@@ -160,71 +74,42 @@
                       }}
                     </span>
                     <span class="text-grey-7">-</span>
-                    <span
-                      class="flex items-center text-caption text-grey-5 text-mono"
-                    >
+                    <span class="flex items-center text-caption text-grey-5 text-mono">
                       {{ shortenTokenId(props.row.token!.category) }}
                       <CopyText :text="props.row.token!.category" />
                     </span>
                   </div>
                   <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                    <q-badge
-                      v-if="getTokenType(props.row) === 'mixed'"
-                      color="dark"
-                      text-color="orange-4"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge"
-                    >
+                    <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                       <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeMixed') }}
                     </q-badge>
-                    <q-badge
-                      v-else-if="getTokenType(props.row) === 'nft'"
-                      color="dark"
-                      text-color="blue-6"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge"
-                    >
+                    <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                       <q-icon name="token" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeNft') }}
                     </q-badge>
-                    <q-badge
-                      v-else
-                      color="dark"
-                      text-color="green-4"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge"
-                    >
+                    <q-badge v-else color="dark" text-color="green-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                       <q-icon name="money" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeFungible') }}
                     </q-badge>
 
-                    <q-badge
-                      v-if="props.row.token?.nft?.capability === 'minting'"
-                      color="dark"
-                      text-color="purple-4"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge"
-                    >
+                    <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark" text-color="purple-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                       <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeMinting') }}
                     </q-badge>
-                    <q-badge
-                      v-else-if="props.row.token?.nft?.capability === 'mutable'"
-                      color="dark"
+                    <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
                       text-color="teal-10"
-                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge"
-                    >
-                      <q-icon
-                        name="published_with_changes"
-                        size="10px"
-                        class="q-mr-xs"
-                      />
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeMutable') }}
                     </q-badge>
-                    <q-badge
-                      v-else-if="props.row.token?.nft?.capability === 'none'"
-                      color="dark"
-                      text-color="grey-6"
+                    <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark" text-color="grey-6"
                       class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
-                      dense
-                    >
+                      dense>
                       <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
                       {{ $t('dashboard.managed.badgeImmutable') }}
                     </q-badge>
@@ -236,10 +121,8 @@
 
           <template v-slot:body-cell-fungibleReserves="props">
             <q-td :props="props" class="text-right">
-              <div
-                v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                class="text-subtitle1 text-weight-bold text-mono text-white"
-              >
+              <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                class="text-subtitle1 text-weight-bold text-mono text-white">
                 {{
                   formatTokenAmount(
                     props.value,
@@ -252,16 +135,10 @@
               <div v-else class="text-grey-6 text-caption text-mono">
                 {{ $t('dashboard.managed.unavailable') }}
               </div>
-              <div
-                v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs"
-              >
+              <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
                 <span>{{ $t('dashboard.managed.decimals') }}</span>
-                <q-badge
-                  outline
-                  color="grey-7"
-                  class="text-weight-bold text-mono font-10 text-grey-4"
-                >
+                <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
                   {{
                     props.row.identitySnapshot?.token?.decimals === undefined
                       ? $t('dashboard.managed.decimalsUnknown')
@@ -279,11 +156,7 @@
                   <q-list dark class="bg-dark" dense style="min-width: 180px">
                     <q-item clickable @click="viewRegistry(value.row)">
                       <q-item-section avatar>
-                        <q-icon
-                          name="description"
-                          color="secondary"
-                          size="xs"
-                        />
+                        <q-icon name="description" color="secondary" size="xs" />
                       </q-item-section>
                       <q-item-section class="text-caption text-grey-3">
                         {{ $t('dashboard.managed.actionViewRegistry') }}
@@ -301,32 +174,20 @@
 
                     <q-separator dark inset />
 
-                    <q-item
-                      v-if="
-                        ['fungible', 'mixed'].includes(getTokenType(value.row))
-                      "
-                      clickable
-                      @click="openTransferDialog(value.row, 'issuance')"
-                    >
+                    <q-item v-if="
+                      ['fungible', 'mixed'].includes(getTokenType(value.row))
+                    " clickable @click="openTransferDialog(value.row, 'issuance')">
                       <q-item-section avatar>
-                        <q-icon
-                          name="mdi-send-circle-outline"
-                          color="primary"
-                          size="xs"
-                        />
+                        <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
                       </q-item-section>
                       <q-item-section class="text-caption text-grey-3">
                         {{ $t('dashboard.managed.actionReleaseReserves') }}
                       </q-item-section>
                     </q-item>
 
-                    <q-item
-                      v-if="
-                        ['fungible', 'mixed'].includes(getTokenType(value.row))
-                      "
-                      clickable
-                      @click="openTransferDialog(value.row, 'burn')"
-                    >
+                    <q-item v-if="
+                      ['fungible', 'mixed'].includes(getTokenType(value.row))
+                    " clickable @click="openTransferDialog(value.row, 'burn')">
                       <q-item-section avatar>
                         <q-icon name="mdi-fire" color="orange" size="xs" />
                       </q-item-section>
@@ -335,14 +196,10 @@
                       </q-item-section>
                     </q-item>
 
-                    <q-item
-                      v-if="
-                        getTokenType(value.row) !== 'fungible' &&
-                        value.row.token?.nft?.capability === 'minting'
-                      "
-                      clickable
-                      @click="navigateToMint(value.row)"
-                    >
+                    <q-item v-if="
+                      getTokenType(value.row) !== 'fungible' &&
+                      value.row.token?.nft?.capability === 'minting'
+                    " clickable @click="navigateToMint(value.row)">
                       <q-item-section avatar>
                         <q-icon name="add_circle" color="primary" size="xs" />
                       </q-item-section>
@@ -351,11 +208,8 @@
                       </q-item-section>
                     </q-item>
 
-                    <q-item
-                      v-if="getTokenType(value.row) !== 'fungible'"
-                      clickable
-                      @click="openTransferDialog(value.row, 'burn')"
-                    >
+                    <q-item v-if="getTokenType(value.row) !== 'fungible'" clickable
+                      @click="openTransferDialog(value.row, 'burn')">
                       <q-item-section avatar>
                         <q-icon name="mdi-fire" color="orange" size="xs" />
                       </q-item-section>
@@ -365,10 +219,7 @@
                     </q-item>
                     <q-separator dark inset />
                     <q-separator dark inset />
-                    <q-item
-                      clickable
-                      @click="refreshCache(value.row.token!.category as string)"
-                    >
+                    <q-item clickable @click="refreshCache(value.row.token!.category as string)">
                       <q-item-section avatar>
                         <q-icon name="refresh" color="grey-5" size="xs" />
                       </q-item-section>
@@ -386,48 +237,30 @@
       <template v-else>
         <div class="bg-dark q-pa-lg rounded-borders">
           <div class="flex flex-center column q-py-lg">
-            <div
-              class="flex flex-center q-mb-lg"
-              style="height: 120px; width: 260px"
-            >
-              <div
-                class="playing-card"
-                style="
+            <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px">
+              <div class="playing-card" style="
                   z-index: 1;
                   transform: rotate(-12deg) translateX(22px);
                   margin-right: -30px;
-                "
-              >
+                ">
                 <q-icon name="brush" size="32px" color="grey-5" />
               </div>
-              <div
-                class="playing-card"
-                style="z-index: 2; transform: rotate(-2deg)"
-              >
+              <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
                 <q-icon name="token" size="32px" color="grey-5" />
               </div>
-              <div
-                class="playing-card"
-                style="
+              <div class="playing-card" style="
                   z-index: 3;
                   transform: rotate(8deg) translateX(-22px);
                   margin-left: -30px;
-                "
-              >
+                ">
                 <q-icon name="auto_awesome" size="32px" color="grey-5" />
               </div>
             </div>
             <div class="text-grey-5 text-h6 q-mb-lg">
               {{ $t('dashboard.managed.noCreatedTokens') }}
             </div>
-            <q-btn
-              color="primary"
-              icon="add"
-              :label="$t('dashboard.managed.createToken')"
-              unelevated
-              size="lg"
-              @click="router.push({ name: 'create-token' })"
-            />
+            <q-btn color="primary" icon="add" :label="$t('dashboard.managed.createToken')" unelevated size="lg"
+              @click="router.push({ name: 'create-token' })" />
           </div>
         </div>
       </template>
@@ -454,7 +287,9 @@ import {
   getTokenType,
   formatTokenAmount,
   shortenTokenId,
+  debounce,
 } from 'src/core/utils';
+import type { Debounced } from 'src/core/utils';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import {
   transferFungibleReserves,
@@ -471,6 +306,7 @@ import { Network } from 'cashscript';
 import { decodeCashAddress } from '@bitauth/libauth';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
 import { db } from 'src/core/client-db';
+import { broadcastTransaction } from 'src/services/transaction';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -479,7 +315,7 @@ const router = useRouter();
 const { wallet, manager, walletIsReady } = useWizardConnectWallet();
 
 const authguardStore = useAuthguardStore();
-const { loadAuthkeys, loadAuthheads } = authguardStore;
+const { loadAuthkeys } = authguardStore;
 const { authheads, authkeysLoading, authheadsLoading } =
   storeToRefs(authguardStore);
 
@@ -492,6 +328,9 @@ const walletWatchers = ref<{
   stopWatchingChangeWallet?: () => void;
   stopWatchingDefiWallet?: () => void;
 }>({});
+
+let debouncedChainRefresh: Debounced<[]>;
+const cancelChainRefresh = () => debouncedChainRefresh?.cancel();
 
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all');
 const createdSearchQuery = ref('');
@@ -623,9 +462,8 @@ const openTransferDialog = (
     if (typeof sampleDecodedAddress === 'string') {
       throw new Error(sampleDecodedAddress);
     }
-    componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${
-      import.meta.env.VITE_BURN_ADDRESS
-    }`;
+    componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS
+      }`;
   }
 
   $q.dialog({
@@ -659,61 +497,64 @@ const openTransferDialog = (
         transferType: action,
       });
 
-      return;
+
       loadingGroup({
         message: t('dashboard.notify.preparingForSignature'),
       });
+
       const response = await manager.value!.signTransaction(signRequest);
 
       loadingGroup({
         message: t('dashboard.notify.broadcasting'),
       });
 
-      const broadcastResponse = await broadcast(response.signedTransaction);
-
-      if (broadcastResponse.ok) {
-        const broadcastResult = await broadcastResponse.json();
-        if (broadcastResult.success) {
-          loadingGroup({
-            message: t('dashboard.notify.awaitingPropagation'),
-          });
-
-          const networkType =
-            import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-              ? NetworkType.Testnet
-              : NetworkType.Mainnet;
-          await new BaseWallet(networkType).waitForTransaction({
-            txHash: broadcastResult.txid,
-          });
-
-          loadingGroup();
-          await loadAuthkeys(wallet.value, true);
-          triggerRef(wallet);
-          await db.saveActivity({
-            event:
-              action === 'issuance'
-                ? t('dashboard.notify.activityEventReleaseReserves')
-                : t('dashboard.notify.activityEventBurnReserves'),
-            txid: broadcastResult.txid,
-            status: 'success',
-          });
-          $q.dialog({
-            component: TransactionStatusDialog,
-            componentProps: {
-              statusType: 'success',
-              statusText: t('dashboard.notify.reservesIssued', {
-                action:
-                  action === 'issuance'
-                    ? t('dashboard.notify.reservesActionIssued')
-                    : t('dashboard.notify.reservesActionBurned'),
-              }),
-              txid: broadcastResult.txid,
-            },
-          });
-        } else {
-          throw new Error(broadcastResult.error);
+      const [broadcastError, txid] = await broadcastTransaction({
+        transactionHex: response.signedTransaction,
+        network: import.meta.env.VITE_BCH_NETWORK,
+        onProgress: (progress: string) => {
+          loadingGroup({ message: progress })
         }
-      }
+      })
+
+      if (broadcastError) throw broadcastError
+
+      loadingGroup({
+        message: t('dashboard.notify.awaitingPropagation'),
+      });
+
+      const networkType =
+        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+          ? NetworkType.Testnet
+          : NetworkType.Mainnet;
+      await new BaseWallet(networkType).waitForTransaction({
+        txHash: txid,
+      });
+
+      loadingGroup();
+      await loadAuthkeys(wallet.value, true, true);
+      triggerRef(wallet);
+      await db.saveActivity({
+        event:
+          action === 'issuance'
+            ? t('dashboard.notify.activityEventReleaseReserves')
+            : t('dashboard.notify.activityEventBurnReserves'),
+        txid: txid,
+        status: 'success',
+      });
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: t('dashboard.notify.reservesIssued', {
+            action:
+              action === 'issuance'
+                ? t('dashboard.notify.reservesActionIssued')
+                : t('dashboard.notify.reservesActionBurned'),
+          }),
+          txid: txid,
+        },
+      });
+
     } catch (error: any) {
       $q.notify({
         type: 'Error',
@@ -729,20 +570,20 @@ watch(
   () => walletIsReady.value,
   async (isReady, prevValue) => {
     if (isReady && !prevValue) {
-      loadAuthkeys(wallet.value).then((authkeys) => {
-        loadAuthheads(authkeys);
-      });
+      loadAuthkeys(wallet.value);
 
       triggerRef(wallet);
+
+      debouncedChainRefresh = debounce(async () => {
+        await wallet.value?.sync();
+        await loadAuthkeys(wallet.value, undefined, true);
+        triggerRef(wallet);
+      }, 300);
 
       walletWatchers.value.stopWatchingReceiveWallet =
         await wallet.value?.receive?.watchStatus(
           async (status: any, address: any) => {
-            await wallet.value?.sync();
-            loadAuthkeys(wallet.value).then((authkeys) => {
-              loadAuthheads(authkeys);
-            });
-            triggerRef(wallet);
+            debouncedChainRefresh();
           }
         );
     }
@@ -751,6 +592,7 @@ watch(
 );
 
 onUnmounted(() => {
+  cancelChainRefresh();
   walletWatchers.value?.stopWatchingReceiveWallet?.();
   walletWatchers.value?.stopWatchingChangeWallet?.();
   walletWatchers.value?.stopWatchingDefiWallet?.();
