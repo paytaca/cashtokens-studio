@@ -82,6 +82,15 @@ export const useWizardConnectWallet = () => {
         return result
     }
 
+    const closeConnectDialog = async () => {
+        showQR.value = false
+        qrURI.value = null
+        qrDataURI.value = null
+        if (state.value === 'connecting' || state.value === 'reconnecting') {
+            await disconnect()
+        }
+    }
+
     watch(() => state.value, async (newState, oldState) => {
         const sessionPaths = manager.value?.getSessionPaths() || []
         if((newState === 'connected' && newState !== oldState) || sessionPaths.length > 0) {
@@ -111,5 +120,6 @@ export const useWizardConnectWallet = () => {
         qrDataURI,
         connect: wrappedConnect,
         disconnect,
+        closeConnectDialog,
     }
 }
