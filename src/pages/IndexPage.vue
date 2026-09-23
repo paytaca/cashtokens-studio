@@ -122,7 +122,7 @@ const router = useRouter();
 
 $q.dark.set(true);
 
-const { walletIsReady, state, connect, showQR, uri, qrUri } =
+const { walletIsReady, state, connect, showQR, uri, qrUri, closeConnectDialog } =
   useWizardConnectWallet();
 
 const bannerSize = computed(() => {
@@ -163,11 +163,11 @@ const onConnect = () => {
 };
 
 const closeQR = () => {
-  showQR.value = false;
+  closeConnectDialog();
 };
 
 const onQRUpdateShow = (val: boolean) => {
-  if (!val) showQR.value = false;
+  if (!val) closeConnectDialog();
 };
 
 watch(
