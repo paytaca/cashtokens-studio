@@ -44,7 +44,8 @@ body {
   // font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   // font-family: 'Gilroy', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
   //   'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   font-size: 1rem;
   /* For Firefox */
   /* Note: You may need to adjust this for older Firefox versions */
@@ -87,7 +88,6 @@ label {
   line-height: 1.5;
   color: #9e9e9e;
 }
-
 
 input,
 textarea {
@@ -194,7 +194,12 @@ i.q-icon.notranslate.material-icons {
 }
 
 body.body--dark {
-  background: radial-gradient(circle at 50% 45%, #242936 0%, #0d0f13 70%, #050608 100%);
+  background: radial-gradient(
+    circle at 50% 45%,
+    #242936 0%,
+    #0d0f13 70%,
+    #050608 100%
+  );
   color: rgb(200, 198, 198);
 }
 
@@ -212,7 +217,7 @@ body.body--dark {
 }
 
 .rounded-borders {
-  border-radius: 15px;
+  border-radius: 25px;
 }
 
 // .q-field--readonly.q-field--float .q-field__native,
@@ -272,7 +277,7 @@ body.body--dark {
   &.q-field--outlined .q-field__control {
     background: #2a2a2a; /* your fill color */
     &:before {
-      border: 1px solid rgba(255,255,255,.3) !important;
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
     }
   }
   // Allow click of appended button even when disabled
