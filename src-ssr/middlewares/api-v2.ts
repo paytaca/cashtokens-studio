@@ -1,49 +1,57 @@
-import { defineSsrMiddleware } from "@quasar/app-vite/wrappers";
-import { PinataSDK } from "pinata";
-import multer from 'multer'
+import { defineSsrMiddleware } from '@quasar/app-vite/wrappers';
+import { PinataSDK } from 'pinata';
+import multer from 'multer';
 
-const upload = multer({ storage: multer.memoryStorage() })
+const upload = multer({ storage: multer.memoryStorage() });
 
 const uploadFileMiddleware = (req: any, res: any): Promise<void> => {
   return new Promise((resolve, reject) => {
     upload.single('file')(req, res, (err: any) => {
-      if (err) reject(err)
-      else resolve()
-    })
-  })
-}
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
 
 const pinata = new PinataSDK({
   pinataJwt: process.env.PINATA_JWT_V2!,
   pinataGateway: process.env.VITE_PAYTACA_IPFS_GATEWAY,
   pinataGatewayKey: process.env.PINATA_GATEWAY_TOKEN,
-  
 });
 
 export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
-
-    app.get('/api/test', async (req: any, res: any) => {
-        res.send({ test: 'test', t: process.env.VITE_PAYTACA_IPFS_GATEWAY, jwt: process.env.PINATA_JWT_V2 });
+  app.get('/api/test', async (req: any, res: any) => {
+    res.send({
+      test: 'test',
+      t: process.env.VITE_PAYTACA_IPFS_GATEWAY,
+      jwt: process.env.PINATA_JWT_V2,
     });
+  });
 
-    app.post('/api/ipfs', async (req: any, res) => {
-      try {
-        await uploadFileMiddleware(req, res)
-        if (!req.file) {
-          return res.status(400).send("No file uploaded.");
-        }
-
-        const file = new File([req.file.buffer], req.file.originalname, {
-          type: req.file.mimetype,
-        });
-
-        const uploadResult = await pinata.upload.public.file(file);
-        res.send(uploadResult)
-      } catch (error) {
-        console.log(error);
-        res.send(error)
+  app.post('/api/ipfs', async (req: any, res) => {
+    console.log(
+      'ENVS ',
+      process.env.VITE_PAYTACA_IPFS_GATEWAY,
+      process.env.PINATA_GATEWAY_TOKEN,
+      process.env.PINATA_JWT_V2
+    );
+    try {
+      await uploadFileMiddleware(req, res);
+      if (!req.file) {
+        return res.status(400).send('No file uploaded.');
       }
-  })
+
+      const file = new File([req.file.buffer], req.file.originalname, {
+        type: req.file.mimetype,
+      });
+
+      const uploadResult = await pinata.upload.public.file(file);
+      res.send(uploadResult);
+    } catch (error) {
+      console.log(error);
+      res.send(error);
+    }
+  });
 
   app.get('/api/ipfs/:cid', async (req: any, res) => {
     try {
@@ -58,9 +66,9 @@ export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
       }
     } catch (error) {
       console.log(error);
-      res.send(error)
+      res.send(error);
     }
-  })
+  });
 
   /**
    * Proxy endpoint for IPFS images
@@ -133,4 +141,4 @@ export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
       });
     }
   });
-})
+});
