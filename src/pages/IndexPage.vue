@@ -1,227 +1,540 @@
 <template>
-  <q-page class="row justify-evenly items-center bg-dark text-white">
-    <div class="col-12">
-      <div v-if="wallet.ready" class="row justify-center q-pa-md q-gutter-md">
-        <div class="col-12 text-center q-mb-md">
-          <div class="text-center text-h4 text-weight-bold">
-            <div>Welcome to</div>
-            <q-img src="images/cts_transparent.png" :style="bannerSize" />
-          </div>
-          <div class="text-subtitle1 text-grey-5 q-mt-sm">
-            Create, manage, and explore Cash Tokens on Bitcoin Cash
-          </div>
+  <q-page class="index-page bg-dark text-white">
+    <div class="index-container column items-center q-pa-md q-pa-sm-lg">
+
+      <!-- Hero -->
+      <div class="hero column items-center text-center">
+        <q-img src="images/cts_transparent.png" :style="bannerSize" class="hero-logo" alt="CashTokens Studio" />
+
+        <div class="hero-tagline text-subtitle1 text-grey-5">
+          {{ t('index.hero.tagline') }}
         </div>
-        <q-card class="action-card" @click="router.push({ name: 'create-token' })">
-          <q-card-section class="text-center">
-            <q-icon name="add_circle" size="48px" color="primary" />
-            <div class="text-h6 q-mt-sm">Create Token</div>
-            <div class="text-caption text-grey-5">
-              Create a new token
+      </div>
+
+      <!-- Wallet connection -->
+      <div class="connect-section">
+        <q-card class="connect-card">
+          <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
+
+            <div class="connect-icon">
+              <q-icon name="mdi-wizard-hat" size="30px" color="primary" />
             </div>
-          </q-card-section>
-        </q-card>
-        <q-card class="action-card" @click="router.push({ name: 'ft-reserves' })">
-          <q-card-section class="text-center">
-            <q-icon name="account_balance" size="48px" color="warning" />
-            <div class="text-h6 q-mt-sm">FT Reserves</div>
-            <div class="text-caption text-grey-5">
-              Manage fungible token reserves
+
+            <div class="col q-ml-md">
+              <template v-if="isConnecting">
+                <div class="text-subtitle1 text-weight-bold text-white">
+                  {{
+                    state === 'reconnecting'
+                      ? t('index.connect.reconnecting')
+                      : t('index.connect.connecting')
+                  }}
+                </div>
+
+                <div class="text-caption text-grey-5 q-mt-xs">
+                  {{ t('index.connect.hint') }}
+                </div>
+
+                <q-linear-progress indeterminate rounded color="primary" track-color="dark" class="q-mt-sm"
+                  style="height: 4px" />
+              </template>
+
+              <template v-else>
+                <div class="text-subtitle1 text-weight-bold text-white">
+                  {{ t('index.connect.title') }}
+                </div>
+
+                <div class="text-caption text-grey-5 q-mt-xs">
+                  {{ t('index.connect.subtitle') }}
+                </div>
+              </template>
             </div>
-          </q-card-section>
-        </q-card>
-        <q-card class="action-card" @click="router.push({ name: 'nft-reserves' })">
-          <q-card-section class="text-center">
-            <q-icon name="photo_library" size="48px" color="accent" />
-            <div class="text-h6 q-mt-sm">NFT Reserves</div>
-            <div class="text-caption text-grey-5">Manage NFT reserves</div>
-          </q-card-section>
-        </q-card>
-        <q-card class="action-card" @click="router.push({ name: 'my-fts' })">
-          <q-card-section class="text-center">
-            <q-icon name="money" size="48px" color="positive" />
-            <div class="text-h6 q-mt-sm">My FTs</div>
-            <div class="text-caption text-grey-5">View your fungible tokens in your wallet</div>
-          </q-card-section>
-        </q-card>
-        <q-card class="action-card" @click="router.push({ name: 'my-nfts' })">
-          <q-card-section class="text-center">
-            <q-icon name="art_track" size="48px" color="info" />
-            <div class="text-h6 q-mt-sm">My NFTs</div>
-            <div class="text-caption text-grey-5">View your NFTs in your wallet</div>
+
+            <q-btn v-if="!isConnecting" color="primary" unelevated rounded no-caps
+              class="connect-button text-weight-bold" :label="t('index.connect.action')" @click="onConnect" />
+
           </q-card-section>
         </q-card>
       </div>
 
-      <div v-else-if="state === 'connecting' || state === 'reconnecting'"
-        class="absolute-center column items-center justify-center q-pa-xl loading-container">
-        <div class="text-center q-mb-xl">
-          <q-img src="images/cts_transparent.png" :style="bannerSize" class="glowing-logo" />
+      <!-- Create token -->
+      <div class="create-section full-width">
+        <div class="section-heading">
+          <div class="text-overline text-grey-6">
+            {{ t('index.create.title', 'CREATE TOKEN') }}
+          </div>
+
+          <div class="text-h5 text-weight-bold">
+            {{ t('index.create.subtitle', 'Choose what you want to create') }}
+          </div>
         </div>
 
-        <div class="column items-center q-gutter-md full-width" style="max-width: 320px;">
-          <div class="spinner-wrapper q-mb-sm">
-            <!-- <q-spinner-eclipse size="64px" color="primary" /> -->
-            <q-icon name="mdi-wizard-hat" size="2em" color="primary" class="absolute-center hat-bounce" />
-          </div>
+        <div class="row q-col-gutter-md">
+          <div v-for="card in featureCards" :key="card.name" class="col-12 col-sm-6">
+            <q-card class="feature-card" :class="{ 'card-muted': !walletIsReady }" :clickable="walletIsReady"
+              :aria-disabled="!walletIsReady" @click="onFeatureCardClick(card)">
+              <q-card-section class="feature-card-content">
 
-          <div class="text-subtitle1 text-weight-medium text-grey-4 tracking-wide">
-            {{ state === 'reconnecting' ? 'Reconnecting Wallet...' : 'Connecting Wallet...' }}
-          </div>
+                <div class="feature-graphic" :class="`graphic-${card.name}`">
+                  <q-icon :name="card.icon" size="42px" />
+                </div>
 
-          <q-linear-progress indeterminate rounded color="primary" track-color="dark" class="glow-progress q-mt-xs"
-            style="height: 6px;" />
+                <div class="feature-info">
+                  <div class="feature-title">
+                    {{ card.title }}
+                  </div>
 
-          <div class="text-caption text-grey-6 text-center q-px-md">
-            Please authorize the connection request inside your WizardConnect extension.
+                  <div class="feature-caption">
+                    {{ card.caption }}
+                  </div>
+                </div>
+
+                <q-icon name="arrow_forward" class="feature-arrow" size="22px" />
+
+              </q-card-section>
+            </q-card>
           </div>
+        </div>
+
+        <div v-if="!walletIsReady" class="wallet-required text-center text-caption text-grey-6 q-mt-md">
+          <q-icon name="lock_outline" size="15px" class="q-mr-xs" />
+          {{ t('index.connect.hint') }}
         </div>
       </div>
-      <div v-else class="row justify-center items-center q-px-lg q-pt-lg q-gutter-sm">
-        <div class="col-12 text-center">
-          <q-img src="images/cts_transparent.png" :style="bannerSize" />
-        </div>
-        <q-card class="action-card q-py-md" style="width: 320px" @click="() => connect()">
-          <q-card-section class="text-center">
-            <div class="flex no-wrap items-center justify-center text-primary q-mb-sm" style="height: 60px">
-              <q-avatar size="md" class="q-mr-sm">
-                <q-icon name="mdi-wizard-hat" size="2em"></q-icon>
-              </q-avatar>
-              <span class="text-bold text-h5">WizardConnect</span>
-            </div>
-            <div class="text-caption text-grey-5">
-              To get started, click here to connect your wallet through WizardConnect.
-            </div>
-          </q-card-section>
-        </q-card>
-      </div>
+
     </div>
+
+    <WizardConnectQRDialog :show="showQR" :qr-uri="qrUri as string" :uri="uri as string" :onClose="closeQR"
+      @update:show="onQRUpdateShow" />
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { watch } from 'vue';
-import { delay } from 'mainnet-js';
+import { computed, watch } from 'vue';
 import { useQuasar } from 'quasar';
-import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
+import { WizardConnectQRDialog } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { WizardConnectState } from 'wizardconnect-vue';
 
-const { walletIsReady } = useWizardConnectWallet()
+const { t } = useI18n();
 const $q = useQuasar();
-// Set dark mode context globally for this component
+const router = useRouter();
+
 $q.dark.set(true);
 
-const isMobileBrowser = ref<boolean>(false);
-const router = useRouter();
+const { walletIsReady, state, connect, showQR, uri, qrUri } =
+  useWizardConnectWallet();
+
 const bannerSize = computed(() => {
-  let size = { width: '450px' }
-
   if ($q.screen.lt.sm) {
-    size = { width: '280px' }
+    return { width: '280px' };
   }
-  return size;
+  return { width: '450px' };
 });
 
-const {
-  wallet,
-  state,
-  connect
-} = useWizardConnectWallet()
+const isConnecting = computed(
+  () => state.value === 'connecting' || state.value === 'reconnecting'
+);
 
+const featureCards = computed(() => [
+  {
+    name: 'fungible',
+    icon: 'payments',
+    title: t('index.createFungible.title'),
+    caption: t('index.createFungible.caption'),
+    query: { type: 'Fungible' },
+  },
+  {
+    name: 'nft',
+    icon: 'art_track',
+    title: t('index.createNft.title'),
+    caption: t('index.createNft.caption'),
+    query: { type: 'NonFungible' },
+  },
+]);
 
-watch(() => walletIsReady.value, (isReady: boolean | undefined, prevValue: boolean | undefined) => {
-  if (isReady && Boolean(prevValue) === false) {
-    router.push({ name: 'dashboard' })
+const onFeatureCardClick = (card: { query: Record<string, string> }) => {
+  if (!walletIsReady.value) return;
+  router.push({ name: 'create-token', query: card.query });
+};
+
+const onConnect = () => {
+  connect();
+};
+
+const closeQR = () => {
+  showQR.value = false;
+};
+
+const onQRUpdateShow = (val: boolean) => {
+  if (!val) showQR.value = false;
+};
+
+watch(
+  () => state.value,
+  (newState) => {
+    if (newState === 'connected') {
+      showQR.value = false;
+    }
   }
-})
-
-watch(() => state.value, (state: WizardConnectState, prevState: WizardConnectState) => {
-  if (state === 'connected' && state !== prevState) {
-    router.push({ name: 'dashboard' })
-  }
-})
-
-onMounted(async () => {
-  await delay(100);
-  isMobileBrowser.value = /Mobi/.test(navigator?.userAgent);
-
-  // Optional: Auto-trigger connection if the app launches completely disconnected
-  // if (!wallet.value?.ready && state.value === 'idle') {
-  //   connect();
-  // }
-});
+);
 </script>
 
 <style scoped>
+/* -------------------------------------------------------------------------- */
+/* Layout                                                                     */
+/* -------------------------------------------------------------------------- */
+
+.index-page {
+  min-height: 100%;
+  overflow-x: hidden;
+}
+
 .bg-dark {
-  background: radial-gradient(circle at center, #1e222d 0%, #0f1115 100%) !important;
+  background:
+    radial-gradient(circle at 50% 15%,
+      #252a36 0%,
+      #171a21 38%,
+      #0d0f13 100%) !important;
 }
 
-.loading-container {
+.index-container {
   width: 100%;
-  max-width: 500px;
-  animation: fadeIn 0.6s ease-out;
+  max-width: 760px;
+  margin: 0 auto;
 }
 
-.spinner-wrapper {
+.hero {
+  margin-top: 24px;
+  margin-bottom: 40px;
+}
+
+.hero-logo {
+  filter:
+    drop-shadow(0 0 18px rgba(255, 255, 255, 0.06)) drop-shadow(0 12px 30px rgba(0, 0, 0, 0.3));
+}
+
+.hero-tagline {
+  max-width: 460px;
+  margin-top: 12px;
+  line-height: 1.5;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Connect Wallet                                                             */
+/* -------------------------------------------------------------------------- */
+
+.connect-section {
+  width: 100%;
+  max-width: 680px;
+  margin-bottom: 40px;
+}
+
+.connect-card {
+  border-radius: 18px;
+
+  background:
+    linear-gradient(135deg,
+      rgba(35, 40, 51, 0.98),
+      rgba(25, 28, 36, 0.98));
+
+  border: 1px solid rgba(var(--q-primary), 0.25);
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.3),
+    0 0 25px rgba(var(--q-primary), 0.05);
+}
+
+.connect-icon {
+  width: 52px;
+  height: 52px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 15px;
+
+  background: rgba(var(--q-primary), 0.1);
+  border: 1px solid rgba(var(--q-primary), 0.2);
+}
+
+.connect-button {
+  flex-shrink: 0;
+  min-width: 150px;
+  padding: 9px 20px;
+
+  box-shadow:
+    0 5px 15px rgba(var(--q-primary), 0.18);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Create section                                                             */
+/* -------------------------------------------------------------------------- */
+
+.create-section {
+  max-width: 680px;
+}
+
+.section-heading {
+  margin-bottom: 18px;
+  padding-left: 4px;
+}
+
+.section-heading .text-overline {
+  letter-spacing: 1.5px;
+  font-size: 11px;
+}
+
+.section-heading .text-h5 {
+  margin-top: 2px;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feature cards                                                              */
+/* -------------------------------------------------------------------------- */
+
+.feature-card {
   position: relative;
-  display: inline-block;
+
+  min-height: 180px;
+
+  border-radius: 22px;
+
+  background:
+    linear-gradient(145deg,
+      rgba(30, 34, 43, 0.98),
+      rgba(20, 23, 30, 0.98));
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  overflow: hidden;
+
+  transition:
+    transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1),
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-.hat-bounce {
-  animation: float 2s ease-in-out infinite;
+.feature-card::after {
+  content: '';
+
+  position: absolute;
+  inset: 0;
+
+  background: linear-gradient(135deg,
+      rgba(255, 255, 255, 0.035),
+      transparent 45%);
+
+  pointer-events: none;
 }
 
-.glow-progress {
-  box-shadow: 0 0 12px rgba(var(--q-primary), 0.4);
+.feature-card:not(.card-muted):hover {
+  transform: translateY(-5px);
+
+  border-color: rgba(255, 255, 255, 0.16);
+
+  box-shadow:
+    0 16px 35px rgba(0, 0, 0, 0.45),
+    0 0 25px rgba(var(--q-primary), 0.05);
 }
 
-.glowing-logo {
-  filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.05));
+.feature-card:not(.card-muted):active {
+  transform: translateY(-1px);
 }
 
-.tracking-wide {
-  letter-spacing: 0.75px;
+.feature-card-content {
+  position: relative;
+  z-index: 1;
+
+  min-height: 180px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 28px;
 }
 
-.action-card {
-  width: 180px;
-  cursor: pointer;
-  border-radius: 16px;
-  background: #191c24;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s, border-color 0.25s;
+/* -------------------------------------------------------------------------- */
+/* Feature graphic                                                            */
+/* -------------------------------------------------------------------------- */
+
+.feature-graphic {
+  width: 76px;
+  height: 76px;
+
+  flex-shrink: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 20px;
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
-.action-card:hover {
-  transform: translateY(-6px);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.6), 0 0 15px rgba(var(--q-primary), 0.1);
-  border-color: rgba(255, 255, 255, 0.15);
+.feature-card:not(.card-muted):hover .feature-graphic {
+  transform: scale(1.06);
 }
 
-@keyframes float {
+.graphic-fungible {
+  color: #81c784;
 
-  0%,
-  100% {
-    transform: translate(-50%, -55%);
+  background:
+    radial-gradient(circle at 30% 25%,
+      rgba(129, 199, 132, 0.3),
+      rgba(46, 125, 50, 0.08));
+
+  border: 1px solid rgba(129, 199, 132, 0.25);
+
+  box-shadow:
+    0 8px 25px rgba(46, 125, 50, 0.1);
+}
+
+.graphic-nft {
+  color: #64b5f6;
+
+  background:
+    radial-gradient(circle at 30% 25%,
+      rgba(100, 181, 246, 0.3),
+      rgba(2, 119, 189, 0.08));
+
+  border: 1px solid rgba(100, 181, 246, 0.25);
+
+  box-shadow:
+    0 8px 25px rgba(2, 119, 189, 0.1);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Feature text                                                               */
+/* -------------------------------------------------------------------------- */
+
+.feature-info {
+  flex: 1;
+  min-width: 0;
+  margin-left: 22px;
+  padding-right: 12px;
+}
+
+.feature-title {
+  color: white;
+
+  font-size: 18px;
+  font-weight: 700;
+
+  line-height: 1.25;
+}
+
+.feature-caption {
+  margin-top: 7px;
+
+  color: #8d929e;
+
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.feature-arrow {
+  color: rgba(255, 255, 255, 0.28);
+
+  transition:
+    transform 0.25s ease,
+    color 0.25s ease;
+}
+
+.feature-card:not(.card-muted):hover .feature-arrow {
+  color: rgba(255, 255, 255, 0.75);
+  transform: translateX(4px);
+}
+
+/* -------------------------------------------------------------------------- */
+/* Disabled state                                                             */
+/* -------------------------------------------------------------------------- */
+
+.card-muted {
+  opacity: 0.42;
+  filter: grayscale(0.65);
+  cursor: not-allowed;
+}
+
+.card-muted .feature-arrow {
+  opacity: 0.4;
+}
+
+.wallet-required {
+  opacity: 0.8;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Mobile                                                                     */
+/* -------------------------------------------------------------------------- */
+
+@media (max-width: 599px) {
+  .index-container {
+    padding-top: 12px;
+    padding-bottom: 24px;
   }
 
-  50% {
-    transform: translate(-50%, -45%);
-  }
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translate(-50%, -48%) scale(0.98);
+  .hero {
+    margin-top: 12px;
+    margin-bottom: 30px;
   }
 
-  to {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
+  .connect-section {
+    margin-bottom: 32px;
+  }
+
+  .connect-card {
+    border-radius: 16px;
+  }
+
+  .connect-card .q-card__section {
+    flex-wrap: wrap;
+  }
+
+  .connect-button {
+    width: 100%;
+    margin-top: 14px;
+  }
+
+  .feature-card,
+  .feature-card-content {
+    min-height: 150px;
+  }
+
+  .feature-card-content {
+    padding: 22px;
+  }
+
+  .feature-graphic {
+    width: 62px;
+    height: 62px;
+    border-radius: 17px;
+  }
+
+  .feature-graphic .q-icon {
+    font-size: 34px !important;
+  }
+
+  .feature-info {
+    margin-left: 16px;
+  }
+
+  .feature-title {
+    font-size: 16px;
+  }
+
+  .feature-caption {
+    font-size: 12px;
   }
 }
 </style>
