@@ -10,15 +10,34 @@
                     <q-card-section>
                         <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-transparent"
                             class="bg-transparent">
-                            <q-step :name="1" title="Token ID" icon="vpn_key" :done="genesisInputs.length >= 1"
+                            <q-step :name="1" title="Step 1" icon="vpn_key" :done="genesisInputs.length >= 1"
                                 header-nav>
-                                <q-separator class="q-my-lg" />
-                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
-                                    The Token ID/Category comes from one of your unspent BCH's txid.
+                                <!-- <q-separator class="q-my-lg" /> -->
+                                <q-banner class="q-mb-md bg-transparent text-grey-8 rounded-borders"
+                                    style="border: 1px solid var(--q-grey-4);">
+                                    <div class="row items-center no-wrap q-gutter-x-sm">
+                                        <div class="text-justify text-body q-gutter-x-md">
+                                            <div class="text-h6 text-primary q-mb-xs">Prepare Token Category</div>
+                                            <p class="q-mb-none text-grey-4">
+                                                A CashTokens <span class="text-weight-bold text-primary">Token Category
+                                                </span> is permanently generated from the unique <span
+                                                    class="text-weight-bold">32-byte Transaction ID (TXID)</span>
+                                                of the
+                                                unspent BCH output (UTXO) which was the first output of a previous
+                                                transaction. To prepare it, CashTokens Studio
+                                                automatically selects an available UTXO from your wallet; the
+                                                hex-encoded TXID of that specific
+                                                transaction will automatically serve as your immutable Token Category
+                                                identifier, guaranteeing global uniqueness on the network.
+                                            </p>
+                                        </div>
+                                    </div>
                                 </q-banner>
+
+
                                 <div v-if="genesisInputs.length === 0">
                                     <FormField>
-                                        <label>Token ID/Category candidate</label>
+                                        <label>Token category candidate</label>
                                         <div class="flex items-center q-gutter-x-md">
                                             <span class="text-caption grey-6">No available Token ID/Category
                                                 candidate <q-icon name="info"></q-icon></span>
@@ -30,7 +49,7 @@
                                 </div>
                                 <div v-else>
                                     <FormField>
-                                        <label>Token ID/Category candidate</label>
+                                        <label>Token category candidate</label>
                                         <q-input :model-value="genesisInputs[0]!.txid" readonly outlined>
                                             <template v-slot:prepend>
                                                 <q-icon name="done_all" color="bch"></q-icon>
@@ -48,14 +67,42 @@
                                 </q-stepper-navigation>
                             </q-step>
 
-                            <q-step :name="2" title="Storage" icon="lock" :done="isStep2Done" header-nav dense>
-                                <q-separator class="q-my-lg" />
-                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
-                                    Choose where to store your token's identity — either in a new Authguard Vault or an
-                                    existing one.
+                            <q-step :name="2" title="Step 2" icon="lock" :done="isStep2Done" header-nav dense>
+                                <q-banner class="q-mb-md bg-transparent text-grey-8 rounded-borders"
+                                    style="border: 1px solid var(--q-grey-4);">
+                                    <div class="row items-center no-wrap q-gutter-x-sm">
+                                        <div class="text-justify text-body q-gutter-x-md">
+                                            <div class="text-h6 text-primary q-mb-xs">Token Security</div>
+                                            <div class="q-mb-none text-grey-4">
+                                                <p>When you create a token in CashTokens Studio, the created token also
+                                                    becomes your token's
+                                                    identity-output. This is used to authenticate updates to your
+                                                    token's metadata / details. <strong>It's
+                                                        important to protect this output—accidentally spending it could
+                                                        compromise your token's
+                                                        ability to be updated.</strong></p>
+                                                That's why CashTokens Studio uses <a
+                                                    href="https://github.com/mr-zwets/AuthGuard" target="_blank"
+                                                    rel="noopener noreferrer" class="text-secondary">AuthGuard</a>, a
+                                                digital vault
+                                                designed to protect
+                                                this important output.
+                                                An Authguard Vault is accompanied with an<strong>AuthKey NFT</strong>
+                                                that gives you (the holder) the authority
+                                                to make
+                                                changes to your token. You can
+                                                keep the AuthKey in your wallet, while AuthGuard protects the
+                                                underlying identity output from
+                                                accidental spending.
+                                                <strong>Your token stays protected, while its authority remains easy
+                                                    to manage.</strong>
+
+                                            </div>
+                                        </div>
+                                    </div>
                                 </q-banner>
                                 <FormField>
-                                    <label>Token Identity Storage Option</label>
+                                    <label>Authguards Option</label>
                                     <q-option-group v-model="vaultMode" :options="[
                                         { label: 'New (Recommended)', value: 'new' },
                                         { label: 'Existing', value: 'existing', disable: authkeys.length === 0 },
@@ -92,17 +139,32 @@
                                 </template>
 
                                 <q-stepper-navigation class="flex justify-end q-gutter-sm">
-                                    <q-btn flat @click="step = 1" label="Back" />
+                                    <q-btn flat @click="step = 1" label="Back" rounded />
                                     <q-btn @click="step = 3" color="primary" label="Next"
-                                        :disable="vaultMode === 'new' ? genesisInputs.length < 2 : !authKeySelected" />
+                                        :disable="vaultMode === 'new' ? genesisInputs.length < 2 : !authKeySelected"
+                                        rounded />
                                 </q-stepper-navigation>
                             </q-step>
 
-                            <q-step :name="3" title="Spec" icon="token" header-nav>
+                            <q-step :name="3" title="Step 3" icon="token" header-nav>
                                 <q-separator class="q-my-lg" />
                                 <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
                                     Configure your token's specifications including type, amount, name, and metadata.
                                 </q-banner>
+                                <q-banner class="q-mb-md bg-transparent text-grey-8 rounded-borders"
+                                    style="border: 1px solid var(--q-grey-4);">
+                                    <div class="row items-center no-wrap q-gutter-x-sm">
+                                        <div class="text-justify text-body q-gutter-x-md">
+                                            <div class="text-h6 text-primary q-mb-xs">Configure Token</div>
+                                            <p class="q-mb-none text-grey-4">
+                                                Set your token's specification here. You can also provide the basic
+                                                token metadata / information.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </q-banner>
+
+
                                 <div class="q-gutter-y-md">
                                     <q-select v-model="tokenType" :options="typeOptions" label="Type *" filled
                                         emit-value map-options :rules="[val => !!val || 'Type is required']"
@@ -175,8 +237,8 @@
 
                                 <q-stepper-navigation>
                                     <div class="flex justify-end q-gutter-sm">
-                                        <q-btn flat @click="step = 2" label="Back" />
-                                        <q-btn @click="onSubmit" color="primary" label="Create Token" />
+                                        <q-btn flat @click="step = 2" label="Back" rounded />
+                                        <q-btn @click="onSubmit" color="primary" label="Create Token" rounded />
                                     </div>
                                 </q-stepper-navigation>
                             </q-step>
@@ -691,6 +753,12 @@ onMounted(async () => {
 </script>
 
 <style lang="scss" scoped>
+/* Target the connector line inside the final step tab only */
+.clean-stepper :deep(.q-stepper__tab:last-child .q-stepper__header-line::before),
+.clean-stepper :deep(.q-stepper__tab:last-child .q-stepper__header-line::after) {
+    display: none !important;
+}
+
 :deep(.q-stepper__header) {
     flex-wrap: nowrap;
     overflow-x: auto;
