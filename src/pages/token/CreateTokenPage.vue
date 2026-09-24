@@ -2,13 +2,14 @@
     <q-page class="bg-dark-page">
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat class="feature-card-bg rounded-borders" bordered>
+                <q-card flat class="feature-card-bg rounded-borders q-mt-xl" bordered>
                     <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
                         <span>Create Token</span>
                         <q-icon name="mdi-creation" size="lg" />
-                        </q-card-title>
+                    </q-card-title>
                     <q-card-section>
-                        <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-transparent" class="bg-transparent">
+                        <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-transparent"
+                            class="bg-transparent">
                             <q-step :name="1" title="Token ID" icon="vpn_key" :done="genesisInputs.length >= 1"
                                 header-nav>
                                 <q-separator class="q-my-lg" />

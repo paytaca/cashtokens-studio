@@ -2,7 +2,7 @@
     <q-page>
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
-                <q-card flat bordered class="feature-card-bg rounded-borders q-py-md">
+                <q-card flat bordered class="feature-card-bg rounded-borders q-mt-xl q-py-md">
                     <q-card-section class="flex justify-between items-center">
                         <div class="flex items-center no-wrap">
                             <q-avatar><q-icon name="key" color="warning"></q-icon></q-avatar>
