@@ -156,7 +156,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                        }})</span>
+                                                            }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -172,6 +172,9 @@
                                 </template>
                             </FormField>
                         </div>
+                    </template>
+                    <template v-else>
+                        <div>No NFT metadata</div>
                     </template>
                 </q-card>
             </div>
