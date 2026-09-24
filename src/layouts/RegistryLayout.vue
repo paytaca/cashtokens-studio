@@ -33,8 +33,10 @@
           </div>
           <q-card flat class="bg-dark q-pa-lg rounded-borders">
             <div class="row justify-end">
-              <q-btn v-if="activeAuthhead && route.name !== 'view-authhead'" icon="mdi-text-box-edit"
-                :label="$q.screen.gt.xs ? 'Edit' : ''" dense flat color="secondary" @click="toggleWriteMode">
+              <q-btn
+                v-if="activeAuthhead && (!route.name?.toString().includes('edit') && route.name !== 'view-authhead')"
+                icon="mdi-text-box-edit" :label="$q.screen.gt.xs ? 'Edit' : ''" dense flat color="secondary"
+                @click="toggleWriteMode">
               </q-btn>
             </div>
             <div class="flex justify-between items-start">
