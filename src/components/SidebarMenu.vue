@@ -79,16 +79,16 @@ const menu = computed<any[]>(() => {
     //   icon: 'add',
     //   disabled: Boolean(user.walletAddress) === false,
     // },
-    {
-      label: 'FT Reserves',
-      href: '/issuer/fungible-reserves',
-      icon: 'money',
-    },
-    {
-      label: 'NFT Collections',
-      href: '/issuer/nft-collections',
-      icon: 'art_track',
-    },
+    // {
+    //   label: 'FT Reserves',
+    //   href: '/issuer/fungible-reserves',
+    //   icon: 'money',
+    // },
+    // {
+    //   label: 'NFT Collections',
+    //   href: '/issuer/nft-collections',
+    //   icon: 'art_track',
+    // },
     {
       label: 'Metadata',
       href: hrefs.manageRegistries,

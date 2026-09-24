@@ -232,6 +232,30 @@ body.body--dark {
     inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
+.q-table__container.q-dark,
+.q-table__container.q-table--dark {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 34, 43, 0.98),
+    rgba(20, 23, 30, 0.98)
+  );
+}
+
+.q-table--dark thead th,
+.q-dark thead th {
+  background: #0d0f137a !important;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.q-table--dark thead th .q-table__sort-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
 // .q-field--readonly.q-field--float .q-field__native,
 // .q-field--readonly.q-field--float .q-field__input {
 //   color: #816f6f;
