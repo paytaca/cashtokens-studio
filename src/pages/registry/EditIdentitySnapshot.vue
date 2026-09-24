@@ -32,13 +32,15 @@
 
                             <div class="col-12">
                                 <FormField v-if="Object.keys(identitySnapshot.uris?.['icon'] || {})" key="icon-uri">
-                                    <label class="text-capitalize">Icon</label>
                                     <q-input v-model="identitySnapshot.uris!['icon']" outlined>
                                         <template v-slot:prepend>
-                                            <q-avatar>
-                                                <img v-if="identitySnapshot.uris!['icon']"
-                                                    :src="ipfsToGatewayUrl(identitySnapshot.uris!['icon']) as string" />
-                                            </q-avatar>
+                                            <q-btn flat class="cursor-pointer" @click="uploadIcon()">
+                                                <q-avatar>
+                                                    <img v-if="identitySnapshot.uris!['icon']"
+                                                        :src="ipfsToGatewayUrl(identitySnapshot.uris!['icon']) as string" />
+                                                </q-avatar>
+                                                <q-tooltip>{{ t('info.changeIcon') }}</q-tooltip>
+                                            </q-btn>
                                         </template>
                                         <template v-slot:append>
                                             <q-spinner-box v-if="iconUploading" color="warning"></q-spinner-box>
@@ -145,38 +147,36 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, triggerRef, watch } from 'vue'
+import { computed, inject, onMounted, ref, triggerRef, watch } from 'vue'
 import { QTableColumn, useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { liveQuery } from 'dexie'
+import { useObservable } from '@vueuse/rxjs'
+import { storeToRefs } from 'pinia'
+
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
-import { storeToRefs } from 'pinia'
+
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
-import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer, publishRegistry, isBroadcastSuccess } from 'src/core/transaction'
-import { Network } from 'cashscript'
-import { decodeCashAddress, stringify } from '@bitauth/libauth'
-import { broadcast } from 'src/core/transaction/broadcast'
+import { publishRegistry } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
-import { ParsableNftCollection, NftType, IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
+import { NftType, IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, IdentitySnapshotRecord, NftRecord } from 'src/core/client-db'
 import { getErrorMessage } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
 import { uploadFile } from 'src/core/ipfs'
 
-import { liveQuery } from 'dexie'
-import { useObservable } from '@vueuse/rxjs'
 import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
-import RegistryVersionOptionsDialog from 'src/components/bcmr/RegistryVersionOptionsDialog.vue'
 import { broadcastTransaction } from 'src/services/transaction'
+import { createSquareThumbnail } from 'src/utils'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -202,6 +202,7 @@ const publishing = ref(false)
 const refreshing = ref(false)
 const initialSnapshotJson = ref('')
 const iconUploading = ref(false)
+const { isUploadTriggered, resetUploadTrigger } = inject('iconUploadTriggered') as any
 
 const modified = computed(() => {
     if (!initialSnapshotJson.value || !identitySnapshot.value) return false
@@ -262,36 +263,6 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
     } finally {
         publishedLoading.value = false
     }
-}
-
-const loadImage = (src: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
-        const img = new Image()
-        img.onload = () => resolve(img)
-        img.onerror = reject
-        img.src = src
-    })
-}
-
-const createSquareThumbnail = async (file: File, maxSize: number): Promise<Blob> => {
-    const url = URL.createObjectURL(file)
-    const img = await loadImage(url)
-    URL.revokeObjectURL(url)
-
-    const size = Math.min(img.width, img.height)
-    const offsetX = (img.width - size) / 2
-    const offsetY = (img.height - size) / 2
-    const targetSize = Math.min(maxSize, size)
-
-    const canvas = document.createElement('canvas')
-    canvas.width = targetSize
-    canvas.height = targetSize
-    const ctx = canvas.getContext('2d')!
-    ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize)
-
-    return new Promise((resolve) => {
-        canvas.toBlob((blob) => resolve(blob!), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9)
-    })
 }
 
 const openAddUriDialog = (uri: any) => {
@@ -484,8 +455,33 @@ const uploadIcon = () => {
         const input = document.createElement('input')
         input.type = 'file'
         input.accept = 'image/*'
+        input.style.display = 'none'
+        document.body.appendChild(input)
+        // --- CANCEL HANDLING ---
+        // Native cancel handler for modern browsers
+        input.oncancel = () => {
+            iconUploading.value = false
+            input.remove()
+        }
+
+        // Robust fallback: if user switches window back to browser without choosing a file
+        const handleWindowFocus = () => {
+            // Slight timeout to let the change event fire first if they DID select a file
+            setTimeout(() => {
+                if (!input.files?.length) {
+                    iconUploading.value = false
+                    input.remove()
+                }
+                window.removeEventListener('focus', handleWindowFocus)
+            }, 300)
+        }
+        window.addEventListener('focus', handleWindowFocus)
+        // ------------------------
+
         input.onchange = async () => {
+            window.removeEventListener('focus', handleWindowFocus)
             const file = input.files?.[0]
+            input.remove()
             if (!file) return
             try {
                 const isImage = file.type.startsWith('image/')
@@ -503,6 +499,8 @@ const uploadIcon = () => {
                 $q.notify({ type: 'positive', message: 'Media uploaded successfully' })
             } catch (e: any) {
                 $q.notify({ type: 'negative', message: e.message || 'Upload failed' })
+            } finally {
+                iconUploading.value = false
             }
         }
         input.click()
@@ -511,10 +509,8 @@ const uploadIcon = () => {
             type: 'error',
             message: 'Error uploading icon'
         })
-    } finally {
         iconUploading.value = false
     }
-
 }
 
 const publishedPagination = ref({ sortBy: 'type', descending: false, page: 1, rowsPerPage: 10, rowsNumber: 0 })
@@ -523,6 +519,14 @@ const onPublishedRequest = async (props: any) => {
     const { page, rowsPerPage } = props.pagination
     await loadPublishedNfts((page - 1) * rowsPerPage, rowsPerPage)
 }
+
+watch(isUploadTriggered, (newValue) => {
+    console.log('@newvalue')
+    if (newValue === true) {
+        uploadIcon()
+        resetUploadTrigger()
+    }
+})
 
 watch(publishedTotal, (total) => {
     publishedPagination.value.rowsNumber = total
@@ -555,139 +559,6 @@ const onSaveClick = async () => {
 const onResetClick = () => {
     if (!initialSnapshotJson.value) return
     identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
-}
-
-const viewRegistry = () => {
-    router.push({ path: '/token/metadata-registry', query: { authbase: activeAuthhead.value?.token?.category } })
-}
-
-const openMintPage = () => {
-    appStore.setActiveMinter(activeAuthhead.value)
-    router.push('/issuer/nft-collections/' + activeAuthhead.value!.token?.category + '/mint')
-}
-
-const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
-    const id = activeAuthhead.value?.identitySnapshotIdentifier
-    const bytecode = (activeAuthhead.value?.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection | undefined)?.bytecode
-    registryStore.setActiveNft({
-        contentHash: id!.contentHash,
-        authbase: id!.identity.authbase,
-        timestamp: id!.identity.timestamp,
-        category: activeAuthhead.value!.token!.category,
-        bytecode,
-        commitmentOrBottomAltStack: row.type,
-        nftType: row.nft,
-        allowEdit: true
-    })
-    router.push('/issuer/nft-collections/' + activeAuthhead.value!.token?.category + '/nft')
-}
-
-const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
-    const v = activeAuthhead.value
-    if (!v) return
-
-    if (!wallet.value?.utxos || wallet.value.utxos.length === 0) {
-        return $q.notify({
-            type: 'Error',
-            message: 'Insufficient BCH balance'
-        })
-    }
-
-    const identitySnapshot = v.identitySnapshot
-    const componentProps: Record<string, any> = {
-        transferType: action,
-        tokenCategory: v.token!.category,
-        balance: BigInt(v.token!.amount),
-        decimals: identitySnapshot?.token?.decimals ?? 0,
-        identitySnapshot,
-    }
-
-    if (action === 'issuance') {
-        componentProps.selfAddress = wallet.value.getTokenDepositAddress(0)
-    } else if (action === 'burn') {
-        const sampleAddress = wallet.value.getTokenDepositAddress(0)
-        const sampleDecodedAddress = decodeCashAddress(sampleAddress)
-        if (typeof (sampleDecodedAddress) === 'string') {
-            throw new Error(sampleDecodedAddress)
-        }
-        componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
-    }
-
-    $q.dialog({
-        component: FungibleTransferDialog,
-        componentProps,
-        focus: 'none'
-    }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
-
-        const loadingGroup = $q.loading.show({
-            group: 'issue-fungible-reserves-loading-group',
-            message: 'Preparing. Checking wallet for inputs...'
-        })
-
-        const issuerTokenUtxo = JSON.parse(
-            JSON.stringify(v, jsonReplacer),
-            jsonFormSafeUtxoReviver,
-        )
-
-        try {
-            let recipientAddress = userInputs.recipient
-            if (action === 'burn') {
-                recipientAddress = componentProps.burnAddress
-            }
-            const signRequest = transferFungibleReserves({
-                issuerTokenUtxo,
-                authkeyUtxo: issuerTokenUtxo.authkey,
-                recipientAddress: recipientAddress,
-                transferTokenAmount: userInputs.tokenAmount,
-                network: import.meta.env.VITE_BCH_NETWORK as Network,
-                funderUtxos: (wallet.value.utxos || []) as UtxoWithPath[],
-                transferType: action
-            })
-
-            loadingGroup({
-                message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
-            })
-            const response = await manager.value!.signTransaction(signRequest);
-
-            loadingGroup({
-                message: 'Broadcasting transaction, please wait...'
-            })
-
-            const broadcastResponse = await broadcast(response.signedTransaction)
-
-            if (broadcastResponse.ok) {
-                const broadcastResult = await broadcastResponse.json()
-                if (broadcastResult.success) {
-                    await delay(2000)
-                    loadingGroup()
-                    $q.dialog({
-                        component: TransactionStatusDialog,
-                        componentProps: {
-                            statusType: 'success',
-                            statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
-                            txid: broadcastResult.txid
-                        }
-                    })
-                } else {
-                    throw new Error(broadcastResult.error)
-                }
-            }
-        } catch (error: any) {
-            $q.notify({
-                type: 'Error',
-                message: error.message
-            })
-        } finally {
-            loadingGroup()
-        }
-    })
-}
-
-
-const onEditIdentitySnapshotClick = () => {
-    router.push({
-        name: 'edit-identity-snapshot', query: route.query
-    })
 }
 
 onMounted(async () => {
