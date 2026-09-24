@@ -1,9 +1,9 @@
 <template>
-  <q-page class="index-page bg-dark text-white">
+  <q-page class="index-page bg-dark text-white" :class="{ 'index-page-centered': walletIsReady }">
     <div class="index-container column items-center q-pa-md q-pa-sm-lg">
 
       <!-- Hero -->
-      <div class="hero column items-center text-center">
+      <div v-if="!walletIsReady" class="hero column items-center text-center">
         <q-img src="images/cts_transparent.png" :style="bannerSize" class="hero-logo" alt="CashTokens Studio" />
 
         <div class="hero-tagline text-subtitle1 text-grey-5">
@@ -12,7 +12,7 @@
       </div>
 
       <!-- Wallet connection -->
-      <div class="connect-section">
+      <div v-if="!walletIsReady" class="connect-section">
         <q-card class="connect-card">
           <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
 
@@ -49,7 +49,7 @@
               </template>
             </div>
 
-            <q-btn v-if="!isConnecting" color="primary" unelevated rounded no-caps
+            <q-btn v-if="!isConnecting && !walletIsReady" color="primary" unelevated rounded no-caps
               class="connect-button text-weight-bold" :label="t('index.connect.action')" @click="onConnect" />
 
           </q-card-section>
@@ -109,11 +109,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, Ref, watch } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { WizardConnectQRDialog } from 'wizardconnect-vue';
+import { WizardConnectQRDialog, WizardConnectState } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 
 const { t } = useI18n();
@@ -202,6 +202,13 @@ watch(
   width: 100%;
   max-width: 760px;
   margin: 0 auto;
+}
+
+.index-page-centered {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
 }
 
 .hero {
