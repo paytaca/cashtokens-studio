@@ -18,6 +18,7 @@ export function useCancelableLoadingDialog() {
   const steps = ref<LoaderStep[]>([]);
   let loadingDialog: DialogChainObject | null = null;
   let abortController: AbortController | null = null;
+  let suppressCancel = false;
 
   /**
    * Initializes and displays the checklist overlay dialog
@@ -27,6 +28,7 @@ export function useCancelableLoadingDialog() {
     onCancelCallback?: () => void,
   ) => {
     abortController = new AbortController();
+    suppressCancel = false;
 
     steps.value = initialSteps.map((step) => ({
       ...step,
@@ -39,6 +41,8 @@ export function useCancelableLoadingDialog() {
     });
 
     loadingDialog.onCancel(() => {
+      if (suppressCancel) return;
+
       if (abortController) abortController.abort();
 
       const currentActive = steps.value.find((s) => s.status === 'running');
@@ -48,11 +52,13 @@ export function useCancelableLoadingDialog() {
     });
   };
 
-  const updateStep = (id: string, status: LoaderStepStatus) => {
+  const updateStep = (id: string, status: LoaderStepStatus, newLabel?: string) => {
     const targetStep = steps.value.find((s) => s.id === id);
     if (targetStep) {
       targetStep.status = status;
-
+      if (newLabel) {
+        targetStep.label = newLabel
+      }
       if (loadingDialog) {
         loadingDialog.update({
           componentProps: { steps: [...steps.value] },
@@ -64,6 +70,7 @@ export function useCancelableLoadingDialog() {
   const stopLoader = (delayMs = 0) => {
     setTimeout(() => {
       if (loadingDialog) {
+        suppressCancel = true;
         loadingDialog.hide();
         loadingDialog = null;
       }
