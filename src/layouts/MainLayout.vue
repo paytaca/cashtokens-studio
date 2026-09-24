@@ -1,7 +1,7 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
+  <q-layout view="hHh lpr fFf">
     <!-- <TransactionLogger /> -->
-    <q-header v-if="showHeader" class="bg-dark">
+    <q-header v-if="showHeader" class="header-subtle">
       <q-toolbar class="q-py-sm">
         <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
           @click="toggleLeftDrawer" />
@@ -94,16 +94,16 @@
       </q-toolbar>
     </q-header>
     <q-drawer v-if="walletIsReady" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
-      v-close-popup class="sidebar-drawer">
+      class="sidebar-drawer">
       <div v-if="$q.screen.lt.sm" class="text-right q-ma-lg">
         <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
           class="justify-right" dense flat />
       </div>
-      <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }">
+      <q-scroll-area style="position: relative; height: 100%; max-width: 100vw" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
             <q-btn to="/" size="2em" flat color="primary">
-              <q-avatar size="4em">
+              <q-avatar size="3em">
                 <q-img src="images/cts_icon.png"></q-img>
               </q-avatar>
             </q-btn>
@@ -113,7 +113,7 @@
       </q-scroll-area>
     </q-drawer>
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
-      :thumb-style="{ width: '0px' }">
+      :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
         <!-- <q-linear-progress v-if="scanning" indeterminate color="primary" class="q-mt-none" />
         <div v-if="scanning" class="q-ml-sm q-mt-sm text-italic text-grey-200 text-caption">
@@ -144,7 +144,7 @@
         <!-- <q-ajax-bar /> -->
       </q-page-container>
     </q-scroll-area>
-    <q-footer class="bg-grey-9 text-white">
+    <q-footer class="footer-subtle text-white">
       <div class="row items-center justify-center q-pa-sm">
         <div class="text-caption">
           Made with <span style="color: #e25555">❤️</span> by
@@ -303,8 +303,12 @@ onMounted(async () => {
   object-fit: contain;
 }
 
-.sidebar-drawer {
-  background: #1e1e1e;
+.header-subtle {
+  background: transparent !important;
+}
+
+.footer-subtle {
+  background: transparent !important;
 }
 
 @media (max-width: 600px) {
@@ -333,5 +337,16 @@ onMounted(async () => {
     transform: scale(1);
     box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
   }
+}
+</style>
+
+<style lang="scss">
+.q-drawer--standard {
+  background: transparent !important;
+  //border-right: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.q-drawer--mobile {
+  background: rgba(18, 20, 26, 0.92) !important;
 }
 </style>
