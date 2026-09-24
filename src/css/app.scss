@@ -244,6 +244,10 @@ body.body--dark {
     inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
 }
 
+.q-dialog .q-card {
+  border-radius: 25px;
+}
+
 .q-table__container.q-dark,
 .q-table__container.q-table--dark {
   background: linear-gradient(
