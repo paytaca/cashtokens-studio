@@ -82,12 +82,20 @@ export const useWizardConnectWallet = () => {
         return result
     }
 
+    const wrappedDisconnect = async () => {
+        await disconnect()
+        wallet.value = new WizardConnectExternalWallet({
+            network: import.meta.env.VITE_BCH_NETWORK
+        })
+        triggerRef(wallet)
+    }
+
     const closeConnectDialog = async () => {
         showQR.value = false
         qrURI.value = null
         qrDataURI.value = null
         if (state.value === 'connecting' || state.value === 'reconnecting') {
-            await disconnect()
+            await wrappedDisconnect()
         }
     }
 
@@ -119,7 +127,7 @@ export const useWizardConnectWallet = () => {
         qrURI,
         qrDataURI,
         connect: wrappedConnect,
-        disconnect,
+        disconnect: wrappedDisconnect,
         closeConnectDialog,
     }
 }

@@ -220,6 +220,18 @@ body.body--dark {
   border-radius: 25px;
 }
 
+.feature-card-bg {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 34, 43, 0.98),
+    rgba(20, 23, 30, 0.98)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
 // .q-field--readonly.q-field--float .q-field__native,
 // .q-field--readonly.q-field--float .q-field__input {
 //   color: #816f6f;

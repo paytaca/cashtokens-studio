@@ -6,10 +6,11 @@
         <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
           @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-img @click.stop="router.push('/')" :src="$q.screen.xs
+          <!-- <q-img @click.stop="router.push('/')" :src="$q.screen.xs
               ? 'images/cts_icon.png'
               : 'images/cts_transparent.png'
-            " class="cursor-pointer app-logo"></q-img>
+            " class="cursor-pointer app-logo"></q-img> -->
+          <code v-if="network === 'chipnet'" class="text-caption text-italic q-ml-sm">Chipnet</code>
         </q-toolbar-title>
         <q-btn v-if="!Boolean(manager) || state === 'disconnected'" to="/wizard-connect" style="
             color: rgb(20, 20, 20);
@@ -90,11 +91,10 @@
           </q-btn-group>
         </div>
         <!-- <light-switch /> -->
-        <code v-if="network === 'chipnet'" class="text-caption text-italic q-ml-sm">Chipnet</code>
       </q-toolbar>
     </q-header>
-    <q-drawer v-if="walletIsReady" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1" v-close-popup
-      class="sidebar-drawer">
+    <q-drawer v-if="walletIsReady" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
+      v-close-popup class="sidebar-drawer">
       <div v-if="$q.screen.lt.sm" class="text-right q-ma-lg">
         <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
           class="justify-right" dense flat />
@@ -190,7 +190,7 @@ const eventBus = inject<EventBus>('eventBus');
 
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
-const showHeader = computed(() => walletIsReady && route.path !== '/');
+const showHeader = computed(() => walletIsReady);
 
 useWalletConnect();
 

@@ -70,7 +70,7 @@
 
         <div class="row q-col-gutter-md">
           <div v-for="card in featureCards" :key="card.name" class="col-12 col-sm-6">
-            <q-card class="feature-card" :class="{ 'card-muted': !walletIsReady }" :clickable="walletIsReady"
+            <q-card class="feature-card feature-card-bg" :class="{ 'card-muted': !walletIsReady }" :clickable="walletIsReady"
               :aria-disabled="!walletIsReady" @click="onFeatureCardClick(card)">
               <q-card-section class="feature-card-content">
 
@@ -309,17 +309,6 @@ watch(
   min-height: 180px;
 
   border-radius: 22px;
-
-  background:
-    linear-gradient(145deg,
-      rgba(30, 34, 43, 0.98),
-      rgba(20, 23, 30, 0.98));
-
-  border: 1px solid rgba(255, 255, 255, 0.08);
-
-  box-shadow:
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.025);
 
   overflow: hidden;
 
