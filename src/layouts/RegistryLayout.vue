@@ -99,7 +99,7 @@
 </template>
 
 <script setup lang="ts">
-import { ipfsToGatewayUrl, uploadFile } from 'src/core/ipfs';
+import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { shortenTokenId } from 'src/core/utils';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { useRegistryStore } from 'src/stores/registry';
@@ -108,7 +108,6 @@ import { useRoute, useRouter } from 'vue-router';
 import CopyText from 'src/components/CopyText.vue';
 import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
-import { createSquareThumbnail } from 'src/utils'
 
 const $q = useQuasar()
 const registryStore = useRegistryStore();
@@ -121,7 +120,6 @@ const { wallet } = inject('wizardConnectWallet') as any;
 const route = useRoute();
 const router = useRouter();
 const mode = ref<'edit' | 'view'>('view');
-const iconUploading = ref<boolean>(false)
 
 const isUploadTriggered = ref(false)
 
@@ -210,49 +208,6 @@ const navModeLinks = {
     },
   ],
 };
-
-const uploadIcon = () => {
-  try {
-    iconUploading.value = true
-    const input = document.createElement('input')
-    input.type = 'file'
-    input.accept = 'image/*'
-    input.style.display = 'none'
-    document.body.appendChild(input)
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      input.remove()
-      if (!file) return
-      try {
-        const isImage = file.type.startsWith('image/')
-        const isGif = file.type === 'image/gif'
-
-        let icon: File | Blob = file
-        if (isImage && !isGif) {
-          icon = await createSquareThumbnail(file, 400)
-        }
-        const result = await uploadFile(icon, `thumb_${file.name}`)
-        const { cid } = result
-        if (cid) {
-          activeIdentitySnapshot.value!.uris!.icon = `ipfs://${cid}`
-        }
-        $q.notify({ type: 'positive', message: 'Media uploaded successfully' })
-      } catch (e: any) {
-        $q.notify({ type: 'negative', message: e.message || 'Upload failed' })
-      } finally {
-        iconUploading.value = false
-      }
-    }
-    input.click()
-  } catch (error) {
-    $q.notify({
-      type: 'error',
-      message: 'Error uploading icon'
-    })
-    iconUploading.value = false
-  }
-}
-
 
 const navLinks = computed(() => {
   let links = mode.value === 'edit' ? navModeLinks.edit : navModeLinks.view;
