@@ -102,7 +102,7 @@
                                     </div>
                                 </q-banner>
                                 <FormField>
-                                    <label>Authguards Option</label>
+                                    <label>Authguard</label>
                                     <q-option-group v-model="vaultMode" :options="[
                                         { label: 'New (Recommended)', value: 'new' },
                                         { label: 'Existing', value: 'existing', disable: authkeys.length === 0 },
@@ -111,7 +111,7 @@
 
                                 <template v-if="vaultMode === 'new'">
                                     <FormField class="q-mt-md">
-                                        <label>Authguard Vault Key ID</label>
+                                        <label>Authkey NFT</label>
                                         <div v-if="genesisInputs.length < 2" class="flex items-center q-gutter-x-md">
                                             <span class="text-caption grey-6">No available Key candidate <q-icon
                                                     name="info"></q-icon></span>
@@ -280,6 +280,8 @@ import { NetworkType } from 'mainnet-js'
 import CopyText from 'src/components/CopyText.vue'
 import { DEFAULT_TOKEN_VALUE } from 'src/apps'
 import { broadcastTransaction } from 'src/services/transaction'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList } from 'src/utils'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -289,6 +291,7 @@ const {
     wallet
 } = useWizardConnectWallet()
 
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys } = authguardStore
 
@@ -395,16 +398,12 @@ const validateVmNumber = (val: string) => {
 }
 
 const onGenerateGenesisInput = async () => {
-    const loadingGroup = $q.loading.show({
-        group: 'ctlg',
-        message: 'Preparing. Checking wallet for inputs...'
-    })
+
+    startLoader(txTaskList)
 
     try {
 
-        loadingGroup({
-            message: 'Checking wallet for inputs...'
-        })
+        updateStep('inputs-check', 'running')
 
         const genesisInputCandidates = new Set()
 
@@ -421,9 +420,8 @@ const onGenerateGenesisInput = async () => {
             return
         }
 
-        loadingGroup({
-            message: 'Preparing transaction...'
-        })
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         const signRequest = createGenesisInput({
             recipientAddress: wallet.value.getDepositAddress(0),
@@ -432,37 +430,41 @@ const onGenerateGenesisInput = async () => {
             feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
         })
 
-        loadingGroup({
-            message: 'Waiting for approval. Please check your wallet...'
-        })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
+
         let response: any = {}
 
         response = await manager.value?.signTransaction(signRequest);
 
-        loadingGroup({
-            message: 'Broadcasting transaction, please wait...'
-        })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
         const [broadcastError, txid] = await broadcastTransaction({
             transactionHex: response.signedTransaction,
             network: import.meta.env.VITE_BCH_NETWORK,
             onProgress: (progress: string) => {
-                loadingGroup({ message: progress })
+                const task = txTaskList.find(t => t.id === TASK_BROADCASTING)
+                const newLabel = task!.label?.replace(/\s*\(.*?\)/g, `(${progress})`)
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
             }
         })
 
-        if (broadcastError) throw broadcastError
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
 
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
-        })
+        updateStep(TASK_BROADCASTING, 'done')
+
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: txid
         })
 
-        loadingGroup()
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
 
         await db.saveActivity({
             event: `Created genesis input`,
@@ -470,6 +472,7 @@ const onGenerateGenesisInput = async () => {
             status: 'success'
         })
 
+        updateStep(TASK_REFRESH_UTXOS, 'done')
         await wallet.value.sync()
 
         triggerRef(wallet)
@@ -488,16 +491,26 @@ const onGenerateGenesisInput = async () => {
 
     } catch (error) {
         $q.notify({ type: 'Error', message: `Error: ${error}` })
+        stopLoader(2000)
     } finally {
-        loadingGroup()
+        // loadingGroup()
+        stopLoader(1000)
     }
 }
 
 const onSubmit = async () => {
 
-    const loadingGroup = $q.loading.show({
-        group: 'create-token-loading-group',
-        message: 'Preparing. Checking wallet for inputs...'
+    const TASK_CREATE_REGISTRY = 'create-registry'
+    const TASK_UPLOAD_REGISTRY = 'upload-registry'
+    const TASK_REFRESH_UTXOS = 'refresh-utxos'
+
+    const genesisTaskList = [
+        { id: TASK_CREATE_REGISTRY, label: 'Creating Registry' },
+        { id: TASK_UPLOAD_REGISTRY, label: 'Uploading Registry' },
+        ...txTaskList,
+    ]
+    startLoader(genesisTaskList, () => {
+        $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
     let contentHash: string | undefined
@@ -512,7 +525,7 @@ const onSubmit = async () => {
         }
 
         const genesisInput = genesisInputs.value[0]
-        const authKeyInput = authKeySelected.value
+        const authKeyInput = authKeySelected.value || genesisInputs.value[1]
         if (!genesisInput) {
             return $q.notify({
                 type: 'Error',
@@ -527,9 +540,7 @@ const onSubmit = async () => {
         }
         const authbase = genesisInput.txid
 
-        loadingGroup({
-            message: 'Creating token registry...'
-        })
+        updateStep(TASK_CREATE_REGISTRY, 'running')
 
         if (tokenType.value === 'Fungible') {
             delete identitySnapshot.value.token!.nfts
@@ -559,11 +570,10 @@ const onSubmit = async () => {
 
         const registryJson = JSON.stringify(registry)
 
-        if (uris?.length === 0) {
-            loadingGroup({
-                message: 'Uploading token registry to IPFS...'
-            })
+        updateStep(TASK_CREATE_REGISTRY, 'done')
 
+        if (uris?.length === 0) {
+            updateStep(TASK_UPLOAD_REGISTRY, 'running')
             try {
                 const registryBlob = new Blob([registryJson], { type: 'application/json' })
                 const uploadResult = await uploadFile(registryBlob, 'bitcoin-cash-metadata-registry.json')
@@ -571,17 +581,20 @@ const onSubmit = async () => {
                     throw new Error(`Error uploading registry to IPFS`)
                 }
                 uris = [`ipfs://${uploadResult.cid}`]
-                loadingGroup({
-                    message: `Upload success, uri = ${uris[0]}`
-                })
+                updateStep(TASK_UPLOAD_REGISTRY, 'done')
             } catch (error) {
-                loadingGroup()
+                updateStep(TASK_UPLOAD_REGISTRY, 'failed')
+                stopLoader(5000)
                 return $q.notify({
                     type: 'Error',
                     message: 'Error saving registry to IPFS. Try refreshing page. If problem persist please contact admin.'
                 })
+
             }
         }
+
+        updateStep(TASK_UPLOAD_REGISTRY, 'done')
+
         if (!savedRegistry) {
             await db.createNewRegistry({
                 publicationUris: uris,
@@ -591,9 +604,7 @@ const onSubmit = async () => {
             })
         }
 
-        loadingGroup({
-            message: 'Preparing transaction...'
-        })
+        updateStep(TASK_PREPARE_TX, 'running')
 
         if (uris.length === 0) throw new Error('Error uploading registry to IPFS')
 
@@ -612,42 +623,46 @@ const onSubmit = async () => {
             feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
         }
 
-        loadingGroup({
-            message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
-        })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
+
         let response: any = {}
 
         const createTokenSignRequest = createToken(createTokenArgs)
 
         response = await manager.value?.signTransaction(createTokenSignRequest);
 
-        loadingGroup({
-            message: 'Broadcasting transaction, please wait...'
-        })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
         const [broadcastError, txid] = await broadcastTransaction({
             transactionHex: response.signedTransaction,
             network: import.meta.env.VITE_BCH_NETWORK,
             onProgress: (progress: string) => {
-                loadingGroup({ message: progress })
+                const task = genesisTaskList.find(t => t.id === TASK_BROADCASTING)
+                const newLabel = task!.label?.replace(/\s*\(.*?\)/g, `(${progress})`)
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
             }
         })
 
-        if (broadcastError) throw broadcastError
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
+
+        updateStep(TASK_BROADCASTING, 'done')
 
         await db.setRegistryPublished(authbase, contentHash)
 
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
-        })
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: txid
         })
 
-
-        loadingGroup()
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'done')
 
         await db.saveActivity({
             event: `Created ${identitySnapshot.value.token!.symbol} Token`,
@@ -658,6 +673,10 @@ const onSubmit = async () => {
         await loadAuthkeys(wallet.value, true)
 
         triggerRef(wallet)
+
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
+        stopLoader(1000)
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -671,15 +690,15 @@ const onSubmit = async () => {
         })
 
     } catch (error) {
+        stopLoader(4000)
         if (contentHash) {
             await db.registry.where('contentHash').equals(contentHash).delete()
         }
+
         $q.notify({
             type: 'Error',
             message: 'Error creating transaction: ' + error
         })
-    } finally {
-        loadingGroup()
     }
 
 }

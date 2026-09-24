@@ -3,7 +3,7 @@ import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { jsonReplacer, jsonReviver, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
 import { AbiFunction, scriptToBytecode } from "@cashscript/utils"
@@ -172,7 +172,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     //     artifact: authguardContract.artifact
     // }
 
-    // issuerTokenSourceOutput!.contract = wcPayload.sourceOutputs[0]?.contract
+    // issuerTokenSourceOutput!.contract = sourceOutputs[0]?.contract
 
 
     // const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex)) as TransactionCommon
@@ -196,11 +196,13 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     } else if (params.transferType === 'burn') {
         userPrompt = 'Burn FTs from reserves'
     }
+
     const wcPayload = transaction.generateWcTransactionObject()
+
     return {
         action: RelayMsgAction.SignTransactionRequest,
         transaction: {
-            transaction: transactionHex,
+            transaction: transaction.build(),
             sourceOutputs: JSON.parse(JSON.stringify(wcPayload.sourceOutputs, jsonReplacer)),
             userPrompt: userPrompt,
             broadcast: false
