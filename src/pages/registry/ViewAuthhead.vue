@@ -141,7 +141,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, triggerRef, inject, defineComponent } from 'vue'
+import { ref, computed, watch, triggerRef, inject, defineComponent } from 'vue'
 import { useRouter, onBeforeRouteLeave, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
@@ -157,13 +157,14 @@ import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useQuasar } from 'quasar'
 import { decodeCashAddress } from '@bitauth/libauth'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
-import { broadcast, isBroadcastSuccess, jsonFormSafeUtxoReviver, jsonReplacer, transferFungibleReserves } from 'src/core/transaction'
+import { transferFungibleReserves } from 'src/core/transaction'
 import { Network } from 'cashscript'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
-import { timeStamp } from 'console'
 import { useRegistryStore } from 'src/stores/registry'
-
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { broadcastTransaction } from 'src/services/transaction'
 const props = defineProps<{
     authkey: string,
     authhead: string,
@@ -177,6 +178,7 @@ const route = useRoute()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
 const { setActiveIdentitySnapshot } = useRegistryStore()
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const wizardConnectWallet = inject('wizardConnectWallet') as any
@@ -299,10 +301,16 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
 
-        const loadingGroup = $q.loading.show({
-            group: 'issue-fungible-reserves-loading-group',
-            message: 'Preparing. Checking wallet for inputs...'
+        startLoader(txTaskList, () => {
+            $q.notify({ type: 'warning', message: 'Cancelled by user' })
         })
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
+        // const loadingGroup = $q.loading.show({
+        //     group: 'issue-fungible-reserves-loading-group',
+        //     message: 'Preparing. Checking wallet for inputs...'
+        // })
 
         const issuerTokenUtxo = activeAuthhead.value as DecoratedUtxo
         try {
@@ -320,38 +328,44 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
                 transferType: action,
                 feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
             })
-
-            loadingGroup({
-                message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
-            })
+            updateStep(TASK_PREPARE_TX, 'done')
+            updateStep(TASK_WAIT_FOR_SIG, 'running')
             const response = await manager.value!.signTransaction(signRequest);
 
-            loadingGroup({
-                message: 'Broadcasting transaction, please wait...'
+            updateStep(TASK_WAIT_FOR_SIG, 'done')
+
+            updateStep(TASK_BROADCASTING, 'running')
+
+            const [broadcastError, txid] = await broadcastTransaction({
+                transactionHex: response.signedTransaction,
+                network: import.meta.env.VITE_BCH_NETWORK,
+                onProgress: (progress: string) => {
+                    const newLabel = updateTxTaskLabel({ txTaskList: txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                    updateStep(TASK_BROADCASTING, 'running', newLabel)
+                }
             })
 
-            const broadcastResponse = await broadcast(response.signedTransaction)
+            if (broadcastError) {
+                updateStep(TASK_BROADCASTING, 'failed')
+                throw broadcastError
+            }
 
-            if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
 
-            const broadcastResult = await broadcastResponse.json()
-
-            if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
-
-            loadingGroup({
-                message: 'Broadcast success, awaiting tx propagation...'
-            })
+            updateStep(TASK_BROADCASTING, 'done')
+            updateStep(TASK_WAITING_PROPAGATION, 'running')
 
             const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
             await (new BaseWallet(networkType)).waitForTransaction({
-                txHash: broadcastResult.txid
+                txHash: txid
             })
 
+            updateStep(TASK_WAITING_PROPAGATION, 'done')
+            updateStep(TASK_REFRESH_UTXOS, 'running')
 
 
             await db.saveActivity({
                 event: `Released ${activeAuthhead.value!.identitySnapshot?.token!.symbol || activeAuthhead.value?.token?.category} Tokens from reserves`,
-                txid: broadcastResult.txid,
+                txid,
                 status: 'success'
             })
 
@@ -360,25 +374,28 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
             })
 
             await updateActiveAuthhead()
-            loadingGroup()
+
+            updateStep(TASK_REFRESH_UTXOS, 'done')
+
+            stopLoader(1000)
+
             $q.dialog({
                 component: TransactionStatusDialog,
                 componentProps: {
                     statusType: 'success',
                     statusText: `Released ${activeAuthhead.value!.identitySnapshot?.token!.symbol || activeAuthhead.value?.token?.category} Tokens from reserves`,
-                    txid: broadcastResult.txid
+                    txid
                 }
             }).onOk(() => {
                 // router.push('/dashboard#collected')
             })
 
         } catch (error: any) {
+            stopLoader(3000)
             $q.notify({
                 type: 'Error',
                 message: error.message
             })
-        } finally {
-            loadingGroup()
         }
     })
 }
@@ -389,10 +406,6 @@ watch(() => activeAuthhead.value, (v) => {
         originalSnapshotJson.value = JSON.stringify(localSnapshot.value)
     }
 }, { immediate: true })
-
-onMounted(() => {
-    console.log('@props', props)
-})
 </script>
 
 <style scoped lang="scss">
