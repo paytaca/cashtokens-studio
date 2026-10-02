@@ -52,6 +52,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
     if (createNewAuthKey && authkeyInput.vout !== 0) throw new Error('AuthKey utxo should be a valid genesis input if creating an AuthKey genesis.')
 
     if (!createNewAuthKey && authkeyInput?.token?.nft?.commitment !== '00') throw new Error('Invalid AuthKey commitment format') 
+    if (!createNewAuthKey && authkeyInput?.token?.nft?.capability !== 'none') throw new Error('Invalid AuthKey capability') 
     
     const newToken = {
         ...params.tokenSpec,

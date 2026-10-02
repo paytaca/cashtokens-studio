@@ -131,7 +131,7 @@ export type LibauthSourceOutput = {
   valueSatoshis: string|bigint;
 }
 
-export function utxoToLibauthSourceOutput (utxo: Utxo, transportSafe: boolean = false) {
+export function utxoToLibauthSourceOutput (utxo: Utxo, transportSafe = false) {
 
     const lockingBytecode = cashAddressToLockingBytecode(utxo.address)
     if (typeof(lockingBytecode) === 'string') throw new Error('Error converting address to locking bytecode')

@@ -1,8 +1,8 @@
 <template>
     <q-dialog ref="dialogRef" @hide="onDialogHide" persistent>
-        <q-card class="feature-card">
-            <q-card-section class="text-h6 text-center q-pb-none">
-                Processing...
+        <q-card class="feature-card q-py-lg">
+            <q-card-section class="text-h6 text-center q-pb-none ">
+                <span class="text-grey-6">Processing...</span>
             </q-card-section>
 
             <q-card-section class="q-py-md">
@@ -33,7 +33,7 @@
             </q-card-section>
 
             <q-card-actions align="center" class="q-pt-none">
-                <q-btn flat label="Cancel Process" color="negative" @click="onDialogCancel" />
+                <q-btn rounded label="Cancel" color="negative" @click="onDialogCancel" />
             </q-card-actions>
         </q-card>
     </q-dialog>
