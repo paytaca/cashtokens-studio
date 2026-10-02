@@ -2,5 +2,5 @@ import { Utxo } from "cashscript";
 import { UtxoWithPath } from "../wallet/types";
 
 export function filterAuthKeys(utxos: Utxo[]|UtxoWithPath[]): Utxo[]|UtxoWithPath[]  {
-    return utxos.filter(u => u.token?.nft?.commitment === '00')
+    return utxos.filter(u => u.token?.nft?.commitment === '00' && u.token?.nft?.capability === 'none')
 }
