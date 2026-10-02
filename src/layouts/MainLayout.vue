@@ -12,7 +12,7 @@
             " class="cursor-pointer app-logo"></q-img> -->
           <code v-if="network === 'chipnet'" class="text-caption text-italic q-ml-sm">Chipnet</code>
         </q-toolbar-title>
-        <q-btn v-if="!Boolean(manager) || state === 'disconnected'" to="/wizard-connect" style="
+        <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
             color: rgb(20, 20, 20);
             padding: 10px;
             border-radius: 10px;
@@ -191,6 +191,8 @@ const eventBus = inject<EventBus>('eventBus');
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
 const showHeader = computed(() => walletIsReady);
+
+const isIndexPage = computed(() => route.path === '/');
 
 useWalletConnect();
 

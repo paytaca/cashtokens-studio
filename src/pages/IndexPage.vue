@@ -17,7 +17,7 @@
           <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
 
             <div class="connect-icon">
-              <q-icon name="mdi-wizard-hat" size="30px" color="primary" />
+              <q-img :src="WIZARDCONNECT_LOGO" class="connect-icon-img" />
             </div>
 
             <div class="col q-ml-md">
@@ -114,6 +114,7 @@ import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { WizardConnectQRDialog, WizardConnectState } from 'wizardconnect-vue';
+import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 
 const { t } = useI18n();
@@ -266,6 +267,12 @@ watch(
 
   background: rgba(var(--q-primary), 0.1);
   border: 1px solid rgba(var(--q-primary), 0.2);
+}
+
+.connect-icon-img {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
 }
 
 .connect-button {
