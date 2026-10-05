@@ -233,7 +233,7 @@ const tokenType = computed(() => {
 })
 
 
-const hasNfts = computed(() => !!localSnapshot.value?.token?.nfts)
+const hasNfts = computed(() => !!localSnapshot.value?.token?.nfts || activeAuthhead.value?.token?.nft?.capability === 'minting')
 
 const nftCollectionType = computed(() => {
     const bytecode = (localSnapshot.value?.token?.nfts?.parse as ParsableNftCollection)?.bytecode
