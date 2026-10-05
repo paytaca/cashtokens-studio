@@ -1,6 +1,6 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
-    <div class="q-px-md q-px-md-xl content-container">
+    <div class="q-px-md q-px-md-xl content-container q-mt-xl q-gutter-y-lg">
       <ExplainerBanner class="q-my-md" icon="brush" :title="$t('dashboard.pageTitle.managedTokens')"
         :description="$t('dashboard.managed.caption')">
         <template v-if="authheads.length > 0">
@@ -296,7 +296,6 @@ import {
   jsonFormSafeUtxoReviver,
   jsonReplacer,
 } from 'src/core/transaction';
-import { broadcast } from 'src/core/transaction/broadcast';
 import { useRouter } from 'vue-router';
 import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
@@ -307,6 +306,9 @@ import { decodeCashAddress } from '@bitauth/libauth';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
 import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils';
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -471,10 +473,14 @@ const openTransferDialog = (
     componentProps,
     focus: 'none',
   }).onOk(async (userInputs: { tokenAmount: bigint; recipient: string }) => {
-    const loadingGroup = $q.loading.show({
-      group: 'issue-fungible-reserves-loading-group',
-      message: t('dashboard.notify.preparingCheckingWallet'),
-    });
+
+    startLoader(txTaskList, () => {
+      $q.notify({ type: 'warning', message: 'Cancelled by user' })
+    })
+
+    updateStep(TASK_INPUTS_CHECK, 'done')
+
+    updateStep(TASK_PREPARE_TX, 'running')
 
     const issuerTokenUtxo = JSON.parse(
       JSON.stringify(v, jsonReplacer),
@@ -498,29 +504,33 @@ const openTransferDialog = (
       });
 
 
-      loadingGroup({
-        message: t('dashboard.notify.preparingForSignature'),
-      });
+      updateStep(TASK_PREPARE_TX, 'done')
+      updateStep(TASK_WAIT_FOR_SIG, 'running')
 
       const response = await manager.value!.signTransaction(signRequest);
 
-      loadingGroup({
-        message: t('dashboard.notify.broadcasting'),
-      });
+      updateStep(TASK_WAIT_FOR_SIG, 'done')
+
+      updateStep(TASK_BROADCASTING, 'running')
 
       const [broadcastError, txid] = await broadcastTransaction({
         transactionHex: response.signedTransaction,
         network: import.meta.env.VITE_BCH_NETWORK,
         onProgress: (progress: string) => {
-          loadingGroup({ message: progress })
-        }
-      })
-
-      if (broadcastError) throw broadcastError
-
-      loadingGroup({
-        message: t('dashboard.notify.awaitingPropagation'),
+          // loadingGroup({ message: progress });
+          const newLabel = updateTxTaskLabel({ txTaskList: txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+          updateStep(TASK_BROADCASTING, 'running', newLabel)
+        },
       });
+
+      if (broadcastError) {
+        updateStep(TASK_BROADCASTING, 'failed')
+        throw broadcastError;
+      }
+
+
+      updateStep(TASK_BROADCASTING, 'done')
+      updateStep(TASK_WAITING_PROPAGATION, 'running')
 
       const networkType =
         import.meta.env.VITE_BCH_NETWORK === 'chipnet'
@@ -530,8 +540,12 @@ const openTransferDialog = (
         txHash: txid,
       });
 
-      loadingGroup();
+      updateStep(TASK_WAITING_PROPAGATION, 'done')
+      updateStep(TASK_REFRESH_UTXOS, 'running')
       await loadAuthkeys(wallet.value, true, true);
+      updateStep(TASK_REFRESH_UTXOS, 'done')
+      stopLoader(1000)
+
       triggerRef(wallet);
       await db.saveActivity({
         event:
@@ -554,14 +568,12 @@ const openTransferDialog = (
           txid: txid,
         },
       });
-
     } catch (error: any) {
+      stopLoader(3000)
       $q.notify({
         type: 'Error',
         message: error.message,
       });
-    } finally {
-      loadingGroup();
     }
   });
 };
