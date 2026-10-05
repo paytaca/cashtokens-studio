@@ -153,7 +153,7 @@
             <q-td :props="value">
               <q-btn round icon="more_vert" size="sm" @click.stop>
                 <q-menu dark auto-close class="bg-dark-2 shadow-2">
-                  <q-list dark class="bg-dark" dense style="min-width: 180px">
+                  <q-list dark class="bg-dark" style="min-width: 180px">
                     <q-item clickable @click="viewRegistry(value.row)">
                       <q-item-section avatar>
                         <q-icon name="description" color="secondary" size="xs" />
@@ -208,15 +208,6 @@
                       </q-item-section>
                     </q-item>
 
-                    <q-item v-if="getTokenType(value.row) !== 'fungible'" clickable
-                      @click="openTransferDialog(value.row, 'burn')">
-                      <q-item-section avatar>
-                        <q-icon name="mdi-fire" color="orange" size="xs" />
-                      </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
-                        {{ $t('dashboard.managed.actionBurn') }}
-                      </q-item-section>
-                    </q-item>
                     <q-separator dark inset />
                     <q-separator dark inset />
                     <q-item clickable @click="refreshCache(value.row.token!.category as string)">
@@ -456,6 +447,7 @@ const openTransferDialog = (
     identitySnapshot: v.identitySnapshot,
   };
 
+
   if (action === 'issuance') {
     componentProps.selfAddress = wallet.value.getTokenDepositAddress(0);
   } else if (action === 'burn') {
@@ -464,8 +456,7 @@ const openTransferDialog = (
     if (typeof sampleDecodedAddress === 'string') {
       throw new Error(sampleDecodedAddress);
     }
-    componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS
-      }`;
+    componentProps.burnAddress = import.meta.env.VITE_BURN_ADDRESS
   }
 
   $q.dialog({
