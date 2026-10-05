@@ -63,7 +63,7 @@ const menu = computed<any[]>(() => {
     },
 
     {
-      label: 'Created Tokens',
+      label: 'Managed Tokens',
       href: hrefs.managedTokens,
       icon: 'brush',
     },
@@ -131,7 +131,8 @@ watch(() => route.path, (currentPath) => {
 /* q-tree__node-header relative-position row no-wrap items-center q-tree__node--link q-hoverable q-focusable q-tree__node--selected {} */
 .q-tree__node--selected {
   color: rgb(254, 254, 254);
-  background: linear-gradient(90deg, rgba(4, 30, 90, 0.9779411764705882) 0%, rgba(7, 41, 102, 1) 42%, rgba(9, 56, 121, 1) 77%, rgba(1, 114, 205, 1) 100%);
+  background: linear-gradient(90deg, rgba(39, 48, 68, 0.978) 0%, rgba(24, 27, 36, 0.98), 42%, rgb(26, 41, 62) 77%, rgb(22, 39, 52) 100%);
+  border-radius: 25px
 }
 
 .sidebar-link {
