@@ -191,8 +191,7 @@ class CashtokensStudioDB extends Dexie {
       return existing
     }
 
-    const record: NftRecord = {
-      id: 0,
+    const record: Omit<NftRecord, 'id'> = {
       contentHash: params.contentHash,
       authbase: params.authbase,
       timestamp: params.timestamp,
@@ -202,7 +201,7 @@ class CashtokensStudioDB extends Dexie {
       status: params.status || 'new'
     }
 
-    const id = await this.nfts.put(record)
+    const id = await this.nfts.add(record)
     return { ...record, id }
   }
 
@@ -286,8 +285,7 @@ class CashtokensStudioDB extends Dexie {
     const parsedRegistry = JSON.parse(text) as Registry
     const compactRegistry = this.toCompactRegistry(parsedRegistry)
 
-    const registryRecord: RegistryRecord = {
-      id: 0,
+    const registryRecord: Omit<RegistryRecord, 'id'> = {
       authbase: params.authbase,
       contentHash: params.contentHash,
       publicationUris: params.publicationUris,
