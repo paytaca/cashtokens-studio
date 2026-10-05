@@ -32,12 +32,14 @@
 
                             <div class="col-12">
                                 <FormField v-if="Object.keys(identitySnapshot.uris?.['icon'] || {})" key="icon-uri">
+                                    <label class="text-capitalize">Token Icon</label>
                                     <q-input v-model="identitySnapshot.uris!['icon']" outlined>
                                         <template v-slot:prepend>
-                                            <q-btn flat class="cursor-pointer" @click="uploadIcon()">
+                                            <q-btn flat class="cursor-pointer" @click="uploadIcon()" dense>
                                                 <q-avatar>
                                                     <img v-if="identitySnapshot.uris!['icon']"
                                                         :src="ipfsToGatewayUrl(identitySnapshot.uris!['icon']) as string" />
+                                                    <q-icon v-else name="mdi-image" dense />
                                                 </q-avatar>
                                                 <q-tooltip>{{ t('info.changeIcon') }}</q-tooltip>
                                             </q-btn>
