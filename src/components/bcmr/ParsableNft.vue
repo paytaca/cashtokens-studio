@@ -75,6 +75,7 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { uploadFile } from 'src/core/ipfs'
 import FormField from 'src/components/FormField.vue'
 import NftAttributeDialog from 'src/components/dialogs/NftAttributeDialog.vue'
+import { createSquareThumbnail, loadImage } from 'src/utils'
 
 const props = defineProps<{
   bottomAltStack: string
@@ -150,36 +151,6 @@ const loadMedia = async () => {
 
 const onMediaError = () => {
   mediaType.value = null
-}
-
-const loadImage = (src: string): Promise<HTMLImageElement> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => resolve(img)
-    img.onerror = reject
-    img.src = src
-  })
-}
-
-const createSquareThumbnail = async (file: File, maxSize: number): Promise<Blob> => {
-  const url = URL.createObjectURL(file)
-  const img = await loadImage(url)
-  URL.revokeObjectURL(url)
-
-  const size = Math.min(img.width, img.height)
-  const offsetX = (img.width - size) / 2
-  const offsetY = (img.height - size) / 2
-  const targetSize = Math.min(maxSize, size)
-
-  const canvas = document.createElement('canvas')
-  canvas.width = targetSize
-  canvas.height = targetSize
-  const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, offsetX, offsetY, size, size, 0, 0, targetSize, targetSize)
-
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob!), file.type === 'image/png' ? 'image/png' : 'image/jpeg', 0.9)
-  })
 }
 
 const uploadMedia = () => {
