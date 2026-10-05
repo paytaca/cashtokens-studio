@@ -11,44 +11,56 @@ export function shortenCashAddress(address = '') {
 }
 
 export function formatTokenAmount(
-    amount: number | bigint, 
-    customSymbol: string, 
-    decimals?: number,
-    symbolPosition: 'prefix' | 'suffix' | 'none' = 'prefix'
+  amount: number | bigint, 
+  customSymbol: string, 
+  decimals?: number,
+  symbolPosition: 'prefix' | 'suffix' | 'none' = 'prefix'
 ) {
-    const decs = decimals ?? 0;
-    
-    // Scale down the atomic amount to its fractional unit base
-    const scaledAmount = typeof amount === 'bigint' 
-        ? Number(amount) / Math.pow(10, decs) 
-        : amount / Math.pow(10, decs);
+  const decs = decimals ?? 0;
+  let valueString = "";
 
-    // We use a dummy currency (USD) to get the correct decimal/thousands layout
-    const formatter = new Intl.NumberFormat(navigator.language, {
-        style: 'currency',
-        currency: 'USD',
-        maximumFractionDigits: decs,
-        minimumFractionDigits: decs,
-    });
+  if (typeof amount === 'bigint') {
+      // Handle bigint safely without losing precision via float division
+      const BigDecimals = BigInt(decs);
+      const divisor = 10n ** BigDecimals;
+      
+      const integerPart = amount / divisor;
+      const fractionalPart = amount % divisor;
+      
+      // Pad the fractional part with leading zeros if necessary
+      let fractionalStr = fractionalPart.toString().padStart(decs, '0');
+      // Trim or pad to exactly match the requested decimal places
+      fractionalStr = fractionalStr.slice(0, decs);
 
-    const parts = formatter.formatToParts(scaledAmount);
+      // Format the integer part natively using the user's locale
+      const intFormatter = new Intl.NumberFormat(navigator.language, {
+          style: 'decimal',
+      });
+      
+      const formattedInteger = intFormatter.format(integerPart);
+      valueString = decs > 0 ? `${formattedInteger}.${fractionalStr}` : formattedInteger;
+  } else {
+      // Safe to scale down via float if it started as a number
+      const scaledAmount = amount / Math.pow(10, decs);
+      
+      const formatter = new Intl.NumberFormat(navigator.language, {
+          style: 'decimal',
+          maximumFractionDigits: decs,
+          minimumFractionDigits: decs,
+      });
+      valueString = formatter.format(scaledAmount);
+  }
 
-    // Filter out the placeholder currency sign to handle it manually based on position
-    const valueString = parts
-        .filter(part => part.type !== 'currency')
-        .map(part => part.value)
-        .join('')
-        .trim(); // Cleans up any trailing/leading whitespace left by the currency part
-
-    // Position or omit the symbol based on the configuration
-    if (symbolPosition === 'none') {
-        return valueString;
-    }
-    
-    return symbolPosition === 'suffix' 
-        ? `${valueString} ${customSymbol}`.trim() 
-        : `${customSymbol}${valueString}`;
+  // Position or omit the symbol based on the configuration
+  if (symbolPosition === 'none') {
+      return valueString;
+  }
+  
+  return symbolPosition === 'suffix' 
+      ? `${valueString} ${customSymbol}`.trim() 
+      : `${customSymbol}${valueString}`;
 }
+
 
 
 
