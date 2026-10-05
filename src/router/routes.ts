@@ -1,11 +1,10 @@
 import { RouteRecordRaw } from 'vue-router';
 
-
 const registryRoutesProps = (route: any) => ({
   authkey: route.query.authkey,
   authhead: route.query.authhead,
   authbase: route.query.authbase,
-  registryIdentity: route.query.registryIdentity
+  registryIdentity: route.query.registryIdentity,
 });
 
 const registryNftsRoutesProps = (route: any) => ({
@@ -31,67 +30,73 @@ const routes: RouteRecordRaw[] = [
         component: () => import('layouts/RegistryLayout.vue'),
         children: [
           {
+            name: 'view-registry',
+            path: 'view',
+            component: () => import('pages/registry/ViewRegistry.vue'),
+            props: registryNftsRoutesProps,
+          },
+          {
+            name: 'edit-registry',
+            path: 'edit',
+            component: () => import('pages/registry/EditRegistry.vue'),
+            props: registryRoutesProps,
+          },
+          {
             name: 'view-identity-snapshot',
             path: 'identity-snapshot/view',
             component: () => import('pages/registry/ViewIdentitySnapshot.vue'),
-            props: registryRoutesProps
+            props: registryRoutesProps,
           },
           {
             name: 'edit-identity-snapshot',
             path: 'identity-snapshot/edit',
             component: () => import('pages/registry/EditIdentitySnapshot.vue'),
-            props: registryRoutesProps
+            props: registryRoutesProps,
           },
           {
             name: 'view-identity-snapshot-nfts',
             path: 'identity-snapshot/nfts/view',
             component: () => import('pages/registry/ViewNftCategory.vue'),
-            props: registryNftsRoutesProps
+            props: registryNftsRoutesProps,
           },
           {
             name: 'edit-identity-snapshot-nfts',
             path: 'identity-snapshot/nfts/edit',
             component: () => import('pages/registry/EditNftCategory.vue'),
-            props: registryNftsRoutesProps
+            props: registryNftsRoutesProps,
           },
           {
             name: 'add-nft',
             path: 'identity-snapshot/nfts/add',
             component: () => import('pages/registry/AddNft.vue'),
-            props: route => ({
+            props: (route) => ({
               lastKnownType: route.query.lastKnownType,
               collectionType: route.query.collectionType,
-              tokenSymbol: route.query.tokenSymbol
-            })
+              tokenSymbol: route.query.tokenSymbol,
+            }),
           },
           {
             name: 'view-nft',
             path: 'identity-snapshot/nfts/:type/view',
             component: () => import('pages/registry/ViewNft.vue'),
-            props: registryNftsRoutesProps
+            props: registryNftsRoutesProps,
           },
           {
             name: 'edit-nft',
             path: 'identity-snapshot/nfts/:type/edit',
             component: () => import('pages/registry/EditNft.vue'),
-            props: registryNftsRoutesProps
+            props: registryNftsRoutesProps,
           },
-          {
-            name: 'view-registry',
-            path: 'view',
-            component: () => import('pages/registry/ViewRegistry.vue'),
-            props: registryNftsRoutesProps
-          },
+          
           {
             name: 'view-authhead',
             path: 'authhead/view',
             component: () => import('pages/registry/ViewAuthhead.vue'),
-            props: registryRoutesProps
+            props: registryRoutesProps,
           },
-        ]
-      }
+        ],
+      },
     ],
-
   },
   // {
   //   path: '/issuer',
@@ -205,14 +210,13 @@ const routes: RouteRecordRaw[] = [
         path: 'nft-collections/:category/nft',
         component: () => import('pages/issuer/manage/NftPage.vue'),
       },
-      
+
       {
         name: 'nft-collections',
         path: 'nft-collections',
         component: () => import('pages/issuer/manage/NftCollectionsPage.vue'),
       },
-      
-    ]
+    ],
   },
   {
     path: '/authguard',
@@ -229,13 +233,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/authguard/AuthkeysPage.vue'),
       },
       {
+        name: 'authguards',
+        path: 'authguards',
+        component: () => import('pages/AuthguardsPage.vue'),
+      },
+      {
         name: 'view-authguard',
         path: ':authkeyCategory',
         component: () => import('pages/authguard/AuthguardPage.vue'),
       },
-    ]
+    ],
   },
-  
+
   {
     path: '/token',
     component: () => import('layouts/MainLayout.vue'),
@@ -250,7 +259,7 @@ const routes: RouteRecordRaw[] = [
         path: ':category/nfts',
         component: () => import('pages/NftCategoryPage.vue'),
       },
-    ]
+    ],
   },
   // {
   //   path: '/registry/:registryIdentity',
@@ -298,11 +307,11 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/MintNftPage.vue'),
       },
       {
-        name: 'authhead-nft-collection', 
+        name: 'authhead-nft-collection',
         path: ':category/nft-collection',
         component: () => import('pages/NftCollectionPage.vue'),
-      }
-    ]
+      },
+    ],
   },
   {
     path: '/dashboard',
@@ -313,7 +322,22 @@ const routes: RouteRecordRaw[] = [
         path: '',
         component: () => import('pages/DashboardPage.vue'),
       },
-    ]
+      {
+        name: 'managed-tokens',
+        path: 'managed-tokens',
+        component: () => import('pages/ManagedTokensPage.vue'),
+      },
+      {
+        name: 'collected-tokens',
+        path: 'collected-tokens',
+        component: () => import('pages/CollectedTokensPage.vue'),
+      },
+      {
+        name: 'activities',
+        path: 'activities',
+        component: () => import('pages/ActivitiesPage.vue'),
+      },
+    ],
   },
   {
     path: '/wizard-connect',
@@ -329,7 +353,7 @@ const routes: RouteRecordRaw[] = [
         path: 'requests',
         component: () => import('pages/wizard-connect/RequestsPage.vue'),
       },
-    ]
+    ],
   },
   // {
   //   path: '/authguard',
