@@ -231,7 +231,7 @@ import HelpDialog from 'components/dialogs/HelpDialog.vue'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
-import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
+import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 import NftTable from 'src/components/bcmr/NftTable.vue'
@@ -241,12 +241,21 @@ import { UtxoWithPath } from 'src/core/wallet'
 import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { getNftCollectionType } from 'src/core/bcmr'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const ROWS_PER_PAGE = 2
 
 const DEFAULT_NFT_CATEGORY: NftCategoryI = {
     parse: { types: {} } as SequentialNftCollectionI,
 }
+
+const TASK_UPLOAD_REGISTRY = 'upload-registry'
+
+const publishTaskList = [
+    { id: TASK_UPLOAD_REGISTRY, label: 'Uploading registry to IPFS' },
+    ...txTaskList,
+]
 
 const { wallet, manager } = inject('wizardConnectWallet') as any
 const $q = useQuasar()
@@ -257,6 +266,7 @@ const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const { activeAuthhead } = storeToRefs(authguardStore)
 const registryStore = useRegistryStore()
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
@@ -556,10 +566,11 @@ const onSaveClick = async () => {
 
 const onPublishClick = async () => {
 
-    const loadingGroup = $q.loading.show({
-        group: 'mpop-lg',
-        message: t('info.uploadingRegistryToIpfs')
+    startLoader(publishTaskList, () => {
+        $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
+
+    updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
     try {
 
@@ -589,13 +600,15 @@ const onPublishClick = async () => {
             throw new Error('Error uploading registry')
         }
 
-        loadingGroup({
-            message: t('transaction.waitingForSignature')
-        })
+        updateStep(TASK_UPLOAD_REGISTRY, 'done')
+        updateStep(TASK_INPUTS_CHECK, 'running')
 
         await wallet.value.sync()
 
         triggerRef(wallet)
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
@@ -607,27 +620,32 @@ const onPublishClick = async () => {
             }
         })
 
-        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value!.signTransaction(publishRegistryRequest);
 
-        loadingGroup({ message: 'Broadcasting, please wait...' })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
         const [broadcastError, txid] = await broadcastTransaction({
             transactionHex: response.signedTransaction,
             network: import.meta.env.VITE_BCH_NETWORK,
             onProgress: (progress: string) => {
-                loadingGroup({ message: progress })
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
             }
         })
 
-        if (broadcastError) throw broadcastError
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
 
         await getRegistryWorker().commitBumpRegistry(contentHash, `${txid}:0`)
 
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
-        })
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
@@ -637,11 +655,16 @@ const onPublishClick = async () => {
             txHash: txid
         })
 
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
+
         loadAuthkeys(wallet.value, true).then(() => {
             triggerRef(wallet)
         })
 
         await updateActiveAuthhead()
+
+        updateStep(TASK_REFRESH_UTXOS, 'done')
 
         await db.saveActivity({
             event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
@@ -649,7 +672,7 @@ const onPublishClick = async () => {
             status: 'success'
         })
 
-        loadingGroup()
+        stopLoader(1000)
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -666,8 +689,7 @@ const onPublishClick = async () => {
         })
     } catch (error: any) {
         $q.notify({ type: 'Error', message: error.message })
-    } finally {
-        loadingGroup()
+        stopLoader(3000)
     }
 }
 
