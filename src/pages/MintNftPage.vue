@@ -208,6 +208,8 @@ import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { db } from 'src/core/client-db'
 import { broadcastTransaction } from 'src/services/transaction'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
@@ -215,6 +217,7 @@ const MINT_ANOTHER_MINTER = 'Mint another minter'
 const $q = useQuasar()
 const router = useRouter()
 const { t } = useI18n()
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 
 
 const authguardStore = useAuthguardStore()
@@ -328,17 +331,20 @@ const mintMinter = async (): Promise<SignTransactionRequest & { mintOutputs: Tra
 }
 
 const mint = async () => {
-    const loadingGroup = $q.loading.show({
-        group: 'mnpm-lg',
-        message: 'Uploading registry to IPFS...'
+    startLoader(txTaskList, () => {
+        $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
+    updateStep(TASK_INPUTS_CHECK, 'running')
 
     try {
         const decodedRecipient = decodeCashAddress(recipient.value)
         if (typeof decodedRecipient === 'string') {
             throw new Error('Invalid recipient address')
         }
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         let signRequest: SignTransactionRequest & { mintOutputs: TransactionOutput[] }
 
@@ -399,21 +405,27 @@ const mint = async () => {
             })
         }
 
-        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value!.signTransaction(restOfSignRequest)
 
-        loadingGroup({ message: 'Broadcasting, please wait...' })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
         const [broadcastError, txid] = await broadcastTransaction({
             transactionHex: response.signedTransaction,
             network: import.meta.env.VITE_BCH_NETWORK,
             onProgress: (progress: string) => {
-                loadingGroup({ message: progress })
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
             }
         })
 
-        if (broadcastError) throw broadcastError
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
 
 
 
@@ -425,9 +437,8 @@ const mint = async () => {
         //     types
         // })
 
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
-        })
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
 
@@ -435,11 +446,15 @@ const mint = async () => {
             txHash: txid
         })
 
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+
         await db.saveActivity({
             event: `Mint ${mintOutputs.length} ${activeMinter.value?.identitySnapshot?.token?.symbol || activeMinter.value!.token!.category} NFT ${mintOutputs.length > 1 ? 's' : ''}`,
             txid: txid,
             status: 'success'
         })
+
+        updateStep(TASK_REFRESH_UTXOS, 'running')
 
         loadAuthkeys(wallet.value, true).then(() => {
             triggerRef(wallet)
@@ -447,7 +462,9 @@ const mint = async () => {
 
         await updateActiveAuthhead()
 
-        loadingGroup()
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
+        stopLoader(1000)
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -476,9 +493,9 @@ const mint = async () => {
         })
     } catch (error: any) {
         $q.notify({ type: 'Error', message: error.message })
+        stopLoader(3000)
     } finally {
         minting.value = false
-        loadingGroup()
     }
 }
 

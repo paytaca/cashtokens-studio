@@ -247,10 +247,10 @@ import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
-import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer, publishRegistry, isBroadcastSuccess } from 'src/core/transaction'
+import { transferFungibleReserves, jsonFormSafeUtxoReviver, jsonReplacer, publishRegistry } from 'src/core/transaction'
 import { Network } from 'cashscript'
 import { decodeCashAddress } from '@bitauth/libauth'
-import { broadcast } from 'src/core/transaction/broadcast'
+import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
@@ -259,11 +259,14 @@ import FormField from 'src/components/FormField.vue'
 import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, NftRecord } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
@@ -383,16 +386,28 @@ const deleteNft = (nft: NftRecord) => {
     })
 }
 
+const TASK_UPLOAD_REGISTRY = 'upload-registry'
+
+const publishTaskList = [
+    { id: TASK_UPLOAD_REGISTRY, label: 'Uploading registry to IPFS' },
+    ...txTaskList,
+]
+
+const childNftTaskList = txTaskList.filter(task =>
+    [TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_WAIT_FOR_SIG, TASK_BROADCASTING].includes(task.id)
+)
+
 const publishNfts = async () => {
 
     if (!authhead.value?.identitySnapshotIdentifier || unpublishedNfts.value.length === 0) return
 
     publishing.value = true
 
-    const loadingGroup = $q.loading.show({
-        group: 'mpop-lg',
-        message: t('info.uploadingRegistryToIpfs')
+    startLoader(publishTaskList, () => {
+        $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
+
+    updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
     try {
 
@@ -411,11 +426,13 @@ const publishNfts = async () => {
             throw new Error('Error uploading registry')
         }
 
-        loadingGroup({
-            message: t('transaction.waitingForSignature')
-        })
+        updateStep(TASK_UPLOAD_REGISTRY, 'done')
+        updateStep(TASK_INPUTS_CHECK, 'running')
 
         await wallet.value.sync()
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
@@ -427,30 +444,40 @@ const publishNfts = async () => {
             }
         })
 
-        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value!.signTransaction(publishRegistryRequest);
 
-        loadingGroup({ message: 'Broadcasting, please wait...' })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
-
-        if (!broadcastResponse.ok) throw new Error('Error broadcasting transaction')
-
-        const broadcastResult = await broadcastResponse.json()
-
-        if (!isBroadcastSuccess(broadcastResult)) throw new Error(broadcastResult.error)
-
-        await getRegistryWorker().commitBumpRegistry(contentHash, `${broadcastResult.txid}:0`)
-
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
+            }
         })
+
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
+
+        await getRegistryWorker().commitBumpRegistry(contentHash, `${txid}:0`)
+
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: broadcastResult.txid
+            txHash: txid
         })
+
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
 
         loadAuthkeys(wallet.value, true).then(() => {
             triggerRef(wallet)
@@ -458,20 +485,22 @@ const publishNfts = async () => {
 
         await updateActiveAuthhead()
 
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
         await db.saveActivity({
             event: `Published NFT metadata of ${authhead.value?.identitySnapshot?.token?.category || authhead.value.token?.category}`,
-            txid: broadcastResult.txid,
+            txid,
             status: 'success'
         })
 
-        loadingGroup()
+        stopLoader(1000)
 
         $q.dialog({
             component: TransactionStatusDialog,
             componentProps: {
                 statusType: 'success',
                 statusText: t('success.registryPublication'),
-                txid: broadcastResult.txid
+                txid
             }
         }).onOk(async () => {
             registryStore.loadRegistry(identity.authbase, true).then(async () => {
@@ -480,9 +509,9 @@ const publishNfts = async () => {
         })
     } catch (error: any) {
         $q.notify({ type: 'Error', message: error.message })
+        stopLoader(3000)
     } finally {
         publishing.value = false
-        loadingGroup()
     }
 }
 
@@ -563,10 +592,12 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
         focus: 'none'
     }).onOk(async (userInputs: { tokenAmount: bigint, recipient: string }) => {
 
-        const loadingGroup = $q.loading.show({
-            group: 'issue-fungible-reserves-loading-group',
-            message: 'Preparing. Checking wallet for inputs...'
+        startLoader(childNftTaskList, () => {
+            $q.notify({ type: 'warning', message: 'Cancelled by user' })
         })
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         const issuerTokenUtxo = JSON.parse(
             JSON.stringify(v, jsonReplacer),
@@ -588,41 +619,46 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
                 transferType: action
             })
 
-            loadingGroup({
-                message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
-            })
+            updateStep(TASK_PREPARE_TX, 'done')
+            updateStep(TASK_WAIT_FOR_SIG, 'running')
+
             const response = await manager.value!.signTransaction(signRequest);
 
-            loadingGroup({
-                message: 'Broadcasting transaction, please wait...'
+            updateStep(TASK_WAIT_FOR_SIG, 'done')
+            updateStep(TASK_BROADCASTING, 'running')
+
+            const [broadcastError, txid] = await broadcastTransaction({
+                transactionHex: response.signedTransaction,
+                network: import.meta.env.VITE_BCH_NETWORK,
+                onProgress: (progress: string) => {
+                    const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                    updateStep(TASK_BROADCASTING, 'running', newLabel)
+                }
             })
 
-            const broadcastResponse = await broadcast(response.signedTransaction)
-
-            if (broadcastResponse.ok) {
-                const broadcastResult = await broadcastResponse.json()
-                if (broadcastResult.success) {
-                    await delay(2000)
-                    loadingGroup()
-                    $q.dialog({
-                        component: TransactionStatusDialog,
-                        componentProps: {
-                            statusType: 'success',
-                            statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
-                            txid: broadcastResult.txid
-                        }
-                    })
-                } else {
-                    throw new Error(broadcastResult.error)
-                }
+            if (broadcastError) {
+                updateStep(TASK_BROADCASTING, 'failed')
+                throw broadcastError
             }
+
+            updateStep(TASK_BROADCASTING, 'done')
+
+            stopLoader(1000)
+
+            $q.dialog({
+                component: TransactionStatusDialog,
+                componentProps: {
+                    statusType: 'success',
+                    statusText: `Fungible token successfully ${action === 'issuance' ? 'issued' : 'burned'} from FT reserves`,
+                    txid
+                }
+            })
         } catch (error: any) {
             $q.notify({
                 type: 'Error',
                 message: error.message
             })
-        } finally {
-            loadingGroup()
+            stopLoader(3000)
         }
     })
 }
