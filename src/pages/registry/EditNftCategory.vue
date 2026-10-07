@@ -1,5 +1,5 @@
 <template>
-    <q-page>
+    <q-page :class="{ 'page--with-actions': showActions }">
         <div class="row justify-center">
             <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
                 <!-- Back Button Placeholder -->
@@ -108,7 +108,16 @@
                                         v-model:fields="nftCategory.fields">
                                         <template #nftTypes>
                                             <q-separator class="q-my-xl"></q-separator>
-                                            <h6 class="q-my-xs">NFT Collection</h6>
+                                            <template v-if="unpublishedNfts.length > 0">
+                                                <div class="flex justify-between items-center q-mb-xs">
+                                                    <h6 class="q-my-xs">Unpublished NFTs</h6>
+                                                    <q-badge color="warning" :label="unpublishedNfts.length" />
+                                                </div>
+                                                <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
+                                                    :total="unpublishedNfts.length" @row-click="onNftRowClick"
+                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                            </template>
+                                            <h6 class="q-my-xs">Published NFTs</h6>
                                             <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
                                                 @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
                                                 @row-delete="onNftRowDelete" />
@@ -164,6 +173,16 @@
                                                     </q-btn>
                                                 </div>
                                             </div>
+                                            <template v-if="unpublishedNfts.length > 0">
+                                                <div class="flex justify-between items-center q-mt-lg q-mb-xs">
+                                                    <h6 class="q-my-xs">Unpublished NFTs</h6>
+                                                    <q-badge color="warning" :label="unpublishedNfts.length" />
+                                                </div>
+                                                <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
+                                                    :total="unpublishedNfts.length" @row-click="onNftRowClick"
+                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                            </template>
+                                            <h6 class="q-my-xs q-mt-lg">Published NFTs</h6>
                                             <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
                                                 @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
                                                 @row-delete="onNftRowDelete" />
@@ -179,8 +198,8 @@
                 </q-card>
             </div>
         </div>
-        <q-page-sticky v-if="modified || unpublishedCount > 0" position="bottom" class="q-pa-md items-center" expand>
-            <div class="row justify-end q-gutter-md items-center bg-dark q-pa-md rounded-borders"
+        <q-page-sticky v-if="showActions" position="bottom" class="q-pa-md items-center" expand>
+            <div class="row justify-end q-gutter-md items-center bg-dark q-pa-md rounded-borders page-actions-bar"
                 style="border: 1px solid #555; width: 100%;">
                 <q-btn flat color="warning" icon="mdi-undo" label="Reset" @click="onResetClick" />
                 <q-btn color="primary" unelevated label="Save" @click="onSaveClick" />
@@ -225,6 +244,10 @@ import { getNftCollectionType } from 'src/core/bcmr'
 
 const ROWS_PER_PAGE = 2
 
+const DEFAULT_NFT_CATEGORY: NftCategoryI = {
+    parse: { types: {} } as SequentialNftCollectionI,
+}
+
 const { wallet, manager } = inject('wizardConnectWallet') as any
 const $q = useQuasar()
 const { t } = useI18n()
@@ -255,8 +278,10 @@ const loading = ref(true)
 const nfts = ref<NftRecord[]>([])
 const nftsTotal = ref(0)
 const nftsLoading = ref(false)
-const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>()
+const nftsStatusFilter = ref<RegistryRecordStatus | undefined | ''>('published')
 const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerPage: ROWS_PER_PAGE, rowsNumber: 0 })
+const unpublishedNfts = ref<NftRecord[]>([])
+const unpublishedLoading = ref(false)
 /**
  * 
  * The commitment or bottomAltStackHex
@@ -265,13 +290,39 @@ const nftsPagination = ref({ sortBy: 'type', descending: true, page: 1, rowsPerP
  */
 const nftsLastNftTypeKey = ref<string>('')
 
-const unpublishedCount = ref()
+const unpublishedCount = computed(() => unpublishedNfts.value.length)
+
+const showActions = computed(() => modified.value || unpublishedCount.value > 0)
+
+/**
+ * The contentHash/authbase/timestamp that identify this collection's identity snapshot.
+ * Prefer the route query (the page is navigated to with these keys), falling back to the
+ * active authhead. Using the query keeps this page consistent with onSaveClick and with the
+ * keys the minted NftRecords were stored under.
+ */
+const nftKeys = computed<{ contentHash: string, authbase: string, timestamp: string } | undefined>(() => {
+    const contentHash = route.query.contentHash as string | undefined
+    const authbase = route.query.authbase as string | undefined
+    const timestamp = route.query.timestamp as string | undefined
+    if (contentHash && authbase && timestamp) {
+        return { contentHash, authbase, timestamp }
+    }
+    const id = activeAuthhead.value?.identitySnapshotIdentifier
+    if (!id) return undefined
+    return {
+        contentHash: id.contentHash,
+        authbase: id.identity.authbase,
+        timestamp: id.identity.timestamp
+    }
+})
 
 const onAddNftClick = async () => {
+    const keys = nftKeys.value
+    if (!keys) return
     const lastKnownType = await getRegistryWorker().getNftsLastType({
-        contentHash: activeAuthhead.value?.identitySnapshotIdentifier!.contentHash as string,
-        authbase: activeAuthhead.value?.identitySnapshotIdentifier!.identity.authbase as string,
-        timestamp: activeAuthhead.value?.identitySnapshotIdentifier!.identity.timestamp as string,
+        contentHash: keys.contentHash,
+        authbase: keys.authbase,
+        timestamp: keys.timestamp,
         publishedOnly: false
     })
 
@@ -287,12 +338,13 @@ const onAddNftClick = async () => {
 }
 
 const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
-    const id = activeAuthhead.value?.identitySnapshotIdentifier
+    const keys = nftKeys.value
+    if (!keys) return
     const bytecode = (activeAuthhead.value?.identitySnapshot?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode
     registryStore.setActiveNft({
-        contentHash: id!.contentHash,
-        authbase: id!.identity.authbase,
-        timestamp: id!.identity.timestamp,
+        contentHash: keys.contentHash,
+        authbase: keys.authbase,
+        timestamp: keys.timestamp,
         category: activeAuthhead.value!.token!.category,
         bytecode,
         commitmentOrBottomAltStack: row.type,
@@ -307,13 +359,16 @@ const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
 }
 
 const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) => {
+    const keys = nftKeys.value
+    if (!keys) return
     await db.setNftRecordStatus({
-        contentHash: activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-        authbase: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-        timestamp: activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
+        contentHash: keys.contentHash,
+        authbase: keys.authbase,
+        timestamp: keys.timestamp,
         status: 'deleted',
         type: row.type
     })
+    await loadUnpublishedNfts()
 }
 
 
@@ -328,14 +383,15 @@ const onNftsRequest = async (props: any) => {
 }
 
 const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRecordStatus) => {
-    if (!activeAuthhead.value?.identitySnapshotIdentifier) return
+    const keys = nftKeys.value
+    if (!keys) return
     nftsLoading.value = true
     try {
         const worker = getRegistryWorker()
         const result = await worker.getNfts({
-            contentHash: activeAuthhead.value?.identitySnapshotIdentifier.contentHash,
-            authbase: activeAuthhead.value?.identitySnapshotIdentifier.identity.authbase,
-            timestamp: activeAuthhead.value?.identitySnapshotIdentifier.identity.timestamp,
+            contentHash: keys.contentHash,
+            authbase: keys.authbase,
+            timestamp: keys.timestamp,
             offset,
             limit,
             status: statusFilter || nftsStatusFilter.value
@@ -354,6 +410,26 @@ const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRe
         })
     } finally {
         nftsLoading.value = false
+    }
+}
+
+const loadUnpublishedNfts = async () => {
+    const keys = nftKeys.value
+    if (!keys) return
+    unpublishedLoading.value = true
+    try {
+        unpublishedNfts.value = await db.nfts
+            .where('[contentHash+authbase+timestamp]')
+            .equals([keys.contentHash, keys.authbase, keys.timestamp] as [string, string, string])
+            .filter(n => n.status === 'new' || n.status === 'modified' || n.status === 'deleted')
+            .toArray()
+    } catch (error) {
+        $q.notify({
+            type: 'warning',
+            message: t('warning.errorLoadingUnpublishedNfts')
+        })
+    } finally {
+        unpublishedLoading.value = false
     }
 }
 
@@ -381,11 +457,24 @@ const collectionType = ref<'sequential' | 'parsable'>('sequential')
 watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activeAuthhead.value as UtxoWithAuthKey], async ([newRecord, newActiveAuthhead]) => {
     if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value && newActiveAuthhead) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
+
+        // If the authhead is an NFT (any capability) but the registry has no
+        // `token.nfts` yet, inject a default so the collection UI (and any
+        // unpublished minted NFTs) is available.
+        if (
+            activeAuthhead.value?.token?.nft &&
+            identitySnapshot.value?.token &&
+            !identitySnapshot.value.token.nfts
+        ) {
+            identitySnapshot.value.token.nfts = { ...DEFAULT_NFT_CATEGORY }
+        }
+
         const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
         loading.value = false
         await loadNfts(0, ROWS_PER_PAGE)
+        await loadUnpublishedNfts()
     }
 }, { immediate: true })
 
@@ -558,6 +647,7 @@ const onPublishClick = async () => {
         }).onOk(async () => {
             registryStore.loadRegistry(identity.authbase, true).then(async () => {
                 loadNfts(0, ROWS_PER_PAGE)
+                loadUnpublishedNfts()
             })
         })
     } catch (error: any) {
@@ -574,51 +664,26 @@ const onResetClick = () => {
 
 
 onMounted(async () => {
-    if (activeAuthhead.value?.identitySnapshotIdentifier) {
-        const newNftsCount = await db.nfts
-            .where('[contentHash+authbase+timestamp+status]')
-            .equals([
-                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
-                'new'
-            ])
-            .or('[contentHash+authbase+timestamp+status]')
-            .equals([
-                activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-                activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
-                'new'
-            ])
-            .count()
-        if (newNftsCount > 0) {
-            unpublishedCount.value = newNftsCount
-            nftsStatusFilter.value = 'new'
-        } else {
-            const modifiedNftsCount = await db.nfts
-                .where('[contentHash+authbase+timestamp+status]')
-                .equals([
-                    activeAuthhead.value!.identitySnapshotIdentifier!.contentHash,
-                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.authbase,
-                    activeAuthhead.value!.identitySnapshotIdentifier!.identity!.timestamp,
-                    'modified'
-                ])
-                .count()
-
-            if (modifiedNftsCount > 0) {
-                unpublishedCount.value = modifiedNftsCount
-                nftsStatusFilter.value = 'modified'
-            }
-        }
-
-
-
-    }
+    await loadUnpublishedNfts()
 })
 
 </script>
 
 <style scoped lang="scss">
+// Total height reserved for the bottom action bar (sticky padding + bar).
+$page-actions-height: 6.5rem;
+
+.page--with-actions {
+    --page-actions-height: #{$page-actions-height};
+    padding-bottom: var(--page-actions-height);
+}
+
+.page-actions-bar {
+    // The sticky applies 1rem of padding top/bottom (q-pa-md), so the bar itself
+    // must fill the rest of the reserved height to keep the two in lock-step.
+    min-height: calc(var(--page-actions-height, #{$page-actions-height}) - 2rem);
+}
+
 .border-radius-8 {
     border-radius: 8px;
 }

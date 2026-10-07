@@ -53,8 +53,8 @@
                     @click.stop="onRowDelete($event, props.row, props.pageIndex)" />
             </q-td>
         </template>
-        <template v-slot:no-data>
-            <div class="text-grey-5 text-center q-pa-md">No published NFTs</div>
+        <template v-slot:no-data="{ message }">
+            <div class="text-grey-5 text-center q-pa-md">{{ message }}</div>
         </template>
     </q-table>
 </template>

@@ -476,7 +476,22 @@ const mint = async () => {
         }).onDismiss(() => {
 
             if (activeMinter.value?.isAuthhead) {
-                return router.push(`/issuer/nft-collections/${activeMinter.value.token!.category}`)
+                const authheadUtxo = authguardStore.activeAuthhead.value ?? activeMinter.value
+                if (authheadUtxo) {
+                    authguardStore.setActiveAuthhead(authheadUtxo)
+                }
+                const authkey = authheadUtxo?.authkey
+                return router.push({
+                    name: 'edit-identity-snapshot-nfts',
+                    query: {
+                        authkey: authkey ? `${authkey.txid}:${authkey.vout}` : undefined,
+                        authhead: authheadUtxo ? `${authheadUtxo.txid}:${authheadUtxo.vout}` : undefined,
+                        authbase,
+                        registryIdentity: identitySnapshotRecord.registryIdentity,
+                        contentHash,
+                        timestamp
+                    }
+                })
             }
 
             if (wallet.value.receive!.getTokenDepositAddress(0) === recipient.value) {
