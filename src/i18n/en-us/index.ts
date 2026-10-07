@@ -42,6 +42,9 @@ export default {
   warning: {
     errorLoadingUnpublishedNfts: 'Error loading unpublished NFTs',
     errorLoadingPublishedNfts: 'Error loading published NFTs',
+    resetNftCategoryTitle: 'Reset changes',
+    resetNftCategoryMessage:
+      'This will delete {count} unpublished NFT(s) and reset your changes. Continue?',
   },
   button: {
     ok: 'Ok',

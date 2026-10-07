@@ -433,6 +433,20 @@ const loadUnpublishedNfts = async () => {
     }
 }
 
+const deleteUnpublishedNfts = async () => {
+    const keys = nftKeys.value
+    if (!keys) return
+    await db.transaction('rw', db.nfts, async () => {
+        for (const status of ['new', 'modified', 'deleted'] as RegistryRecordStatus[]) {
+            await db.nfts
+                .where('[contentHash+authbase+timestamp+status]')
+                .equals([keys.contentHash, keys.authbase, keys.timestamp, status])
+                .delete()
+        }
+    })
+    unpublishedNfts.value = []
+}
+
 watch(nftsTotal, (total) => {
     nftsPagination.value.rowsNumber = total
 })
@@ -469,7 +483,7 @@ watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activ
             identitySnapshot.value.token.nfts = { ...DEFAULT_NFT_CATEGORY }
         }
 
-        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
+        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
         loading.value = false
@@ -659,7 +673,26 @@ const onPublishClick = async () => {
 
 const onResetClick = () => {
     if (!initialSnapshotJson.value) return
-    identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
+
+    const resetSnapshot = () => {
+        identitySnapshot.value = JSON.parse(initialSnapshotJson.value)
+    }
+
+    if (unpublishedNfts.value.length === 0) {
+        resetSnapshot()
+        return
+    }
+
+    $q.dialog({
+        title: t('warning.resetNftCategoryTitle'),
+        message: t('warning.resetNftCategoryMessage', { count: unpublishedNfts.value.length }),
+        cancel: { label: t('button.cancel'), flat: true, color: 'grey-6' },
+        ok: { label: t('button.reset'), color: 'warning', unelevated: true },
+        persistent: true
+    }).onOk(async () => {
+        await deleteUnpublishedNfts()
+        resetSnapshot()
+    })
 }
 
 

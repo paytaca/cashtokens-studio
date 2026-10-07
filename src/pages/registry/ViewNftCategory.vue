@@ -365,7 +365,7 @@ const refreshNfts = async () => {
 watch(() => identitySnapshotRecord.value as IdentitySnapshotRecord, async (newRecord: IdentitySnapshotRecord) => {
     if (Object.keys(newRecord || {}).length > 0 && !identitySnapshot.value) {
         identitySnapshot.value = JSON.parse(JSON.stringify(newRecord.identitySnapshot))
-        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse?.types?.parse as ParsableNftCollectionI | undefined)?.bytecode)
+        const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode)
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
         await loadNfts(0, ROWS_PER_PAGE)
