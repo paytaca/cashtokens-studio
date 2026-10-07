@@ -27,6 +27,21 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
   async function updateActiveAuthhead() {
     if (!activeAuthhead.value || !activeAuthhead.value.authkey?.token?.category) return
+
+    // Re-decorate the authhead from the (possibly bumped) registry so the
+    // identitySnapshotIdentifier tracks the current contentHash.
+    const refreshed = await loadAuthhead({
+      authkey: activeAuthhead.value.authkey,
+      sync: true
+    })
+
+    if (refreshed) {
+      activeAuthhead.value = Object.assign({}, refreshed)
+      setActiveAuthhead(activeAuthhead.value)
+      return
+    }
+
+    // Fallback: refresh the UTXO while keeping the previous identity.
     const latestAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value.authkey]))?.[0]
     if (!latestAuthhead) return 
     latestAuthhead.identitySnapshot = activeAuthhead.value.identitySnapshot

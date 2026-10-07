@@ -664,6 +664,12 @@ const onPublishClick = async () => {
 
         await updateActiveAuthhead()
 
+        // The registry now lives at a new contentHash — keep the route query
+        // (which drives nftKeys) pointed at it so this page reads the new rows.
+        if (bumpArtifact.contentHash !== route.query.contentHash) {
+            router.replace({ query: { ...route.query, contentHash: bumpArtifact.contentHash } })
+        }
+
         updateStep(TASK_REFRESH_UTXOS, 'done')
 
         await db.saveActivity({

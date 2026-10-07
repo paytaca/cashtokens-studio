@@ -50,12 +50,18 @@ export const useRegistryStore = defineStore('registry-store', () => {
 
     const loadRegistry = async (authbase: string, sync?: boolean) => {
         const i = registries.value?.findIndex((r) => r.authbase === authbase)
-        if (i !== -1) {
+        // When syncing, always refetch: the on-chain registry may have been bumped
+        // to a new contentHash, so the cached row would be stale.
+        if (i !== -1 && !sync) {
             return registries.value[i]
         }
         const result = await worker?.loadRegistry({ authbase, sync })
         if (result) {
-            registries.value.push(result as ParsedRegistryRecord)
+            if (i !== -1) {
+                registries.value.splice(i, 1, result as ParsedRegistryRecord)
+            } else {
+                registries.value.push(result as ParsedRegistryRecord)
+            }
         }
         return result
     }
