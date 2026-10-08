@@ -80,7 +80,7 @@ const columns = computed((): QTableColumn[] => {
         { name: 'type', label: 'Items', field: 'type', align: 'left', sortable: true },
     ]
     if (props.allowDelete) {
-        cols.push({ name: 'actions', label: 'Actions', field: 'actions', align: 'right' })
+        cols.push({ name: 'actions', label: '', field: 'actions', align: 'right' })
     }
     return cols
 })
