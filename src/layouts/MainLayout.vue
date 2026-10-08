@@ -348,11 +348,14 @@ onMounted(async () => {
 
 <style lang="scss">
 .q-drawer--standard {
-  background: transparent !important;
-  //border-right: 1px solid rgba(255, 255, 255, 0.03);
+  background: rgba(13, 15, 19, 0.028) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
 
 .q-drawer--mobile {
-  background: rgba(18, 20, 26, 0.92) !important;
+  background: rgba(18, 20, 26, 0.72) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
 </style>
