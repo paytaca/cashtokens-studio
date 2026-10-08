@@ -49,7 +49,7 @@
                 <q-card v-else class="bg-dark q-pa-lg rounded-borders" flat>
                     <div class="flex justify-end ">
                         <q-btn icon="lock" color="secondary"
-                            @click="router.push({ name: 'view-authguard', params: { authkeyCategory: activeAuthhead!.authkey!.token!.category } })"
+                            @click="router.push({ name: 'view-authguard', params: { authkeyCategory: activeAuthhead!.authkey!.token!.category }, query: route.query })"
                             dense no-caps flat>View Vault</q-btn>
                         <q-btn icon="help" dense></q-btn>
                     </div>

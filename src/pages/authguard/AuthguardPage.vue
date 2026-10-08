@@ -406,8 +406,12 @@ onMounted(async () => {
   }
 })
 
-onBeforeRouteLeave(() => {
-  authguardStore.setActiveAuthhead(null as any)
+onBeforeRouteLeave((to) => {
+  // Keep the active authhead when returning to the reserves view so it can
+  // still render the locked/reserve UTXO. Clear it when leaving elsewhere.
+  if (to.name !== 'view-authhead') {
+    authguardStore.setActiveAuthhead(null as any)
+  }
 })
 </script>
 
