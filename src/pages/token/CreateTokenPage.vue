@@ -103,13 +103,13 @@
                                 </q-banner>
                                 <FormField>
                                     <label>Authguard</label>
-                                    <q-option-group v-model="vaultMode" :options="[
+                                    <q-option-group v-model="authguardState" :options="[
                                         { label: 'New (Recommended)', value: 'new' },
                                         { label: 'Existing', value: 'existing', disable: authkeys.length === 0 },
                                     ]" type="radio" inline dense class="text-caption" />
                                 </FormField>
 
-                                <template v-if="vaultMode === 'new'">
+                                <template v-if="authguardState === 'new'">
                                     <FormField class="q-mt-md">
                                         <label>Authkey NFT</label>
                                         <div v-if="genesisInputs.length < 2" class="flex items-center q-gutter-x-md">
@@ -141,7 +141,7 @@
                                 <q-stepper-navigation class="flex justify-end q-gutter-sm">
                                     <q-btn flat @click="step = 1" label="Back" rounded />
                                     <q-btn @click="step = 3" color="primary" label="Next"
-                                        :disable="vaultMode === 'new' ? genesisInputs.length < 2 : !authKeySelected"
+                                        :disable="authguardState === 'new' ? genesisInputs.length < 2 : !authKeySelected"
                                         rounded />
                                 </q-stepper-navigation>
                             </q-step>
@@ -330,12 +330,12 @@ const tokenIconPreviewUri = computed(() => {
 const token = ref({
     amount: '0',
     nft: {
-        capability: NFTCapability.mutable,
+        capability: NFTCapability.mutable as NFTCapability,
         commitment: ''
     }
 })
 
-const vaultMode = ref<'new' | 'existing'>('new')
+const authguardState = ref<'new' | 'existing'>('new')
 const step = ref(1)
 const stepperRef = ref()
 const tokenType = ref<TokenType>(typeOptions[0]!)
@@ -346,7 +346,7 @@ const iconFileUploading = ref<boolean>(false)
 const authKeySelected = ref<Utxo>()
 
 const isStep2Done = computed(() =>
-    vaultMode.value === 'new'
+    authguardState.value === 'new'
         ? genesisInputs.value.length >= 2
         : !!authKeySelected.value
 )
@@ -525,7 +525,13 @@ const onSubmit = async () => {
         }
 
         const genesisInput = genesisInputs.value[0]
-        const authKeyInput = authKeySelected.value || genesisInputs.value[1]
+
+        let authKeyInput = authKeySelected.value
+
+        if (authguardState.value === 'new') {
+            authKeyInput = genesisInputs.value[1]
+        }
+
         if (!genesisInput) {
             return $q.notify({
                 type: 'Error',
