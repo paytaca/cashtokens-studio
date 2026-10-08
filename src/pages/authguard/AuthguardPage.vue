@@ -1,129 +1,138 @@
 <template>
   <q-page class="bg-dark-page text-white">
     <div class="row justify-center q-pa-md">
-      <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+      <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-gutter-y-lg">
         <div class="q-mb-md q-px-sm">
           <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
         </div>
-
-        <div class="row" style="height: 10rem;">
-          <q-avatar size="3xl" class="profile-avatar bg-grey-9">
-            <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
-              fit="cover" />
-            <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" fit="cover" />
-          </q-avatar>
-        </div>
-
-        <div class="q-pt-lg q-px-md content-container">
-          <div class="q-mb-lg">
-            <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || 'Authguard Vault' }}</div>
-            <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
-              identitySnapshot.description }}</div>
-          </div>
-
-          <div class="row q-gutter-y-md q-mb-lg">
-            <div class="col-12 col-sm-6">
-              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">Authguard Vault Address</div>
-              <div class="flex items-center q-gutter-x-xs">
-                <span class="text-caption text-grey-3 text-mono">{{ shortenAddress(vaultAddress) }}</span>
-                <CopyText :text="vaultAddress" />
+        <q-card class="bg-dark q-pa-lg rounded-borders">
+          <div class="row">
+            <div class="col-12 flex items-center q-gutter-x-md">
+              <q-avatar size="3xl" class="profile-avatar bg-grey-9">
+                <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" />
+                <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" />
+              </q-avatar>
+              <div>
+                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || 'Authguard Vault' }}</div>
+                <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
+                  identitySnapshot.description }}</div>
               </div>
             </div>
-            <div class="col-12 col-sm-6">
-              <div class="text-caption text-grey-5 text-uppercase q-mb-xs">Authguard Key ID</div>
-              <div class="flex items-center q-gutter-x-xs">
-                <span class="text-caption text-grey-3 text-mono">{{ shortenTokenId(authkeyCategory) }}</span>
-                <CopyText :text="authkeyCategory" />
+
+          </div>
+        </q-card>
+        <q-card class="bg-dark q-pa-lg rounded-borders">
+          <div class="q-pt-lg q-px-md content-container">
+            <div class="row q-gutter-y-md q-mb-lg">
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
+                  <q-icon name="lock" color="warning"></q-icon>
+                  <div>Authguard Vault Address</div>
+                </div>
+                <div class="flex items-center q-gutter-x-xs">
+                  <span class="text-caption text-grey-3 text-mono">{{ shortenAddress(vaultAddress) }}</span>
+                  <CopyText :text="vaultAddress" />
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
+                  <q-icon name="key" color="warning"></q-icon>
+                  <div>Authguard Key NFT Category</div>
+                </div>
+                <div class="flex items-center q-gutter-x-xs">
+                  <span class="text-caption text-grey-3 text-mono">{{ shortenTokenId(authkeyCategory) }}</span>
+                  <CopyText :text="authkeyCategory" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div class="table-scroll-wrapper">
-            <q-table :rows="vaultUtxos" :columns="columns" flat class="border-radius-12 token-reserves-table"
-              :loading="loading" row-key="txid" style="min-width: 640px">
-              <template v-slot:body-cell-token="props">
-                <q-td :props="props">
-                  <div class="flex items-center no-wrap q-gutter-x-md">
-                    <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                      <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!"
-                        fit="cover" />
-                      <q-img v-else
-                        :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
-                        fit="cover">
-                        <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
-                          placeholder</q-tooltip>
-                      </q-img>
-                    </q-avatar>
-                    <div>
-                      <div class="flex items-center q-gutter-x-xs">
-                        <span class="text-caption text-weight-medium text-primary">
-                          {{ identitySnapshot?.token?.symbol || '?' }}
-                        </span>
-                        <span class="text-grey-7">•</span>
-                        <span class="text-caption text-grey-5 text-mono">
-                          {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
-                        </span>
-                      </div>
-                      <div class="flex items-center q-gutter-x-xs q-mt-xs">
-                        <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                          Mixed
-                        </q-badge>
-                        <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="token" size="10px" class="q-mr-xs" />
-                          NFT
-                        </q-badge>
-                        <q-badge v-else color="dark" text-color="green-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="money" size="10px" class="q-mr-xs" />
-                          Fungible
-                        </q-badge>
+            <div class="table-scroll-wrapper">
+              <q-table :rows="vaultUtxos" :columns="columns" flat class="border-radius-12 token-reserves-table"
+                :loading="loading" row-key="txid" style="min-width: 640px">
+                <template v-slot:body-cell-token="props">
+                  <q-td :props="props">
+                    <div class="flex items-center no-wrap q-gutter-x-md">
+                      <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                        <q-img v-if="identitySnapshot?.uris?.icon"
+                          :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" fit="cover" />
+                        <q-img v-else
+                          :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
+                          fit="cover">
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
+                            placeholder</q-tooltip>
+                        </q-img>
+                      </q-avatar>
+                      <div>
+                        <div class="flex items-center q-gutter-x-xs">
+                          <span class="text-caption text-weight-medium text-primary">
+                            {{ identitySnapshot?.token?.symbol || '?' }}
+                          </span>
+                          <span class="text-grey-7">•</span>
+                          <span class="text-caption text-grey-5 text-mono">
+                            {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
+                          </span>
+                        </div>
+                        <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                          <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                            Mixed
+                          </q-badge>
+                          <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="token" size="10px" class="q-mr-xs" />
+                            NFT
+                          </q-badge>
+                          <q-badge v-else color="dark" text-color="green-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="money" size="10px" class="q-mr-xs" />
+                            Fungible
+                          </q-badge>
 
-                        <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
-                          text-color="purple-4"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                          Minting
-                        </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
-                          text-color="teal-10"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                          <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
-                          Mutable
-                        </q-badge>
-                        <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
-                          text-color="grey-6"
-                          class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
-                          dense>
-                          <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
-                          Immutable
-                        </q-badge>
+                          <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
+                            text-color="purple-4"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                            Minting
+                          </q-badge>
+                          <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                            text-color="teal-10"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                            <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
+                            Mutable
+                          </q-badge>
+                          <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
+                            text-color="grey-6"
+                            class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
+                            dense>
+                            <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
+                            Immutable
+                          </q-badge>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </q-td>
-              </template>
+                  </q-td>
+                </template>
 
-              <template v-slot:body-cell-utxoRef="props">
-                <q-td :props="props">
-                  <span class="text-caption text-grey-5 text-mono">{{ props.row.txid?.slice(0, 8) }}...:{{
-                    props.row.vout }}</span>
-                </q-td>
-              </template>
+                <template v-slot:body-cell-utxoRef="props">
+                  <q-td :props="props">
+                    <span class="text-caption text-grey-5 text-mono">{{ props.row.txid?.slice(0, 8) }}...:{{
+                      props.row.vout }}</span>
+                  </q-td>
+                </template>
 
-              <template v-slot:body-cell-actions="props">
-                <q-td :props="props" class="text-right">
-                  <q-btn flat dense icon="lock_open" label="Unlock" size="sm" color="grey-4" class="q-mr-sm"
-                    @click="confirmUnguard(props.row)" />
-                  <q-btn flat dense icon="mdi-fire" label="Burn" size="sm" color="orange"
-                    @click="confirmBurn(props.row)" />
-                </q-td>
-              </template>
-            </q-table>
+                <template v-slot:body-cell-actions="props">
+                  <q-td :props="props" class="text-right">
+                    <q-btn flat dense icon="lock_open" label="Unlock" size="sm" color="grey-4" class="q-mr-sm"
+                      @click="confirmUnguard(props.row)" />
+                    <q-btn flat dense icon="mdi-fire" label="Burn" size="sm" color="orange"
+                      @click="confirmBurn(props.row)" />
+                  </q-td>
+                </template>
+              </q-table>
+            </div>
           </div>
-        </div>
+        </q-card>
       </div>
     </div>
 
@@ -416,16 +425,6 @@ onBeforeRouteLeave((to) => {
 </script>
 
 <style scoped>
-.profile-avatar {
-  bottom: -3rem;
-}
-
-/* @media (min-width: 768px) {
-  .profile-avatar {
-    left: 3rem;
-  }
-} */
-
 .content-container {
   max-width: 80rem;
   margin-left: auto;
