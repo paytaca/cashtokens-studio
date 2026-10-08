@@ -161,7 +161,6 @@ import { transferFungibleReserves } from 'src/core/transaction'
 import { Network } from 'cashscript'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { db } from 'src/core/client-db'
-import { useRegistryStore } from 'src/stores/registry'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
@@ -177,7 +176,6 @@ const router = useRouter()
 const route = useRoute()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
-const { setActiveIdentitySnapshot } = useRegistryStore()
 const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
@@ -336,6 +334,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
 
             updateStep(TASK_BROADCASTING, 'running')
 
+
             const [broadcastError, txid] = await broadcastTransaction({
                 transactionHex: response.signedTransaction,
                 network: import.meta.env.VITE_BCH_NETWORK,
@@ -369,11 +368,11 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
                 status: 'success'
             })
 
+            await updateActiveAuthhead({ authheadTxid: txid, bumpedRegistry: false })
+
             loadAuthkeys(wallet.value, true).then(() => {
                 triggerRef(wallet)
             })
-
-            await updateActiveAuthhead()
 
             updateStep(TASK_REFRESH_UTXOS, 'done')
 

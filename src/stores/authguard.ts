@@ -1,9 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { AuthheadId, filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/authguard'
-import type { UtxoWithPath, UtxoWithAuthKey, AuthheadUtxo, DecoratedUtxo} from 'src/core/types'
+import type { UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
-import { db } from 'src/core/client-db'
 import { LocalStorage } from 'quasar'
 import { stringify } from '@bitauth/libauth'
 import { parseLibauthStringified } from 'src/core/utils'
@@ -25,24 +24,32 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authheadLoading = ref<Record<string, boolean>>({}) // {<txid:vout>: true}
   
 
-  async function updateActiveAuthhead() {
+  /**
+   * Assumes authkeys was updated somewhere by invoking loadAuthheads
+   */
+  async function updateActiveAuthhead(params?: {authheadTxid: string, bumpedRegistry: boolean}) {
     if (!activeAuthhead.value || !activeAuthhead.value.authkey?.token?.category) return
-
     // Re-decorate the authhead from the (possibly bumped) registry so the
     // identitySnapshotIdentifier tracks the current contentHash.
-    const refreshed = await loadAuthhead({
-      authkey: activeAuthhead.value.authkey,
-      sync: true
-    })
+    if (params?.bumpedRegistry !== false) {
+      const refreshed = await loadAuthhead({
+        authkey: activeAuthhead.value.authkey,
+        sync: true
+      })
 
-    if (refreshed) {
-      activeAuthhead.value = Object.assign({}, refreshed)
-      setActiveAuthhead(activeAuthhead.value)
-      return
+      if (refreshed) {
+        activeAuthhead.value = Object.assign({}, refreshed)
+        setActiveAuthhead(activeAuthhead.value)
+        return
+      }
     }
 
+    
+
     // Fallback: refresh the UTXO while keeping the previous identity.
-    const latestAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value.authkey]))?.[0]
+    const authheadId = params?.authheadTxid ? `${params.authheadTxid}:0`: params?.authheadTxid
+    const latestAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value.authkey], authheadId as AuthheadId))?.[0]
+
     if (!latestAuthhead) return 
     latestAuthhead.identitySnapshot = activeAuthhead.value.identitySnapshot
     latestAuthhead.identitySnapshotIdentifier = activeAuthhead.value.identitySnapshotIdentifier
@@ -50,7 +57,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     latestAuthhead.authkey.vout = activeAuthhead.value.authkey.vout
     latestAuthhead.authkey.txid = latestAuthhead.txid
     activeAuthhead.value = Object.assign({}, latestAuthhead)
-    setActiveAuthhead(activeAuthhead.value)
+    setActiveAuthhead(latestAuthhead)
   }
 
   async function loadAuthhead(params: { authkey: UtxoWithPath, sync?: boolean, authheadId?: AuthheadId }) {
@@ -158,10 +165,8 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     try {
         if (!silent) authkeysLoading.value = true
         const utxos = await externalWallet.getUtxos({ sync }) as UtxoWithPath[]
+        
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
-        // if (sync) {
-        //   await loadAuthheads(sync)
-        // }
         authkeysLastSync.value = Date.now()
         return authkeys.value
     } finally {
