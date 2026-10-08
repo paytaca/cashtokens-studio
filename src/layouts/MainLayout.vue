@@ -140,10 +140,7 @@
             </q-banner>
           </div>
         </template> -->
-        <WalletInitializing
-          v-if="wallet?.initializing"
-          :message="$t('info.initializingWallet')"
-        />
+        <WalletInitializing v-if="wallet?.initializing" :message="$t('info.initializingWallet')" />
         <router-view v-else />
         <!-- <q-ajax-bar /> -->
       </q-page-container>
@@ -307,7 +304,11 @@ onMounted(async () => {
 }
 
 .header-subtle {
-  background: transparent !important;
+  /* background: transparent !important; */
+  background: rgba(13, 15, 19, 0.028) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+  /* border-bottom: 1px solid rgba(13, 15, 19, 0.084); */
 }
 
 .footer-subtle {
