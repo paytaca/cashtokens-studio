@@ -216,8 +216,6 @@ const onPublishClick = async () => {
 
         const response = await manager.value!.signTransaction(publishRegistryRequest)
 
-        console.log('@sign response', response)
-
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
 
@@ -292,15 +290,6 @@ const onPublishClick = async () => {
         publishing.value = false
     }
 }
-
-
-onMounted(async () => {
-    console.log('registry record', registry.value)
-    const x = await db.registry.where({
-        registryIdentity: route.query.registryIdentity
-    }).first()
-    console.log('registry record', x)
-})
 
 </script>
 
