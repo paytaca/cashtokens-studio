@@ -403,7 +403,7 @@ const onGenerateGenesisInput = async () => {
 
     try {
 
-        updateStep('inputs-check', 'running')
+        updateStep(TASK_INPUTS_CHECK, 'running')
 
         const genesisInputCandidates = new Set()
 
