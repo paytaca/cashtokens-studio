@@ -37,15 +37,27 @@
                     {{ activeIdentitySnapshot?.token?.symbol || 'Unknown' }}
                   </div>
                   <div class="text-mono text-grey-2 ellipsis">
-                    {{
-                      $q.screen.lt.lg
-                        ? shortenTokenId(
-                          activeIdentitySnapshot?.token?.category as string
-                        )
-                        : activeIdentitySnapshot?.token?.category
-                    }}
-                    <CopyText v-if="activeIdentitySnapshot?.token?.category"
-                      :text="activeIdentitySnapshot?.token?.category" />
+                    <q-chip color="grey-8">
+                      <CopyText v-if="activeIdentitySnapshot?.token?.category"
+                        :text="activeIdentitySnapshot?.token?.category" />
+                      {{
+                        $q.screen.lt.lg
+                          ? shortenTokenId(
+                            activeIdentitySnapshot?.token?.category as string
+                          )
+                          : activeIdentitySnapshot?.token?.category
+                      }}
+                    </q-chip>
+
+
+                  </div>
+                  <div v-if="activeIdentitySnapshot?.uris?.web">
+                    <a :href="activeIdentitySnapshot.uris.web" target="_blank" rel="noopener noreferrer"
+                      class="web-chip-link">
+                      <q-chip icon="mdi-web" color="secondary" clickable>
+                        {{ activeIdentitySnapshot.uris.web }}
+                      </q-chip>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -434,5 +446,12 @@ watch(
 .inline-text-section {
   padding: 0 !important;
   overflow: visible !important;
+}
+
+/* Web URI chip rendered as a real link so it opens in a new tab */
+.web-chip-link {
+  display: inline-block;
+  text-decoration: none;
+  color: inherit;
 }
 </style>
