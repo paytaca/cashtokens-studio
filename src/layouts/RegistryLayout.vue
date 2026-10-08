@@ -64,7 +64,7 @@
             </div>
 
             <!-- Only this nav scrolls horizontally when the links don't fit -->
-            <div class="inline-nav-wrap" :style="$q.screen.lt.sm ? { maxWidth: '380px' } : undefined">
+            <div class="inline-nav-wrap" :style="$q.screen.lt.sm ? { maxWidth: '350px' } : undefined">
               <nav ref="navRef" class="inline-nav q-py-lg" @scroll.passive="updateScrollState">
                 <div class="inline-nav-row">
                   <q-item v-for="link in navLinks" :key="link.title" clickable v-ripple :to="link.to" exact
