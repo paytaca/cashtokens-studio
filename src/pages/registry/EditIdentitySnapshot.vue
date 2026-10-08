@@ -169,16 +169,18 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { BaseWallet, delay, NetworkType } from 'mainnet-js-v3'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
-import { NftType, IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
+import { NftType, IdentitySnapshot, Registry } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, IdentitySnapshotRecord, NftRecord } from 'src/core/client-db'
 import { getErrorMessage } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
 import { uploadFile } from 'src/core/ipfs'
 
-import { createIdentitySnapshotTemplate } from 'src/core/bcmr'
+import { createIdentitySnapshotTemplate, createTokenRegistry } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import { broadcastTransaction } from 'src/services/transaction'
 import { createSquareThumbnail } from 'src/utils'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -188,11 +190,19 @@ const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { loadAuthkeys, updateActiveAuthhead } = authguardStore
+const { loadAuthkeys, updateActiveAuthhead, setActiveAuthhead } = authguardStore
 const {
     manager,
     wallet,
 } = useWizardConnectWallet()
+
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+
+const TASK_UPLOAD_REGISTRY = 'upload-registry'
+const publishTaskList = [
+    { id: TASK_UPLOAD_REGISTRY, label: t('info.uploadingRegistryToIpfs') },
+    ...txTaskList,
+]
 
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotHasNoRegistry = ref<boolean>()
@@ -334,78 +344,154 @@ const onPublishClick = async () => {
 
     publishing.value = true
 
-    const loadingGroup = $q.loading.show({
-        group: 'mpop-lg',
-        message: t('info.uploadingRegistryToIpfs')
+    startLoader(publishTaskList, () => {
+        $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
+
+    updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
     try {
 
-        const { contentHash, identity } = activeAuthhead.value!.identitySnapshotIdentifier!
+        const authhead = activeAuthhead.value as UtxoWithAuthKey
+        const existingIdentifier = authhead.identitySnapshotIdentifier
 
-        const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
+        const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value)) as IdentitySnapshot
 
-        const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
+        let contentHash: string
+        let uris: string[]
+        let newRegistryBlob: Blob | undefined
+        let newRegistry: Registry | undefined
 
-        await db.identitySnapshot
-            .where('id')
-            .equals(id)
-            .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
+        if (existingIdentifier) {
+            // Bump the existing registry with the edited identity snapshot.
+            const { contentHash: originalContentHash, identity } = existingIdentifier
 
-        // initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
+            const id = (identitySnapshotRecord.value as IdentitySnapshotRecord).id
 
-        const bumpArtifact = await getRegistryWorker().bumpRegistry({
-            originalContentHash: contentHash,
-            bumpType: 'patch',
-            targetIdentity: {
-                authbase: identity.authbase,
-                timestamp: identity.timestamp
+            await db.identitySnapshot
+                .where('id')
+                .equals(id)
+                .modify({ identitySnapshot: clonedSnapshot, status: 'modified' })
+
+            const bumpArtifact = await getRegistryWorker().bumpRegistry({
+                originalContentHash,
+                bumpType: 'patch',
+                targetIdentity: {
+                    authbase: identity.authbase,
+                    timestamp: identity.timestamp
+                }
+            })
+
+            if (!bumpArtifact) {
+                throw new Error('Error uploading registry')
             }
-        })
 
-        if (!bumpArtifact) {
-            throw new Error('Error uploading registry')
+            contentHash = bumpArtifact.contentHash
+            uris = bumpArtifact.uris
+        } else {
+            // No registry yet — create and publish a brand-new full registry.
+            const authbase = (route.query.authbase as string) || authhead.token!.category
+
+            if (clonedSnapshot.token) {
+                clonedSnapshot.token.category = authbase
+            }
+
+            const created = createTokenRegistry({
+                authbase,
+                identitySnapshot: clonedSnapshot,
+                authKeyNftCategory: authhead.authkey?.token?.category || ''
+            })
+
+            newRegistry = created.registry
+            newRegistryBlob = new Blob([JSON.stringify(newRegistry)], { type: 'application/json' })
+
+            const uploadResult = await uploadFile(newRegistryBlob, 'bitcoin-cash-metadata-registry.json')
+            if (!uploadResult.cid) {
+                throw new Error('Error uploading registry to IPFS')
+            }
+
+            contentHash = created.contentHash
+            uris = [`ipfs://${uploadResult.cid}`]
         }
 
-        loadingGroup({
-            message: t('transaction.waitingForSignature')
-        })
+        updateStep(TASK_UPLOAD_REGISTRY, 'done')
+        updateStep(TASK_INPUTS_CHECK, 'running')
 
         await wallet.value.sync()
 
         triggerRef(wallet)
 
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
+
         const publishRegistryRequest = publishRegistry({
-            authhead: activeAuthhead.value as UtxoWithAuthKey,
+            authhead,
             funderUtxos: wallet.value.utxos as UtxoWithPath[],
             network: import.meta.env.VITE_BCH_NETWORK,
             registryPublicationData: {
-                contentHash: bumpArtifact.contentHash,
-                uris: bumpArtifact.uris
+                contentHash,
+                uris
             }
         })
 
-        loadingGroup({ message: 'Waiting for approval, please check your wallet...' })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value!.signTransaction(publishRegistryRequest);
 
-        loadingGroup({ message: 'Broadcasting, please wait...' })
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
         const [broadcastError, txid] = await broadcastTransaction({
             transactionHex: response.signedTransaction,
             network: import.meta.env.VITE_BCH_NETWORK,
             onProgress: (progress: string) => {
-                loadingGroup({ message: progress })
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
             }
         })
 
-        if (broadcastError) throw broadcastError
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
 
-        await getRegistryWorker().commitBumpRegistry(contentHash, `${txid}:0`)
+        const authbase = (route.query.authbase as string) || authhead.token!.category
 
-        loadingGroup({
-            message: 'Broadcast success, awaiting tx propagation...'
-        })
+        if (existingIdentifier) {
+            await getRegistryWorker().commitBumpRegistry(existingIdentifier.contentHash, `${txid}:0`)
+        } else {
+            await db.createNewRegistry({
+                publicationUris: uris,
+                contentHash,
+                rawRegistry: newRegistryBlob!,
+                authbase
+            })
+            await db.setRegistryPublished(authbase, contentHash)
+
+            // Materialize the new identity snapshot locally so this page and the
+            // active authhead update without waiting for the chain to index it.
+            const timestamp = newRegistry!.latestRevision
+            await getRegistryWorker().getIdentitySnapshot({
+                contentHash,
+                identity: { authbase, timestamp }
+            })
+
+            const updatedAuthhead = {
+                ...authhead,
+                identitySnapshot: clonedSnapshot,
+                identitySnapshotIdentifier: {
+                    contentHash,
+                    identity: { authbase, timestamp },
+                    registryIdentity: authbase
+                }
+            }
+            setActiveAuthhead(updatedAuthhead as UtxoWithAuthKey)
+            identitySnapshotHasNoRegistry.value = false
+        }
+
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
@@ -414,6 +500,9 @@ const onPublishClick = async () => {
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: txid
         })
+
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
 
         loadAuthkeys(wallet.value, true).then(() => {
             triggerRef(wallet)
@@ -427,7 +516,9 @@ const onPublishClick = async () => {
             status: 'success'
         })
 
-        loadingGroup()
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
+        stopLoader(1000)
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -438,16 +529,16 @@ const onPublishClick = async () => {
             }
         }).onOk(async () => {
 
-            registryStore.loadRegistry(identity.authbase, true).then(async () => {
+            registryStore.loadRegistry(authbase, true).then(async () => {
                 await loadPublishedNfts(0, 5)
                 await onPublishedRequest({ pagination: { page: 1, rowsPerPage: 5 } })
             })
         })
     } catch (error: any) {
+        stopLoader(3000)
         $q.notify({ type: 'Error', message: error.message })
     } finally {
         publishing.value = false
-        loadingGroup()
     }
 }
 
