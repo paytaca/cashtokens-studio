@@ -86,6 +86,7 @@ export default {
       latestRevision: 'Latest Revision',
       identities: 'Identities',
       authbase: 'Authbase',
+      license: 'License',
       identityHistory: 'Identity History',
       identitySnapshot: 'Identity Snapshot',
       name: 'Name',
