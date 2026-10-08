@@ -114,7 +114,8 @@
                                                     <h6 class="q-my-xs">Unpublished NFTs</h6>
                                                     <q-badge color="warning" :label="unpublishedNfts.length" />
                                                 </div>
-                                                <div class="table-scroll-wrapper">
+                                                <div class="table-scroll-wrapper"
+                                                    :style="$q.screen.lt.sm ? { maxWidth: '270px' } : { maxWidth: '2000px' }">
                                                     <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
                                                         :total="unpublishedNfts.length" @row-click="onNftRowClick"
                                                         :allow-delete="true" @row-delete="onNftRowDelete" />
@@ -170,7 +171,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                        }})</span>
+                                                            }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -776,7 +777,6 @@ $page-actions-height: 6.5rem;
 .table-scroll-wrapper {
     display: block;
     width: 100%;
-    max-width: 350px;
     min-width: 0;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
