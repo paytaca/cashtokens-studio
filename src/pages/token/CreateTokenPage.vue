@@ -330,7 +330,7 @@ const tokenIconPreviewUri = computed(() => {
 const token = ref({
     amount: '0',
     nft: {
-        capability: NFTCapability.minting,
+        capability: NFTCapability.mutable,
         commitment: ''
     }
 })
@@ -707,6 +707,14 @@ const initializeDefaultAuthKey = () => {
     authKeySelected.value = existingVaultOptions.value?.[0]?.value as Utxo
 }
 
+
+// Fungible tokens default to a mutable identity output; NFT/mixed tokens
+// default to minting (the capability select is shown for those).
+watch(tokenType, (type) => {
+    token.value.nft.capability = type === 'Fungible'
+        ? NFTCapability.mutable
+        : NFTCapability.minting
+}, { immediate: true })
 
 watch(() => iconFile.value, async (v) => {
     if (v) {
