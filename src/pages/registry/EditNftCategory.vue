@@ -244,7 +244,7 @@ import { getNftCollectionType } from 'src/core/bcmr'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
-const ROWS_PER_PAGE = 2
+const ROWS_PER_PAGE = 10
 
 const DEFAULT_NFT_CATEGORY: NftCategoryI = {
     parse: { types: {} } as SequentialNftCollectionI,
