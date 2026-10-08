@@ -112,7 +112,7 @@ const pagination = ref({
     sortBy: 'type',
     descending: false,
     page: 1,
-    rowsPerPage: 2,
+    rowsPerPage: 10,
     rowsNumber: 0
 })
 

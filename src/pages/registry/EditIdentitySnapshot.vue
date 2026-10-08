@@ -3,6 +3,7 @@
         <div class="row justify-center">
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
                 <q-card v-if="identitySnapshot" flat class="bg-dark q-pa-lg rounded-borders">
+                    <div class="text-right text-caption text-grey-6 text-uppercase">Metadata</div>
                     <q-banner v-if="identitySnapshotHasNoRegistry">
                         No published token metadata. Fill up this form and publish.
                     </q-banner>

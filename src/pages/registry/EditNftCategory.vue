@@ -71,6 +71,7 @@
             </div>
             <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md content-col">
                 <q-card flat class="bg-dark q-pa-lg rounded-borders">
+                    <div class="text-right text-caption text-grey-6 text-uppercase">Metadata</div>
                     <template v-if="nftCategory">
                         <div class="bg-dark q-mt-md" flat>
                             <h6 class="q-my-xs">NFT Category Info</h6>
@@ -169,7 +170,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                            }})</span>
+                                                        }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"

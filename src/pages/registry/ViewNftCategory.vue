@@ -189,7 +189,7 @@ import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 
 
-const ROWS_PER_PAGE = 2
+const ROWS_PER_PAGE = 10
 
 const props = defineProps<{
     authkey: string,
