@@ -4,7 +4,7 @@
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
           <q-avatar rounded size="md">
-            <q-img src="images/paytaca_icon.png"></q-img>
+            <q-img src="/images/paytaca_icon.png"></q-img>
           </q-avatar>
         </div>
       </div>
@@ -17,18 +17,18 @@
           rounded></q-badge>
         <q-avatar rounded size="md">
 
-          <q-img src="images/paytaca_icon.png"></q-img>
+          <q-img src="/images/paytaca_icon.png"></q-img>
 
         </q-avatar>
         <q-avatar v-if="user.walletType == 'walletconnect'" rounded size="md">
-          <q-img src="images/paytaca_icon.png"></q-img>
+          <q-img src="/images/paytaca_icon.png"></q-img>
         </q-avatar>
       </span>
       <span>Disconnect</span>
     </q-btn>
     <q-avatar v-else rounded style="width: 250px; height: 100px">
-      <q-img v-if="$q.dark.isActive" src="images/paytaca_dark.png"></q-img>
-      <q-img v-else src="images/paytaca_light.png"></q-img>
+      <q-img v-if="$q.dark.isActive" src="/images/paytaca_dark.png"></q-img>
+      <q-img v-else src="/images/paytaca_light.png"></q-img>
       <span v-if="!paytacaIsInstalled" class="text-caption">
         Not Installed! <a @click.stop target="_blank"
           href="https://chromewebstore.google.com/detail/paytaca/pakphhpnneopheifihmjcjnbdbhaaiaa">Install?</a>

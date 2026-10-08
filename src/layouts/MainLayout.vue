@@ -6,10 +6,8 @@
         <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
           @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <!-- <q-img @click.stop="router.push('/')" :src="$q.screen.xs
-              ? 'images/cts_icon.png'
-              : 'images/cts_transparent.png'
-            " class="cursor-pointer app-logo"></q-img> -->
+          <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_icon.png"
+            class="cursor-pointer app-logo" />
           <code v-if="network === 'chipnet'" class="text-caption text-italic q-ml-sm">Chipnet</code>
         </q-toolbar-title>
         <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
@@ -104,7 +102,7 @@
           <div class="col-12 text-center">
             <q-btn to="/" size="2em" flat color="primary">
               <q-avatar size="3em">
-                <q-img src="images/cts_icon.png"></q-img>
+                <q-img src="/images/cts_icon.png"></q-img>
               </q-avatar>
             </q-btn>
           </div>
@@ -193,6 +191,10 @@ const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 const showHeader = computed(() => walletIsReady);
 
 const isIndexPage = computed(() => route.path === '/');
+
+// The drawer is always shown above the xs breakpoint (show-if-above), so the
+// logo only needs to appear in the header when the sidebar isn't visible.
+const showHeaderLogo = computed(() => $q.screen.xs && !leftDrawerOpen.value);
 
 useWalletConnect();
 

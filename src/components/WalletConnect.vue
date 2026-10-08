@@ -4,7 +4,7 @@
       <div class="row justify-center text-center q-py-xs">
         <div class="col-xs-12">
           <q-avatar rounded size="md">
-            <q-img src="images/walletconnect_icon.png"></q-img>
+            <q-img src="/images/walletconnect_icon.png"></q-img>
           </q-avatar>
         </div>
       </div>
@@ -17,14 +17,14 @@
         <q-badge floating :color="user.walletAddress && user.walletType == 'walletconnect' ? 'green' : 'red'" rounded>
         </q-badge>
         <q-avatar v-if="user.walletType == 'walletconnect'" rounded size="md">
-          <q-img src="images/walletconnect_icon.png"></q-img>
+          <q-img src="/images/walletconnect_icon.png"></q-img>
         </q-avatar>
       </span>
       <span>Disconnect</span>
     </q-btn>
 
     <q-avatar v-else rounded style="width: 250px; height: 100px">
-      <q-img src="images/walletconnect.png"></q-img>
+      <q-img src="/images/walletconnect.png"></q-img>
     </q-avatar>
   </span>
 </template>

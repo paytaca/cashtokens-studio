@@ -4,7 +4,7 @@
 
       <!-- Hero -->
       <div v-if="!walletIsReady" class="hero column items-center text-center">
-        <q-img src="images/cts_transparent.png" :style="bannerSize" class="hero-logo" alt="CashTokens Studio" />
+        <q-img src="/images/cts_transparent.png" :style="bannerSize" class="hero-logo" alt="CashTokens Studio" />
 
         <div class="hero-tagline text-subtitle1 text-grey-5">
           {{ t('index.hero.tagline') }}
