@@ -1,29 +1,7 @@
 <template>
   <div>
     <template v-if="wallet?.initializing">
-      <div class="row justify-center">
-        <div class="col-xs-12 col-sm-10 col-md-8">
-          <div class="q-mb-md q-px-sm">
-            <q-skeleton type="QBtn" width="100px" height="36px" class="bg-grey-9 rounded-borders" />
-          </div>
-          <q-card flat class="bg-dark q-pa-lg rounded-borders">
-            <div class="row justify-end q-mb-md">
-              <q-skeleton type="QBtn" width="60px" height="32px" class="bg-grey-9 rounded-borders" />
-            </div>
-            <div class="flex no-wrap items-center q-gutter-x-md">
-              <q-skeleton type="circle" :size="$q.screen.lt.sm ? '5rem' : '8rem'" class="bg-grey-9" />
-              <div class="q-pa-sm q-gutter-y-sm">
-                <q-skeleton type="text" width="140px" height="28px" class="bg-grey-9" />
-                <q-skeleton type="text" width="220px" height="16px" class="bg-grey-9" />
-              </div>
-            </div>
-            <div class="row no-wrap q-gutter-x-sm q-py-lg">
-              <q-skeleton v-for="i in 4" :key="i" type="rect" width="90px" height="36px"
-                class="bg-grey-9 rounded-borders" />
-            </div>
-          </q-card>
-        </div>
-      </div>
+      <WalletInitializing :message="$t('info.initializingWallet')" />
     </template>
     <template v-else>
       <div class="row justify-center">
@@ -93,8 +71,8 @@
           </q-card>
         </div>
       </div>
+      <router-view />
     </template>
-    <router-view />
   </div>
 </template>
 
@@ -106,6 +84,7 @@ import { useRegistryStore } from 'src/stores/registry';
 import { computed, inject, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CopyText from 'src/components/CopyText.vue';
+import WalletInitializing from 'src/components/WalletInitializing.vue';
 import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
 

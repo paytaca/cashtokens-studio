@@ -11,6 +11,7 @@ export default {
   },
   info: {
     walletNotReady: 'Wallet not ready',
+    initializingWallet: 'Initializing Wallet',
     preparingTx: 'Preparing transaction, please wait...',
     waitingForSignature: 'Waiting for signature, please check your wallet...',
     broadcastingTx: 'Broadcasting transaction, please wait...',
@@ -22,6 +23,7 @@ export default {
             genesis input becomes the future token id of the token you create, in this case when you
             create an Authkey Non-Fungible Token.</p>`,
     whatsThis: `What's this?`,
+    changeIcon: 'Change icon',
     uploadingRegistryToIpfs: 'Uploading registry to IPFS',
     uploadedRegsitryToIpfs: 'Uploaded registry to IPFS, id = {cid}',
     clearingChanges: 'Clearing Changes',
@@ -155,6 +157,27 @@ export default {
     lastMintedSeq: 'Last minted seq:',
     nextSequenceHint: 'Will mint NFTs #{start} - #{end}',
     particularSequenceHint: 'Will mint {quantity} NFT(s) with sequence #{seq}',
+  },
+  index: {
+    hero: {
+      tagline: 'Create, manage, and explore CashTokens on Bitcoin Cash',
+    },
+    createFungible: {
+      title: 'Create Fungible Token',
+      caption: 'Issue a fungible token with custom supply and decimals',
+    },
+    createNft: {
+      title: 'Create NFT',
+      caption: 'Create a unique non-fungible token with its own identity',
+    },
+    connect: {
+      title: 'Connect Wallet',
+      subtitle: 'Connect Wallet via Wizard Connect',
+      action: 'Connect',
+      connecting: 'Connecting Wallet...',
+      reconnecting: 'Reconnecting Wallet...',
+      hint: 'Please authorize the connection request inside your WizardConnect extension.',
+    },
   },
   dashboard: {
     pageTitle: {

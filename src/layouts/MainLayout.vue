@@ -140,7 +140,11 @@
             </q-banner>
           </div>
         </template> -->
-        <router-view />
+        <WalletInitializing
+          v-if="wallet?.initializing"
+          :message="$t('info.initializingWallet')"
+        />
+        <router-view v-else />
         <!-- <q-ajax-bar /> -->
       </q-page-container>
     </q-scroll-area>
@@ -164,6 +168,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { EventBus, useQuasar } from 'quasar';
 import ClientDB from 'src/apps/clientonly/ClientDB';
 import SidebarMenu from 'components/SidebarMenu.vue';
+import WalletInitializing from 'src/components/WalletInitializing.vue';
 import { useUser } from 'src/stores/user';
 import { useUI } from 'src/stores/ui';
 import TransactionLogger from 'src/components/TransactionLogger.vue';
@@ -179,11 +184,9 @@ import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 const leftDrawerOpen = ref(false);
 const user = useUser();
-const ui = useUI();
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-const messageDialog = ref<boolean>(false);
 const pendingMultisigTransactions = ref([]);
 const scanning = ref<string | boolean>(false);
 const eventBus = inject<EventBus>('eventBus');
@@ -198,8 +201,6 @@ useWalletConnect();
 
 const { state, manager, disconnect, showQR, uri, qrUri, wallet, walletIsReady } =
   inject('wizardConnectWallet') as any;
-// const { wallet, manager, state, disconnect, showQR, uri, qrUri } = useWizardConnectWallet()
-// const { wallet, manager, state, disconnect, showQR, uri, qrUri } = wizardConnectWallet
 
 const closeQR = () => {
   showQR.value = false;

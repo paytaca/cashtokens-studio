@@ -13,8 +13,6 @@ import { AuthheadId } from './core/authguard';
 import { useRegistryStore } from './stores/registry';
 import { storeToRefs } from 'pinia';
 import { useI18n } from 'vue-i18n';
-import LoadingDialog from 'src/components/dialogs/LoadingDialog.vue';
-import { useQuasar } from 'quasar';
 
 const { setActiveIdentitySnapshot } = useRegistryStore();
 const wizardConnectWallet = useWizardConnectWallet();
@@ -27,22 +25,10 @@ const { activeAuthhead } = storeToRefs(authguardStore);
 
 provide('wizardConnectWallet', wizardConnectWallet);
 
-const $q = useQuasar();
 const route = useRoute();
 const router = useRouter();
 const { t } = useI18n();
 const dashboardVisited = ref<boolean>(false);
-
-watch(
-  () => wallet.value.initializing,
-  (walletInitializing) => {
-    if (walletInitializing) {
-      $q.loading.show({ message: 'Initializing Wallet' });
-    } else {
-      $q.loading.hide()
-    }
-  }
-);
 
 watch(
   () => wallet.value.ready,
