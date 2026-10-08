@@ -5,7 +5,7 @@
         <div class="q-mb-md q-px-sm">
           <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
         </div>
-        <q-card class="bg-dark q-pa-lg rounded-borders">
+        <q-card class="q-pa-lg rounded-borders">
           <div class="row">
             <div class="col-12 flex items-center q-gutter-x-md">
               <q-avatar size="3xl" class="profile-avatar bg-grey-9">
@@ -21,7 +21,7 @@
 
           </div>
         </q-card>
-        <q-card class="bg-dark q-pa-lg rounded-borders">
+        <q-card class="q-pa-lg rounded-borders">
           <div class="q-pt-lg q-px-md content-container">
             <div class="row q-gutter-y-md q-mb-lg">
               <div class="col-12 col-sm-6">

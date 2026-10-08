@@ -1,7 +1,7 @@
 <template>
     <q-page :class="{ 'page--with-actions': showActions }">
         <div class="row justify-center">
-            <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+            <div v-if="loading" class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
                 <!-- Back Button Placeholder -->
                 <div class="q-mb-md q-px-sm">
                     <q-skeleton type="rect" width="80px" height="36px" class="bg-grey-9" />
@@ -69,7 +69,7 @@
                     </q-card>
                 </q-card>
             </div>
-            <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+            <div v-else-if="identitySnapshot" class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md content-col">
                 <q-card flat class="bg-dark q-pa-lg rounded-borders">
                     <template v-if="nftCategory">
                         <div class="bg-dark q-mt-md" flat>
@@ -113,14 +113,18 @@
                                                     <h6 class="q-my-xs">Unpublished NFTs</h6>
                                                     <q-badge color="warning" :label="unpublishedNfts.length" />
                                                 </div>
-                                                <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
-                                                    :total="unpublishedNfts.length" @row-click="onNftRowClick"
-                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                                <div class="table-scroll-wrapper">
+                                                    <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
+                                                        :total="unpublishedNfts.length" @row-click="onNftRowClick"
+                                                        :allow-delete="true" @row-delete="onNftRowDelete" />
+                                                </div>
                                             </template>
                                             <h6 class="q-my-xs">Published NFTs</h6>
-                                            <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
-                                                @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
-                                                @row-delete="onNftRowDelete" />
+                                            <div class="table-scroll-wrapper">
+                                                <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
+                                                    @request="onNftsRequest" @row-click="onNftRowClick"
+                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                            </div>
                                         </template>
                                     </ParsableNftCollection>
                                 </template>
@@ -178,14 +182,18 @@
                                                     <h6 class="q-my-xs">Unpublished NFTs</h6>
                                                     <q-badge color="warning" :label="unpublishedNfts.length" />
                                                 </div>
-                                                <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
-                                                    :total="unpublishedNfts.length" @row-click="onNftRowClick"
-                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                                <div class="table-scroll-wrapper">
+                                                    <NftTable :rows="unpublishedNfts" :loading="unpublishedLoading"
+                                                        :total="unpublishedNfts.length" @row-click="onNftRowClick"
+                                                        :allow-delete="true" @row-delete="onNftRowDelete" />
+                                                </div>
                                             </template>
                                             <h6 class="q-my-xs q-mt-lg">Published NFTs</h6>
-                                            <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
-                                                @request="onNftsRequest" @row-click="onNftRowClick" :allow-delete="true"
-                                                @row-delete="onNftRowDelete" />
+                                            <div class="table-scroll-wrapper">
+                                                <NftTable :rows="nfts" :loading="nftsLoading" :total="nftsTotal"
+                                                    @request="onNftsRequest" @row-click="onNftRowClick"
+                                                    :allow-delete="true" @row-delete="onNftRowDelete" />
+                                            </div>
                                         </template>
                                     </SequentialNftCollection>
                                 </template>
@@ -755,5 +763,36 @@ $page-actions-height: 6.5rem;
 
 .text-mono {
     font-family: 'Courier New', Courier, monospace;
+}
+
+/* Let the flex column shrink below its content width so a wide table can't
+   widen (and overflow) the page. */
+.content-col {
+    min-width: 0;
+}
+
+/* Horizontal scroll container for the NFT tables. */
+.table-scroll-wrapper {
+    display: block;
+    width: 100%;
+    max-width: 350px;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar {
+    height: 4px;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.table-scroll-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 2px;
 }
 </style>

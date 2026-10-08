@@ -4,12 +4,12 @@
       <WalletInitializing :message="$t('info.initializingWallet')" />
     </template>
     <template v-else>
-      <div class="row justify-center">
-        <div class="col-xs-12 col-sm-10 col-md-8">
+      <div class="row justify-center registry-row">
+        <div class="col-xs-12 col-sm-10 col-md-8 registry-col">
           <div class="q-mb-md q-px-sm">
             <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
           </div>
-          <q-card flat class="bg-dark q-pa-lg rounded-borders">
+          <q-card flat class="bg-dark q-pa-sm q-mx-md rounded-borders registry-card q-py-lg">
             <div class="row justify-end">
               <q-btn
                 v-if="activeAuthhead && (!route.name?.toString().includes('edit') && route.name !== 'view-authhead')"
@@ -17,8 +17,8 @@
                 @click="toggleWriteMode">
               </q-btn>
             </div>
-            <div class="flex justify-between items-start">
-              <div class="flex no-wrap items-center">
+            <div class="flex justify-center items-start header-row">
+              <div class="flex justify-center no-wrap items-center header-main">
                 <q-btn @click="triggerUpload" class="row justify-center text-center" dense flat no-caps>
                   <div class="col-12">
                     <q-avatar :size="$q.screen.lt.sm ? '4rem' : '6rem'" class="bg-grey-9 border-radius-8 shadow-1">
@@ -32,12 +32,11 @@
                   </div>
                 </q-btn>
 
-                <div class="q-pa-sm q-gutter-y-sm" style="min-width: 0">
+                <div class="q-gutter-y-sm header-text q-ml-lg q-py-md" style="min-width: 0">
                   <div class="flex items-center q-mt-xs token-symbol">
                     {{ activeIdentitySnapshot?.token?.symbol || 'Unknown' }}
                   </div>
                   <div class="text-mono text-grey-2 ellipsis">
-                    Token ID:
                     {{
                       $q.screen.lt.lg
                         ? shortenTokenId(
@@ -51,23 +50,35 @@
                 </div>
               </div>
             </div>
-            <nav class="inline-nav q-py-lg">
-              <div class="row no-wrap items-center justify-start q-gutter-x-sm">
-                <q-item v-for="link in navLinks" :key="link.title" clickable v-ripple :to="link.to" exact
-                  active-class="inline-item-active" class="inline-item q-px-md q-py-sm rounded-borders text-no-wrap">
-                  <q-item-section v-if="link.icon" avatar class="inline-icon-section q-mr-sm">
-                    <q-icon :name="link.icon" size="20px" class="inline-icon" />
-                  </q-item-section>
-                  <q-item-section class="inline-text-section">
-                    <span class="nav-text-wrapper">
-                      <q-item-label class="text-weight-medium text-body2">
-                        {{ link.title }}
-                      </q-item-label>
-                    </span>
-                  </q-item-section>
-                </q-item>
+
+            <!-- Only this nav scrolls horizontally when the links don't fit -->
+            <div class="inline-nav-wrap" :style="$q.screen.lt.sm ? { maxWidth: '380px' } : undefined">
+              <nav ref="navRef" class="inline-nav q-py-lg" @scroll.passive="updateScrollState">
+                <div class="inline-nav-row">
+                  <q-item v-for="link in navLinks" :key="link.title" clickable v-ripple :to="link.to" exact
+                    active-class="inline-item-active" class="inline-item q-px-md q-py-sm rounded-borders text-no-wrap">
+                    <q-item-section v-if="link.icon" avatar class="inline-icon-section q-mr-sm">
+                      <q-icon :name="link.icon" size="20px" class="inline-icon" />
+                    </q-item-section>
+                    <q-item-section class="inline-text-section">
+                      <span class="nav-text-wrapper">
+                        <q-item-label class="text-weight-medium text-body2">
+                          {{ link.title }}
+                        </q-item-label>
+                      </span>
+                    </q-item-section>
+                  </q-item>
+                </div>
+              </nav>
+
+              <!-- Scroll indicators: visible only when there's more content in that direction -->
+              <div class="nav-fade nav-fade-left" :class="{ visible: canScrollLeft }">
+                <q-icon name="chevron_left" size="20px" class="nav-chevron" @click="scrollNav(-1)" />
               </div>
-            </nav>
+              <div class="nav-fade nav-fade-right" :class="{ visible: canScrollRight }">
+                <q-icon name="chevron_right" size="20px" class="nav-chevron" @click="scrollNav(1)" />
+              </div>
+            </div>
           </q-card>
         </div>
       </div>
@@ -81,7 +92,7 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { shortenTokenId } from 'src/core/utils';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { useRegistryStore } from 'src/stores/registry';
-import { computed, inject, provide, ref, watch } from 'vue';
+import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CopyText from 'src/components/CopyText.vue';
 import WalletInitializing from 'src/components/WalletInitializing.vue';
@@ -115,6 +126,37 @@ provide('iconUploadTriggered', {
   isUploadTriggered,
   resetUploadTrigger
 })
+
+
+// --- Nav scroll indicators ---
+const navRef = ref<HTMLElement | null>(null);
+const canScrollLeft = ref(false);
+const canScrollRight = ref(false);
+
+const updateScrollState = () => {
+  const el = navRef.value;
+  if (!el) return;
+  canScrollLeft.value = el.scrollLeft > 1;
+  canScrollRight.value = el.scrollLeft + el.clientWidth < el.scrollWidth - 1;
+};
+
+const scrollNav = (direction: 1 | -1) => {
+  navRef.value?.scrollBy({ left: direction * 150, behavior: 'smooth' });
+};
+
+// Recalculate when the nav or its content changes size (resize, links added/removed).
+// Watching the ref (instead of onMounted) is deliberate: the nav lives inside a
+// v-else block, so it may not exist yet when the component mounts.
+let resizeObserver: ResizeObserver | undefined;
+watch(navRef, (el) => {
+  resizeObserver?.disconnect();
+  if (!el) return;
+  resizeObserver = new ResizeObserver(updateScrollState);
+  resizeObserver.observe(el);
+  if (el.firstElementChild) resizeObserver.observe(el.firstElementChild);
+  updateScrollState();
+});
+onBeforeUnmount(() => resizeObserver?.disconnect());
 
 
 const navModeLinks = {
@@ -225,83 +267,165 @@ watch(
 </script>
 
 <style scoped>
-.inline-nav {
-  background: transparent;
-  width: 100%;
-  overflow-x: auto;
-  /* Horizontal scrolling on small screens */
-  white-space: nowrap;
+/* ---- Containment: nothing above the nav may widen the page ---- */
+.registry-row {
+  min-width: 0;
+  max-width: 100%;
 }
 
-/* Base link styling - Text starts as a muted grey-white */
+.registry-col {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.registry-card {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  /* clip anything that would otherwise push the page sideways */
+}
+
+.header-row,
+.header-main,
+.header-text {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.header-main {
+  flex: 1 1 auto;
+}
+
+/* ---- The nav is the only horizontal scroll container ---- */
+.inline-nav-wrap {
+  position: relative;
+  min-width: 0;
+}
+
+.inline-nav {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+/* ---- Scroll indicators ---- */
+.nav-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 44px;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.nav-fade.visible {
+  opacity: 1;
+}
+
+.nav-fade-left {
+  left: 0;
+  justify-content: flex-start;
+  background: linear-gradient(to right, var(--q-dark), transparent);
+}
+
+.nav-fade-right {
+  right: 0;
+  justify-content: flex-end;
+  background: linear-gradient(to left, var(--q-dark), transparent);
+}
+
+.nav-chevron {
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  pointer-events: none;
+  /* only clickable while the fade is visible */
+}
+
+.nav-fade.visible .nav-chevron {
+  pointer-events: auto;
+}
+
+/* Row is as wide as its content, so the nav scrolls when it exceeds the card */
+.inline-nav-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+  width: max-content;
+}
+
+/* Each item keeps its natural width */
 .inline-item {
+  flex: 0 0 auto;
+  width: max-content;
+  min-width: max-content;
   color: rgba(255, 255, 255, 0.6);
   min-height: auto;
-  /* Overrides default q-item height */
   padding: 8px 16px;
+  white-space: nowrap;
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-
-  .inline-icon {
-    color: rgba(255, 255, 255, 0.5);
-    transition: color 0.25s ease, transform 0.25s ease;
-  }
-
-  /* Hover State - Becomes full white */
-  &:hover {
-    color: #ffffff;
-    background: rgba(255, 255, 255, 0.05);
-
-    .inline-icon {
-      color: #ffffff;
-      transform: translateY(-1px);
-    }
-
-    /* Expand underline to 100% text width on hover */
-    .nav-text-wrapper::after {
-      width: 100%;
-    }
-  }
 }
 
-/* Text wrapper handles exact width alignment and bottom padding spacing */
+.inline-item .inline-icon {
+  color: rgba(255, 255, 255, 0.5);
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.inline-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.inline-item:hover .inline-icon {
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.inline-item:hover .nav-text-wrapper::after {
+  width: 100%;
+}
+
 .nav-text-wrapper {
   position: relative;
   display: inline-block;
   padding-bottom: 6px;
-  /* Spacing to push the underline lower */
-
-  /* Underline structural baseline */
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -2px;
-    /* Shifts the line slightly below the text padding boundary */
-    left: 0;
-    width: 0;
-    height: 3px;
-    background-color: var(--q-primary);
-    /* Keeps the green/primary underline color */
-    transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    border-radius: 2px;
-  }
 }
 
-/* Active State styling - Pure stark white text, no primary color injection */
+.nav-text-wrapper::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 3px;
+  background-color: var(--q-primary);
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 2px;
+}
+
 .inline-item-active {
   color: #ffffff !important;
   background: rgba(255, 255, 255, 0.08) !important;
-
-  .inline-icon {
-    color: #ffffff !important;
-  }
-
-  /* Force full text-width highlight when active */
-  .nav-text-wrapper::after {
-    width: 100% !important;
-  }
 }
 
-/* Fix Quasar defaults for tight horizontal spacing */
+.inline-item-active .inline-icon {
+  color: #ffffff !important;
+}
+
+.inline-item-active .nav-text-wrapper::after {
+  width: 100% !important;
+}
+
 .inline-icon-section {
   min-width: auto !important;
   padding-right: 0 !important;
@@ -310,6 +434,5 @@ watch(
 .inline-text-section {
   padding: 0 !important;
   overflow: visible !important;
-  /* Prevents underline clipping */
 }
 </style>

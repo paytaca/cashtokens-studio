@@ -1,7 +1,7 @@
 <template>
     <q-page class="bg-dark-page text-grey-2">
         <div class="row justify-center">
-            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
                 <q-card v-if="authheadLoading[route.query?.authhead as string] || wallet.initializing"
                     class="dark q-pa-lg rounded-borders">
                     <div class="flex justify-end q-mb-lg">
@@ -105,7 +105,8 @@
 
                     <FormField v-if="showReleaseReserves && activeAuthhead" class="rounded-borders">
                         <label>Fungible Reserves</label>
-                        <q-input :model-value="fungibleReserves" disable outlined bottom-slots>
+                        <q-input :model-value="fungibleReserves" disable outlined bottom-slots
+                            :type="$q.screen.lt.sm ? 'textarea' : 'text'" :autogrow="$q.screen.lt.sm">
                             <template v-slot:hint>
                                 <div v-if="showDecimals" class="flex items-center q-gutter-x-md">
                                     <label>Decimals</label>
