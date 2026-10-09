@@ -116,6 +116,89 @@ export async function safeAsync<T, E = Error>(
       .then<[null, T]>((data: T) => [null, data])
       .catch<[E, null]>((error: E) => [error, null]);
   };
+
+export class HttpError extends Error {
+    constructor(public status: number, message: string) {
+        super(message);
+        this.name = 'HttpError';
+    }
+}
+
+export type RetryOptions = {
+    /** Total number of tries, including the first. Defaults to 3. */
+    attempts?: number;
+    /** Base delay before the first retry, in ms. Defaults to 300. */
+    baseDelayMs?: number;
+    /** Upper bound for the backoff delay, in ms. Defaults to 2000. */
+    maxDelayMs?: number;
+    /** Per-attempt timeout before the request is aborted, in ms. Defaults to 8000. */
+    timeoutMs?: number;
+    /** Decides whether a given failure is worth retrying. Defaults to transient errors only. */
+    shouldRetry?: (error: unknown) => boolean;
+    /** Called before each retry with the failure and the attempt that just failed. */
+    onRetry?: (error: unknown, attempt: number) => void;
+    /** Optional caller signal. Aborting it stops retrying and rejects immediately. */
+    signal?: AbortSignal;
+};
+
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Retries transient failures (network errors, 5xx and 429) while failing fast
+ * on permanent ones (other 4xx). Each attempt is bounded by its own timeout and
+ * retries are spaced out with an exponential backoff plus jitter.
+ */
+function isRetryableError(error: unknown): boolean {
+    if (error instanceof HttpError) {
+        return error.status >= 500 || error.status === 429;
+    }
+    return true;
+}
+
+export async function withRetry<T>(
+    fn: (signal: AbortSignal) => Promise<T>,
+    options: RetryOptions = {}
+): Promise<T> {
+    const {
+        attempts = 3,
+        baseDelayMs = 300,
+        maxDelayMs = 2000,
+        timeoutMs = 8000,
+        shouldRetry = isRetryableError,
+        onRetry,
+        signal,
+    } = options;
+
+    let lastError: unknown;
+
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        const controller = new AbortController();
+        const onExternalAbort = () => controller.abort();
+        signal?.addEventListener('abort', onExternalAbort, { once: true });
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            return await fn(controller.signal);
+        } catch (error) {
+            lastError = error;
+            const abortedByCaller = signal?.aborted ?? false;
+            if (abortedByCaller || attempt === attempts || !shouldRetry(error)) {
+                throw error;
+            }
+            onRetry?.(error, attempt);
+            const backoff = Math.min(maxDelayMs, baseDelayMs * 2 ** (attempt - 1));
+            const jitter = Math.random() * backoff * 0.2;
+            await sleep(backoff + jitter);
+        } finally {
+            clearTimeout(timeoutId);
+            signal?.removeEventListener('abort', onExternalAbort);
+        }
+    }
+
+    throw lastError;
+}
   
 export function parseLibauthStringified(stringified: string | object) {
     const str = typeof(stringified) === 'string'? stringified : JSON.stringify(stringified)
