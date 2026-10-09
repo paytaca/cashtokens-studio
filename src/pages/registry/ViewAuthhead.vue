@@ -71,6 +71,12 @@
                                 <q-icon name="money" size="10px" class="q-mr-xs" />
                                 Fungible Token
                             </q-badge>
+                            <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'minting'" color="dark"
+                                text-color="purple-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                                Minting
+                            </q-badge>
                         </label>
                         <q-input :model-value="shortenTokenId(`${activeAuthhead?.txid}:${activeAuthhead?.vout}`)"
                             disable outlined>
@@ -85,14 +91,16 @@
                     </FormField>
 
                     <FormField v-if="hasNfts">
-                        <label class="flex q-gutter-x-sm">
-                            <span>NFT Collection </span>
-                            <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'minting'" color="dark"
-                                text-color="purple-4"
-                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                                Minting
-                            </q-badge>
+                        <label class="flex items-center q-gutter-x-sm">
+                            <span>NFT Collection Type</span>
+                            <q-btn @click="$q.dialog({
+                                class: ['q-py-sm', 'text-body1', $q.screen.gt.xs ? 'text-justify' : 'text-left'],
+                                style: 'width: 100%; max-width: min(92vw, 36rem);',
+                                html: true,
+                                message: `<div class='scroll' style='max-height: 70vh'>${t('info.nftCollectionTypeExplainer')}</div>`
+                            })" flat no-caps dense text-color="secondary">
+                                {{ t('info.whatsThis') }}
+                            </q-btn>
                         </label>
                         <q-input :model-value="nftCollectionType" disable outlined>
                             <template v-slot:append>
@@ -143,6 +151,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, triggerRef, inject, defineComponent } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useRouter, onBeforeRouteLeave, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
@@ -165,6 +174,7 @@ import { db } from 'src/core/client-db'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
+
 const props = defineProps<{
     authkey: string,
     authhead: string,
@@ -173,6 +183,7 @@ const props = defineProps<{
 }>()
 
 const $q = useQuasar()
+const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authguardStore = useAuthguardStore()
