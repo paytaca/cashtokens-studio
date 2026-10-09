@@ -210,9 +210,11 @@ import { db } from 'src/core/client-db'
 import { broadcastTransaction } from 'src/services/transaction'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
+import { mintNftMutables } from 'src/core/transaction/mint-nft-mutables'
 const MINT_NEXT_SEQUENCE = 'Mint next sequence'
 const MINT_A_SEQUENCE_NUMBER = 'Mint a particular NFT type'
 const MINT_ANOTHER_MINTER = 'Mint another minter'
+const MINT_MUTABLES = 'Mint mutable NFTs'
 
 const $q = useQuasar()
 const router = useRouter()
@@ -257,7 +259,9 @@ const strategyOptions = computed(() => {
         ]
     }
     return [
-        { value: MINT_A_SEQUENCE_NUMBER, label: MINT_A_SEQUENCE_NUMBER },
+        { value: MINT_ANOTHER_MINTER, label: MINT_ANOTHER_MINTER },
+        { value: MINT_MUTABLES, label: MINT_MUTABLES },
+
     ]
 })
 
@@ -330,6 +334,17 @@ const mintMinter = async (): Promise<SignTransactionRequest & { mintOutputs: Tra
     })
 }
 
+const mintMutables = async (): Promise<SignTransactionRequest & { mintOutputs: TransactionOutput[] }> => {
+    return mintNftMutables({
+        minterUtxo: minter.value!,
+        authkeyUtxo: minter.value?.authkey,
+        mintQuantity: mintQuantity.value,
+        recipient: recipient.value,
+        network: import.meta.env.VITE_BCH_NETWORK as any,
+        funderUtxos: (wallet.value?.utxos || []) as UtxoWithPath[],
+        // Add individual commitments
+    })
+}
 const mint = async () => {
     startLoader(txTaskList, () => {
         $q.notify({ type: 'warning', message: 'Cancelled by user' })
@@ -357,6 +372,9 @@ const mint = async () => {
                 break
             case MINT_ANOTHER_MINTER:
                 signRequest = await mintMinter()
+                break
+            case MINT_MUTABLES:
+                signRequest = await mintMutables()
                 break
             default:
                 throw new Error('Invalid mint strategy')
@@ -427,9 +445,6 @@ const mint = async () => {
             throw broadcastError
         }
 
-
-
-
         // await db.setNftRecordsPublished({
         //     contentHash,
         //     authbase,
@@ -476,7 +491,7 @@ const mint = async () => {
         }).onDismiss(() => {
 
             if (activeMinter.value?.isAuthhead) {
-                const authheadUtxo = authguardStore.activeAuthhead.value ?? activeMinter.value
+                const authheadUtxo = activeMinter.value
                 if (authheadUtxo) {
                     authguardStore.setActiveAuthhead(authheadUtxo)
                 }
