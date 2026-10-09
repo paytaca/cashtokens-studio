@@ -1,6 +1,5 @@
 <template>
   <q-layout view="hHh lpr fFf">
-    <!-- <TransactionLogger /> -->
     <q-header v-if="showHeader" class="header-subtle">
       <q-toolbar class="q-py-sm">
         <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
@@ -30,7 +29,7 @@
         <div v-else-if="
           Boolean(manager) && (state !== 'disconnected' || wallet?.ready)
         " class="q-mx-sm">
-          <q-btn-group class="text-right" style="position: relative">
+          <q-btn-group class="text-right q-my-sm" style="position: relative">
             <q-btn-dropdown size="lg" @before-show="onBeforeMenuShow" style="
                 color: rgb(20, 20, 20);
                 padding: 10px;
@@ -46,35 +45,7 @@
                   <q-img v-else :src="WIZARDCONNECT_LOGO"></q-img>
                 </q-avatar>
               </template>
-              <q-list padding style="width: 300px">
-                <q-item clickable :to="{ name: 'dashboard' }">
-                  <q-item-section avatar>
-                    <q-avatar icon="dashboard"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Dashboard
-                        <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating
-                          rounded></q-badge>
-                      </span>
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-
-                <q-separator inset class="q-my-md" />
-                <q-item-label header></q-item-label>
-                <q-item clickable to="/wizard-connect/requests">
-                  <q-item-section avatar>
-                    <q-avatar color="bch" text-color="white">
-                      <q-icon name="pending"></q-icon>
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>WizardConnect Requests</q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
+              <q-list padding style="width: 200px">
                 <q-item clickable @click="disconnect">
                   <q-item-section avatar>
                     <q-avatar color="negative" icon="link_off"></q-avatar>
@@ -85,10 +56,8 @@
                 </q-item>
               </q-list>
             </q-btn-dropdown>
-            <!-- <q-badge v-if="pendingMultisigTransactions?.length > 0" color="orange" label="!" floating></q-badge> -->
           </q-btn-group>
         </div>
-        <!-- <light-switch /> -->
       </q-toolbar>
     </q-header>
     <q-drawer v-if="walletIsReady" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
@@ -113,34 +82,8 @@
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <!-- <q-linear-progress v-if="scanning" indeterminate color="primary" class="q-mt-none" />
-        <div v-if="scanning" class="q-ml-sm q-mt-sm text-italic text-grey-200 text-caption">
-          {{ scanning }}
-        </div>
-        <q-toolbar v-if="ui.routeBack" class="q-mt-sm q-mb-sm">
-          <q-toolbar-title class="text-h6">{{
-            ui.pageTitle || $route.meta?.pageTitle
-          }}</q-toolbar-title>
-        </q-toolbar>
-        <template v-if="
-          user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
-        ">
-          <div class="q-pa-md q-gutter-sm">
-            <q-banner inline-actions rounded class="bg-orange-400 text-warning">
-              It looks like you still have a pending multisig transaction.
-              Please make sure to finalize and broadcast it first, before
-              creating a new transaction in Cashtokens Studio, to avoid any
-              issues.
-              <template v-slot:action>
-                <q-btn v-if="route.name !== 'recent-transactions'" color="warning" icon="launch" label="Check it out"
-                  text-color="black" :to="{ name: 'recent-transactions' }" no-caps />
-              </template>
-            </q-banner>
-          </div>
-        </template> -->
         <WalletInitializing v-if="wallet?.initializing" :message="$t('info.initializingWallet')" />
         <router-view v-else />
-        <!-- <q-ajax-bar /> -->
       </q-page-container>
     </q-scroll-area>
     <q-footer class="footer-subtle text-white">
@@ -151,9 +94,6 @@
         </div>
       </div>
     </q-footer>
-    <!-- <WizardConnectQRDialog :show="showQR" :qr-uri="(qrUri as string)" :uri="(uri as string)" :onClose="closeQR"
-      @update:show="onQRUpdateShow" />
-    <MessageDialog v-model="messageDialog" /> -->
   </q-layout>
 </template>
 
@@ -165,17 +105,11 @@ import ClientDB from 'src/apps/clientonly/ClientDB';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import WalletInitializing from 'src/components/WalletInitializing.vue';
 import { useUser } from 'src/stores/user';
-import { useUI } from 'src/stores/ui';
-import TransactionLogger from 'src/components/TransactionLogger.vue';
-import getAppEnv from 'src/apps/utils/getAppEnv';
-import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
 import { useInit } from 'src/composables/useInit';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { AuthKey, Watchtower } from 'src/apps';
 import { delay, Wallet } from 'mainnet-js';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
-// import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-// import { WizardConnectQRDialog } from 'wizardconnect-vue';
 
 const leftDrawerOpen = ref(false);
 const user = useUser();
@@ -192,8 +126,6 @@ const showHeader = computed(() => walletIsReady);
 
 const isIndexPage = computed(() => route.path === '/');
 
-// The drawer is always shown above the xs breakpoint (show-if-above), so the
-// logo only needs to appear in the header when the sidebar isn't visible.
 const showHeaderLogo = computed(() => $q.screen.xs && !leftDrawerOpen.value);
 
 useWalletConnect();
@@ -257,38 +189,6 @@ const onDisconnectClick = async () => {
   router.push('/');
 };
 
-// watch(
-//   () => route.path,
-//   () => {
-//     ui.clearStatusMessage();
-//   }
-// );
-
-// watch(
-//   () => ui.statusMessage,
-//   (value) => {
-//     if (value) {
-//       messageDialog.value = true;
-//     }
-//   }
-// );
-
-// watch(
-//   () => user.wallet,
-//   async (wallet) => {
-//     if (wallet !== undefined && typeof wallet.isMultisig === 'function') {
-//       pendingMultisigTransactions.value =
-//         await user.getPendingMultisigTransactions();
-//     }
-//   }
-// );
-
-watch(
-  () => state.value,
-  (newState, oldState) => {
-    console.log('@state mainlayout', newState, oldState);
-  }
-);
 onMounted(async () => {
   const db = ClientDB.getInstance();
   pendingMultisigTransactions.value =
@@ -306,11 +206,9 @@ onMounted(async () => {
 }
 
 .header-subtle {
-  /* background: transparent !important; */
   background: rgba(13, 15, 19, 0.028) !important;
   backdrop-filter: blur(14px) saturate(160%);
   -webkit-backdrop-filter: blur(14px) saturate(160%);
-  /* border-bottom: 1px solid rgba(13, 15, 19, 0.084); */
 }
 
 .footer-subtle {
