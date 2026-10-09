@@ -267,7 +267,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { createGenesisInput } from 'src/core/transaction/create-genesis-input'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { filterAuthKeys, getAuthguardContractAddress } from 'src/core/authguard'
+import { createAuthguardContract, filterAuthKeys, getAuthguardContractAddress } from 'src/core/authguard'
 import { shortenCashAddress } from 'src/core/utils'
 import FormField from 'src/components/FormField.vue'
 import { filterGenesisInputs } from 'src/core/wallet'
@@ -282,6 +282,7 @@ import { DEFAULT_TOKEN_VALUE } from 'src/apps'
 import { broadcastTransaction } from 'src/services/transaction'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList } from 'src/utils'
+import { subscribe } from 'src/services/watchtower'
 
 const $q = useQuasar()
 const route = useRoute()
@@ -532,6 +533,7 @@ const onSubmit = async () => {
             authKeyInput = genesisInputs.value[1]
         }
 
+
         if (!genesisInput) {
             return $q.notify({
                 type: 'Error',
@@ -544,6 +546,13 @@ const onSubmit = async () => {
                 message: 'Missing required authkey'
             })
         }
+        const authkeyTokenId = authKeyInput.token?.category || authKeyInput.txid
+
+        const authguard = createAuthguardContract({ authkeyTokenId: authkeyTokenId, network: import.meta.env.VITE_BCH_NETWORK })
+
+        // Best effor watchtower subscription
+        subscribe(authguard.address).catch()
+
         const authbase = genesisInput.txid
 
         updateStep(TASK_CREATE_REGISTRY, 'running')

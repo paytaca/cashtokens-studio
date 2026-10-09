@@ -4,10 +4,11 @@
             <div class="col-xs-12 col-sm-8">
                 <q-card flat bordered class="feature-card-bg rounded-borders q-mt-xl q-py-md">
                     <q-card-section class="flex justify-between items-center">
-                        <div class="flex items-center no-wrap">
-                            <q-avatar><q-icon name="key" color="warning"></q-icon></q-avatar>
-                            <div class="text-h5 text-bold">Create Authkey</div>
-                        </div>
+                        <q-card-title
+                            class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
+                            <span>Create Authkey NFT</span>
+                            <q-icon name="key" size="lg" color="warning" style="transform: rotate(-25deg);" />
+                        </q-card-title>
                         <q-btn @click="$q.dialog({
                             class: 'q-py-sm text-body1 text-justify',
                             html: true,
@@ -51,12 +52,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuasar } from 'quasar'
-import { delay } from 'mainnet-js-v3'
+import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { broadcast } from 'src/core/transaction/broadcast'
 import { UtxoWithPath } from 'src/core/types'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { createAuthguardContract } from 'src/core/authguard'
+import { subscribe } from 'src/services/watchtower'
+import { broadcastTransaction } from 'src/services/transaction'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
 const {
@@ -65,6 +70,8 @@ const {
 } = useWizardConnectWallet()
 
 const { t } = useI18n()
+
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 
 const utxos = ref<UtxoWithPath[]>([])
 const genesisInputCandidate = computed<UtxoWithPath>(() => {
@@ -81,58 +88,77 @@ const hint = computed(() => {
 })
 
 const onGenerateGenesisInput = async () => {
-    const loadingGroup = $q.loading.show({
-        group: 'cakp1-lg',
-        message: t('info.preparingTx')
-    })
+    startLoader(txTaskList)
 
     try {
+        updateStep(TASK_INPUTS_CHECK, 'running')
+
         if (!wallet.value?.ready) {
+            updateStep(TASK_INPUTS_CHECK, 'failed')
             $q.notify({
                 message: 'Wallet not ready'
             })
             return
         }
 
-        const utxos = await wallet.value.getUtxos()
+        const walletUtxos = await wallet.value.getUtxos()
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
+
         const genesisInputSignReq = createGenesisInput({
-            funderUtxos: utxos,
+            funderUtxos: walletUtxos,
             recipientAddress: wallet.value.getDepositAddress(0)
         })
 
-        loadingGroup({
-            message: t('transaction.waitingForSignature')
-        })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value?.signTransaction(genesisInputSignReq);
 
         if (!response) {
-            return loadingGroup()
+            updateStep(TASK_WAIT_FOR_SIG, 'failed')
+            return
         }
 
-        loadingGroup({
-            message: t('transaction.broadcasting')
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
+
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
+            }
         })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
-
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
-            if (broadcastResult.success) {
-                await delay(2000)
-                loadingGroup()
-                $q.dialog({
-                    component: TransactionStatusDialog,
-                    componentProps: {
-                        statusType: 'success',
-                        statusText: t('success.genesisInputCreation'),
-                        txid: broadcastResult.txid
-                    }
-                })
-            } else {
-                throw new Error(broadcastResult.error)
-            }
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
         }
+
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
+
+        utxos.value = await wallet.value.getUtxos()
+
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: t('success.genesisInputCreation'),
+                txid
+            }
+        })
 
     } catch (error) {
         console.log(error)
@@ -141,72 +167,98 @@ const onGenerateGenesisInput = async () => {
             message: t('error.genesisInputCreation')
         })
     } finally {
-        loadingGroup()
+        stopLoader(1000)
     }
 }
 
 const onCreateAuthKey = async () => {
-
-    const loadingGroup = $q.loading.show({
-        group: 'cakp2-lg',
-        message: t('info.preparingTx')
-    })
+    startLoader(txTaskList)
 
     try {
+        updateStep(TASK_INPUTS_CHECK, 'running')
 
         if (!wallet.value?.ready) {
-
+            updateStep(TASK_INPUTS_CHECK, 'failed')
             $q.notify({
                 message: t('info.walletNotReady')
             })
-
             return
         }
 
-        const utxos = await wallet.value.getUtxos()
+        const walletUtxos = await wallet.value.getUtxos()
         const recipientAddress = wallet.value.getDepositAddress(0)
+
+        updateStep(TASK_INPUTS_CHECK, 'done')
+        updateStep(TASK_PREPARE_TX, 'running')
 
         const signRequest = createAuthkey({
             genesisInputId: `${genesisInputCandidate.value!.txid}:${genesisInputCandidate.value!.vout}` as `${string}:${number}`,
-            utxos: utxos,
+            utxos: walletUtxos,
             authKeyRecipientAddress: recipientAddress,
             network: import.meta.env.VITE_BCH_NETWORK
         })
 
-        console.log('SIGN REQUEST', signRequest)
-        loadingGroup({
-            message: t('info.waitingForSignature')
+        const authguard = createAuthguardContract({
+            authkeyTokenId: genesisInputCandidate.value!.txid,
+            network: import.meta.env.VITE_BCH_NETWORK
         })
+
+        // Best effort watchtower subscription
+        subscribe(authguard.address).catch()
+
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
 
         const response = await manager.value?.signTransaction(signRequest);
 
         if (!response) {
-            return loadingGroup()
+            updateStep(TASK_WAIT_FOR_SIG, 'failed')
+            return
         }
 
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
 
-        loadingGroup({
-            message: t('info.broadcastingTx')
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', newLabel)
+            }
         })
 
-        const broadcastResponse = await broadcast(response.signedTransaction)
-
-        if (broadcastResponse.ok) {
-            const broadcastResult = await broadcastResponse.json()
-            $q.dialog({
-                component: TransactionStatusDialog,
-                componentProps: {
-                    statusType: 'success',
-                    statusText: t('success.authkeyCreation'),
-                    txid: broadcastResult.txid
-                }
-            })
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
         }
+
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
+
+        utxos.value = await wallet.value.getUtxos()
+
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: t('success.authkeyCreation'),
+                txid
+            }
+        })
 
     } catch (error) {
         console.log(error)
     } finally {
-        loadingGroup()
+        stopLoader(1000)
     }
 }
 
