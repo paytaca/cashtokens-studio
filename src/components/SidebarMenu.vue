@@ -24,22 +24,14 @@ const route = useRoute()
 const router = useRouter()
 const user = useUser()
 const hrefs = {
-  createAuthKey: '/issuer/tokens/create/authkey',
-  manageFTReserves: '/issuer/manage/ft-reserves',
-  manageNFTReserves: '/issuer/manage/nft-reserves',
-  manageRegistries: '/issuer/manage/registries',
-  manageAuthchains: '/issuer/manage/authchains',
-  manageAuthKeys: '/issuer/manage/authkeys',
-  manageAuthGuards: '/issuer/manage/authguards',
-  accountFungibles: '/account/balance/fungibletokens',
-  accountCollectibles: '/account/balance/collectibles',
-  recentTransactions: '/account/recent-transactions',
-  createNewToken: '/issuer/tokens/create',
-  importAuthUtxo: '/issuer/tokens/import-auth-utxo',
   dashboard: '/dashboard',
   managedTokens: '/dashboard/managed-tokens',
   collectedTokens: '/dashboard/collected-tokens',
   activities: '/dashboard/activities',
+  createNewToken: '/token/create',
+  createAuthKey: '/authguard/authkeys/create',
+  authguards: '/authguard/authguards',
+  authguardKeys: '/authguard/authkeys',
 }
 
 const selected = ref<string | null>(hrefs.dashboard)
@@ -53,12 +45,12 @@ const menu = computed<any[]>(() => {
     },
     {
       label: 'Create New Token',
-      href: '/token/create',
+      href: hrefs.createNewToken,
       icon: 'add',
     },
     {
       label: 'Create New AuthKey',
-      href: '/authguard/authkeys/create',
+      href: hrefs.createAuthKey,
       icon: 'add',
     },
 
@@ -73,35 +65,14 @@ const menu = computed<any[]>(() => {
       icon: 'grid_view',
     },
 
-    // {
-    //   label: 'Import Auth Utxo',
-    //   href: hrefs.importAuthUtxo,
-    //   icon: 'add',
-    //   disabled: Boolean(user.walletAddress) === false,
-    // },
-    // {
-    //   label: 'FT Reserves',
-    //   href: '/issuer/fungible-reserves',
-    //   icon: 'money',
-    // },
-    // {
-    //   label: 'NFT Collections',
-    //   href: '/issuer/nft-collections',
-    //   icon: 'art_track',
-    // },
-    {
-      label: 'Metadata',
-      href: hrefs.manageRegistries,
-      icon: 'data_object',
-    },
     {
       label: 'Authguards',
-      href: '/authguard/authguards',
+      href: hrefs.authguards,
       icon: 'lock',
     },
     {
       label: 'Authguard Keys',
-      href: '/authguard/authkeys',
+      href: hrefs.authguardKeys,
       icon: 'key',
     },
     {
