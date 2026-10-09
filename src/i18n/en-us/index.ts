@@ -22,6 +22,13 @@ export default {
             just an unspent BCH which is the 1st output of a previous transaction.</p><p> The txid of this
             genesis input becomes the future token id of the token you create, in this case when you
             create an Authkey Non-Fungible Token.</p>`,
+    nftCollectionTypeExplainer: `<p>When you create an NFT collection, you choose how each NFT stores its information on-chain. There are two styles to pick from: Sequential and Parsable.</p>
+<p><b>Sequential collection</b> — every NFT is simply numbered in order (1, 2, 3…). The only thing stored on-chain is that number, which makes it the simplest and cheapest option.</p>
+<p>It's ideal for a plain series of collectibles — artworks, tickets, or membership cards — where the only thing that sets each item apart is its place in the line.</p>
+<p><b>Parsable collection</b> — each NFT can carry extra details beyond its number, such as an item name, a price, a seat number, a link, or any custom field you define. The collection includes a small set of instructions (the "parse bytecode") that tells wallets how to read and display those details.</p>
+<p>It's ideal when each NFT needs to show meaningful information — for example, order receipts with amounts, tickets with seat numbers, or game items with their attributes.</p>
+<p><b>In short:</b> Sequential gives you just a number for each item, while Parsable gives you a number plus extra information that wallets can display.</p>
+<p><b>Quick tip:</b> choose Sequential if you only need unique numbered items; choose Parsable if each item must show extra details.</p>`,
     whatsThis: `What's this?`,
     changeIcon: 'Change icon',
     uploadingRegistryToIpfs: 'Uploading registry to IPFS',
