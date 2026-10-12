@@ -14,17 +14,19 @@
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build",
     "dev:prod": "FORCE_PROD=true quasar dev -m ssr -- --mode production",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package && cd node_modules/wizardconnect-vue && yarn install && yarn build"
   },
   "dependencies": {
     "@bitauth/libauth": "2.0.0-alpha.8",
     "@bitjson/qr-code": "^1.0.2",
     "@cashscript/utils": "^0.12.1",
     "@electrum-cash/network": "^4.1.1",
+    "@helia/verified-fetch": "^7.2.16",
     "@mainnet-cash/contract": "2.3.0",
     "@pinata/sdk": "^2.1.0",
     "@quasar/extras": "^1.18.0",
     "@types/express": "^4.17.21",
+    "@vueuse/rxjs": "^14.3.0",
     "@walletconnect/modal": "^2.6.1",
     "@walletconnect/sign-client": "^2.10.1",
     "@wizardconnect/core": "^0.2.0",
@@ -45,9 +47,10 @@
     "pinata": "^2.5.6",
     "pinia": "^2.0.11",
     "quasar": "^2.19.3",
+    "rxjs": "^7.8.2",
     "vue": "^3.4.0",
     "vue-router": "^4.0.0",
-    "wizardconnect-vue": "paytaca/wizardconnect-vue"
+    "wizardconnect-vue": "github:paytaca/wizardconnect-vue"
   },
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^11.2.0",
