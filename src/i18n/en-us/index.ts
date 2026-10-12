@@ -230,6 +230,7 @@ export default {
     },
     qr: {
       title: 'Receive Address',
+      tokenTitle: 'Token Address',
       subtitle: 'Scan with your wallet to send to this address.',
       copyLabel: 'Copy Address',
     },
