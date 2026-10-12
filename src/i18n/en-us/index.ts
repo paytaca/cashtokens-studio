@@ -312,6 +312,19 @@ export default {
       utxoCountPlural: '{count} UTXOs',
       actionSend: 'Send Tokens',
       actionBurn: 'Burn Tokens',
+      authKeyGuard: {
+        title: 'Looks like an AuthKey NFT',
+        messageSend:
+          '<p>This NFT looks like an <strong>AuthKey NFT</strong>. If you <strong>send</strong> it, you will <strong>lose the authority</strong> to update the tokens associated with this AuthKey NFT.</p><p>This action cannot be undone.</p>',
+        messageBurn:
+          '<p>This NFT looks like an <strong>AuthKey NFT</strong>. If you <strong>burn</strong> it, you will <strong>lose the authority</strong> to update the tokens associated with this AuthKey NFT.</p><p>This action cannot be undone.</p>',
+        inputLabel: 'Type "yes" to confirm',
+        inputPlaceholder: 'yes',
+        expected: 'yes',
+        confirmSend: 'Send anyway',
+        confirmBurn: 'Burn anyway',
+        cancel: 'Cancel',
+      },
     },
     authguards: {
       bannerTitle: "Protecting Your Token's Identity",
