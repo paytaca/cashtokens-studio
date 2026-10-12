@@ -38,9 +38,33 @@
                                 <label>{{ t('label.registry.registryIdentity') }}</label>
                                 <q-input v-model="(registry.registryIdentity as string)" autogrow outlined></q-input>
                             </FormField>
+                            <template v-else-if="isOffchainRegistryIdentity">
+                                <FormField>
+                                    <label>{{ t('label.registry.name') }}</label>
+                                    <q-input v-model="(registry.registryIdentity as OffChainRegistryIdentity).name"
+                                        autogrow outlined></q-input>
+                                </FormField>
+                                <FormField>
+                                    <label>{{ t('label.registry.description') }}</label>
+                                    <q-input v-model="(registry.registryIdentity as OffChainRegistryIdentity).description"
+                                        autogrow outlined></q-input>
+                                </FormField>
+                                <FormField>
+                                    <label>{{ t('label.registry.website') }}</label>
+                                    <q-input
+                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris.web"
+                                        autogrow outlined></q-input>
+                                </FormField>
+                                <FormField>
+                                    <label>{{ t('label.registry.icon') }}</label>
+                                    <q-input
+                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris.icon"
+                                        autogrow outlined></q-input>
+                                </FormField>
+                            </template>
                         </div>
                         <div class="col-12">
-                            <FormField v-if="isOnchainRegistryIdentity">
+                            <FormField>
                                 <label>{{ t('label.registry.license') }}</label>
                                 <q-input v-model="(registry.license as string)" autogrow outlined></q-input>
                             </FormField>
@@ -78,6 +102,7 @@ import { db, RegistryRecord } from 'src/core/client-db'
 import { liveQuery } from 'dexie'
 import { useObservable } from '@vueuse/rxjs'
 import type { CompactRegistry } from 'src/core/bcmr/types'
+import type { OffChainRegistryIdentity } from 'src/core/bcmr/bcmr-v2.schema'
 import { getErrorMessage } from 'src/core/utils'
 import type { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { publishRegistry } from 'src/core/transaction'
@@ -136,9 +161,20 @@ const isOnchainRegistryIdentity = computed(() => {
     )
 })
 
+const isOffchainRegistryIdentity = computed(() => {
+    const registryIdentity = registry.value?.registryIdentity
+    return !!registryIdentity && typeof registryIdentity !== 'string'
+})
+
 watch(() => registryRecord.value as RegistryRecord, (newRecord: RegistryRecord) => {
     if (newRecord && Object.keys(newRecord || {}).length > 0 && !registry.value) {
         registry.value = JSON.parse(JSON.stringify(newRecord.registry))
+        // Off-chain registries carry a registryIdentity object; make sure its
+        // `uris` map exists so the Website/Icon fields can bind without error.
+        const registryIdentity = registry.value.registryIdentity
+        if (registryIdentity && typeof registryIdentity !== 'string' && !registryIdentity.uris) {
+            registryIdentity.uris = {}
+        }
         initialRegistryJson.value = JSON.stringify(registry.value)
     }
 }, { immediate: true })
