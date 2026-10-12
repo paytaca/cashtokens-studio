@@ -18,10 +18,7 @@ export default {
     authkeyTokenIdCandidateHint:
       'This will become the token id of your Authkey NFT',
     authkeyTokenIdCandidateNotFoundHint: 'No available token id candidate',
-    authkeyTokenIdCandidateExplainer: `<p>Creating a new 'Authkey' requires a 'genesis input'. A valid genesis input is
-            just an unspent BCH which is the 1st output of a previous transaction.</p><p> The txid of this
-            genesis input becomes the future token id of the token you create, in this case when you
-            create an Authkey Non-Fungible Token.</p>`,
+    createAuthKeyNftExplainer: `<p>The AuthKey is the key to an <b>AuthGuard</b> vault: it grants you the authority to manage the token identity output that the AuthGuard protects, while the vault guards that output from being accidentally spent.</p>`,
     nftCollectionTypeExplainer: `<p>When you create an NFT collection, you choose how each NFT stores its information on-chain. There are two styles to pick from: Sequential and Parsable.</p>
 <p><b>Sequential collection</b> — every NFT is simply numbered in order (1, 2, 3…). The only thing stored on-chain is that number, which makes it the simplest and cheapest option.</p>
 <p>It's ideal for a plain series of collectibles — artworks, tickets, or membership cards — where the only thing that sets each item apart is its place in the line.</p>
@@ -166,6 +163,14 @@ export default {
     lastMintedSeq: 'Last minted seq:',
     nextSequenceHint: 'Will mint NFTs #{start} - #{end}',
     particularSequenceHint: 'Will mint {quantity} NFT(s) with sequence #{seq}',
+  },
+  createAuthkey: {
+    title: 'Create Authkey NFT',
+    tokenIdCandidate: 'AuthKey Token Id Candidate',
+    commitment: 'Commitment',
+    capability: 'Capability',
+    generate: 'Generate',
+    submit: 'Create AuthKey',
   },
   index: {
     hero: {
