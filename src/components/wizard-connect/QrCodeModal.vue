@@ -7,8 +7,11 @@
             </div>
 
             <div class="wz-qr-wrapper flex flex-center">
-                <qr-code class="wz-qr" :contents="contents" module-color="#1c7d43"
-                    position-ring-color="#13532d" position-center-color="#70c559" />
+                <qr-code class="wz-qr" :contents="contents" :mask-x-to-y-ratio="iconRatio"
+                    module-color="#1c7d43" position-ring-color="#13532d" position-center-color="#70c559">
+                    <!-- eslint-disable-next-line vue/no-deprecated-slot-attribute -->
+                    <img v-if="icon" :src="icon" slot="icon" class="wz-qr-icon" alt="" />
+                </qr-code>
             </div>
 
             <div class="text-center q-mt-md">
@@ -28,6 +31,8 @@ defineProps({
     title: { type: String, default: 'Connect Wallet' },
     subtitle: { type: String, default: 'Scan with your wallet' },
     copyLabel: { type: String, default: 'Copy to Clipboard' },
+    icon: { type: String, default: '' },
+    iconRatio: { type: Number, default: 1 },
 });
 
 defineEmits([...useDialogPluginComponent.emits]);
@@ -54,6 +59,12 @@ const { dialogRef, onDialogHide } = useDialogPluginComponent();
     display: block;
     width: 240px;
     height: 240px;
+}
+
+.wz-qr-icon {
+    display: block;
+    width: 100%;
+    height: auto;
 }
 
 .wz-copy-btn {
