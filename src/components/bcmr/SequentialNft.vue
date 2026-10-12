@@ -11,7 +11,7 @@
         <div class="text-caption text-grey-5 text-mono q-mt-xs">&lt;0x{{ commitment }}&gt;</div>
       </div>
       <div class="col text-right">SequenceNumber
-        <q-chip round color="accent" size="lg">#{{ sequenceNumber }}</q-chip>
+        <q-chip round color="accent" size="lg">#{{ sequenceNumberDisplay }}</q-chip>
       </div>
     </div>
     <div class="media-viewport bg-grey-9 border-radius-12 flex flex-center q-mb-lg" :style="{ minHeight: '300px' }"
@@ -109,6 +109,13 @@ const props = defineProps<{
 const $q = useQuasar()
 
 const sequenceNumber = ref<string>()
+
+// The sequence number is derived from the commitment; guard against invalid
+// commitments that would otherwise render as "#NaN"/"#undefined".
+const isSequenceNumberValid = (value?: string | null): value is string =>
+  typeof value === 'string' && /^\d+$/.test(value)
+
+const sequenceNumberDisplay = computed(() => (isSequenceNumberValid(sequenceNumber.value) ? sequenceNumber.value : '?'))
 
 const emit = defineEmits<{
   save: [nft: NftType],
@@ -297,7 +304,7 @@ watch(() => nft.value.uris?.image || nft.value.uris?.asset || nft.value.uris?.we
 })
 
 watch(() => sequenceNumber.value, (newValue) => {
-  if (newValue) {
+  if (isSequenceNumberValid(newValue)) {
     commitment.value = sequenceNumberToCommitment(newValue)
     nft.value.name = `NFT #${newValue}`
   }
@@ -305,7 +312,12 @@ watch(() => sequenceNumber.value, (newValue) => {
 
 onMounted(() => {
   initialNft.value = JSON.stringify(nft.value)
-  sequenceNumber.value = String(commitmentToSequenceNumber(commitment.value || '01'))
+  try {
+    const sequence = String(commitmentToSequenceNumber(commitment.value || '01'))
+    sequenceNumber.value = isSequenceNumberValid(sequence) ? sequence : ''
+  } catch (e) {
+    sequenceNumber.value = ''
+  }
   loadMedia()
 })
 
