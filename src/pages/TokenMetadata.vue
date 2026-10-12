@@ -680,7 +680,7 @@ const progress = ref<boolean | string>()
 const isURI = /^(?:[a-zA-Z][a-zA-Z\d+\-.]*:\/\/)?[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+(?:[^\s]*)$/
 
 const bcmrApiHost = computed(() => {
-  return process.env.BCMR_API
+  return `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/`
 })
 
 const isSequentialNftCollection = computed(() => {

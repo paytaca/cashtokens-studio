@@ -10,6 +10,5 @@ export * from './bcmr/Bcmr';
 export * from './bcmr/BcmrIndexer';
 export * from './ProcessingMessage';
 // export * from './ProcessingMessageHandler'
-export * from './CtsRegistry';
 export * from './ChainGraph';
 export * from './types';

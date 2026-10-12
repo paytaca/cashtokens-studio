@@ -1138,7 +1138,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/token`,
+        `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/bcmr/${this.token!.tokenId}/token`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1159,7 +1159,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
         this._processing = 'Checking token registry';
       }
       const r = await fetch(
-        `${process.env.BCMR_API}bcmr/${this.token!.tokenId}/uris`,
+        `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/bcmr/${this.token!.tokenId}/uris`,
       );
       const rj = await r.json();
       if (!rj.error) {
@@ -1194,7 +1194,7 @@ export class AuthchainIdentity implements UtxoI, PartialBcmr {
     for (let i = 0; i < identities.length; i++) {
       try {
         const r = await fetch(
-          `${process.env.BCMR_API}bcmr/${identities[i].token!.tokenId}/token`,
+          `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/bcmr/${identities[i].token!.tokenId}/token`,
         );
         const rj = await r.json();
       } catch (error) {

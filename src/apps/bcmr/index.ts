@@ -263,7 +263,7 @@ export const getIdentitySnapshot = async (
 ): Promise<undefined | any> => {
   try {
     const r = await fetch(
-      `${url || process.env.BCMR_API}registry/${tokenId}/identity-snapshot/`
+      `${url || `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/`}registry/${tokenId}/identity-snapshot/`
     );
     if (r.status == 200) {
       return await r.json();

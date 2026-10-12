@@ -51,7 +51,7 @@ const icon = computed(() => {
 
 const explore = computed(() => {
   return (txid: string) => {
-    return `${process.env.TX_EXPLORER_BASE_URL}tx/${txid}`
+    return `${import.meta.env.VITE_TX_EXPLORER_BASE_URL}/tx/${txid}`
   }
 })
 watch(() => ui.statusMessage, (hasMessage) => {

@@ -608,7 +608,7 @@ const mintOptions = ref<{
 })
 
 const bcmrApiHost = computed(() => {
-  return process.env.BCMR_API
+  return `${import.meta.env.VITE_BCMR_INDEXER_URL}/api/`
 })
 
 const publicationTx = ref<string>()

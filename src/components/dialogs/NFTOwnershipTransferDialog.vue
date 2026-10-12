@@ -140,7 +140,7 @@ const beforeShow = async () => {
   commitmentCopy.value = props.nft?.token?.commitment
   if (props.nft?.token?.tokenId && props.nft?.token?.commitment) {
     try {
-      const resp = await fetch(`${process.env.BCMR_API}bcmr/${props.nft?.token?.tokenId}/token/nfts/${props.nft?.token?.commitment}`)
+      const resp = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/bcmr/${props.nft?.token?.tokenId}/token/nfts/${props.nft?.token?.commitment}`)
       nftMetadata.value = await resp.json()
     } catch (error) {
       console.log(error)

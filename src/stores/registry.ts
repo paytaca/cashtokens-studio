@@ -86,7 +86,7 @@ export const useRegistryStore = defineStore('registry-store', () => {
       }
 
     const fetchNftType = async (category:string, commitment: string): Promise<any> => {
-        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}registry/${category}/identity-snapshot/token-category/nfts/parse/types/${commitment}/?include_metadata=true`)  
+        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/registry/${category}/identity-snapshot/token-category/nfts/parse/types/${commitment}/?include_metadata=true`)  
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
         return data;
