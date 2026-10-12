@@ -7,7 +7,9 @@
         <q-toolbar-title>
           <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_icon.png"
             class="cursor-pointer app-logo" />
-          <code v-if="network === 'chipnet'" class="text-caption text-italic q-ml-sm">Chipnet</code>
+          <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
+            {{ network }}
+          </q-chip>
         </q-toolbar-title>
         <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
             color: rgb(20, 20, 20);
@@ -110,6 +112,7 @@ import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { AuthKey, Watchtower } from 'src/apps';
 import { delay, Wallet } from 'mainnet-js';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
+
 
 const leftDrawerOpen = ref(false);
 const user = useUser();
