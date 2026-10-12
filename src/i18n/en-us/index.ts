@@ -105,6 +105,8 @@ export default {
       uris: 'URIs',
       uriName: 'URI name',
       uri: 'URI',
+      website: 'Website',
+      icon: 'Icon',
       identityHistoryStrategy: 'Identity History Strategy',
       identityHistoryStrategyKeepAll: 'Keep All',
       identityHistoryStrategyLatestOnly: 'Latest Only (Recommended)',
