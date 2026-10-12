@@ -84,7 +84,8 @@
                         {{ receiveAddress || t('dashboard.wallet.noAddress') }}
                       </span>
                       <q-btn v-if="receiveAddress" flat dense round size="sm" icon="qr_code_2"
-                        color="grey-5" @click="openAddressQrDialog(receiveAddress)">
+                        color="grey-5"
+                        @click="openQrDialog(receiveAddress, { title: t('dashboard.qr.title'), icon: '/images/bitcoin-cash-circle.svg' })">
                         <q-tooltip>{{ t('dashboard.wallet.showQr') }}</q-tooltip>
                       </q-btn>
                       <q-btn v-if="receiveAddress" flat dense round size="sm" icon="content_copy"
@@ -94,11 +95,18 @@
                     </div>
                   </div>
                   <div class="col-12 col-sm-6">
-                    <div class="text-caption text-grey-5">{{ t('dashboard.wallet.tokenAddress') }}</div>
+                    <div class="text-caption text-grey-5">
+                      {{ t('dashboard.wallet.tokenAddress') }} {{ t('dashboard.wallet.addressIndex') }}
+                    </div>
                     <div class="row items-center no-wrap">
                       <span class="ellipsis text-grey-2" :title="tokenAddress || ''">
                         {{ tokenAddress || t('dashboard.wallet.noAddress') }}
                       </span>
+                      <q-btn v-if="tokenAddress" flat dense round size="sm" icon="qr_code_2"
+                        color="grey-5"
+                        @click="openQrDialog(tokenAddress, { title: t('dashboard.qr.tokenTitle'), icon: '/images/cashtokens.svg' })">
+                        <q-tooltip>{{ t('dashboard.wallet.showQr') }}</q-tooltip>
+                      </q-btn>
                       <q-btn v-if="tokenAddress" flat dense round size="sm" icon="content_copy"
                         color="grey-5" @click="copyValue(tokenAddress)">
                         <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
@@ -317,12 +325,13 @@ function copyValue(value?: string | null) {
   $q.notify({ type: 'positive', message: t('dashboard.copy.copied'), position: 'top' })
 }
 
-function openAddressQrDialog(address: string) {
+function openQrDialog(address: string, options: { title: string, icon: string }) {
   $q.dialog({
     component: QrCodeModal,
     componentProps: {
       contents: address,
-      title: t('dashboard.qr.title'),
+      title: options.title,
+      icon: options.icon,
       subtitle: t('dashboard.qr.subtitle'),
       copyLabel: t('dashboard.qr.copyLabel'),
     },
