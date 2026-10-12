@@ -1,4 +1,4 @@
-import { DisconnectReason, type PathXpub, type ProtocolMessage, type WalletReadyMessage } from '@wizardconnect/core'
+import { DisconnectReason, RelayMsgAction, type PathXpub, type ProtocolMessage, type WalletReadyMessage } from '@wizardconnect/core'
 import { useWizardConnect } from 'wizardconnect-vue'
 import { computed, ref, shallowRef, triggerRef, watch } from 'vue'
 import { WizardConnectExternalWallet } from 'src/core/wallet'
@@ -9,8 +9,20 @@ const showQR = ref(false)
 const qrURI = ref<string | null>(null)
 const qrDataURI = ref<string | null>(null)
 
+/** Timestamp (ms) of the last Pong (keepalive response) received from the wallet. */
+const lastPongAt = ref<number | null>(null)
+/** Number of Pong replies received during the current session. */
+const pongCount = ref(0)
+
 let _wc: ReturnType<typeof useWizardConnect> | null = null
 let _watcherSetup = false
+
+export const wizardConnectRelayUrls = [
+    'wss://relay.riften.net:443',
+    'wss://relay.cauldron.quest:443',
+]
+
+export const wizardConnectSessionKey = 'wizardconnect-session'
 
 const walletIsReady = computed(() => {
     return wallet.value?.ready
@@ -22,14 +34,16 @@ export const useWizardConnectWallet = () => {
         _wc = useWizardConnect({
             dappName: import.meta.env.VITE_APP_NAME as string,
             dappIcon: import.meta.env.VITE_APP_ICON_URL as string,
-            relayUrls: ['wss://relay.riften.net:443', 'wss://relay.cauldron.quest:443']
+            relayUrls: wizardConnectRelayUrls
         })
     }
 
     const {
         state,
         manager,
-        walletName, uri, qrUri, connect, disconnect,
+        walletName,
+        walletIcon,
+        uri, qrUri, connect, disconnect,
     } = _wc
 
     if (!_watcherSetup) {
@@ -42,6 +56,29 @@ export const useWizardConnectWallet = () => {
                 showQR.value = true
             }
         })
+
+        // Track keepalive Pong replies so the UI can show the last ping status.
+        // Outgoing pings aren't emitted by the library, but every incoming
+        // message (including Pong) is emitted via `messagereceived`.
+        let pingManager: any = null
+        watch(manager, (mgr) => {
+            if (!mgr) {
+                pingManager = null
+                lastPongAt.value = null
+                pongCount.value = 0
+                return
+            }
+            if (mgr === pingManager) return
+            pingManager = mgr
+            lastPongAt.value = null
+            pongCount.value = 0
+            mgr.on('messagereceived', (msg: ProtocolMessage) => {
+                if (msg?.action === RelayMsgAction.Pong) {
+                    lastPongAt.value = Date.now()
+                    pongCount.value += 1
+                }
+            })
+        }, { immediate: true })
     }
 
     const wrappedConnect = () => {
@@ -117,6 +154,7 @@ export const useWizardConnectWallet = () => {
     return {
         state,
         walletName,
+        walletIcon,
         manager,
         uri,
         qrUri,
@@ -126,6 +164,10 @@ export const useWizardConnectWallet = () => {
         showQR,
         qrURI,
         qrDataURI,
+        relayUrls: wizardConnectRelayUrls,
+        sessionKey: wizardConnectSessionKey,
+        lastPongAt,
+        pongCount,
         connect: wrappedConnect,
         disconnect: wrappedDisconnect,
         closeConnectDialog,
