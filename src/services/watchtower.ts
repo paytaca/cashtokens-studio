@@ -55,4 +55,38 @@ export async function subscribe(address: string, options?: RetryOptions): Promis
       return response.json();
     }, options);
   }
+
+/**
+ * Authenticates an authhead against its authbase via Watchtower
+ * (`POST /api/cts/authhead/authenticate/`).
+ *
+ * The endpoint returns HTTP 200 for both outcomes:
+ * - authenticated -> `{ authhead: {...}, address, success: 'Authhead checked ok' }`
+ * - not authenticated -> `{ failed: 'Authhead checked nok' }`
+ */
+export async function authenticateAuthhead(
+  authbase: string,
+  authhead: string,
+  options?: RetryOptions
+): Promise<boolean> {
+  return withRetry(async (signal) => {
+    const url =
+      `${import.meta.env.VITE_WATCHTOWER_URL}/api/cts/authhead/authenticate/` +
+      `?authbase=${encodeURIComponent(authbase)}&authhead=${encodeURIComponent(authhead)}`;
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new HttpError(response.status, `HTTP Error ${response.status}: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    // Failure is expressed as HTTP 200 with a `failed` key, not a non-2xx status.
+    return Boolean(data?.success) && !data?.failed;
+  }, options);
+}
   
