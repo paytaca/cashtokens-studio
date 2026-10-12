@@ -13,50 +13,43 @@
                             <q-step :name="1" title="Step 1" icon="vpn_key" :done="genesisInputs.length >= 1"
                                 header-nav>
                                 <!-- <q-separator class="q-my-lg" /> -->
-                                <q-banner class="q-mb-md bg-transparent text-grey-8 rounded-borders"
-                                    style="border: 1px solid var(--q-grey-4);">
-                                    <div class="row items-center no-wrap q-gutter-x-sm">
-                                        <div class="text-justify text-body q-gutter-x-md">
-                                            <div class="text-h6 text-primary q-mb-xs">Prepare Token Category</div>
-                                            <p class="q-mb-none text-grey-4">
-                                                A CashTokens <span class="text-weight-bold text-primary">Token Category
-                                                </span> is permanently generated from the unique <span
-                                                    class="text-weight-bold">32-byte Transaction ID (TXID)</span>
-                                                of the
-                                                unspent BCH output (UTXO) which was the first output of a previous
-                                                transaction. To prepare it, CashTokens Studio
-                                                automatically selects an available UTXO from your wallet; the
-                                                hex-encoded TXID of that specific
-                                                transaction will automatically serve as your immutable Token Category
-                                                identifier, guaranteeing global uniqueness on the network.
-                                            </p>
-                                        </div>
-                                    </div>
-                                </q-banner>
-
-
+                                <div class="flex items-center q-gutter-x-sm q-mb-md">
+                                    <span class="text-h6 text-primary">Prepare Token Category</span>
+                                    <q-btn @click="$q.dialog({
+                                        class: ['q-py-sm', 'text-body1', $q.screen.gt.xs ? 'text-justify' : 'text-left'],
+                                        style: 'width: 100%; max-width: min(92vw, 36rem);',
+                                        html: true,
+                                        message: `<div class='scroll' style='max-height: 70vh'>${$t('info.prepareTokenCategoryExplainer')}</div>`
+                                    })" flat no-caps dense text-color="secondary">
+                                        {{ $t('info.whatsThis') }}
+                                    </q-btn>
+                                </div>
                                 <div v-if="genesisInputs.length === 0">
                                     <FormField>
                                         <label>Token category candidate</label>
-                                        <div class="flex items-center q-gutter-x-md">
-                                            <span class="text-caption grey-6">No available Token ID/Category
-                                                candidate <q-icon name="info"></q-icon></span>
-                                            <q-btn flat no-caps dense color="secondary" @click="onGenerateGenesisInput">
-                                                Click Here to Generate
-                                            </q-btn>
+                                        <div>
+                                            <q-input model-value="No available Token ID/Category candidate" disable
+                                                outlined autogrow input-class="q-mb-md text-subtitle2 text-grey-4">
+                                                <template v-slot:append>
+                                                    <q-btn flat no-caps dense color="secondary"
+                                                        @click="onGenerateGenesisInput">
+                                                        Click Here to Generate
+                                                    </q-btn>
+                                                </template>
+                                            </q-input>
                                         </div>
                                     </FormField>
                                 </div>
                                 <div v-else>
                                     <FormField>
                                         <label>Token category candidate</label>
-                                        <q-input :model-value="genesisInputs[0]!.txid" readonly outlined>
+                                        <q-input :model-value="genesisInputs[0]!.txid"
+                                            input-class="q-mb-md text-subtitle2 text-grey-4" outlined autogrow>
                                             <template v-slot:prepend>
                                                 <q-icon name="done_all" color="bch"></q-icon>
                                             </template>
                                             <template v-slot:append>
                                                 <CopyText :text="genesisInputs[0]!.txid" />
-
                                             </template>
                                         </q-input>
                                     </FormField>
