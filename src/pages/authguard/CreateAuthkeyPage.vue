@@ -6,43 +6,50 @@
                     <q-card-section class="flex justify-between items-center">
                         <q-card-title
                             class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
-                            <span>Create Authkey NFT</span>
+                            <span>{{ t('createAuthkey.title') }}</span>
                             <q-icon name="key" size="lg" color="warning" style="transform: rotate(-25deg);" />
                         </q-card-title>
                         <q-btn @click="$q.dialog({
                             class: 'q-py-sm text-body1 text-justify',
                             html: true,
-                            message: t('info.authkeyTokenIdCandidateExplainer')
+                            message: t('info.createAuthKeyNftExplainer')
                         })" flat no-caps dense text-color="secondary">
                             {{ t('info.whatsThis') }}
                         </q-btn>
                     </q-card-section>
                     <q-card-section>
                         <q-form class="q-gutter-y-md" greedy>
-                            <q-input label="AuthKey Token Id Candidate" type="textarea"
-                                :model-value="genesisInputCandidate?.txid || hint" class="full-width" :hint="hint"
-                                filled readonly autogrow bottom-slots>
-                                <template v-slot:prepend>
-                                    <q-icon name="key"></q-icon>
-                                </template>
-                                <template v-slot:append>
-                                    <q-btn v-if="!genesisInputCandidate?.txid" @click="onGenerateGenesisInput"
-                                        text-color="primary" no-caps flat>Generate</q-btn>
-                                </template>
-                            </q-input>
-                            <q-input label="Commitment" type="textarea" model-value="00" class="full-width" filled
-                                readonly autogrow bottom-slots />
-                            <q-input label="Capability" type="textarea" model-value="none" class="full-width" filled
-                                readonly autogrow bottom-slots />
+                            <FormField class="full-width">
+                                <label>{{ t('createAuthkey.tokenIdCandidate') }}</label>
+                                <q-input :model-value="genesisInputCandidate?.txid || hint" class="full-width" outlined
+                                    readonly>
+                                    <template v-slot:prepend>
+                                        <q-icon name="key"></q-icon>
+                                    </template>
+                                    <template v-slot:append>
+                                        <q-btn v-if="!genesisInputCandidate?.txid" @click="onGenerateGenesisInput"
+                                            text-color="secondary" no-caps flat>{{ t('createAuthkey.generate')
+                                            }}</q-btn>
+                                    </template>
+                                </q-input>
+                            </FormField>
+                            <FormField class="full-width">
+                                <label>{{ t('createAuthkey.commitment') }}</label>
+                                <q-input model-value="00" class="full-width" outlined readonly />
+                            </FormField>
+                            <FormField class="full-width">
+                                <label>{{ t('createAuthkey.capability') }}</label>
+                                <q-input model-value="none" class="full-width" outlined readonly />
+                            </FormField>
                         </q-form>
                     </q-card-section>
                     <q-card-actions class="q-mt-lg">
-                        <q-btn label="Create AuthKey" color="primary" class="full-width" @click="onCreateAuthKey"
-                            rounded no-caps size="lg" />
+                        <q-btn :label="t('createAuthkey.submit')" color="primary" class="full-width"
+                            :disable="!genesisInputCandidate?.txid" @click="onCreateAuthKey" rounded no-caps
+                            size="lg" />
                     </q-card-actions>
                 </q-card>
             </div>
-
         </div>
     </q-page>
 </template>
@@ -55,6 +62,7 @@ import { useQuasar } from 'quasar'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import FormField from 'src/components/FormField.vue'
 import { UtxoWithPath } from 'src/core/types'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { createAuthguardContract } from 'src/core/authguard'
