@@ -1,6 +1,6 @@
 <template>
     <q-table :rows="rows" :columns="columns" row-key="type" flat dark :loading="loading" v-model:pagination="pagination"
-        @request="onRequest" @row-click="onRowClick" class="bg-dark border-radius-12">
+        @request="onRequest" @row-click="onRowClick" class="border-radius-12">
         <template v-slot:body-cell-type="props">
             <q-td :props="props" class="text-mono">
                 <div class="flex items-center no-wrap q-gutter-x-md">
