@@ -3,15 +3,14 @@
 
 import { defineConfig } from '#q-app/wrappers';
 import { fileURLToPath } from 'url';
-import { mergeConfig } from 'vite'
-
+import { mergeConfig } from 'vite';
 
 export default defineConfig((ctx) => {
-  let envFiles = []
+  let envFiles = [];
   if (Boolean(process.env.FORCE_PROD)) {
-    envFiles = ['./.env.prod', './.env.local.prod']
+    envFiles = ['./.env.prod', './.env.local.prod'];
   }
-  
+
   return {
     // https://v2.quasar.dev/quasar-cli-vite/prefetch-feature
     // preFetch: true,
@@ -19,9 +18,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: [
-      'i18n.ts', 'eventbus.ts'
-    ],
+    boot: ['i18n.ts', 'eventbus.ts', 'initialize', 'qr-code'],
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],
@@ -51,7 +48,7 @@ export default defineConfig((ctx) => {
         vueShim: true,
         // extendTsConfig (tsConfig) {}
       },
-      envFiles: envFiles,
+      envFiles: envFiles.length > 0 ? envFiles : undefined,
 
       vueRouterMode: 'hash', // available values: 'hash', 'history'
       // vueRouterBase,
@@ -69,33 +66,55 @@ export default defineConfig((ctx) => {
       // polyfillModulePreload: true,
       // distDir
 
-      extendViteConf (viteConf, { isServer }) {
+      extendViteConf(viteConf, { isServer }) {
         if (isServer) {
           // Merge your SSR overrides into the existing config
-          mergeConfig(viteConf, mergeConfig(viteConf, {
-            ssr: {
-              noExternal: ['@bitauth/libauth']
-            }
-          }));
-          
-          viteConf.optimizeDeps = viteConf.optimizeDeps || {}
+          mergeConfig(
+            viteConf,
+            mergeConfig(viteConf, {
+              ssr: {
+                noExternal: ['@bitauth/libauth'],
+              },
+            })
+          );
 
-          viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
+          viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+
+          viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || [];
           if (!viteConf.optimizeDeps.exclude.includes('@bitauth/libauth')) {
             viteConf.optimizeDeps.exclude.push('@bitauth/libauth');
           }
         }
-        
+
         // viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
         // viteConf.optimizeDeps.exclude.push('@wizardconnect/core')
         // // viteConf.optimizeDeps.exclude.push('mainnet-js-v3')
         // viteConf.optimizeDeps.exclude.push('@bitauth/libauth')
         // viteConf.optimizeDeps.force = true
         // viteConf.optimizeDeps.include = ['@wizardconnect/core']
+
+        // The @bitjson/qr-code Stencil bundle uses relative dynamic imports for
+        // its polyfills, which Vite's dep pre-bundler mishandles. Serving it as
+        // source ESM (excluded) lets those imports resolve correctly.
+        viteConf.optimizeDeps = viteConf.optimizeDeps || {};
+        viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || [];
+        if (!viteConf.optimizeDeps.exclude.includes('@bitjson/qr-code')) {
+          viteConf.optimizeDeps.exclude.push('@bitjson/qr-code');
+        }
       },
 
       // viteVuePluginOptions: {},
       // viteVuePluginOptions: {},
+
+      // Treat the @bitjson/qr-code web component as a custom element so Vue
+      // renders it natively instead of warning about an unknown component.
+      viteVuePluginOptions: {
+        template: {
+          compilerOptions: {
+            isCustomElement: (tag) => tag === 'qr-code',
+          },
+        },
+      },
 
       vitePlugins: [
         [
@@ -132,7 +151,7 @@ export default defineConfig((ctx) => {
         //   transform(code, id) {
         //     if (id.includes('node_modules')) {
         //       return code.replace(
-        //         /assert\s*\{\s*type\s*:\s*['"]json['"]\s*\}/g, 
+        //         /assert\s*\{\s*type\s*:\s*['"]json['"]\s*\}/g,
         //         'with { type: "json" }'
         //       );
         //     }
@@ -145,13 +164,12 @@ export default defineConfig((ctx) => {
     devServer: {
       // https: true,
       open: true, // opens browser window automatically,
-      
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#framework
     framework: {
       config: {
-        dark: true
+        dark: true,
       },
 
       // iconSet: 'material-icons', // Quasar icon set
@@ -168,7 +186,7 @@ export default defineConfig((ctx) => {
       plugins: ['Dialog', 'Notify', 'Loading'],
     },
 
-    // animations: 'all', // --- includes all animations
+    animations: 'all', // --- includes all animations
     // https://v2.quasar.dev/options/animations
     animations: [],
 
@@ -210,7 +228,7 @@ export default defineConfig((ctx) => {
       // pwaExtendGenerateSWOptions (cfg) {},
       // pwaExtendInjectManifestOptions (cfg) {}
       // This tells the Quasar SSR engine specifically not to treat it as a Node external
-      noExternal: ['@bitauth/libauth']
+      noExternal: ['@bitauth/libauth'],
     },
 
     // https://v2.quasar.dev/quasar-cli-vite/developing-pwa/configuring-pwa
