@@ -188,6 +188,19 @@ export default {
       hint: 'Please authorize the connection request inside your WizardConnect extension.',
     },
   },
+  nftPage: {
+    noName: '<Unknown NFT>',
+    authKeyNft: {
+      indicator: 'AuthKey NFT',
+      bannerTitle: 'This is an AuthKey NFT',
+      bannerMessage:
+        'This NFT is the authentication key (AuthKey) for an AuthGuard contract. If you lose or transfer it, you will no longer be able to manage the tokens locked by this AuthGuard.',
+      lockedTokens: 'Locked tokens',
+      lockedTokensLoading: 'Checking…',
+      lockedTokensUnknown: '?',
+      sequenceUnknown: '?',
+    },
+  },
   dashboard: {
     pageTitle: {
       managedTokens: 'Managed Tokens',
