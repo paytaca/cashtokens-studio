@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -223,6 +223,7 @@ import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
+import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
 import { decodeCashAddress } from '@bitauth/libauth';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
@@ -417,7 +418,7 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
   router.push(`/issuer/nft-collections/${row.token?.category}/nft`);
 };
 
-const sendCollectedTokens = (row: any) => {
+const performSendCollectedTokens = (row: any) => {
   $q.dialog({
     component: FungibleTransferDialog,
     componentProps: {
@@ -489,7 +490,7 @@ const sendCollectedTokens = (row: any) => {
   });
 };
 
-const burnCollectedTokens = (row: any) => {
+const performBurnCollectedTokens = (row: any) => {
   const sampleAddress = wallet.value!.getTokenDepositAddress(0);
   const sampleDecodedAddress = decodeCashAddress(sampleAddress);
   if (typeof sampleDecodedAddress === 'string') {
@@ -566,6 +567,50 @@ const burnCollectedTokens = (row: any) => {
       loadingGroup();
     }
   });
+};
+
+const promptAuthKeyGuard = (action: 'send' | 'burn', onConfirm: () => void) => {
+  const isBurn = action === 'burn';
+  $q.dialog({
+    component: PromptDialog,
+    componentProps: {
+      title: t('dashboard.collected.authKeyGuard.title'),
+      icon: 'key',
+      iconColor: 'warning',
+      message: t(
+        isBurn
+          ? 'dashboard.collected.authKeyGuard.messageBurn'
+          : 'dashboard.collected.authKeyGuard.messageSend'
+      ),
+      expectedPromptOkResponse: t('dashboard.collected.authKeyGuard.expected'),
+      inputLabel: t('dashboard.collected.authKeyGuard.inputLabel'),
+      inputPlaceholder: t('dashboard.collected.authKeyGuard.inputPlaceholder'),
+      okLabel: t(
+        isBurn
+          ? 'dashboard.collected.authKeyGuard.confirmBurn'
+          : 'dashboard.collected.authKeyGuard.confirmSend'
+      ),
+      okColor: 'warning',
+      cancelLabel: t('dashboard.collected.authKeyGuard.cancel'),
+    },
+    focus: 'none',
+  }).onOk(() => onConfirm());
+};
+
+const sendCollectedTokens = (row: any) => {
+  if (isAuthKeyNft(row)) {
+    promptAuthKeyGuard('send', () => performSendCollectedTokens(row));
+    return;
+  }
+  performSendCollectedTokens(row);
+};
+
+const burnCollectedTokens = (row: any) => {
+  if (isAuthKeyNft(row)) {
+    promptAuthKeyGuard('burn', () => performBurnCollectedTokens(row));
+    return;
+  }
+  performBurnCollectedTokens(row);
 };
 
 watch(
