@@ -30,15 +30,15 @@
       <div class="q-pa-md">
         <div class="row q-col-gutter-md">
           <div v-for="card in sectionCards" :key="card.name" class="col-12 col-sm-6 col-md-4">
-            <q-card clickable flat class="dashboard-section-card" @click="router.push(card.to)">
+            <q-card clickable flat class="dashboard-section-card cursor-pointer" @click="router.push(card.to)">
               <q-card-section class="q-pa-lg">
                 <div class="row items-center no-wrap q-gutter-md">
-                  <q-avatar rounded :color="card.color" text-color="white" size="56px">
-                    <q-icon :name="card.icon" size="28px" />
+                  <q-avatar text-color="white" size="56px" flat>
+                    <q-icon :name="card.icon" size="28px" flat />
                   </q-avatar>
                   <div class="col" style="min-width: 0">
                     <div class="text-subtitle1 text-weight-bold text-white">{{ card.title }}</div>
-                    <div class="text-caption text-grey-4">{{ card.description }}</div>
+                    <div class="text-caption text-grey-4 card-description">{{ card.description }}</div>
                   </div>
                 </div>
               </q-card-section>
@@ -83,13 +83,12 @@
                       <span class="ellipsis text-grey-2" :title="receiveAddress || ''">
                         {{ receiveAddress || t('dashboard.wallet.noAddress') }}
                       </span>
-                      <q-btn v-if="receiveAddress" flat dense round size="sm" icon="qr_code_2"
-                        color="grey-5"
+                      <q-btn v-if="receiveAddress" flat dense round size="sm" icon="qr_code_2" color="grey-5"
                         @click="openQrDialog(receiveAddress, { title: t('dashboard.qr.title'), icon: '/images/bitcoin-cash-circle.svg' })">
                         <q-tooltip>{{ t('dashboard.wallet.showQr') }}</q-tooltip>
                       </q-btn>
-                      <q-btn v-if="receiveAddress" flat dense round size="sm" icon="content_copy"
-                        color="grey-5" @click="copyValue(receiveAddress)">
+                      <q-btn v-if="receiveAddress" flat dense round size="sm" icon="content_copy" color="grey-5"
+                        @click="copyValue(receiveAddress)">
                         <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
                       </q-btn>
                     </div>
@@ -102,13 +101,12 @@
                       <span class="ellipsis text-grey-2" :title="tokenAddress || ''">
                         {{ tokenAddress || t('dashboard.wallet.noAddress') }}
                       </span>
-                      <q-btn v-if="tokenAddress" flat dense round size="sm" icon="qr_code_2"
-                        color="grey-5"
+                      <q-btn v-if="tokenAddress" flat dense round size="sm" icon="qr_code_2" color="grey-5"
                         @click="openQrDialog(tokenAddress, { title: t('dashboard.qr.tokenTitle'), icon: '/images/cashtokens.svg' })">
                         <q-tooltip>{{ t('dashboard.wallet.showQr') }}</q-tooltip>
                       </q-btn>
-                      <q-btn v-if="tokenAddress" flat dense round size="sm" icon="content_copy"
-                        color="grey-5" @click="copyValue(tokenAddress)">
+                      <q-btn v-if="tokenAddress" flat dense round size="sm" icon="content_copy" color="grey-5"
+                        @click="copyValue(tokenAddress)">
                         <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
                       </q-btn>
                     </div>
@@ -144,14 +142,19 @@
                   {{ t('dashboard.wallet.notAvailable') }}
                 </div>
                 <div v-for="path in sessionPaths" :key="path.name"
-                  class="row items-center no-wrap q-gutter-x-sm q-py-xs">
-                  <q-badge color="grey-9" text-color="grey-3" :label="pathLabel(path.name)" />
-                  <span class="ellipsis text-grey-3" :title="path.xpub">{{ shorten(path.xpub, 12, 6) }}</span>
-                  <q-space />
-                  <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
-                    @click="copyValue(path.xpub)">
-                    <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
-                  </q-btn>
+                  class="row items-center no-wrap q-py-xs">
+                  <div class="col-3">
+                    <q-badge color="grey-9" text-color="grey-3" :label="pathLabel(path.name)" />
+                  </div>
+                  <div class="col ellipsis text-grey-3" style="min-width: 0" :title="path.xpub">
+                    {{ shorten(path.xpub, 12, 6) }}
+                  </div>
+                  <div class="col-auto q-ml-sm">
+                    <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
+                      @click="copyValue(path.xpub)">
+                      <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
+                    </q-btn>
+                  </div>
                 </div>
               </q-card-section>
             </q-card>
@@ -162,9 +165,8 @@
             <q-card flat class="dashboard-section-card">
               <q-card-section>
                 <div class="row items-center no-wrap q-gutter-sm">
-                  <q-avatar rounded size="36px">
-                    <q-img v-if="walletIcon" :src="walletIcon"></q-img>
-                    <q-img v-else :src="WIZARDCONNECT_LOGO"></q-img>
+                  <q-avatar rounded>
+                    <q-img :src="WIZARDCONNECT_LOGO"></q-img>
                   </q-avatar>
                   <div class="col" style="min-width: 0">
                     <div class="text-subtitle1 text-weight-bold text-white">{{ t('dashboard.connection.title') }}</div>
@@ -178,8 +180,15 @@
                 <q-list dense dark>
                   <q-item class="px-0">
                     <q-item-section>
-                      <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.wallet') }}</q-item-label>
-                      <q-item-label class="text-grey-2">{{ walletName || t('dashboard.wallet.notAvailable') }}</q-item-label>
+                      <q-item-label caption>
+
+                        <div>{{ t('dashboard.connection.wallet') }}</div>
+                      </q-item-label>
+                      <q-item-label class="text-grey-2 q-gutter-x-sm">
+                        <q-avatar size="sm">
+                          <q-img v-if="walletIcon" :src="walletIcon" size="xs"></q-img>
+                        </q-avatar>{{ walletName || t('dashboard.wallet.notAvailable')
+                        }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
@@ -193,27 +202,34 @@
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.protocol') }}</q-item-label>
-                      <q-item-label class="text-grey-2">{{ protocol || t('dashboard.wallet.notAvailable') }}</q-item-label>
+                      <q-item-label class="text-grey-2">{{ protocol || t('dashboard.wallet.notAvailable')
+                        }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
                     <q-item-section>
-                      <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.discovered') }}</q-item-label>
-                      <q-item-label class="text-grey-2">{{ isDiscovered ? t('dashboard.connection.yes') : t('dashboard.connection.no') }}</q-item-label>
+                      <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.discovered')
+                        }}</q-item-label>
+                      <q-item-label class="text-grey-2">{{ isDiscovered ? t('dashboard.connection.yes') :
+                        t('dashboard.connection.no') }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.persisted') }}</q-item-label>
-                      <q-item-label class="text-grey-2">{{ storedSession ? t('dashboard.connection.yes') : t('dashboard.connection.no') }}</q-item-label>
+                      <q-item-label class="text-grey-2">{{ storedSession ? t('dashboard.connection.yes') :
+                        t('dashboard.connection.no') }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item v-if="walletPublicKey" class="px-0">
                     <q-item-section>
-                      <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.walletPublicKey') }}</q-item-label>
+                      <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.walletPublicKey')
+                        }}</q-item-label>
                       <q-item-label class="row items-center no-wrap q-gutter-x-sm">
-                        <span class="ellipsis text-grey-2" :title="walletPublicKey">{{ shorten(walletPublicKey, 12, 6) }}</span>
-                        <q-btn flat dense round size="sm" icon="content_copy" color="grey-5" @click="copyValue(walletPublicKey)">
+                        <span class="ellipsis text-grey-2" :title="walletPublicKey">{{ shorten(walletPublicKey, 12, 6)
+                          }}</span>
+                        <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
+                          @click="copyValue(walletPublicKey)">
                           <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
                         </q-btn>
                       </q-item-label>
@@ -223,7 +239,8 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.paths') }}</q-item-label>
                       <q-item-label class="text-grey-2">
-                        {{ sessionPaths.length > 0 ? sessionPaths.map((p) => pathLabel(p.name)).join(', ') : t('dashboard.connection.noSession') }}
+                        {{sessionPaths.length > 0 ? sessionPaths.map((p) => pathLabel(p.name)).join(', ') :
+                          t('dashboard.connection.noSession')}}
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -248,7 +265,8 @@
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.relay') }}</q-item-label>
-                      <q-item-label v-for="relayUrl in relayUrls" :key="relayUrl" class="text-grey-2 ellipsis" :title="relayUrl">
+                      <q-item-label v-for="relayUrl in relayUrls" :key="relayUrl" class="text-grey-2 ellipsis"
+                        :title="relayUrl">
                         {{ relayUrl }}
                       </q-item-label>
                     </q-item-section>
@@ -424,18 +442,27 @@ const networkLabel = computed(() => {
   return translated === key ? net.charAt(0).toUpperCase() + net.slice(1) : translated
 })
 
-const stateMap: Record<string, { color: string, icon: string, labelKey: string }> = {
+type BannerStateStyle = { color: string, icon: string, labelKey: string }
+
+const idleState: BannerStateStyle = {
+  color: 'grey-6',
+  icon: 'hourglass_empty',
+  labelKey: 'dashboard.banner.state.idle',
+}
+
+const stateMap: Record<string, BannerStateStyle> = {
   connected: { color: 'positive', icon: 'link', labelKey: 'dashboard.banner.state.connected' },
   connecting: { color: 'info', icon: 'sync', labelKey: 'dashboard.banner.state.connecting' },
   reconnecting: { color: 'warning', icon: 'sync', labelKey: 'dashboard.banner.state.reconnecting' },
   disconnected: { color: 'grey-6', icon: 'link_off', labelKey: 'dashboard.banner.state.disconnected' },
-  idle: { color: 'grey-6', icon: 'hourglass_empty', labelKey: 'dashboard.banner.state.idle' },
+  idle: idleState,
 }
 
 const connectionState = computed(() => state.value || 'idle')
-const stateLabel = computed(() => t((stateMap[connectionState.value] ?? stateMap.idle).labelKey))
-const stateColor = computed(() => (stateMap[connectionState.value] ?? stateMap.idle).color)
-const stateIcon = computed(() => (stateMap[connectionState.value] ?? stateMap.idle).icon)
+const stateStyle = computed(() => stateMap[connectionState.value] ?? idleState)
+const stateLabel = computed(() => t(stateStyle.value.labelKey))
+const stateColor = computed(() => stateStyle.value.color)
+const stateIcon = computed(() => stateStyle.value.icon)
 
 const protocol = computed(() => manager.value?.protocol ?? null)
 const isDiscovered = computed(() => manager.value?.isWalletDiscovered?.() ?? false)
@@ -595,6 +622,16 @@ onUnmounted(() => {
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.02);
   height: 100%;
+}
+
+.card-description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  overflow: hidden;
+  line-height: 1.25rem;
+  min-height: calc(1.25rem * 3);
 }
 
 .px-0 {
