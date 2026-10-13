@@ -60,7 +60,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -424,7 +424,12 @@ const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
 const navigateToMint = (row: UtxoWithAuthKey) => {
   authguardStore.setActiveAuthhead(row);
   appStore.setActiveMinter(row as any);
-  router.push('/issuer/nft-collections/' + row.token?.category + '/mint');
+  router.push({
+    name: 'nft-collection-mint',
+    params: {
+      category: row.token!.category
+    }
+  })
 };
 
 const refreshCache = async (category: string) => {

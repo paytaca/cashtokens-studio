@@ -171,7 +171,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                        }})</span>
+                                                            }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -371,7 +371,7 @@ const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
         nftType: row.nft,
         allowEdit: true
     })
-    router.push('/issuer/nft-collections/' + activeAuthhead.value!.token?.category + '/nft')
+    // router.push('/issuer/nft-collections/' + activeAuthhead.value!.token?.category + '/nft')
     router.push({
         name: 'edit-nft',
         query: { ...route.query, returnTo: route.path }
