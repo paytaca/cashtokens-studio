@@ -17,6 +17,8 @@ export type RegistryRecord = {
   authbase: string,
   contentHash: string,
   publicationUris: string[],
+  /** Verbatim on-chain publication chunks, kept for debugging/reference. */
+  originalUris?: string[],
   authhead?: string,
   rawRegistry: Blob,
   registry: CompactRegistry,
@@ -279,6 +281,7 @@ class CashtokensStudioDB extends Dexie {
     authbase: string,
     contentHash: string,
     publicationUris: string[],
+    originalUris?: string[],
     rawRegistry: Blob
   }): Promise<ParsedRegistryRecord> {
     const text = await params.rawRegistry.text()
@@ -289,6 +292,7 @@ class CashtokensStudioDB extends Dexie {
       authbase: params.authbase,
       contentHash: params.contentHash,
       publicationUris: params.publicationUris,
+      originalUris: params.originalUris ?? params.publicationUris,
       rawRegistry: params.rawRegistry,
       registry: compactRegistry,
       registryIdentity: '',
