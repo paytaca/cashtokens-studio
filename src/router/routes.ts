@@ -106,11 +106,6 @@ const routes: RouteRecordRaw[] = [
   //       path: 'tokens/create/authkey',
   //       component: () => import('pages/issuer/CreateAuthKey.vue'),
   //     },
-  //     // {
-  //     //   name: 'create-token',
-  //     //   path: 'tokens/create',
-  //     //   component: () => import('pages/issuer/TokenGenesis.vue'),
-  //     // },
   //     {
   //       name: 'import-auth-utxo',
   //       path: 'tokens/import-auth-utxo',
@@ -146,10 +141,6 @@ const routes: RouteRecordRaw[] = [
   //       name: 'authguards',
   //       path: 'authguards',
   //       component: () => import('pages/issuer/manage/AuthGuards.vue'),
-  //     },
-  //     {
-  //       path: 'token/:identifier',
-  //       component: () => import('pages/TokenMetadata.vue'),
   //     },
   //   ],
   // },
