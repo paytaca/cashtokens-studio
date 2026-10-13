@@ -266,7 +266,7 @@ const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
@@ -447,7 +447,7 @@ const publishNfts = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest);
+        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -508,6 +508,10 @@ const publishNfts = async () => {
             })
         })
     } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            stopLoader(3000)
+            return
+        }
         $q.notify({ type: 'Error', message: error.message })
         stopLoader(3000)
     } finally {
@@ -622,7 +626,7 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
             updateStep(TASK_PREPARE_TX, 'done')
             updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-            const response = await manager.value!.signTransaction(signRequest);
+            const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
 
             updateStep(TASK_WAIT_FOR_SIG, 'done')
             updateStep(TASK_BROADCASTING, 'running')
@@ -654,6 +658,10 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
                 }
             })
         } catch (error: any) {
+            if (error?.name === 'AbortError') {
+                stopLoader(3000)
+                return
+            }
             $q.notify({
                 type: 'Error',
                 message: error.message

@@ -181,7 +181,7 @@ const { wallet, manager } = useWizardConnectWallet()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const vaultUtxos = ref<any[]>([])
 const loading = ref(false)
@@ -290,7 +290,7 @@ const handleUnguard = async (row: any) => {
     updateStep(TASK_PREPARE_TX, 'done')
     updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-    const response = await manager.value!.signTransaction(signRequest)
+    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
 
     updateStep(TASK_WAIT_FOR_SIG, 'done')
     updateStep(TASK_BROADCASTING, 'running')
@@ -333,6 +333,7 @@ const handleUnguard = async (row: any) => {
     })
   } catch (error: any) {
     stopLoader(3000)
+    if (error?.name === 'AbortError') return
     console.log('Unguard error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.authheadRelease') })
   }
@@ -377,7 +378,7 @@ const handleBurn = async (row: any) => {
     updateStep(TASK_PREPARE_TX, 'done')
     updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-    const response = await manager.value!.signTransaction(signRequest)
+    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
 
     updateStep(TASK_WAIT_FOR_SIG, 'done')
     updateStep(TASK_BROADCASTING, 'running')
@@ -420,6 +421,7 @@ const handleBurn = async (row: any) => {
     })
   } catch (error: any) {
     stopLoader(3000)
+    if (error?.name === 'AbortError') return
     console.log('Burn error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.authheadBurn') })
   }

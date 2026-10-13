@@ -197,7 +197,7 @@ const {
     wallet,
 } = useWizardConnectWallet()
 
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
 const publishTaskList = [
@@ -438,7 +438,7 @@ const onPublishClick = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest);
+        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -537,6 +537,7 @@ const onPublishClick = async () => {
         })
     } catch (error: any) {
         stopLoader(3000)
+        if (error?.name === 'AbortError') return
         $q.notify({ type: 'Error', message: error.message })
     } finally {
         publishing.value = false

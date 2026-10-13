@@ -302,7 +302,7 @@ import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils';
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -501,7 +501,7 @@ const openTransferDialog = (
       updateStep(TASK_PREPARE_TX, 'done')
       updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-      const response = await manager.value!.signTransaction(signRequest);
+      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done')
 
@@ -564,6 +564,7 @@ const openTransferDialog = (
       });
     } catch (error: any) {
       stopLoader(3000)
+      if (error?.name === 'AbortError') return
       $q.notify({
         type: 'Error',
         message: error.message,

@@ -118,7 +118,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
 const publishTaskList = [
@@ -254,7 +254,7 @@ const onPublishClick = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest)
+        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() })
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -317,6 +317,10 @@ const onPublishClick = async () => {
             }
         })
     } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            stopLoader(3000)
+            return
+        }
         if (!broadcastTxidCopy) {
             await db.saveActivity({
                 event: `Published registry of ${activeAuthhead.value?.identitySnapshot?.token?.symbol || record.authbase}`,

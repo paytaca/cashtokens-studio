@@ -219,7 +219,7 @@ const MINT_MUTABLES = 'Mint mutable NFTs'
 const $q = useQuasar()
 const router = useRouter()
 const { t } = useI18n()
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 
 const authguardStore = useAuthguardStore()
@@ -426,7 +426,7 @@ const mint = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(restOfSignRequest)
+        const response = await manager.value!.signTransaction(restOfSignRequest, { signal: getSignal() })
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -522,6 +522,10 @@ const mint = async () => {
             router.push('/dashboard')
         })
     } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            stopLoader(3000)
+            return
+        }
         $q.notify({ type: 'Error', message: error.message })
         stopLoader(3000)
     } finally {

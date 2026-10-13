@@ -393,7 +393,9 @@ const validateVmNumber = (val: string) => {
 
 const onGenerateGenesisInput = async () => {
 
-    startLoader(txTaskList)
+    startLoader(txTaskList, () => {
+        $q.notify({ type: 'warning', message: t('info.cancelled') })
+    })
 
     try {
 
@@ -429,7 +431,7 @@ const onGenerateGenesisInput = async () => {
 
         let response: any = {}
 
-        response = await manager.value?.signTransaction(signRequest);
+        response = await manager.value?.signTransaction(signRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -483,7 +485,8 @@ const onGenerateGenesisInput = async () => {
             authkeys.value = filterAuthKeys(wallet.value.utxos || []) as UtxoWithPath[]
         })
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.name === 'AbortError') return
         $q.notify({ type: 'Error', message: `Error: ${error}` })
         stopLoader(2000)
     } finally {
@@ -638,7 +641,7 @@ const onSubmit = async () => {
 
         const createTokenSignRequest = createToken(createTokenArgs)
 
-        response = await manager.value?.signTransaction(createTokenSignRequest);
+        response = await manager.value?.signTransaction(createTokenSignRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -697,7 +700,11 @@ const onSubmit = async () => {
             router.push('/dashboard#created')
         })
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.name === 'AbortError') {
+            stopLoader(4000)
+            return
+        }
         stopLoader(4000)
         if (contentHash) {
             await db.registry.where('contentHash').equals(contentHash).delete()

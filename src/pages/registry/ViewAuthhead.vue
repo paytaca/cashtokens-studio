@@ -188,7 +188,7 @@ const router = useRouter()
 const route = useRoute()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const wizardConnectWallet = inject('wizardConnectWallet') as any
@@ -340,7 +340,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
             })
             updateStep(TASK_PREPARE_TX, 'done')
             updateStep(TASK_WAIT_FOR_SIG, 'running')
-            const response = await manager.value!.signTransaction(signRequest);
+            const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
 
             updateStep(TASK_WAIT_FOR_SIG, 'done')
 
@@ -403,6 +403,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
 
         } catch (error: any) {
             stopLoader(3000)
+            if (error?.name === 'AbortError') return
             $q.notify({
                 type: 'Error',
                 message: error.message

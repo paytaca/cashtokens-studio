@@ -234,7 +234,7 @@ import { db } from 'src/core/client-db';
 const { t } = useI18n();
 const $q = useQuasar();
 const router = useRouter();
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog();
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog();
 
 const { wallet, manager, walletIsReady } = useWizardConnectWallet();
 
@@ -455,7 +455,7 @@ const performSendCollectedTokens = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest);
+      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');
@@ -509,6 +509,7 @@ const performSendCollectedTokens = (row: any) => {
       });
     } catch (error: any) {
       stopLoader(3000);
+      if (error?.name === 'AbortError') return
       $q.notify({ type: 'Error', message: error.message });
     }
   });
@@ -556,7 +557,7 @@ const performBurnCollectedTokens = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest);
+      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');
@@ -610,6 +611,7 @@ const performBurnCollectedTokens = (row: any) => {
       });
     } catch (error: any) {
       stopLoader(3000);
+      if (error?.name === 'AbortError') return
       $q.notify({ type: 'Error', message: error.message });
     }
   });

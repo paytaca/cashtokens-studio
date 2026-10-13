@@ -79,7 +79,7 @@ const {
 
 const { t } = useI18n()
 
-const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const utxos = ref<UtxoWithPath[]>([])
 const genesisInputCandidate = computed<UtxoWithPath>(() => {
@@ -96,7 +96,9 @@ const hint = computed(() => {
 })
 
 const onGenerateGenesisInput = async () => {
-    startLoader(txTaskList)
+    startLoader(txTaskList, () => {
+        $q.notify({ type: 'warning', message: t('info.cancelled') })
+    })
 
     try {
         updateStep(TASK_INPUTS_CHECK, 'running')
@@ -122,7 +124,7 @@ const onGenerateGenesisInput = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value?.signTransaction(genesisInputSignReq);
+        const response = await manager.value?.signTransaction(genesisInputSignReq, { signal: getSignal() });
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')
@@ -168,7 +170,8 @@ const onGenerateGenesisInput = async () => {
             }
         })
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.name === 'AbortError') return
         console.log(error)
         $q.notify({
             type: 'Error',
@@ -180,7 +183,9 @@ const onGenerateGenesisInput = async () => {
 }
 
 const onCreateAuthKey = async () => {
-    startLoader(txTaskList)
+    startLoader(txTaskList, () => {
+        $q.notify({ type: 'warning', message: t('info.cancelled') })
+    })
 
     try {
         updateStep(TASK_INPUTS_CHECK, 'running')
@@ -217,7 +222,7 @@ const onCreateAuthKey = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value?.signTransaction(signRequest);
+        const response = await manager.value?.signTransaction(signRequest, { signal: getSignal() });
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')
@@ -263,7 +268,8 @@ const onCreateAuthKey = async () => {
             }
         })
 
-    } catch (error) {
+    } catch (error: any) {
+        if (error?.name === 'AbortError') return
         console.log(error)
     } finally {
         stopLoader(1000)
