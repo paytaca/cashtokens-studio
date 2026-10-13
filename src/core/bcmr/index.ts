@@ -3,6 +3,7 @@ import { IdentitySnapshot, Registry } from './bcmr-v2.schema'
 export * from './enum'
 export * from './indexer'
 export * from './utils'
+export * from './authenticate'
 
 export type CreateBcmrOptions = {
     authbase: string,
