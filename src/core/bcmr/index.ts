@@ -5,6 +5,8 @@ export * from './indexer'
 export * from './utils'
 export * from './authenticate'
 
+export const BCMR_PREFIX = '6a0442434d52'
+
 export type CreateBcmrOptions = {
     authbase: string,
     identitySnapshot: IdentitySnapshot,

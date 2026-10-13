@@ -2,7 +2,6 @@ import { Registry, type IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema';
 import { defineStore } from 'pinia'
 import { db } from 'src/core/client-db';
 import { WorkerResponse } from 'src/workers/registry-worker';
-import { retrieveLastRegistryPublication } from 'src/core/chaingraph';
 
 type TokenId = string;
 
@@ -66,11 +65,7 @@ export const useMetadataStore = defineStore('metadataStore', {
     async loadRegistry(authbase: string) {
       console.log('AUTHBASEz', authbase)
       if (authbase === 'f9a89eaed8338067a2e881a205ff50de595755670e7c1f731d227071a50dc338') return
-      // console.log('AUTHBASE', authbase)
-      
-      // const pub = await retrieveLastRegistryPublication({ authbase })
-      // const uris: string[] = pub[0]?.uris || []
-      // if (!uris.length) return
+
       console.log('Hello', authbase)
 
       if (!registryWorker) {

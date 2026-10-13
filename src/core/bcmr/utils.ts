@@ -132,3 +132,4 @@ export function commitmentToSequenceNumber(commitment: string) {
 export function sequenceNumberToCommitment(sequenceNumber: string|bigint|number) {
   return binToHex(bigIntToVmNumber(BigInt(sequenceNumber)))
 }
+

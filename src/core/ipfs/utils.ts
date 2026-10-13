@@ -137,3 +137,19 @@ function normalizeUri(str: string, scheme: IpfsScheme): ParsedIpfsUrl {
   const path = pathParts.join('/').replace(/\/+$/, '');
   return { scheme, id: id as string , path, search: '', uri: `${scheme}://${id}${path ? '/' + path : ''}` };
 }
+
+
+export function isCID(str: string) {
+  if (typeof str !== 'string') return false;
+
+  // Official IPFS regex for CIDv0 (Base58, 46 characters, starts with Qm)
+  const cidv0Regex = /^Qm[1-9A-HJ-NP-Za-km-z]{44}$/;
+
+  // Official IPFS regex for CIDv1 (Case-insensitive Base32, usually 59 chars)
+  const cidv1Regex = /^b[a-z2-7]{58}$/i;
+
+  // Official IPFS regex for other standard multibase CIDv1 variants (hex, base58, etc.)
+  const cidv1AlternativeRegex = /^[Bza-f7][a-zA-Z0-9]{49,70}$/;
+
+  return cidv0Regex.test(str) || cidv1Regex.test(str) || cidv1AlternativeRegex.test(str);
+}

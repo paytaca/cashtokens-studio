@@ -7,7 +7,7 @@ import {
   ParsedRegistryRecord, 
   RegistryRecordStatus 
 } from '../core/client-db'
-import { retrieveLastRegistryPublication } from '../core/chaingraph'
+import { fetchLastRegistryPublication } from '../core/chaingraph'
 import { getErrorMessage } from '../core/utils';
 import type { 
   IdentitySnapshot, NftType, OffChainRegistryIdentity, Registry, RegistryTimestampKeyedValues 
@@ -73,10 +73,10 @@ const registryWorker = {
         }
       }
 
-      const pub = await retrieveLastRegistryPublication({ authbase: params.authbase })
-      const uris: string[] = pub[0]?.uris || []
-      const contentHash: string = pub[0]?.contentHash
-      if (!uris.length) return
+      const pub = await fetchLastRegistryPublication({ authbase: params.authbase })
+      const uris: string[] = pub?.uris || []
+      const contentHash: string = pub?.contentHash || ''
+      if (!uris.length || !contentHash) return
 
       const existing = await db.registry.where('contentHash').equals(contentHash).first();
         if(existing) {
@@ -151,6 +151,7 @@ const registryWorker = {
             authbase: params.authbase,
             contentHash,
             publicationUris: uris,
+            originalUris: pub?.urisOriginal || [],
             rawRegistry: registry,
             registry: compactParsedRegistry as CompactRegistry,
             status: 'published' as RegistryRecordStatus,
@@ -507,6 +508,7 @@ const registryWorker = {
       await db.registry.update(registryRecord.id!, {
         contentHash: newContentHash,
         publicationUris: newUris,
+        originalUris: newUris,
         rawRegistry: newRawRegistry,
         registry: compactParsedRegistry,
         authhead: newAuthhead,
@@ -519,6 +521,7 @@ const registryWorker = {
         authbase: registryRecord.authbase,
         contentHash: newContentHash,
         publicationUris: newUris,
+        originalUris: newUris,
         registry: compactParsedRegistry
       } as ParsedRegistryRecord
     })
