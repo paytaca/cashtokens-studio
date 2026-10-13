@@ -149,11 +149,6 @@ const routes: RouteRecordRaw[] = [
   //   component: () => import('layouts/MainLayout.vue'),
   //   children: [
   //     {
-  //       name: 'my-fts',
-  //       path: 'fungibletokens',
-  //       component: () => import('pages/account/balances/FungibleTokens.vue'),
-  //     },
-  //     {
   //       name: 'my-nfts',
   //       path: 'collectibles',
   //       component: () => import('pages/account/balances/NonFungibleTokens.vue'),
