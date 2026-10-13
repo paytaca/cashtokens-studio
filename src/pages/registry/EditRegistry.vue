@@ -46,19 +46,19 @@
                                 </FormField>
                                 <FormField>
                                     <label>{{ t('label.registry.description') }}</label>
-                                    <q-input v-model="(registry.registryIdentity as OffChainRegistryIdentity).description"
+                                    <q-input
+                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).description"
                                         autogrow outlined></q-input>
                                 </FormField>
                                 <FormField>
                                     <label>{{ t('label.registry.website') }}</label>
-                                    <q-input
-                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris.web"
+                                    <q-input v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris!.web"
                                         autogrow outlined></q-input>
                                 </FormField>
                                 <FormField>
                                     <label>{{ t('label.registry.icon') }}</label>
                                     <q-input
-                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris.icon"
+                                        v-model="(registry.registryIdentity as OffChainRegistryIdentity).uris!.icon"
                                         autogrow outlined></q-input>
                                 </FormField>
                             </template>
@@ -171,9 +171,12 @@ watch(() => registryRecord.value as RegistryRecord, (newRecord: RegistryRecord) 
         registry.value = JSON.parse(JSON.stringify(newRecord.registry))
         // Off-chain registries carry a registryIdentity object; make sure its
         // `uris` map exists so the Website/Icon fields can bind without error.
-        const registryIdentity = registry.value.registryIdentity
+        const registryIdentity = registry.value?.registryIdentity
         if (registryIdentity && typeof registryIdentity !== 'string' && !registryIdentity.uris) {
-            registryIdentity.uris = {}
+            registryIdentity.uris = {
+                icon: '',
+                web: ''
+            }
         }
         initialRegistryJson.value = JSON.stringify(registry.value)
     }

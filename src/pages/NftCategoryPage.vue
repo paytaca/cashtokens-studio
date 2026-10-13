@@ -164,7 +164,7 @@ import type {
     SequentialNftCollection as SequentialNftCollectionI
 } from 'src/core/bcmr/bcmr-v2.schema'
 import { type NftCategory as NftCategoryI } from 'src/core/bcmr/bcmr-v2.schema'
-import { db, IdentitySnapshotRecord, setRecordStatus } from 'src/core/client-db'
+import { db, IdentitySnapshotRecord } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
 import { getErrorMessage } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
@@ -332,7 +332,10 @@ const save = async () => {
     try {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
         identitySnapshotRecord.value.identitySnapshot = clonedSnapshot
-        setRecordStatus(identitySnapshotRecord.value, 'modified')
+        // 'modified' only sticks once a record has left the 'new' state
+        // (same rule as db.setNftRecordStatus)
+        identitySnapshotRecord.value.status =
+          identitySnapshotRecord.value.status === 'new' ? 'new' : 'modified'
         await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([

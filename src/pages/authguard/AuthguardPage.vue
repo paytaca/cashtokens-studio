@@ -217,7 +217,7 @@ const loadAuthguardUtxos = async (a: DecoratedUtxo) => {
     authkeyTokenId: category,
     network: import.meta.env.VITE_BCH_NETWORK as any
   })
-  vaultAddress.value = contract.address
+  vaultAddress.value = contract.tokenAddress
 
   const utxos: any[] = await contract.getUtxos()
   vaultUtxos.value = utxos.map(u => ({

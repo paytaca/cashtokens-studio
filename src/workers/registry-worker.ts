@@ -13,11 +13,10 @@ import type {
   IdentitySnapshot, NftType, OffChainRegistryIdentity, Registry, RegistryTimestampKeyedValues 
 } from '../core/bcmr/bcmr-v2.schema';
 import { uploadFile } from '../core/ipfs';
-import { hexToBin } from 'mainnet-js';
 import { compactRegistry, extractNftTypeKeys, extractTokenCategories, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
 import { type CompactRegistry } from 'src/core/bcmr/types';
 import { NftCollectionType } from 'src/core/bcmr';
-import { vmNumberToBigInt } from '@bitauth/libauth';
+import { vmNumberToBigInt, hexToBin } from '@bitauth/libauth';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,
