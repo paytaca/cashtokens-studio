@@ -1,9 +1,9 @@
-import { ChainGraph } from '../ChainGraph';
 import { BcmrIndexer } from '../bcmr/BcmrIndexer';
-import { OffChainRegistryIdentity, Registry } from 'mainnet-js';
+import { fetchLastRegistryPublication } from 'src/core/chaingraph';
 import { fetchFile as fetchFileFromIpfs } from '../ipfs/fetchFile';
 import { extractCidAndPathFromUrl } from '../ipfs';
 import { importMetadataRegistry, type MetadataRegistry } from 'bitauth-libauth-v3';
+import type { OffChainRegistryIdentity, Registry } from 'src/core/bcmr/bcmr-v2.schema'
 // import { extractCidAndPathFromUrl } from '../ipfs';
 
 /**
@@ -23,26 +23,30 @@ export const locateRegistry = async (
     return r;
   }
 
-  const pubInfo = await new ChainGraph().retrieveLastRegistryPublication(
-    registryIdentity
-  );
+  const pub = await fetchLastRegistryPublication({ authbase: registryIdentity });
 
-  let finalUrl = pubInfo[0].httpsUrl
+  if (!pub?.httpsUrl && !pub?.uris?.length) {
+    throw new Error(`Unable to locate registry for ${registryIdentity}`)
+  }
 
-  if (!/^(ipfs:\/\/)/.test(pubInfo[0].httpsUrl) && !/^(https?:)?\/\//i.test(pubInfo[0].httpsUrl)) {
-    finalUrl = 'https://' + pubInfo[0].httpsUrl
+  let finalUrl = pub.httpsUrl
+
+  if (finalUrl && !/^(ipfs:\/\/)/.test(finalUrl) && !/^(https?:)?\/\//i.test(finalUrl)) {
+    finalUrl = 'https://' + finalUrl
   }
 
   const { cid } = extractCidAndPathFromUrl(finalUrl)
 
   let validatedRegistry: MetadataRegistry | string = ''
 
-  const uris = pubInfo[0]?.uris || []
+  const uris = [...(pub.uris || [])]
 
-  if (cid) {
-    uris.unshift(finalUrl) // Prioritize if httpUrl is an ipfs url or gateway
-  } else {
-    uris.push(finalUrl)
+  if (finalUrl) {
+    if (cid) {
+      uris.unshift(finalUrl) // Prioritize if httpUrl is an ipfs url or gateway
+    } else {
+      uris.push(finalUrl)
+    }
   }
 
   for (const uri of uris) {
@@ -86,9 +90,9 @@ export const locateRegistry = async (
     return validatedRegistry as Registry
   }
   
-  if (pubInfo[0]?.httpsUrl || uris?.length > 0) {
+  if (pub?.httpsUrl || uris?.length > 0) {
     throw new Error(
-      `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+      `Found registry publication but unable to load from the published URL (${pub.httpsUrl}). Verify that the URL exist or try again later`
     )
   }
 

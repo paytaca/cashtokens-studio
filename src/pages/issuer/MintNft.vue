@@ -524,6 +524,7 @@ import {
   delay
 } from 'mainnet-js'
 import { AuthchainIdentity, Bcmr, BcmrIndexer, ChainGraph } from 'src/apps'
+import { fetchLastRegistryPublication } from 'src/core/chaingraph'
 import { shortenTokenId, openTxInExplorer, formatCommitment, ipfsToGatewayUrl } from 'src/apps/utils'
 import { useLocalForage } from 'src/composables/useLocalForage'
 import { useEventBus } from 'src/composables'
@@ -838,11 +839,11 @@ const locateRegistry = async () => {
       progress.value = `Trying other methods please wait...`
       await delay(1000)
       progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-      const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(minter.value.token.tokenId)
-      if (pubInfo && pubInfo[0]) {
-        if (pubInfo[0].httpsUrl) {
+      const pub = await fetchLastRegistryPublication({ authbase: minter.value.token.tokenId })
+      if (pub?.httpsUrl || pub?.uris?.length) {
+        if (pub.httpsUrl) {
           try {
-            const r = await fetch(pubInfo[0].httpsUrl)
+            const r = await fetch(pub.httpsUrl)
             if (r.status == 200) {
               const rj = await r.json()
               if (rj) {
@@ -852,7 +853,7 @@ const locateRegistry = async () => {
             }
           } catch (error) {
             $q.dialog({
-              message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
+              message: `Found registry publication but unable to load from the published URL (${pub.httpsUrl}). Verify that the URL exist or try again later`
             })
           }
         }

@@ -571,6 +571,7 @@ import { onMounted, ref, watch, onBeforeMount, computed, onBeforeUnmount } from 
 import { useRouter, useRoute } from 'vue-router';
 import { useUI } from 'src/stores/ui'
 import { Bcmr, BcmrIndexer, ChainGraph } from 'src/apps';
+import { fetchLastRegistryPublication } from 'src/core/chaingraph';
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import RegistryPublishFromFileDialog from 'src/components/dialogs/RegistryPublishFromFileDialog.vue';
@@ -1586,24 +1587,21 @@ onBeforeMount(async () => {
         progress.value = `Trying other methods please wait...`
         await delay(1000)
         progress.value = `Retrieving last registry publication, using the authhead UTXO's Token ID as authbase...`
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(tokenId)
-        if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
-            try {
-              const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
-              if (downloadedRegistry) {
-                initBcmr(downloadedRegistry)
-              }
-            } catch (error) {
-              console.log("🚀 ~ onBeforeMount ~ error:", error)
-              // $q.dialog({
-              //   message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              // })
+        const pub = await fetchLastRegistryPublication({ authbase: tokenId })
+        if (pub?.httpsUrl || pub?.uris?.length) {
+          try {
+            const downloadedRegistry = await downloadRegistryFromPublishedUris([...(pub.uris || []), pub.httpsUrl].filter(Boolean))
+            if (downloadedRegistry) {
+              initBcmr(downloadedRegistry)
             }
+          } catch (error) {
+            console.log("🚀 ~ onBeforeMount ~ error:", error)
+            // $q.dialog({
+            //   message: `Found registry publication but unable to load from the published URL (${pub.httpsUrl}). Verify that the URL exist or try again later`
+            // })
           }
         } else {
           bcmrNotFound.value = true
-
         }
 
         if (!bcmrSelectedAuthbase.value) {
@@ -1646,20 +1644,18 @@ onMounted(async () => {
           return await displayAuthheadAuthFailureDialog(tokenStore.token.txid)
         }
         progress.value = 'Retrieving last published registry, please wait...'
-        const pubInfo = await (new ChainGraph()).retrieveLastRegistryPublication(authbase)
-        if (pubInfo && pubInfo[0]) {
-          if (pubInfo[0].httpsUrl || pubInfo[0].uris) {
-            try {
-              const downloadedRegistry = await downloadRegistryFromPublishedUris([...pubInfo[0].uris, pubInfo[0].httpsUrl])
-              if (downloadedRegistry) {
-                initBcmr(downloadedRegistry)
-              }
-            } catch (error) {
-              console.log("🚀 ~ onMounted ~ error:", error)
-              $q.dialog({
-                message: `Found registry publication but unable to load from the published URL (${pubInfo[0].httpsUrl}). Verify that the URL exist or try again later`
-              })
+        const pub = await fetchLastRegistryPublication({ authbase })
+        if (pub?.httpsUrl || pub?.uris?.length) {
+          try {
+            const downloadedRegistry = await downloadRegistryFromPublishedUris([...(pub.uris || []), pub.httpsUrl].filter(Boolean))
+            if (downloadedRegistry) {
+              initBcmr(downloadedRegistry)
             }
+          } catch (error) {
+            console.log("🚀 ~ onMounted ~ error:", error)
+            $q.dialog({
+              message: `Found registry publication but unable to load from the published URL (${pub.httpsUrl}). Verify that the URL exist or try again later`
+            })
           }
         } else {
           bcmrNotFound.value = true
