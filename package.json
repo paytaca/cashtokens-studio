@@ -52,7 +52,7 @@
     "vue": "^3.4.0",
     "vue-i18n": "^10.0.0",
     "vue-router": "^4.0.0",
-    "wizardconnect-vue": "github:paytaca/wizardconnect-vue"
+    "wizardconnect-vue": "github:paytaca/wizardconnect-vue#880006706a504ebd7242a8c680fe3a15f79a3e9d"
   },
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^11.2.0",

@@ -11293,7 +11293,7 @@ wildcard@^2.0.1:
   resolved "https://registry.yarnpkg.com/wildcard/-/wildcard-2.0.1.tgz#5ab10d02487198954836b6349f74fff961e10f67"
   integrity sha512-CC1bOL87PIWSBhDcTrdeLo6eGT7mCFtrg0uIJtqJUFyK+eJnzl8A1niH56uu7KMa5XFrtiV+AQuHO3n7DsHnLQ==
 
-"wizardconnect-vue@github:paytaca/wizardconnect-vue":
+"wizardconnect-vue@github:paytaca/wizardconnect-vue#880006706a504ebd7242a8c680fe3a15f79a3e9d":
   version "0.2.2"
   resolved "https://codeload.github.com/paytaca/wizardconnect-vue/tar.gz/880006706a504ebd7242a8c680fe3a15f79a3e9d"
   dependencies:
