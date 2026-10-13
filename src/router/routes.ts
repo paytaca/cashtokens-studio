@@ -144,28 +144,6 @@ const routes: RouteRecordRaw[] = [
   //     },
   //   ],
   // },
-  // {
-  //   path: '/account/balance',
-  //   component: () => import('layouts/MainLayout.vue'),
-  //   children: [
-  //     {
-  //       name: 'my-nfts',
-  //       path: 'collectibles',
-  //       component: () => import('pages/account/balances/NonFungibleTokens.vue'),
-  //     },
-  //   ],
-  // },
-  // {
-  //   path: '/account',
-  //   component: () => import('layouts/MainLayout.vue'),
-  //   children: [
-  //     {
-  //       name: 'recent-transactions',
-  //       path: 'recent-transactions',
-  //       component: () => import('pages/account/TransactionLogs.vue'),
-  //     },
-  //   ],
-  // },
   {
     path: '/issuer',
     component: () => import('layouts/MainLayout.vue'),
