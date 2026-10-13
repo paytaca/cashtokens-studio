@@ -123,16 +123,6 @@ const routes: RouteRecordRaw[] = [
   //   component: () => import('layouts/MainLayout.vue'),
   //   children: [
   //     {
-  //       name: 'nft-reserves',
-  //       path: 'nft-reserves',
-  //       component: () => import('pages/issuer/manage/NftReserves.vue'),
-  //     },
-  //     {
-  //       name: 'registries',
-  //       path: 'registries',
-  //       component: () => import('pages/issuer/manage/Registries.vue'),
-  //     },
-  //     {
   //       name: 'authkeys',
   //       path: 'authkeys',
   //       component: () => import('pages/issuer/manage/AuthKeys.vue'),
