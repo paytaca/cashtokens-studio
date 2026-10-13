@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -217,7 +217,9 @@ import type { UtxoWithPath } from 'src/core/types';
 import { getTokenType, isPureFungible, shortenTokenId } from 'src/core/utils';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { transferFts } from 'src/core/transaction';
-import { broadcast } from 'src/core/transaction/broadcast';
+import { broadcastTransaction } from 'src/services/transaction';
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils';
 import { useRouter } from 'vue-router';
 import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
@@ -232,6 +234,7 @@ import { db } from 'src/core/client-db';
 const { t } = useI18n();
 const $q = useQuasar();
 const router = useRouter();
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog();
 
 const { wallet, manager, walletIsReady } = useWizardConnectWallet();
 
@@ -431,10 +434,13 @@ const performSendCollectedTokens = (row: any) => {
     },
     focus: 'none',
   }).onOk(async (userInputs: { tokenAmount: bigint; recipient: string }) => {
-    const loadingGroup = $q.loading.show({
-      group: 'send-tokens-loading-group',
-      message: t('dashboard.notify.preparingCheckingWallet'),
+    startLoader(txTaskList, () => {
+      $q.notify({ type: 'warning', message: t('info.cancelled') });
     });
+
+    updateStep(TASK_INPUTS_CHECK, 'done');
+    updateStep(TASK_PREPARE_TX, 'running');
+
     try {
       const signRequest = transferFts({
         category: row.token!.category,
@@ -445,47 +451,65 @@ const performSendCollectedTokens = (row: any) => {
         network: import.meta.env.VITE_BCH_NETWORK as Network,
         transferType: 'send',
       });
-      loadingGroup({ message: t('dashboard.notify.preparingForSignature') });
+
+      updateStep(TASK_PREPARE_TX, 'done');
+      updateStep(TASK_WAIT_FOR_SIG, 'running');
+
       const response = await manager.value!.signTransaction(signRequest);
-      loadingGroup({ message: t('dashboard.notify.broadcasting') });
-      const broadcastResponse = await broadcast(response.signedTransaction);
-      if (broadcastResponse.ok) {
-        const broadcastResult = await broadcastResponse.json();
-        if (broadcastResult.success) {
-          loadingGroup({ message: t('dashboard.notify.awaitingPropagation') });
 
-          const networkType =
-            import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-              ? NetworkType.Testnet
-              : NetworkType.Mainnet;
-          await new BaseWallet(networkType).waitForTransaction({
-            txHash: broadcastResult.txid,
-          });
+      updateStep(TASK_WAIT_FOR_SIG, 'done');
+      updateStep(TASK_BROADCASTING, 'running');
 
-          await wallet.value?.sync();
-          triggerRef(wallet);
-          await db.saveActivity({
-            event: t('dashboard.notify.activityEventTransferFts'),
-            txid: broadcastResult.txid,
-            status: 'success',
-          });
-          loadingGroup();
-          $q.dialog({
-            component: TransactionStatusDialog,
-            componentProps: {
-              statusType: 'success',
-              statusText: t('dashboard.notify.transferSent'),
-              txid: broadcastResult.txid,
-            },
-          });
-        } else {
-          throw new Error(broadcastResult.error);
-        }
+      const [broadcastError, txid] = await broadcastTransaction({
+        transactionHex: response.signedTransaction,
+        network: import.meta.env.VITE_BCH_NETWORK,
+        onProgress: (progress: string) => {
+          const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress });
+          updateStep(TASK_BROADCASTING, 'running', newLabel);
+        },
+      });
+
+      if (broadcastError) {
+        updateStep(TASK_BROADCASTING, 'failed');
+        throw broadcastError;
       }
+
+      updateStep(TASK_BROADCASTING, 'done');
+      updateStep(TASK_WAITING_PROPAGATION, 'running');
+
+      const networkType =
+        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+          ? NetworkType.Testnet
+          : NetworkType.Mainnet;
+      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+
+      updateStep(TASK_WAITING_PROPAGATION, 'done');
+      updateStep(TASK_REFRESH_UTXOS, 'running');
+
+      await wallet.value?.sync();
+      triggerRef(wallet);
+
+      updateStep(TASK_REFRESH_UTXOS, 'done');
+
+      await db.saveActivity({
+        event: t('dashboard.notify.activityEventTransferFts'),
+        txid,
+        status: 'success',
+      });
+
+      stopLoader(1000);
+
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: t('dashboard.notify.transferSent'),
+          txid,
+        },
+      });
     } catch (error: any) {
+      stopLoader(3000);
       $q.notify({ type: 'Error', message: error.message });
-    } finally {
-      loadingGroup();
     }
   });
 };
@@ -511,10 +535,13 @@ const performBurnCollectedTokens = (row: any) => {
     },
     focus: 'none',
   }).onOk(async (userInputs: { tokenAmount: bigint }) => {
-    const loadingGroup = $q.loading.show({
-      group: 'burn-tokens-loading-group',
-      message: t('dashboard.notify.preparingCheckingWallet'),
+    startLoader(txTaskList, () => {
+      $q.notify({ type: 'warning', message: t('info.cancelled') });
     });
+
+    updateStep(TASK_INPUTS_CHECK, 'done');
+    updateStep(TASK_PREPARE_TX, 'running');
+
     try {
       const signRequest = transferFts({
         category: row.token!.category,
@@ -525,46 +552,65 @@ const performBurnCollectedTokens = (row: any) => {
         network: import.meta.env.VITE_BCH_NETWORK as Network,
         transferType: 'burn',
       });
-      loadingGroup({ message: t('dashboard.notify.preparingForSignature') });
-      const response = await manager.value!.signTransaction(signRequest);
-      loadingGroup({ message: t('dashboard.notify.broadcasting') });
-      const broadcastResponse = await broadcast(response.signedTransaction);
-      if (broadcastResponse.ok) {
-        const broadcastResult = await broadcastResponse.json();
-        if (broadcastResult.success) {
-          loadingGroup({ message: t('dashboard.notify.awaitingPropagation') });
-          const networkType =
-            import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-              ? NetworkType.Testnet
-              : NetworkType.Mainnet;
-          await new BaseWallet(networkType).waitForTransaction({
-            txHash: broadcastResult.txid,
-          });
 
-          await wallet.value?.sync();
-          triggerRef(wallet);
-          await db.saveActivity({
-            event: t('dashboard.notify.activityEventBurnFts'),
-            txid: broadcastResult.txid,
-            status: 'success',
-          });
-          loadingGroup();
-          $q.dialog({
-            component: TransactionStatusDialog,
-            componentProps: {
-              statusType: 'success',
-              statusText: t('dashboard.notify.transferBurned'),
-              txid: broadcastResult.txid,
-            },
-          });
-        } else {
-          throw new Error(broadcastResult.error);
-        }
+      updateStep(TASK_PREPARE_TX, 'done');
+      updateStep(TASK_WAIT_FOR_SIG, 'running');
+
+      const response = await manager.value!.signTransaction(signRequest);
+
+      updateStep(TASK_WAIT_FOR_SIG, 'done');
+      updateStep(TASK_BROADCASTING, 'running');
+
+      const [broadcastError, txid] = await broadcastTransaction({
+        transactionHex: response.signedTransaction,
+        network: import.meta.env.VITE_BCH_NETWORK,
+        onProgress: (progress: string) => {
+          const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress });
+          updateStep(TASK_BROADCASTING, 'running', newLabel);
+        },
+      });
+
+      if (broadcastError) {
+        updateStep(TASK_BROADCASTING, 'failed');
+        throw broadcastError;
       }
+
+      updateStep(TASK_BROADCASTING, 'done');
+      updateStep(TASK_WAITING_PROPAGATION, 'running');
+
+      const networkType =
+        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+          ? NetworkType.Testnet
+          : NetworkType.Mainnet;
+      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+
+      updateStep(TASK_WAITING_PROPAGATION, 'done');
+      updateStep(TASK_REFRESH_UTXOS, 'running');
+
+      await wallet.value?.sync();
+      triggerRef(wallet);
+
+      updateStep(TASK_REFRESH_UTXOS, 'done');
+
+      await db.saveActivity({
+        event: t('dashboard.notify.activityEventBurnFts'),
+        txid,
+        status: 'success',
+      });
+
+      stopLoader(1000);
+
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: t('dashboard.notify.transferBurned'),
+          txid,
+        },
+      });
     } catch (error: any) {
+      stopLoader(3000);
       $q.notify({ type: 'Error', message: error.message });
-    } finally {
-      loadingGroup();
     }
   });
 };

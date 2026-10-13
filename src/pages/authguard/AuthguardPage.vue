@@ -3,7 +3,7 @@
     <div class="row justify-center q-pa-md">
       <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-gutter-y-lg">
         <div class="q-mb-md q-px-sm">
-          <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
+          <q-btn flat dense icon="arrow_back" :label="t('button.back')" color="grey-4" @click="router.back()" />
         </div>
         <q-card class="q-pa-lg rounded-borders">
           <div class="row">
@@ -13,7 +13,7 @@
                 <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" />
               </q-avatar>
               <div>
-                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || 'Authguard Vault' }}</div>
+                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || t('authguard.vault') }}</div>
                 <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
                   identitySnapshot.description }}</div>
               </div>
@@ -27,7 +27,7 @@
               <div class="col-12 col-sm-6">
                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
                   <q-icon name="lock" color="warning"></q-icon>
-                  <div>Authguard Vault Address</div>
+                  <div>{{ t('authguard.vaultAddress') }}</div>
                 </div>
                 <div class="flex items-center q-gutter-x-xs">
                   <span class="text-caption text-grey-3 text-mono">{{ shortenAddress(vaultAddress) }}</span>
@@ -37,7 +37,7 @@
               <div class="col-12 col-sm-6">
                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
                   <q-icon name="key" color="warning"></q-icon>
-                  <div>Authguard Key NFT Category</div>
+                  <div>{{ t('authguard.keyNftCategory') }}</div>
                 </div>
                 <div class="flex items-center q-gutter-x-xs">
                   <span class="text-caption text-grey-3 text-mono">{{ shortenTokenId(authkeyCategory) }}</span>
@@ -58,8 +58,8 @@
                         <q-img v-else
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
-                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">No Icon — generated
-                            placeholder</q-tooltip>
+                          <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
+                            }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>
@@ -76,37 +76,37 @@
                           <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                             <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                            Mixed
+                            {{ t('authguard.badgeMixed') }}
                           </q-badge>
                           <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                             <q-icon name="token" size="10px" class="q-mr-xs" />
-                            NFT
+                            {{ t('authguard.badgeNft') }}
                           </q-badge>
                           <q-badge v-else color="dark" text-color="green-4"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                             <q-icon name="money" size="10px" class="q-mr-xs" />
-                            Fungible
+                            {{ t('authguard.badgeFungible') }}
                           </q-badge>
 
                           <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark"
                             text-color="purple-4"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                             <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
-                            Minting
+                            {{ t('authguard.badgeMinting') }}
                           </q-badge>
                           <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
                             text-color="teal-10"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
                             <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
-                            Mutable
+                            {{ t('authguard.badgeMutable') }}
                           </q-badge>
                           <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark"
                             text-color="grey-6"
                             class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
                             dense>
                             <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
-                            Immutable
+                            {{ t('authguard.badgeImmutable') }}
                           </q-badge>
                         </div>
                       </div>
@@ -123,9 +123,9 @@
 
                 <template v-slot:body-cell-actions="props">
                   <q-td :props="props" class="text-right">
-                    <q-btn flat dense icon="lock_open" label="Unlock" size="sm" color="grey-4" class="q-mr-sm"
+                    <q-btn flat dense icon="lock_open" :label="t('button.unlock')" size="sm" color="grey-4" class="q-mr-sm"
                       @click="confirmUnguard(props.row)" />
-                    <q-btn flat dense icon="mdi-fire" label="Burn" size="sm" color="orange"
+                    <q-btn flat dense icon="mdi-fire" :label="t('button.burn')" size="sm" color="orange"
                       @click="confirmBurn(props.row)" />
                   </q-td>
                 </template>
@@ -150,21 +150,25 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { createAuthguardContract } from 'src/core/authguard/create-authguard-contract'
 import { unguardAuthhead, burnAuthhead } from 'src/core/transaction'
-import { broadcast } from 'src/core/transaction/broadcast'
 import { shortenTokenId, getTokenType } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { broadcastTransaction } from 'src/services/transaction'
+import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useQuasar } from 'quasar'
 import { decodeCashAddress } from '@bitauth/libauth'
-import { delay } from 'mainnet-js-v3'
+import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import CopyText from 'components/CopyText.vue'
 import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
 import BurnAuthheadDialog from 'src/components/dialogs/BurnAuthheadDialog.vue'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import type { DecoratedUtxo } from 'src/core/types'
 import type { QTableColumn } from 'quasar'
 import { shortenAddress } from 'src/apps/utils'
@@ -172,10 +176,12 @@ import { shortenAddress } from 'src/apps/utils'
 const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
+const { t } = useI18n()
 const { wallet, manager } = useWizardConnectWallet()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
+const { startLoader, updateStep, stopLoader } = useCancelableLoadingDialog()
 
 const vaultUtxos = ref<any[]>([])
 const loading = ref(false)
@@ -252,19 +258,26 @@ const onBurnDialogConfirm = () => {
 }
 
 const handleUnguard = async (row: any) => {
+  const a = activeAuthhead.value
+  if (!a?.authkey) {
+    $q.notify({ type: 'negative', message: t('info.authkeyNotAvailable') })
+    return
+  }
+
+  const funderUtxos = (wallet.value?.utxos || []).filter((u: any) => !u.token)
+  if (funderUtxos.length === 0) {
+    $q.notify({ type: 'negative', message: t('info.insufficientBchBalance') })
+    return
+  }
+
+  startLoader(txTaskList, () => {
+    $q.notify({ type: 'warning', message: t('info.cancelled') })
+  })
+
+  updateStep(TASK_INPUTS_CHECK, 'done')
+  updateStep(TASK_PREPARE_TX, 'running')
+
   try {
-    const a = activeAuthhead.value
-    if (!a?.authkey) {
-      $q.notify({ type: 'negative', message: 'Authkey not available' })
-      return
-    }
-
-    const funderUtxos = (wallet.value?.utxos || []).filter((u: any) => !u.token)
-    if (funderUtxos.length === 0) {
-      $q.notify({ type: 'negative', message: 'Insufficient BCH balance' })
-      return
-    }
-
     const ownerAddress = wallet.value!.getTokenDepositAddress(0)
     const signRequest = unguardAuthhead({
       authheadUtxo: row,
@@ -274,44 +287,78 @@ const handleUnguard = async (row: any) => {
       network: import.meta.env.VITE_BCH_NETWORK as any
     })
 
-    const loadingGroup = $q.loading.show({ message: 'Waiting for signature...' })
-    try {
-      const response = await manager.value!.signTransaction(signRequest)
-      loadingGroup({ message: 'Broadcasting transaction...' })
-      const broadcastResponse = await broadcast(response.signedTransaction)
-      if (broadcastResponse.ok) {
-        const result = await broadcastResponse.json()
-        if (result.success) {
-          await delay(2000)
-          $q.notify({ type: 'positive', message: 'Successfully released from AuthGuard' })
-          await loadAuthguardUtxos(a)
-        } else {
-          throw new Error(result.error)
-        }
+    updateStep(TASK_PREPARE_TX, 'done')
+    updateStep(TASK_WAIT_FOR_SIG, 'running')
+
+    const response = await manager.value!.signTransaction(signRequest)
+
+    updateStep(TASK_WAIT_FOR_SIG, 'done')
+    updateStep(TASK_BROADCASTING, 'running')
+
+    const [broadcastError, txid] = await broadcastTransaction({
+      transactionHex: response.signedTransaction,
+      network: import.meta.env.VITE_BCH_NETWORK,
+      onProgress: (progress: string) => {
+        const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+        updateStep(TASK_BROADCASTING, 'running', newLabel)
       }
-    } finally {
-      loadingGroup()
+    })
+
+    if (broadcastError) {
+      updateStep(TASK_BROADCASTING, 'failed')
+      throw broadcastError
     }
+
+    updateStep(TASK_BROADCASTING, 'done')
+    updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+
+    updateStep(TASK_WAITING_PROPAGATION, 'done')
+    updateStep(TASK_REFRESH_UTXOS, 'running')
+
+    await loadAuthguardUtxos(a)
+
+    updateStep(TASK_REFRESH_UTXOS, 'done')
+    stopLoader(1000)
+
+    $q.dialog({
+      component: TransactionStatusDialog,
+      componentProps: {
+        statusType: 'success',
+        statusText: t('success.authheadRelease'),
+        txid
+      }
+    })
   } catch (error: any) {
+    stopLoader(3000)
     console.log('Unguard error', error)
-    $q.notify({ type: 'negative', message: error.message || 'Failed to release UTXO' })
+    $q.notify({ type: 'negative', message: error.message || t('error.authheadRelease') })
   }
 }
 
 const handleBurn = async (row: any) => {
+  const a = activeAuthhead.value
+  if (!a?.authkey) {
+    $q.notify({ type: 'negative', message: t('info.authkeyNotAvailable') })
+    return
+  }
+
+  const funderUtxos = (wallet.value?.utxos || []).filter((u: any) => !u.token)
+  if (funderUtxos.length === 0) {
+    $q.notify({ type: 'negative', message: t('info.insufficientBchBalance') })
+    return
+  }
+
+  startLoader(txTaskList, () => {
+    $q.notify({ type: 'warning', message: t('info.cancelled') })
+  })
+
+  updateStep(TASK_INPUTS_CHECK, 'done')
+  updateStep(TASK_PREPARE_TX, 'running')
+
   try {
-    const a = activeAuthhead.value
-    if (!a?.authkey) {
-      $q.notify({ type: 'negative', message: 'Authkey not available' })
-      return
-    }
-
-    const funderUtxos = (wallet.value?.utxos || []).filter((u: any) => !u.token)
-    if (funderUtxos.length === 0) {
-      $q.notify({ type: 'negative', message: 'Insufficient BCH balance' })
-      return
-    }
-
     const sampleAddress = wallet.value!.getTokenDepositAddress(0)
     const decodedAddress = decodeCashAddress(sampleAddress)
     if (typeof decodedAddress === 'string') {
@@ -327,27 +374,54 @@ const handleBurn = async (row: any) => {
       network: import.meta.env.VITE_BCH_NETWORK as any
     })
 
-    const loadingGroup = $q.loading.show({ message: 'Waiting for signature...' })
-    try {
-      const response = await manager.value!.signTransaction(signRequest)
-      loadingGroup({ message: 'Broadcasting transaction...' })
-      const broadcastResponse = await broadcast(response.signedTransaction)
-      if (broadcastResponse.ok) {
-        const result = await broadcastResponse.json()
-        if (result.success) {
-          await delay(2000)
-          $q.notify({ type: 'positive', message: 'Successfully burned token identity' })
-          await loadAuthguardUtxos(a)
-        } else {
-          throw new Error(result.error)
-        }
+    updateStep(TASK_PREPARE_TX, 'done')
+    updateStep(TASK_WAIT_FOR_SIG, 'running')
+
+    const response = await manager.value!.signTransaction(signRequest)
+
+    updateStep(TASK_WAIT_FOR_SIG, 'done')
+    updateStep(TASK_BROADCASTING, 'running')
+
+    const [broadcastError, txid] = await broadcastTransaction({
+      transactionHex: response.signedTransaction,
+      network: import.meta.env.VITE_BCH_NETWORK,
+      onProgress: (progress: string) => {
+        const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+        updateStep(TASK_BROADCASTING, 'running', newLabel)
       }
-    } finally {
-      loadingGroup()
+    })
+
+    if (broadcastError) {
+      updateStep(TASK_BROADCASTING, 'failed')
+      throw broadcastError
     }
+
+    updateStep(TASK_BROADCASTING, 'done')
+    updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+
+    updateStep(TASK_WAITING_PROPAGATION, 'done')
+    updateStep(TASK_REFRESH_UTXOS, 'running')
+
+    await loadAuthguardUtxos(a)
+
+    updateStep(TASK_REFRESH_UTXOS, 'done')
+    stopLoader(1000)
+
+    $q.dialog({
+      component: TransactionStatusDialog,
+      componentProps: {
+        statusType: 'success',
+        statusText: t('success.authheadBurn'),
+        txid
+      }
+    })
   } catch (error: any) {
+    stopLoader(3000)
     console.log('Burn error', error)
-    $q.notify({ type: 'negative', message: error.message || 'Failed to burn UTXO' })
+    $q.notify({ type: 'negative', message: error.message || t('error.authheadBurn') })
   }
 }
 
