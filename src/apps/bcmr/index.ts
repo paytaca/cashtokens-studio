@@ -43,7 +43,7 @@ import {
 // import type { BcmrStorageArtifact } from '../ipfs';
 // import { ISODateString } from './types';
 // import { storeRegistry } from '../ipfs';
-export { locateRegistry } from './locateRegistry';
+// export { locateRegistry } from './locateRegistry';   // moved to src/core/bcmr/locate-registry.ts
 // export class Bcmr implements Registry {
 //   $schema?: string | undefined;
 //   version: { major: number; minor: number; patch: number };

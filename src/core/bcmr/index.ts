@@ -5,6 +5,7 @@ export * from './indexer'
 export * from './utils'
 export * from './authenticate'
 export * from './reserved-symbols'
+export * from './locate-registry'
 
 export const BCMR_PREFIX = '6a0442434d52'
 

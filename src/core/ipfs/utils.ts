@@ -153,3 +153,18 @@ export function isCID(str: string) {
 
   return cidv0Regex.test(str) || cidv1Regex.test(str) || cidv1AlternativeRegex.test(str);
 }
+
+/**
+ * Same as {@link parseIpfsUrl}, but returns `undefined` instead of throwing when the input
+ * isn't a recognizable IPFS/IPNS URL.
+ *
+ * Callers that also handle plain HTTP URLs need this: a registry published on an ordinary
+ * domain must fall through to a plain `fetch` rather than abort the whole lookup.
+ */
+export function tryParseIpfsUrl(input: string): ParsedIpfsUrl | undefined {
+  try {
+    return parseIpfsUrl(input)
+  } catch {
+    return undefined
+  }
+}
