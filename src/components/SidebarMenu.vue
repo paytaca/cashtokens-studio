@@ -3,7 +3,8 @@
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
       <template v-slot:default-header="prop">
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
-          <q-icon :name="prop.node.icon || 'share'"
+          <img v-if="prop.node.img" :src="prop.node.img" class="sidebar-logo q-mr-sm" alt="" />
+          <q-icon v-else :name="prop.node.icon || 'share'"
             :color="prop.node.label == 'Authguards' || prop.node.label == 'Authguard Keys' ? 'orange' : undefined"
             size="28px" class="q-mr-sm" />
           <div>{{ prop.node.label }}</div>
@@ -18,6 +19,7 @@
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch } from 'vue'
 import { useUser } from 'src/stores/user'
+import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 
 defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
@@ -32,6 +34,7 @@ const hrefs = {
   createAuthKey: '/authguard/authkeys/create',
   authguards: '/authguard/authguards',
   authguardKeys: '/authguard/authkeys',
+  requests: '/wizard-connect/requests',
 }
 
 const selected = ref<string | null>(hrefs.dashboard)
@@ -80,6 +83,11 @@ const menu = computed<any[]>(() => {
       href: hrefs.activities,
       icon: 'history',
     },
+    {
+      label: 'Requests',
+      href: hrefs.requests,
+      img: WIZARDCONNECT_LOGO,
+    },
 
   ]
 })
@@ -104,6 +112,14 @@ watch(() => route.path, (currentPath) => {
   color: rgb(254, 254, 254);
   background: linear-gradient(90deg, rgba(39, 48, 68, 0.978) 0%, rgba(24, 27, 36, 0.98), 42%, rgb(26, 41, 62) 77%, rgb(22, 39, 52) 100%);
   border-radius: 25px
+}
+
+.sidebar-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 .sidebar-link {

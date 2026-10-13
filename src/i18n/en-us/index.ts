@@ -230,6 +230,22 @@ export default {
       sequenceUnknown: '?',
     },
   },
+  wizardConnect: {
+    requests: {
+      title: 'WizardConnect Requests',
+      caption:
+        'Signature requests this app has sent and that are still waiting for your wallet. They only exist for the current session.',
+      columnRequest: 'Request',
+      columnTime: 'Sent',
+      unknownRequest: 'Signature request',
+      empty: 'No pending requests',
+      emptyCaption:
+        'Requests appear here while they wait for your wallet to approve or reject them.',
+      cancelTooltip: 'Cancel this request',
+      cancelError: 'Could not cancel the request',
+      view: 'View pending requests',
+    },
+  },
   dashboard: {
     pageTitle: {
       managedTokens: 'Managed Tokens',

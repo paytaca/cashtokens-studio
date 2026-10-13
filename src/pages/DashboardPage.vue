@@ -178,6 +178,22 @@
 
               <q-card-section class="q-pt-sm q-pb-sm">
                 <q-list dense dark>
+                  <q-item class="px-0 cursor-pointer" clickable
+                    @click="router.push({ name: 'wizard-connect-requests' })">
+                    <q-item-section>
+                      <q-item-label caption class="text-grey-5">{{ t('wizardConnect.requests.title') }}</q-item-label>
+                      <q-item-label class="row items-center no-wrap q-gutter-x-sm text-grey-2">
+                        <q-avatar size="sm" rounded>
+                          <q-img :src="WIZARDCONNECT_LOGO"></q-img>
+                        </q-avatar>
+                        <span class="ellipsis">{{ t('wizardConnect.requests.view') }}</span>
+                        <q-badge v-if="pendingRequestCount > 0" color="warning" text-color="white"
+                          :label="pendingRequestCount" rounded />
+                        <q-space />
+                        <q-icon name="chevron_right" color="grey-5" />
+                      </q-item-label>
+                    </q-item-section>
+                  </q-item>
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption>
@@ -356,11 +372,26 @@ function openQrDialog(address: string, options: { title: string, icon: string })
   })
 }
 
+/**
+ * `pendingSignatureRequests` is a private, non-reactive Map on the dapp manager
+ * (see the Requests page), so the badge is refreshed on the dashboard's
+ * existing 1s tick.
+ */
+const pendingRequestCount = ref(0)
+const refreshPendingRequestCount = () => {
+  const pending = (manager.value as unknown as { pendingSignatureRequests?: Map<number, unknown> })
+    ?.pendingSignatureRequests
+  pendingRequestCount.value = pending ? pending.size : 0
+}
+watch(() => manager.value, refreshPendingRequestCount, { immediate: true })
+
 const now = ref(Date.now())
 let nowTimer: ReturnType<typeof setInterval> | undefined
 onMounted(() => {
+  refreshPendingRequestCount()
   nowTimer = setInterval(() => {
     now.value = Date.now()
+    refreshPendingRequestCount()
   }, 1000)
 })
 

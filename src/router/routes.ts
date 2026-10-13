@@ -258,6 +258,16 @@ const routes: RouteRecordRaw[] = [
         path: ':category/nfts',
         component: () => import('pages/NftCategoryPage.vue'),
       },
+      {
+        name: 'nft-detail',
+        path: ':category/nft',
+        component: () => import('pages/issuer/manage/NftPage.vue'),
+      },
+      {
+        name: 'nft-collection-mint',
+        path: ':category/mint',
+        component: () => import('pages/MintNftPage.vue'),
+      },
     ],
   },
   // {
@@ -348,23 +358,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/wizard-connect/ConnectPage.vue'),
       },
       {
-        name: 'requests',
+        name: 'wizard-connect-requests',
         path: 'requests',
         component: () => import('pages/wizard-connect/RequestsPage.vue'),
-      },
+      }
     ],
   },
-  // {
-  //   path: '/authguard',
-  //   component: () => import('layouts/MainLayout.vue'),
-  //   children: [
-  //     {
-  //       name: 'create-authkey',
-  //       path: 'authkey/create',
-  //       component: () => import('pages/authguard/CreateAuthKeyPage.vue'),
-  //     },
-  //   ]
-  // },
   // Always leave this as last one,
   // but you can also remove it
   {
