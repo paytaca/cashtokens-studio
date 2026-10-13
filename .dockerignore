@@ -5,6 +5,8 @@
 
 # Local build output & scratch dirs
 .quasar
+# Quasar's temporary compiled copy of quasar.config.js (never a build input)
+quasar.config.js.temporary.compiled.*.mjs
 dist
 archive
 temp

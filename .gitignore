@@ -12,6 +12,8 @@ node_modules
 # Quasar core related directories
 .quasar
 /dist
+# Quasar writes a temporary compiled copy of quasar.config.js next to it during dev/build
+quasar.config.js.temporary.compiled.*.mjs
 
 # Cordova related directories and files
 /src-cordova/node_modules

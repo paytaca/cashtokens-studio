@@ -83,7 +83,8 @@ You must strictly isolate platform-agnostic application architecture, applicatio
 
 ### 4. Git & Destructive Actions
 
-- **Never change git state unless explicitly asked.** No `git add`, `git commit`, `git amend`, `git reset`, or `git push` on your own initiative. Implement the change, report it, and leave it uncommitted for review.
+- **Never change git state unless explicitly asked.** No `git add`, `git commit`, `git amend`, or `git reset` on your own initiative. Implement the change, report it, and leave it uncommitted for review.
+- **Never push.** Remote state is the maintainer's to publish: no `git push`, no force-push, no pull requests on your own initiative — commits stay local and are pushed manually.
 - **Ambiguous is not permission.** If a request *could* be read as including a commit or other state change, ask before acting.
 - **Never modify `.env*` files** unless explicitly told to.
 
