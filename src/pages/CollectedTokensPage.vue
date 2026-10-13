@@ -418,7 +418,12 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
     allowEdit: false,
   });
 
-  router.push(`/issuer/nft-collections/${row.token?.category}/nft`);
+  router.push({
+    name: 'nft-detail',
+    params: {
+      category: row.token!.category
+    }
+  });
 };
 
 const performSendCollectedTokens = (row: any) => {
