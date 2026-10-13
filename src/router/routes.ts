@@ -128,11 +128,6 @@ const routes: RouteRecordRaw[] = [
   //   component: () => import('layouts/MainLayout.vue'),
   //   children: [
   //     {
-  //       name: 'ft-reserves',
-  //       path: 'ft-reserves',
-  //       component: () => import('pages/issuer/manage/FtReserves.vue'),
-  //     },
-  //     {
   //       name: 'nft-reserves',
   //       path: 'nft-reserves',
   //       component: () => import('pages/issuer/manage/NftReserves.vue'),
