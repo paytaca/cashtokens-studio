@@ -77,7 +77,7 @@
                                 <div class="col-12">
                                     <FormField>
                                         <label for="">Symbol</label>
-                                        <q-input v-model="identitySnapshot.token.symbol" outlined></q-input>
+                                        <q-input v-model="identitySnapshot.token.symbol" :rules="symbolRules" outlined></q-input>
                                     </FormField>
                                 </div>
                                 <div class="col-12">
@@ -176,7 +176,7 @@ import { getErrorMessage } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
 import { uploadFile } from 'src/core/ipfs'
 
-import { createIdentitySnapshotTemplate, createTokenRegistry } from 'src/core/bcmr'
+import { createIdentitySnapshotTemplate, createTokenRegistry, isReservedTokenSymbol } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import { broadcastTransaction } from 'src/services/transaction'
 import { createSquareThumbnail } from 'src/utils'
@@ -187,6 +187,10 @@ const $q = useQuasar()
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+
+const symbolRules = [
+    (val: string) => !isReservedTokenSymbol(val) || t('warning.symbolReserved'),
+]
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()

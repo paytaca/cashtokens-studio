@@ -198,7 +198,7 @@
                                     <q-input v-model="identitySnapshot.token!.symbol" label="Token Symbol *" filled
                                         type="text"
                                         @update:model-value="val => identitySnapshot.token!.symbol = (val as string)?.toUpperCase()"
-                                        :rules="[val => !!val || 'Symbol is required']" class="full-width" />
+                                        :rules="symbolRules" class="full-width" />
 
                                     <q-input v-model="identitySnapshot.uris!.icon" filled label="Icon"
                                         placeholder="Enter icon's URL or upload an icon" class="full-width">
@@ -247,6 +247,7 @@
 
 import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
 import { MAX_VM_NUMBER } from 'src/core/constants'
 import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
@@ -254,7 +255,7 @@ import { uploadFile } from 'src/core/ipfs/upload-file'
 import { NFTCapability, Utxo } from 'mainnet-js-v3'
 import { UtxoWithPath } from 'src/core/types'
 import { createToken, isBroadcastSuccess } from 'src/core/transaction'
-import { createTokenRegistry } from 'src/core/bcmr'
+import { createTokenRegistry, isReservedTokenSymbol } from 'src/core/bcmr'
 import { db } from 'src/core/client-db'
 import { useRoute, useRouter } from 'vue-router'
 import { broadcast } from 'src/core/transaction/broadcast'
@@ -278,8 +279,14 @@ import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTX
 import { subscribe } from 'src/services/watchtower'
 
 const $q = useQuasar()
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+
+const symbolRules = [
+    (val: string) => !!val || t('warning.symbolRequired'),
+    (val: string) => !isReservedTokenSymbol(val) || t('warning.symbolReserved'),
+]
 const {
     manager,
     wallet

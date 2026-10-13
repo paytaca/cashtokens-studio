@@ -16,6 +16,7 @@
       <FormField>
         <label>Symbol</label>
         <q-input v-model="token.symbol" class="full-width" filled></q-input>
+        <div v-if="symbolIsReserved" class="text-warning text-caption">{{ t('warning.symbolReserved') }}</div>
       </FormField>
       <FormField>
         <label>Decimals</label>
@@ -37,11 +38,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import type { TokenCategory } from 'src/core/bcmr/bcmr-v2.schema'
-import { default as reservedCryptoSymbols } from 'src/apps/bcmr/reserved-token-symbols-cryptocurrencies.json'
+import { isReservedTokenSymbol } from 'src/core/bcmr'
 import FormField from '../FormField.vue';
 const { t } = useI18n()
 const router = useRouter()
@@ -52,9 +53,10 @@ const props = defineProps<{
   timestamp?: string
 }>()
 
-const reservedSymbols = reservedCryptoSymbols.concat(reservedCryptoSymbols)
 const token = defineModel<TokenCategory>('token', { required: true })
 const hidden = ref<boolean>(false)
+
+const symbolIsReserved = computed(() => isReservedTokenSymbol(token.value.symbol))
 
 const openNftCategory = () => {
   router.push({

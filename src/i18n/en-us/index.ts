@@ -60,6 +60,8 @@ export default {
     resetNftCategoryTitle: 'Reset changes',
     resetNftCategoryMessage:
       'This will delete {count} unpublished NFT(s) and reset your changes. Continue?',
+    symbolRequired: 'Symbol is required',
+    symbolReserved: 'This symbol is reserved. Please choose a different symbol.',
   },
   button: {
     ok: 'Ok',

@@ -4,6 +4,7 @@ export * from './enum'
 export * from './indexer'
 export * from './utils'
 export * from './authenticate'
+export * from './reserved-symbols'
 
 export const BCMR_PREFIX = '6a0442434d52'
 
