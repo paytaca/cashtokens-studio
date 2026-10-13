@@ -2,13 +2,23 @@
 // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file
 
 import { defineConfig } from '#q-app/wrappers';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'url';
 import { mergeConfig } from 'vite';
 
 export default defineConfig((ctx) => {
-  let envFiles = [];
+  // Extra env files for Quasar to read, on top of its automatic selection
+  // (`quasar dev` reads .env.dev, `quasar build` reads .env.prod). Entries are
+  // appended last, so they take precedence over the automatic ones.
+  const envFiles = [];
   if (Boolean(process.env.FORCE_PROD)) {
-    envFiles = ['./.env.prod', './.env.local.prod'];
+    // yarn dev:prod — run the dev server with production parameters
+    envFiles.push('./.env.prod', './.env.local.prod');
+  }
+  if (process.env.BUILD_ENV === 'dev') {
+    // dev/staging deploys build against .env.dev (buildType is always "prod"
+    // for `quasar build`, so Quasar would otherwise pick .env.prod)
+    envFiles.push('./.env.dev');
   }
 
   return {
@@ -84,6 +94,17 @@ export default defineConfig((ctx) => {
           if (!viteConf.optimizeDeps.exclude.includes('@bitauth/libauth')) {
             viteConf.optimizeDeps.exclude.push('@bitauth/libauth');
           }
+
+          // Vite 8 derives the SSR server entry extension from the app
+          // package.json `type` (no `type` => commonjs => `.mjs`), but Quasar's
+          // webserver template imports './server/server-entry.js'. Pin the entry
+          // filename so the generated index.js resolves it.
+          viteConf.build = viteConf.build || {};
+          viteConf.build.rolldownOptions = viteConf.build.rolldownOptions || {};
+          viteConf.build.rolldownOptions.output = {
+            ...(viteConf.build.rolldownOptions.output || {}),
+            entryFileNames: '[name].js',
+          };
         }
 
         // viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
@@ -101,6 +122,12 @@ export default defineConfig((ctx) => {
         if (!viteConf.optimizeDeps.exclude.includes('@bitjson/qr-code')) {
           viteConf.optimizeDeps.exclude.push('@bitjson/qr-code');
         }
+
+        // mainnet-js (v2) evaluates `await ExchangeRate.get("usd")` at module
+        // scope (rate/ExchangeRate.js). Vite bundles web workers as iife by
+        // default, and iife cannot represent top-level await, so emit ES module
+        // workers instead. The worker is already created with { type: 'module' }.
+        viteConf.worker = { ...(viteConf.worker || {}), format: 'es' };
       },
 
       // viteVuePluginOptions: {},
@@ -214,7 +241,16 @@ export default defineConfig((ctx) => {
         'render', // keep this as last one
       ],
 
-      // extendPackageJson (json) {},
+      // dist/ssr is a separate yarn project: Quasar only copies `dependencies`,
+      // so the root `resolutions` (which pin @bitauth/libauth for mainnet-js)
+      // would be lost and yarn would resolve mainnet-js's libauth to 2.1.0,
+      // whose API it doesn't match.
+      extendPackageJson(pkg) {
+        const { resolutions } = JSON.parse(
+          readFileSync(new URL('./package.json', import.meta.url), 'utf-8')
+        )
+        if (resolutions) pkg.resolutions = resolutions
+      },
       // extendSSRWebserverConf (esbuildConf) {},
 
       // manualStoreSerialization: true,

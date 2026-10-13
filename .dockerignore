@@ -1,10 +1,32 @@
+# Dependencies & VCS
 **/node_modules
-*.log
 .git
-.vscode
-# .eslintignore
-# .eslintrc.cjs
-.prettierrc
-.editorconfig
-README.md
+.gitignore
 
+# Local build output & scratch dirs
+.quasar
+dist
+archive
+temp
+sample_built_txs
+.vscode
+
+# Logs & docs
+*.log
+**/*.log
+*.md
+.DS_Store
+
+# Runtime secrets for docker compose — never needed inside the build context.
+deployment/.env*
+
+# Not build inputs: `quasar build` resolves `.env.prod` / `.env.local.prod`
+# (buildType === "prod"), plus `.env.dev` when BUILD_ENV=dev is passed.
+.env
+.env.local
+.env.dev_backup
+
+# NOTE: root `.env.dev` (BUILD_ENV=dev builds), `.env.prod` and
+# `.env.local.prod` ARE required at build time — they carry the client-side
+# VITE_* values baked into the bundle — so they intentionally stay in the
+# context. The multi-stage build keeps them out of the final runtime image.

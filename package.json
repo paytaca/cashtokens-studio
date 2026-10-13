@@ -48,7 +48,9 @@
     "pinia": "^2.0.11",
     "quasar": "^2.19.3",
     "rxjs": "^7.8.2",
+    "source-map": "^0.7.4",
     "vue": "^3.4.0",
+    "vue-i18n": "^10.0.0",
     "vue-router": "^4.0.0",
     "wizardconnect-vue": "github:paytaca/wizardconnect-vue"
   },
