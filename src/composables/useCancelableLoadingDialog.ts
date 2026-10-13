@@ -7,6 +7,8 @@ export type LoaderStepStatus = 'pending' | 'running' | 'done' | 'failed';
 export interface LoaderStepDefinition {
   id: string;
   label: string;
+  /** Whether the dialog's Cancel button stays available while this step runs. */
+  cancelable?: boolean;
 }
 
 export interface LoaderStep extends LoaderStepDefinition {
@@ -16,9 +18,23 @@ export interface LoaderStep extends LoaderStepDefinition {
 export function useCancelableLoadingDialog() {
   const $q = useQuasar();
   const steps = ref<LoaderStep[]>([]);
+  const canCancel = ref(true);
   let loadingDialog: DialogChainObject | null = null;
   let abortController: AbortController | null = null;
   let suppressCancel = false;
+
+  /**
+   * Cancelling only makes sense while the active step is still reversible, so
+   * the dialog's Cancel button is disabled on steps flagged `cancelable: false`.
+   */
+  const syncDialog = () => {
+    const runningStep = steps.value.find((step) => step.status === 'running');
+    canCancel.value = runningStep ? runningStep.cancelable !== false : true;
+
+    loadingDialog?.update({
+      componentProps: { steps: [...steps.value], canCancel: canCancel.value },
+    });
+  };
 
   /**
    * Initializes and displays the checklist overlay dialog
@@ -29,6 +45,7 @@ export function useCancelableLoadingDialog() {
   ) => {
     abortController = new AbortController();
     suppressCancel = false;
+    canCancel.value = true;
 
     steps.value = initialSteps.map((step) => ({
       ...step,
@@ -37,11 +54,12 @@ export function useCancelableLoadingDialog() {
 
     loadingDialog = $q.dialog({
       component: CancelableLoadingDialog,
-      componentProps: { steps: steps.value },
+      componentProps: { steps: steps.value, canCancel: canCancel.value },
     });
 
     loadingDialog.onCancel(() => {
       if (suppressCancel) return;
+      if (!canCancel.value) return;
 
       if (abortController) abortController.abort();
 
@@ -59,11 +77,7 @@ export function useCancelableLoadingDialog() {
       if (newLabel) {
         targetStep.label = newLabel
       }
-      if (loadingDialog) {
-        loadingDialog.update({
-          componentProps: { steps: [...steps.value] },
-        });
-      }
+      syncDialog();
     }
   };
 
@@ -82,6 +96,7 @@ export function useCancelableLoadingDialog() {
     startLoader,
     updateStep,
     stopLoader,
+    canCancel,
     getSignal: () => abortController?.signal,
   };
 }

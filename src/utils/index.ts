@@ -5,15 +5,17 @@ export const TASK_BROADCASTING = 'broadcasting'
 export const TASK_WAITING_PROPAGATION = 'waiting-propagation'
 export const TASK_REFRESH_UTXOS = 'refresh-utxos'
 
-export type TxTaskList = { id: string, label: string }[]
+export type TxTaskList = { id: string, label: string, cancelable?: boolean }[]
 
 export const txTaskList = [
     { id: TASK_INPUTS_CHECK, label: 'Checking wallet for inputs.' },
     { id: TASK_PREPARE_TX, label: 'Preparing transaction.' },
     { id: TASK_WAIT_FOR_SIG, label: 'Waiting for signature. Please check your wallet.' },
-    { id: TASK_BROADCASTING, label: 'Broadcasting transaction. Please wait.' },
-    { id: TASK_WAITING_PROPAGATION, label: 'Waiting transaction propagation. Please wait.' },
-    { id: TASK_REFRESH_UTXOS, label: 'Refreshing UTXOs' },
+    // Once the transaction is on the wire there is nothing left to cancel, so
+    // the loader dialog disables its Cancel button from here on.
+    { id: TASK_BROADCASTING, label: 'Broadcasting transaction. Please wait.', cancelable: false },
+    { id: TASK_WAITING_PROPAGATION, label: 'Waiting transaction propagation. Please wait.', cancelable: false },
+    { id: TASK_REFRESH_UTXOS, label: 'Refreshing UTXOs', cancelable: false },
 ]
 
 export function updateTxTaskLabel({txTaskList, taskId, newTaskLabel }: { txTaskList: TxTaskList, taskId: string, newTaskLabel: string }) {

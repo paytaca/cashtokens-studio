@@ -33,7 +33,10 @@
             </q-card-section>
 
             <q-card-actions align="center" class="q-pt-none">
-                <q-btn rounded label="Cancel" color="negative" @click="onDialogCancel" />
+                <q-btn rounded :label="t('button.cancel')" color="negative" :disable="!canCancel"
+                    @click="onDialogCancel">
+                    <q-tooltip v-if="!canCancel">{{ t('info.cancelDisabled') }}</q-tooltip>
+                </q-btn>
             </q-card-actions>
         </q-card>
     </q-dialog>
@@ -41,14 +44,20 @@
 
 <script setup>
 import { useDialogPluginComponent } from 'quasar'
+import { useI18n } from 'vue-i18n'
 
 defineProps({
     steps: {
         type: Array,
         required: true
+    },
+    canCancel: {
+        type: Boolean,
+        default: true
     }
 })
 
 defineEmits([...useDialogPluginComponent.emits])
+const { t } = useI18n()
 const { dialogRef, onDialogHide, onDialogCancel } = useDialogPluginComponent()
 </script>

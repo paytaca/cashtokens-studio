@@ -13,6 +13,7 @@ export default {
   },
   info: {
     walletNotReady: 'Wallet not ready',
+    cancelDisabled: "This step can't be cancelled.",
     authkeyNotAvailable: 'Authkey not available',
     insufficientBchBalance: 'Insufficient BCH balance',
     cancelled: 'Cancelled by user',
