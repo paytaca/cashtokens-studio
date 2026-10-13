@@ -540,7 +540,7 @@ const viewRegistry = () => {
 
 const openMintPage = () => {
     appStore.setActiveMinter(authhead.value)
-    router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/mint')
+    router.push({ name: 'nft-collection-mint', params: { category: authhead.value!.token!.category } })
 }
 
 const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
@@ -556,7 +556,7 @@ const onNftRowClick = (_evt: Event, row: { type: string, nft: NftType }) => {
         nftType: row.nft,
         allowEdit: true
     })
-    router.push('/issuer/nft-collections/' + authhead.value!.token?.category + '/nft')
+    router.push({ name: 'nft-detail', params: { category: authhead.value!.token?.category } })
 }
 
 const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
@@ -673,7 +673,7 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
 
 onMounted(async () => {
     if (!authhead.value) {
-        router.push('/issuer/nft-collections')
+        router.push({ name: 'nft-collections' })
         return
     }
 

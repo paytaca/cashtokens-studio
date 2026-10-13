@@ -441,12 +441,12 @@ const viewRegistry = (authhead: UtxoWithAuthKey) => {
 const navigateToCollection = (_evt: Event, row: UtxoWithAuthKey) => {
     console.log('ROW', row)
     authguardStore.setActiveAuthhead(row)
-    router.push('/issuer/nft-collections/' + row.token?.category)
+    router.push({ name: 'nft-collection-detail', params: { category: row.token!.category } })
 }
 
 const navigateToMint = (row: UtxoWithAuthKey) => {
     authguardStore.setActiveAuthhead(row)
-    router.push('/issuer/nft-collections/' + row.token?.category + '/mint')
+    router.push({ name: 'nft-collection-mint', params: { category: row.token!.category } })
 }
 
 const AUTO_SYNC_INTERVAL = 30 * 60 * 1000

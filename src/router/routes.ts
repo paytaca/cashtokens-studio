@@ -102,65 +102,12 @@ const routes: RouteRecordRaw[] = [
   //   component: () => import('layouts/MainLayout.vue'),
   //   children: [
   //     {
-  //       name: 'create-authkey',
-  //       path: 'tokens/create/authkey',
-  //       component: () => import('pages/issuer/CreateAuthKey.vue'),
-  //     },
-  //     {
   //       name: 'import-auth-utxo',
   //       path: 'tokens/import-auth-utxo',
-  //       component: () => import('pages/issuer/ImportAuthUtxo.vue'),
-  //     },
-  //     {
-  //       name: 'mint-nft',
-  //       path: 'tokens/mint-nft',
-  //       component: () => import('pages/issuer/MintNft.vue'),
+  //       component: () => import('pages/authguard/ImportAuthheadPage.vue'),
   //     },
   //   ],
   // },
-  // {
-  //   path: '/issuer/manage',
-  //   component: () => import('layouts/MainLayout.vue'),
-  //   children: [
-  //     {
-  //       name: 'authkeys',
-  //       path: 'authkeys',
-  //       component: () => import('pages/issuer/manage/AuthKeys.vue'),
-  //     },
-  //     {
-  //       name: 'authguards',
-  //       path: 'authguards',
-  //       component: () => import('pages/issuer/manage/AuthGuards.vue'),
-  //     },
-  //   ],
-  // },
-  {
-    path: '/issuer',
-    component: () => import('layouts/MainLayout.vue'),
-    children: [
-      {
-        name: 'nft-collection-detail',
-        path: 'nft-collections/:category',
-        component: () => import('pages/NftCollectionPage.vue'),
-      },
-      {
-        name: 'nft-collection-mint',
-        path: 'nft-collections/:category/mint',
-        component: () => import('pages/MintNftPage.vue'),
-      },
-      {
-        name: 'nft-detail',
-        path: 'nft-collections/:category/nft',
-        component: () => import('pages/issuer/manage/NftPage.vue'),
-      },
-
-      {
-        name: 'nft-collections',
-        path: 'nft-collections',
-        component: () => import('pages/issuer/manage/NftCollectionsPage.vue'),
-      },
-    ],
-  },
   {
     path: '/authguard',
     component: () => import('layouts/MainLayout.vue'),
@@ -193,6 +140,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('layouts/MainLayout.vue'),
     children: [
       {
+        name: 'nft-collections',
+        path: 'nft-collections',
+        component: () => import('pages/token/NftCollectionsPage.vue'),
+      },
+      {
+        name: 'nft-collection-detail',
+        path: 'nft-collections/:category',
+        component: () => import('pages/NftCollectionPage.vue'),
+      },
+      {
         name: 'create-token',
         path: 'create',
         component: () => import('pages/token/CreateTokenPage.vue'),
@@ -205,7 +162,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'nft-detail',
         path: ':category/nft',
-        component: () => import('pages/issuer/manage/NftPage.vue'),
+        component: () => import('pages/token/NftPage.vue'),
       },
       {
         name: 'nft-collection-mint',
