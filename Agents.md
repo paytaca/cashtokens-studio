@@ -31,26 +31,32 @@ yarn test            # Run mocha tests (Run contextually; strict test-writing no
 
 ## 📂 Structural Boundaries & File Placement
 
-You must strictly isolate platform-agnostic application architecture, localization resources, and visual framework components:
+You must strictly isolate platform-agnostic application architecture, application services, localization resources, and visual framework components:
 
 ### 1. Target Core Architecture (`src/core/`)
 
 - **Pure Portability:** Everything under `src/core/` must be 100% independent of any UI framework (Vue, Quasar, etc.). It must run seamlessly across web apps, browser extensions, or Node.js environments.
 - **No Side-Effects or Globals:** No Vue reactivity, Pinia states, or direct browser globals are allowed in this directory. Inject dependencies explicitly as runtime parameters.
-- **`src/core/services/`**: All files executing external network requests, database logic, indexer communication, indexing calls, or third-party API communications **must** be contained here.
+- **Clients live with their domain:** a client for an external system belongs to the domain that uses it — `core/chaingraph`, `core/ipfs`, `core/bcmr`, `core/electrum` — so a domain's client, its types and its schema stay together. Performing network I/O does not by itself move code out of core; the invariant is that core stays free of UI, stores and app policy.
 
-### 2. UI Presentation Layer (`src/components/`, `src/pages/`, etc.)
+### 2. Application Services (`src/services/`)
+
+- **Orchestration, not UI or domain logic:** services compose core clients with app-level configuration and policy — configured endpoints, retry budgets, provider fallback, progress reporting.
+- **App-aware, still framework-free:** no Vue components, Pinia stores or i18n keys here.
+- **Examples:** `services/watchtower.ts` (deployment API + retry defaults), `services/transaction.ts` (watchtower → electrum broadcast fallback), `services/electrum.ts` (mempool checks on the configured network).
+
+### 3. UI Presentation Layer (`src/components/`, `src/pages/`, etc.)
 
 - **`src/components/dialogs/`**: Contains modal windows and popup interfaces. These must remain completely "dumb" presentation components.
 - **Behavior:** Dialogs receive data purely via Vue props and emit all user interactions (clicks, saves, closures) up to parent layers using clear callbacks or events. They must not query APIs or handle persistent states themselves.
 
-### 3. 🌐 Internationalization & Text Resources
+### 4. 🌐 Internationalization & Text Resources
 
-- **No Hardcoded Strings:** Do not embed user-facing text strings directly into components, files, or core services.
-- **Localization Source:** All structural text resources, labels, descriptions, and dynamic UI messaging must be added directly into **`i18n/en-us/index.ts`**.
+- **No Hardcoded Strings:** Do not embed user-facing text strings directly into components, files, or services.
+- **Localization Source:** All structural text resources, labels, descriptions, and dynamic UI messaging must be added directly into **`src/i18n/en-us/index.ts`**.
 - **Key Referencing:** Always extract and reference strings from the localization keys within code tasks to ensure clean multi-language maintainability.
 
-### 4. Legacy Context (`src/apps/`)
+### 5. Legacy Context (`src/apps/`)
 
 - `src/apps/` contains legacy code being gradually refactored into the root `src/core/` space.
 - Do not add new features to `src/apps/`. Migrate logic out to `src/core/` when editing these areas.
