@@ -1,29 +1,19 @@
 <template>
-  <q-page class="wallet-initializing flex flex-center no-scroll">
+  <q-page class="wallet-initializing flex flex-center no-scroll" :class="{ 'wallet-initializing--embedded': embedded }">
     <div class="ambient-glow glow-1"></div>
     <div class="ambient-glow glow-2"></div>
     <div class="text-center z-top select-none content-box">
       <div class="logo-wrapper">
         <div class="logo-pulse-ring"></div>
         <div class="logo-pulse-ring delay-1"></div>
-        <img
-          src="/images/cts_icon.png"
-          class="logo-image"
-          alt="CTS Logo"
-        />
+        <img src="/images/cts_icon.png" class="logo-image" alt="CTS Logo" />
       </div>
 
       <h1 class="text-h4 text-weight-bold text-white tracking-wide text-glow">
         {{ message }}
       </h1>
       <div class="progress-wrapper">
-        <q-linear-progress
-          indeterminate
-          rounded
-          color="indigo-4"
-          track-color="transparent"
-          class="custom-progress"
-        />
+        <q-linear-progress indeterminate rounded color="indigo-4" track-color="transparent" class="custom-progress" />
       </div>
     </div>
   </q-page>
@@ -32,6 +22,8 @@
 <script setup lang="ts">
 defineProps<{
   message: string;
+  /** Layout inside a host container (a card) instead of owning the page: drops the page backdrop. */
+  embedded?: boolean;
 }>();
 </script>
 
@@ -39,12 +31,10 @@ defineProps<{
 .wallet-initializing {
   position: relative;
   overflow: hidden;
-  background: radial-gradient(
-    circle at 50% 45%,
-    #242936 0%,
-    #0d0f13 70%,
-    #050608 100%
-  ) !important;
+  background: radial-gradient(circle at 50% 45%,
+      #242936 0%,
+      #0d0f13 70%,
+      #050608 100%) !important;
 }
 
 .ambient-glow {
@@ -59,7 +49,7 @@ defineProps<{
     left: -10%;
     width: 50vw;
     height: 50vw;
-    background: #3f51b5;
+    background: #272d4f;
   }
 
   &.glow-2 {
@@ -67,7 +57,7 @@ defineProps<{
     right: -10%;
     width: 60vw;
     height: 60vw;
-    background: #00e5ff;
+    background: #122f32;
   }
 }
 
@@ -137,6 +127,31 @@ defineProps<{
 
 .text-glow {
   text-shadow: 0 0 30px rgba(255, 255, 255, 0.15);
+}
+
+/* Inside a host card: no page backdrop, and tightened so the block reads as that page's content. */
+.wallet-initializing.wallet-initializing--embedded {
+  background: none !important;
+  padding: 0.5rem 0 0;
+
+  .logo-wrapper {
+    width: 96px;
+    height: 96px;
+  }
+
+  .logo-image {
+    width: 3.5rem;
+    height: 3.5rem;
+  }
+
+  .tracking-wide {
+    font-size: 1.5rem;
+    margin-top: 1.5rem;
+  }
+
+  .progress-wrapper {
+    margin-top: 1.5rem;
+  }
 }
 
 @keyframes ripple {

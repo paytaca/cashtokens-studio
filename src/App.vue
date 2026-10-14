@@ -30,9 +30,22 @@ const router = useRouter();
 const { t } = useI18n();
 const dashboardVisited = ref<boolean>(false);
 
+/**
+ * Warm the authguard store the moment a wallet is available, so the managed tokens page opens with
+ * rows instead of a skeleton. Silent and fire-and-forget: it must not delay the connect flow, and
+ * it must not replace rows that are already on screen. The wallet's UTXO set is already cached by
+ * then (initWallet syncs it), so this costs no extra chain request.
+ */
+const warmUpAuthguardData = () => {
+  loadAuthkeys(wallet.value, undefined, true).catch((error) =>
+    console.error(error)
+  );
+};
+
 watch(
   () => wallet.value.ready,
   async (walletIsReady) => {
+    if (walletIsReady) warmUpAuthguardData();
     if (
       walletIsReady &&
       route.query.authkey &&

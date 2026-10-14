@@ -23,11 +23,7 @@
             <div class="col q-ml-md">
               <template v-if="isConnecting">
                 <div class="text-subtitle1 text-weight-bold text-white">
-                  {{
-                    state === 'reconnecting'
-                      ? t('index.connect.reconnecting')
-                      : t('index.connect.connecting')
-                  }}
+                  {{ connectingLabel }}
                 </div>
 
                 <div class="text-caption text-grey-5 q-mt-xs">
@@ -109,12 +105,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, Ref, watch } from 'vue';
+import { computed } from 'vue';
 import { useQuasar } from 'quasar';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
-import { WizardConnectQRDialog, WizardConnectState } from 'wizardconnect-vue';
-import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
+import { WIZARDCONNECT_LOGO, WizardConnectQRDialog } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 
 const { t } = useI18n();
@@ -133,9 +128,19 @@ const bannerSize = computed(() => {
   return { width: '450px' };
 });
 
+/** Covers the post-connect window too: `state` is already 'connected' while initWallet() runs. */
 const isConnecting = computed(
-  () => state.value === 'connecting' || state.value === 'reconnecting'
+  () =>
+    state.value === 'connecting' ||
+    state.value === 'reconnecting' ||
+    (state.value === 'connected' && !walletIsReady.value)
 );
+
+const connectingLabel = computed(() => {
+  if (state.value === 'reconnecting') return t('index.connect.reconnecting');
+  if (state.value === 'connected') return t('info.initializingWallet');
+  return t('index.connect.connecting');
+});
 
 const featureCards = computed(() => [
   {
@@ -170,15 +175,6 @@ const closeQR = () => {
 const onQRUpdateShow = (val: boolean) => {
   if (!val) closeConnectDialog();
 };
-
-watch(
-  () => state.value,
-  (newState) => {
-    if (newState === 'connected') {
-      showQR.value = false;
-    }
-  }
-);
 </script>
 
 <style scoped>

@@ -25,7 +25,17 @@ import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
+import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
+
+const { walletIsReady } = useWizardConnectWallet();
+
+/**
+ * The drawer stays up while a restored session initializes, but the pages behind these links need a
+ * ready wallet — so the entries are inert until then. QTree refuses to select a disabled node, which
+ * stops the navigation watcher below from ever firing.
+ */
+const linksDisabled = computed(() => !walletIsReady.value);
 
 defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
@@ -101,7 +111,7 @@ const menu = computed<any[]>(() => {
       img: WIZARDCONNECT_LOGO,
     },
 
-  ]
+  ].map((node) => ({ ...node, disabled: linksDisabled.value }))
 })
 
 const menuHrefs = computed(() => menu.value.map((node) => node.href))
@@ -152,5 +162,17 @@ watch(() => route.path, (currentPath) => {
 
 .sidebar-selected {
   color: #fff;
+}
+
+/* Inert while the wallet is initializing. QTree marks the node disabled, which already blocks its
+   pointer events; cancel its extra dimming so the label stays readable, then set the muted colour. */
+.q-tree__node--disabled>div {
+  opacity: 1 !important;
+}
+
+.q-tree__node--disabled .sidebar-link,
+.q-tree__node--disabled .sidebar-link:hover {
+  color: rgba(255, 255, 255, 0.35);
+  cursor: not-allowed;
 }
 </style>

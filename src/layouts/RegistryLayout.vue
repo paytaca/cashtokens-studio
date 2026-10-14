@@ -1,7 +1,7 @@
 <template>
   <div>
     <template v-if="wallet?.initializing">
-      <WalletInitializing :message="$t('info.initializingWallet')" />
+      <PageSkeleton :message="$t('info.initializingWallet')" />
     </template>
     <template v-else>
       <div class="row justify-center registry-row">
@@ -107,7 +107,7 @@ import { useRegistryStore } from 'src/stores/registry';
 import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import CopyText from 'src/components/CopyText.vue';
-import WalletInitializing from 'src/components/WalletInitializing.vue';
+import PageSkeleton from 'src/components/PageSkeleton.vue';
 import { storeToRefs } from 'pinia';
 import { useQuasar } from 'quasar';
 

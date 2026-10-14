@@ -28,6 +28,25 @@ const walletIsReady = computed(() => {
     return wallet.value?.ready
 })
 
+/**
+ * `wallet` is a shallowRef holding a class instance, so writes to its properties are invisible to
+ * the UI. Every transition of `initializing` has to be paired with a `triggerRef` — the views that
+ * read it (`MainLayout`, `RegistryLayout`) only re-render when the ref itself is poked.
+ *
+ * Without this, `initWallet()`'s window (dynamic import + UTXO fetch) stayed invisible and pages
+ * kept rendering the pre-connect state — the index page showed its Connect button until the very
+ * end of the init.
+ */
+const beginWalletInit = () => {
+    if (wallet.value) wallet.value.initializing = true
+    triggerRef(wallet)
+}
+
+const endWalletInit = () => {
+    if (wallet.value) wallet.value.initializing = false
+    triggerRef(wallet)
+}
+
 export const useWizardConnectWallet = () => {
 
     if (!_wc) {
@@ -50,7 +69,9 @@ export const useWizardConnectWallet = () => {
         _watcherSetup = true
 
         watch(uri, (newUri) => {
-            if (newUri) {
+            // Only use a URI to open the QR while we are still getting into a session: a
+            // URI arriving after the handshake completed must not re-open the dialog.
+            if (newUri && state.value !== 'connected') {
                 qrURI.value = newUri as any
                 qrDataURI.value = qrUri.value
                 showQR.value = true
@@ -107,10 +128,16 @@ export const useWizardConnectWallet = () => {
                                 network: import.meta.env.VITE_BCH_NETWORK
                             })
                         }
-                        await wallet.value!.initWallet(session)
-                        wallet.value.getBalance({ sync: true })
-                        walletLasySync.value = Date.now()
-                        triggerRef(wallet)
+                        // Flag the window before awaiting: initWallet()'s import and UTXO
+                        // fetches are the lag that used to show the Connect button.
+                        beginWalletInit()
+                        try {
+                            await wallet.value!.initWallet(session)
+                            wallet.value.getBalance({ sync: true })
+                            walletLasySync.value = Date.now()
+                        } finally {
+                            endWalletInit()
+                        }
                     }
                 })
 
@@ -138,16 +165,25 @@ export const useWizardConnectWallet = () => {
     }
 
     watch(() => state.value, async (newState, oldState) => {
+        // Own the QR's lifetime here, not in a page: the init swap unmounts the router-view, and
+        // a page's watcher is stopped at that point — which used to strand `showQR` at true and
+        // re-open the dialog as soon as the page remounted.
+        if (newState === 'connected') showQR.value = false
+
         const sessionPaths = manager.value?.getSessionPaths() || []
         if((newState === 'connected' && newState !== oldState) || sessionPaths.length > 0) {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
                 wallet.value = new WizardConnectExternalWallet({
                     network: import.meta.env.VITE_BCH_NETWORK
                 })
-                await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
-                await wallet.value.getBalance({ sync: true })
-                walletLasySync.value = Date.now()
-                triggerRef(wallet)
+                beginWalletInit()
+                try {
+                    await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
+                    await wallet.value.getBalance({ sync: true })
+                    walletLasySync.value = Date.now()
+                } finally {
+                    endWalletInit()
+                }
             }
         }
     }, { immediate: true })

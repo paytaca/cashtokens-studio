@@ -1,8 +1,8 @@
 <template>
   <q-layout view="hHh lpr fFf">
-    <q-header v-if="showHeader" class="header-subtle">
+    <q-header v-if="showAppChrome" class="header-subtle">
       <q-toolbar class="q-py-sm">
-        <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
+        <q-btn v-if="$q.screen.lt.sm && showAppChrome" flat dense round icon="menu" aria-label="Menu" size="lg"
           @click="toggleLeftDrawer" />
         <q-toolbar-title>
           <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_transparent.png"
@@ -59,7 +59,7 @@
         </div>
       </q-toolbar>
     </q-header>
-    <q-drawer v-if="walletIsReady" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
+    <q-drawer v-if="showAppChrome" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
       class="sidebar-drawer">
       <div v-if="$q.screen.lt.sm" class="text-right q-ma-lg">
         <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
@@ -81,7 +81,8 @@
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <WalletInitializing v-if="wallet?.initializing" :message="$t('info.initializingWallet')" />
+        <PageSkeleton v-if="wallet?.initializing && !isIndexPage"
+          :message="$t('info.initializingWallet')" />
         <router-view v-else />
       </q-page-container>
     </q-scroll-area>
@@ -101,7 +102,7 @@ import { computed, inject, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import SidebarMenu from 'components/SidebarMenu.vue';
-import WalletInitializing from 'src/components/WalletInitializing.vue';
+import PageSkeleton from 'src/components/PageSkeleton.vue';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 
@@ -112,8 +113,6 @@ const $q = useQuasar();
 
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
-const showHeader = computed(() => walletIsReady);
-
 const isIndexPage = computed(() => route.path === '/');
 
 /** From sm up the drawer is permanent, so the wordmark lives in the header; on xs the drawer carries the icon. */
@@ -123,8 +122,20 @@ const showHeaderLogo = computed(() => $q.screen.gt.xs);
 // owns the wallet session now. It is parked in
 // .git/exclude/archive/dead-files-2026-10-14/src/composables/useWalletConnect.ts — restoring that file
 // and calling it here brings the old v1 path back.
-const { state, manager, disconnect, showQR, uri, qrUri, wallet, walletIsReady } =
+const { state, manager, disconnect, showQR, uri, qrUri, wallet } =
   inject('wizardConnectWallet') as any;
+
+/**
+ * The header and drawer are about being inside the app, not about the wallet being usable yet. They
+ * follow the session rather than `walletIsReady`, so initializing a restored session no longer tears
+ * the chrome down and rebuilds it — which read as the whole layout refreshing.
+ */
+const showAppChrome = computed(
+  () =>
+    Boolean(manager.value) ||
+    Boolean(wallet.value?.ready) ||
+    Boolean(wallet.value?.initializing)
+);
 
 const closeQR = () => {
   showQR.value = false;
