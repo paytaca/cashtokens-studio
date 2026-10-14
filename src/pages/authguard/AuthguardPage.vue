@@ -56,7 +56,7 @@
                   <div class="row items-center no-wrap q-gutter-x-sm">
                     <div class="text-h6">{{ t('authguard.vaultContents') }}</div>
                     <q-badge color="warning" text-color="dark" class="text-weight-bold">{{ vaultUtxos.length
-                    }}</q-badge>
+                      }}</q-badge>
                   </div>
                 </template>
 
@@ -70,7 +70,7 @@
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
                           <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
-                            }}</q-tooltip>
+                          }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>
@@ -169,14 +169,13 @@
 
     <BurnAuthheadDialog v-model="showBurnDialog" :icon="identitySnapshot?.uris?.icon"
       :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory"
-      :amount="selectedRow?.token?.amount?.toString()"
-      :decimals="selectedRow?.identitySnapshot?.token?.decimals" :capability="selectedRow?.token?.nft?.capability"
-      @cancel="selectedRow = null" @burn="onBurnDialogConfirm" />
+      :amount="selectedRow?.token?.amount?.toString()" :decimals="selectedRow?.identitySnapshot?.token?.decimals"
+      :capability="selectedRow?.token?.nft?.capability" @cancel="selectedRow = null" @burn="onBurnDialogConfirm" />
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, triggerRef } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
@@ -395,7 +394,7 @@ const handleUnguard = async (row: any, finalDestinationAddress: string) => {
     updateStep(TASK_REFRESH_UTXOS, 'running')
 
     await loadAuthguardUtxos(a)
-
+    triggerRef(wallet);
     updateStep(TASK_REFRESH_UTXOS, 'done')
     stopLoader(1000)
 
