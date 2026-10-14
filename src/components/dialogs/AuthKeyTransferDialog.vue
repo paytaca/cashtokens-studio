@@ -9,9 +9,7 @@
               <q-avatar>
                 <q-img v-if="identitySnapshot?.uris?.icon"
                   :src="ipfsToGatewayUrl(identitySnapshot.uris.icon) as string"></q-img>
-                <q-icon v-else name="key" color="warning"></q-icon>
               </q-avatar>
-              <span>{{ identitySnapshot?.token?.symbol }}</span>
             </div>
           </div>
         </q-toolbar-title>
@@ -19,13 +17,20 @@
 
       <q-card-section>
         <div class="row items-start no-wrap q-gutter-x-sm text-justify q-mb-md">
-          <q-icon name="warning" color="warning" size="sm" class="q-mt-xs" />
+          <q-icon name="warning" color="warning" size="sm" class="q-my-md" />
           <span class="text-body2 text-grey-4">
             {{ $t('authguard.transferOwnership.contextWarning', { count: lockedCount ?? 0 }) }}
           </span>
         </div>
 
-        <q-form ref="transferForm" @submit.prevent="onSubmit" class="authkey-transfer-form q-gutter-md">
+        <q-form ref="transferForm" @submit.prevent="onSubmit" class="authkey-transfer-form q-gutter-md q-mt-md">
+          <FormField>
+            <label for="">Token Symbol</label>
+            <q-input :model-value="identitySnapshot?.token?.symbol || 'Unknown Token'" outlined readonly size="lg">
+
+            </q-input>
+          </FormField>
+
           <q-input :model-value="shortenTokenId(category)" :label="$t('createAuthkey.tokenIdCandidate')" outlined
             readonly size="lg">
             <template v-slot:append>
@@ -48,8 +53,8 @@
 
       <q-card-actions class="row justify-end">
         <q-btn flat no-caps :label="$t('button.cancel')" color="grey-6" v-close-popup />
-        <q-btn color="warning" text-color="dark" :label="$t('authguard.transferOwnership.submit')"
-          icon="mdi-transfer-right" size="lg" :disable="!canSubmit" @click.stop="(e) => transferForm.submit(e)" />
+        <q-btn color="primary" :label="$t('nftTransfer.submit')" icon="mdi-send" :disable="!canSubmit"
+          @click.stop="(e) => transferForm.submit(e)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
@@ -63,6 +68,7 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { isTokenAwareAddress, shortenTokenId } from 'src/core/utils'
 import type { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import CopyText from 'components/CopyText.vue'
+import FormField from '../FormField.vue'
 
 const props = defineProps<{
   /** The AuthKey NFT category: whoever holds this NFT controls everything the vault locks. */

@@ -1,11 +1,14 @@
 <template>
   <q-dialog :model-value="modelValue" persistent>
     <q-card class="q-px-sm q-py-lg full-width">
-      <q-avatar class="q-mx-sm" v-if="icon">
-        <img :src="icon" alt="">
-      </q-avatar>
+
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold">Burn Token Identity</q-toolbar-title>
+        <q-toolbar-title class="text-h5 text-bold">
+          Burn Token Identity
+          <q-avatar class="q-mx-sm" v-if="icon">
+            <img :src="ipfsToGatewayUrl(icon) as string" alt="">
+          </q-avatar>
+        </q-toolbar-title>
       </q-toolbar>
       <div class="q-mx-md text-justify">
         <q-icon name="warning" color="warning" size="sm"></q-icon>
@@ -35,6 +38,8 @@
 </template>
 
 <script setup lang="ts">
+import { ipfsToGatewayUrl } from 'src/core/ipfs';
+
 const props = defineProps<{
   modelValue: boolean
   icon?: string
