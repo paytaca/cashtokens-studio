@@ -10,17 +10,20 @@ The Quasar config was migrated from `quasar.config.cjs` (webpack) to `quasar.con
 
 ## Background: package.json Dependency Split
 
-The codebase currently uses two versions of `mainnet-js`:
+The codebase used to carry two versions of `mainnet-js`:
 
 | Package | Version | Use Case |
 |---------|---------|----------|
-| `mainnet-js` | 2.3.0 | Legacy transaction builders |
-| `mainnet-js-v3` | ^3.0.0 | HD wallet, WalletConnect v2 |
+| `mainnet-js` | 2.3.0 | Legacy transaction builders — **removed 2026-10-14** |
+| `mainnet-js-v3` | ^3.1.7 | HD wallet, WalletConnect v2 |
 
-This split exists because:
-1. To better support `@wizardconnect/core`
-2. Transaction builders in `apps/` rely on the older `mainnet-js` API
-3. The migration to `modules/` should consolidate to a single approach
+The v2 entry, and the `@mainnet-cash/contract` package that depended on it, were removed once the last
+callers went: the legacy `src/apps` classes, the WalletConnect v1 composable and the v2 watch-only
+wallet. Those files are parked in `.git/exclude/archive/dead-files-2026-10-14/`, so restoring one means
+re-adding `mainnet-js@2.3.0`.
+
+`@bitauth/libauth` v2 is still a direct dependency while `src/core/transaction`, `src/core/bcmr` and
+the pages move to v3.
 
 **Note**: The new packages (`mainnet-js` v3, `@bitauth/libauth` v3, `cashscript` v0.8+) have breaking changes and significant improvements. Migration is an opportunity to adopt these.
 
@@ -139,12 +142,14 @@ export const cashAddressToTokenAddress = (...) => { ... }
 
 ## Code Patterns
 
-### Handling the Dual Package Split
+### Handling Wallet Selection
 
-Current code in `apps/` checks `process.env.APP_ENV` to determine which wallet to use:
+Historical note: the code that picked a wallet class from `process.env.APP_ENV` lived in
+`src/apps/utils/wallet.ts`, which is now parked (`.git/exclude/archive/dead-files-2026-10-14/`). It is
+kept here as the pattern to avoid:
 
 ```typescript
-// src/apps/utils/wallet.ts - BAD pattern (env-based)
+// src/apps/utils/wallet.ts - BAD pattern (env-based) — parked
 export const getWalletClass = () => {
   let WalletClass = Wallet;
   if (
@@ -169,33 +174,16 @@ export interface WalletConfig {
 }
 
 // src/modules/wallet/factory.ts
-import { Wallet, TestNetWallet } from 'mainnet-js';
+import { HDWallet, TestNetHDWallet } from 'mainnet-js-v3';
 
-export const createWalletClass = (config: WalletConfig) => {
-  return config.network === 'testnet' ? TestNetWallet : Wallet;
+export const getWalletClass = (config: WalletConfig) => {
+  const network = import.meta.env.VITE_BCH_NETWORK;
+  return network === 'chipnet' || network === 'testnet' ? TestNetHDWallet : HDWallet;
 };
 ```
 
-Or support both packages via an adapter pattern:
-
-```typescript
-// src/modules/wallet/adapters.ts
-import type { Wallet as WalletV2, TestNetWallet as TestNetWalletV2 } from 'mainnet-js';
-import type { HDWallet, TestNetHDWallet } from 'mainnet-js-v3';
-
-export type WalletVersion = 'v2' | 'v3';
-
-export interface WalletAdapter {
-  createWallet(seed: Uint8Array, network: Network): Promise<WalletV2 | HDWallet>;
-}
-
-export const getAdapter = (version: WalletVersion): WalletAdapter => {
-  if (version === 'v3') {
-    // Return mainnet-js-v3 adapter
-  }
-  // Return mainnet-js adapter
-};
-```
+The v2/v3 adapter pattern this section used to show is no longer needed: with `mainnet-js` v2 removed,
+`mainnet-js-v3` is the only package, so a single factory (above) is enough.
 
 ### Environment Variables: Use Vite/Quasar Default
 

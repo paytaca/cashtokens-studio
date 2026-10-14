@@ -45,9 +45,9 @@ RUN yarn install --production --ignore-engines --network-timeout 600000
 # skips. Reuse the built (and patched) copy from the root install above.
 RUN cp -r /app/node_modules/wizardconnect-vue/dist /app/dist/ssr/node_modules/wizardconnect-vue/dist
 
-# mainnet-js -> @bitauth/libauth@2.1.0 ships build/lib/key/bip39.js using the
-# legacy `assert { type: 'json' }` import attribute, which Node >=22.23 rejects
-# when the SSR server loads it at runtime. Rewrite it to the supported form.
+# Older @bitauth/libauth bundles ship build/lib/key/bip39.js using the legacy
+# `assert { type: 'json' }` import attribute, which Node >=22.23 rejects when the SSR
+# server loads it at runtime. Rewrite it to the supported form (a no-op if none match).
 RUN grep -rlZ --include='*.js' --include='*.mjs' --include='*.cjs' \
       "assert { type: 'json' }" /app/dist/ssr/node_modules \
   | xargs -0 -r sed -i "s/assert { type: 'json' }/with { type: 'json' }/g"

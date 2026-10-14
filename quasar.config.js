@@ -109,7 +109,6 @@ export default defineConfig((ctx) => {
 
         // viteConf.optimizeDeps.exclude = viteConf.optimizeDeps.exclude || []
         // viteConf.optimizeDeps.exclude.push('@wizardconnect/core')
-        // // viteConf.optimizeDeps.exclude.push('mainnet-js-v3')
         // viteConf.optimizeDeps.exclude.push('@bitauth/libauth')
         // viteConf.optimizeDeps.force = true
         // viteConf.optimizeDeps.include = ['@wizardconnect/core']
@@ -123,10 +122,8 @@ export default defineConfig((ctx) => {
           viteConf.optimizeDeps.exclude.push('@bitjson/qr-code');
         }
 
-        // mainnet-js (v2) evaluates `await ExchangeRate.get("usd")` at module
-        // scope (rate/ExchangeRate.js). Vite bundles web workers as iife by
-        // default, and iife cannot represent top-level await, so emit ES module
-        // workers instead. The worker is already created with { type: 'module' }.
+        // Vite bundles web workers as iife by default, and iife cannot represent top-level await.
+        // The app's workers are created with { type: 'module' }, so emit ES module workers instead.
         viteConf.worker = { ...(viteConf.worker || {}), format: 'es' };
       },
 
@@ -241,10 +238,9 @@ export default defineConfig((ctx) => {
         'render', // keep this as last one
       ],
 
-      // dist/ssr is a separate yarn project: Quasar only copies `dependencies`,
-      // so the root `resolutions` (which pin @bitauth/libauth for mainnet-js)
-      // would be lost and yarn would resolve mainnet-js's libauth to 2.1.0,
-      // whose API it doesn't match.
+      // dist/ssr is a separate yarn project: Quasar only copies `dependencies`, so the root
+      // `resolutions` (which pin @bitauth/libauth for mainnet-js-v3) would be lost and yarn would
+      // resolve its libauth to a version whose API doesn't match.
       extendPackageJson(pkg) {
         const { resolutions } = JSON.parse(
           readFileSync(new URL('./package.json', import.meta.url), 'utf-8')

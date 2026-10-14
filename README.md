@@ -35,7 +35,7 @@ cp .env.example .env.dev
 2. Configure your environment variables in `.env.dev`:
    - `WALLET_CONNECT_PROJECT_ID` - Get from [WalletConnect Cloud](https://cloud.walletconnect.com/)
    - `PINATA_API_KEY` and `PINATA_API_SECRET` - Get from [Pinata](https://app.pinata.cloud/keys)
-   - `NFT_STORAGE_API_KEY_*` - Get from [NFT.storage](https://nft.storage/manage-api-keys)
+   - `PINATA_JWT_V2`, `PINATA_GATEWAY_TOKEN` and `VITE_PAYTACA_IPFS_GATEWAY` - IPFS pins and gateways (used by the SSR upload endpoint and the client)
 
 ## Development
 
