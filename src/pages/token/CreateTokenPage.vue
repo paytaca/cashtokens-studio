@@ -159,12 +159,12 @@
 
 
                                 <div class="q-gutter-y-md">
-                                    <q-select v-model="tokenType" :options="typeOptions" label="Type *" filled
+                                    <q-select v-model="tokenType" :options="typeOptions" label="Type *" outlined
                                         emit-value map-options :rules="[val => !!val || 'Type is required']"
                                         class="full-width" />
 
                                     <q-input v-if="tokenType === 'Fungible' || tokenType === 'Mixed'"
-                                        v-model="token.amount" label="Token Amount *" filled :rules="[
+                                        v-model="token.amount" label="Token Amount *" outlined :rules="[
                                             val => !!val || 'Amount is required',
                                             val => val >= 0 || 'Invalid amount',
                                             validateVmNumber
@@ -179,28 +179,28 @@
                                     </q-input>
 
                                     <q-input v-if="computedDecimals > 0" :model-value="computedDecimals"
-                                        label="Decimals" filled readonly hint="Auto-computed" class="full-width" />
+                                        label="Decimals" outlined readonly hint="Auto-computed" class="full-width" />
 
                                     <template v-if="tokenType.startsWith('Non-Fungible') || tokenType === 'Mixed'">
                                         <q-select v-model="token.nft.capability"
-                                            :options="['none', 'mutable', 'minting']" label="Capability *" filled
+                                            :options="['none', 'mutable', 'minting']" label="Capability *" outlined
                                             :rules="[val => !!val || 'Capability is required']" class="full-width" />
-                                        <q-input v-model="token.nft.commitment" label="Commitment (Optional)" filled
+                                        <q-input v-model="token.nft.commitment" label="Commitment (Optional)" outlined
                                             hint="Hex String" class="full-width" />
                                     </template>
 
-                                    <q-input v-model="identitySnapshot.name" label="Name *" filled
+                                    <q-input v-model="identitySnapshot.name" label="Name *" outlined
                                         :rules="[val => !!val || 'Name is required']" class="full-width" />
 
-                                    <q-input v-model="identitySnapshot.description" label="Description" filled
+                                    <q-input v-model="identitySnapshot.description" label="Description" outlined
                                         class="full-width" />
 
-                                    <q-input v-model="identitySnapshot.token!.symbol" label="Token Symbol *" filled
+                                    <q-input v-model="identitySnapshot.token!.symbol" label="Token Symbol *" outlined
                                         type="text"
                                         @update:model-value="val => identitySnapshot.token!.symbol = (val as string)?.toUpperCase()"
                                         :rules="symbolRules" class="full-width" />
 
-                                    <q-input v-model="identitySnapshot.uris!.icon" filled label="Icon"
+                                    <q-input v-model="identitySnapshot.uris!.icon" outlined label="Icon"
                                         placeholder="Enter icon's URL or upload an icon" class="full-width">
                                         <template v-slot:prepend>
                                             <q-avatar>
@@ -224,7 +224,7 @@
                                         @rejected="() => $q.dialog({ message: 'File rejected, make sure to upload an image file!' })"
                                         :disable="iconFileUploading" outlined bottom-slots class="hidden">
                                     </q-file>
-                                    <q-input v-model="identitySnapshot.uris!.web" label="Website" filled type="text"
+                                    <q-input v-model="identitySnapshot.uris!.web" label="Website" outlined type="text"
                                         placeholder="https://" class="full-width" />
                                 </div>
 
@@ -557,6 +557,7 @@ const onSubmit = async () => {
 
         const authbase = genesisInput.txid
 
+        updateStep(TASK_INPUTS_CHECK, 'done')
         updateStep(TASK_CREATE_REGISTRY, 'running')
 
         if (tokenType.value === 'Fungible') {
@@ -703,7 +704,9 @@ const onSubmit = async () => {
                 txid: txid
             }
         }).onOk(() => {
-            router.push('/dashboard#created')
+            router.push({
+                name: 'managed-tokens'
+            })
         })
 
     } catch (error: any) {
