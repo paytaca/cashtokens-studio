@@ -1,93 +1,118 @@
 <template>
-  <q-dialog ref="authKeyTransferDialog">
-    <q-card class="q-px-sm q-py-lg full-width">
-      <div class="row justify-end"><q-btn flat color="negative" icon="close" v-close-popup></q-btn></div>
+  <q-dialog ref="dialogRef" @hide="onDialogHide">
+    <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="text-h5 text-bold">Transfer AuthKey</q-toolbar-title>
-      </q-toolbar>
-      <q-card-section class="q-gutter-sm">
-        <q-banner rounded>
-
-          <div class="text-center">
-            <q-icon name="warning" color="warning"></q-icon>
-            <span class="q-ml-sm">Warning! You are about to transfer an AuthKey. This will
-              transfer permissions
-              to manage
-              any tokens locked by
-              this key.</span>
+        <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap: wrap">
+          <div class="flex items-center col justify-between">
+            <div class="flex items-center">{{ $t('authguard.transferOwnership.dialogTitle') }}</div>
+            <div class="flex items-center token-symbol q-gutter-xs">
+              <q-avatar>
+                <q-img v-if="identitySnapshot?.uris?.icon"
+                  :src="ipfsToGatewayUrl(identitySnapshot.uris.icon) as string"></q-img>
+                <q-icon v-else name="key" color="warning"></q-icon>
+              </q-avatar>
+              <span>{{ identitySnapshot?.token?.symbol }}</span>
+            </div>
           </div>
-        </q-banner>
-        <q-form class="q-gutter-sm">
-          <q-input :model-value="authKey.token?.tokenId" label="AuthKey ID" filled dense disable></q-input>
-          <q-input v-model="form.recipient" label="Recipient's Token Address" filled dense></q-input>
+        </q-toolbar-title>
+      </q-toolbar>
+
+      <q-card-section>
+        <div class="row items-start no-wrap q-gutter-x-sm text-justify q-mb-md">
+          <q-icon name="warning" color="warning" size="sm" class="q-mt-xs" />
+          <span class="text-body2 text-grey-4">
+            {{ $t('authguard.transferOwnership.contextWarning', { count: lockedCount ?? 0 }) }}
+          </span>
+        </div>
+
+        <q-form ref="transferForm" @submit.prevent="onSubmit" class="authkey-transfer-form q-gutter-md">
+          <q-input :model-value="shortenTokenId(category)" :label="$t('createAuthkey.tokenIdCandidate')" outlined
+            readonly size="lg">
+            <template v-slot:append>
+              <CopyText :text="category" />
+            </template>
+          </q-input>
+          <q-input v-if="commitment" :model-value="commitment" :label="$t('createAuthkey.commitment')" outlined
+            readonly />
+          <!-- Recipient labels and rules are shared with the NFT transfer dialog. -->
+          <q-input v-model="recipient" ref="recipientInputElement" :label="$t('nftTransfer.recipient')"
+            :placeholder="$t('nftTransfer.recipientPlaceholder')" :rules="recipientRules" outlined autofocus
+            hide-bottom-space>
+            <template v-slot:append>
+              <q-btn v-if="selfAddress" @click="sendToSelf" text-color="primary" no-caps>{{ $t('nftTransfer.self') }}
+              </q-btn>
+            </template>
+          </q-input>
         </q-form>
       </q-card-section>
+
       <q-card-actions class="row justify-end">
-        <BusyButton @click="() => transferAuthKey()" label="Transfer AuthKey" :busyLabel="authKey.processing"
-          color="primary" :disable="!Boolean(form.recipient) || Boolean(authKey.processing)" />
+        <q-btn flat no-caps :label="$t('button.cancel')" color="grey-6" v-close-popup />
+        <q-btn color="warning" text-color="dark" :label="$t('authguard.transferOwnership.submit')"
+          icon="mdi-transfer-right" size="lg" :disable="!canSubmit" @click.stop="(e) => transferForm.submit(e)" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
-<script setup lang="ts">
-import { useQuasar } from 'quasar';
-import { AuthKey } from 'src/apps';
-import { ref } from 'vue';
-import BusyButton from 'src/components/BusyButton.vue'
-import { useUser } from 'src/stores/user';
-import { Wallet, fromUtxoId } from 'mainnet-js';
-import shortenTokenId from 'src/apps/utils/shortenTokenId';
-import { useEventBus } from 'src/composables';
-import { shortenAddress } from 'src/apps/utils';
-import { useUI } from 'src/stores/ui';
 
-defineOptions({ name: 'FungibleTokenIssuerDialog' })
-const $q = useQuasar()
-const ui = useUI()
-const { $ebus } = useEventBus()
-const props = defineProps<{ authKey: AuthKey }>()
-const authKeyTransferDialog = ref()
-const emit = defineEmits<{
-  (e: 'authKeyTransferred'): void
+<script setup lang="ts">
+import { computed, nextTick, ref } from 'vue'
+import { useDialogPluginComponent } from 'quasar'
+import { useI18n } from 'vue-i18n'
+import { ipfsToGatewayUrl } from 'src/core/ipfs'
+import { isTokenAwareAddress, shortenTokenId } from 'src/core/utils'
+import type { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
+import CopyText from 'components/CopyText.vue'
+
+const props = defineProps<{
+  /** The AuthKey NFT category: whoever holds this NFT controls everything the vault locks. */
+  category: string
+  commitment?: string
+  identitySnapshot?: IdentitySnapshot | null
+  /** How many outputs the vault locks right now, quoted in the warning. */
+  lockedCount?: number
+  selfAddress?: string
 }>()
 
-const form = ref<{ recipient: string }>({
-  recipient: ''
-})
+defineEmits([...useDialogPluginComponent.emits])
 
-const transferAuthKey = async () => {
-  try {
+const { dialogRef, onDialogHide, onDialogOK } = useDialogPluginComponent()
+const { t } = useI18n()
 
-    const tx = await props.authKey.transfer(form.value.recipient)
-    if (tx) {
-      $q.notify({ type: 'positive', message: 'Success!Tx' + shortenTokenId(tx) })
+const recipient = ref<string>('')
+const recipientInputElement = ref()
+const transferForm = ref()
 
-      $ebus?.emit('transaction', {
-        txid: tx,
-        txType: 'AuthchainIdentity.releaseTokensFromReserveSupply',
-        timestamp: new Date().getTime(),
-        successMsg: `Transferred AuthKey, id=${shortenTokenId(props.authKey.token!.tokenId)} to ${shortenAddress(form.value.recipient)}`
-      })
+/** The tokens ride along on the UTXO, so the new owner has to be able to receive them. */
+const recipientRules = [
+  (v: string) => !!v || t('nftTransfer.recipientRequired'),
+  (v: string) => isTokenAwareAddress(v) || t('nftTransfer.recipientRule'),
+]
 
-      ui.setStatusMessage({
-        statusMessage: `Transferred AuthKey, id=${shortenTokenId(props.authKey.token!.tokenId)} to ${shortenAddress(form.value.recipient)}`,
-        statusMessageType: 'success',
-        statusMessageTxid: tx
-      })
+const canSubmit = computed(() => isTokenAwareAddress(recipient.value))
 
-      emit('authKeyTransferred')
-
-      authKeyTransferDialog.value.hide()
-
-    }
-  } catch (error: any) {
-    console.log(error)
-    ui.setStatusMessage({
-      statusMessage: error,
-      statusMessageType: 'error'
-    })
-    $q.notify({ type: 'negative', message: 'Error!' + error.message })
-  }
+const onSubmit = () => {
+  if (!canSubmit.value) return
+  onDialogOK({ recipient: recipient.value })
 }
 
+const sendToSelf = () => {
+  if (!props.selfAddress) return
+  recipient.value = props.selfAddress
+  nextTick(() => {
+    const inputEl = recipientInputElement.value?.$el?.querySelector('input')
+    if (inputEl) {
+      inputEl.focus()
+      const len = inputEl.value.length
+      inputEl.setSelectionRange(len, len)
+    }
+  })
+}
 </script>
+
+<style scoped>
+/** See NFTTransferDialog: the global `form { justify-items: center }` makes fields shrink to fit. */
+.authkey-transfer-form {
+  justify-items: initial;
+}
+</style>

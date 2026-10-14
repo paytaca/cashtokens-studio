@@ -10,6 +10,7 @@ export default {
     savedDescription: 'Changes saved successfully.',
     authheadRelease: 'Authhead released from Authguard successfully.',
     authheadBurn: 'Token identity burned successfully.',
+    vaultOwnershipTransferred: 'Vault ownership transferred.',
   },
   info: {
     walletNotReady: 'Wallet not ready',
@@ -53,6 +54,7 @@ export default {
     registryPublication: 'Error publishing registry',
     authheadRelease: 'Error releasing authhead from Authguard.',
     authheadBurn: 'Error burning token identity.',
+    vaultOwnershipTransfer: 'Error transferring vault ownership.',
   },
   warning: {
     errorLoadingUnpublishedNfts: 'Error loading unpublished NFTs',
@@ -218,6 +220,22 @@ export default {
     badgeMinting: 'Minting',
     badgeMutable: 'Mutable',
     badgeImmutable: 'Immutable',
+    transferOwnership: {
+      button: 'Transfer Vault Ownership',
+      dialogTitle: 'Transfer Vault Ownership',
+      contextWarning:
+        'Transferring Authguard Vault ownership just transfers the AuthKey NFT to the new owner. All {count} Auth UTXO(s) locked in this vault will then be controlled by whoever holds this NFT.',
+      promptTitle: 'Transfer vault ownership?',
+      promptMessage:
+        'You are about to hand over the AuthKey NFT of this Authguard Vault. Whoever receives it will control the {count} Auth UTXO(s) the vault locks. The new owner basically becomes the new owner of the token\'s metadata and any reserve FTs or NFTs if there\'s any.',
+      expected: 'yes',
+      inputLabel: 'Type "yes" to confirm',
+      inputPlaceholder: 'yes',
+      confirm: 'Continue',
+      submit: 'Transfer AuthKey',
+      walletPrompt: 'Transfer AuthKey NFT',
+      authKeyNotFound: 'Could not find this vault\'s AuthKey NFT in your wallet.',
+    },
     importAuthhead: {
       menu: 'Import Auth UTXO',
       title: 'Importing Auth Utxo',

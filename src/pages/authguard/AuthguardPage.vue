@@ -14,11 +14,13 @@
               </q-avatar>
               <div>
                 <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || t('authguard.vault')
-                }}
+                  }}
                 </div>
                 <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
                   identitySnapshot.description }}</div>
               </div>
+              <q-btn class="q-ml-auto" outline color="negative" no-caps icon="mdi-shield-alert"
+                :label="t('authguard.transferOwnership.button')" @click="onTransferOwnershipClick" rounded />
             </div>
 
           </div>
@@ -32,7 +34,7 @@
                   <div>{{ t('authguard.vaultAddress') }}</div>
                 </div>
                 <div class="flex items-center q-gutter-x-xs">
-                  <span class="text-caption text-grey-3 text-mono">{{ shortenAddress(vaultAddress) }}</span>
+                  <span class="text-caption text-grey-3 text-mono">{{ shortenCashAddress(vaultAddress) }}</span>
                   <CopyText :text="vaultAddress" />
                 </div>
               </div>
@@ -61,7 +63,7 @@
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
                           <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
-                          }}</q-tooltip>
+                            }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>
@@ -165,8 +167,9 @@ import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { createAuthguardContract } from 'src/core/authguard/create-authguard-contract'
-import { unguardAuthhead, burnAuthhead } from 'src/core/transaction'
-import { shortenTokenId, getTokenType } from 'src/core/utils'
+import { unguardAuthhead, burnAuthhead, transferNfts } from 'src/core/transaction'
+import { filterAuthKeys } from 'src/core/authguard'
+import { shortenTokenId, getTokenType, shortenCashAddress } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
@@ -178,10 +181,11 @@ import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import CopyText from 'components/CopyText.vue'
 import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
 import BurnAuthheadDialog from 'src/components/dialogs/BurnAuthheadDialog.vue'
+import AuthKeyTransferDialog from 'src/components/dialogs/AuthKeyTransferDialog.vue'
+import PromptDialog from 'src/components/dialogs/PromptDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import type { DecoratedUtxo } from 'src/core/types'
 import type { QTableColumn } from 'quasar'
-import { shortenAddress } from 'src/apps/utils'
 
 const router = useRouter()
 const route = useRoute()
@@ -428,6 +432,133 @@ const handleBurn = async (row: any) => {
     if (error?.name === 'AbortError') return
     console.log('Burn error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.authheadBurn') })
+  }
+}
+
+/** Vault ownership *is* the AuthKey NFT, so handing over the vault is a plain wallet transfer. */
+const findAuthkeyUtxo = async () => {
+  const utxos = await wallet.value!.getUtxos()
+  return (filterAuthKeys(utxos) as any[]).find((u) => u.token?.category === authkeyCategory.value)
+}
+
+const onTransferOwnershipClick = () => {
+  $q.dialog({
+    component: PromptDialog,
+    componentProps: {
+      title: t('authguard.transferOwnership.promptTitle'),
+      icon: 'key',
+      iconColor: 'warning',
+      message: t('authguard.transferOwnership.promptMessage', { count: vaultUtxos.value.length }),
+      expectedPromptOkResponse: t('authguard.transferOwnership.expected'),
+      inputLabel: t('authguard.transferOwnership.inputLabel'),
+      inputPlaceholder: t('authguard.transferOwnership.inputPlaceholder'),
+      okLabel: t('authguard.transferOwnership.confirm'),
+      okColor: 'warning',
+      cancelLabel: t('button.cancel'),
+    },
+    focus: 'none',
+  }).onOk(() => openAuthkeyTransferDialog())
+}
+
+const openAuthkeyTransferDialog = async () => {
+  let authkeyUtxo
+  try {
+    authkeyUtxo = await findAuthkeyUtxo()
+  } catch (error: any) {
+    $q.notify({ type: 'Error', message: error.message })
+    return
+  }
+
+  if (!authkeyUtxo) {
+    $q.notify({ type: 'negative', message: t('authguard.transferOwnership.authKeyNotFound') })
+    return
+  }
+
+  $q.dialog({
+    component: AuthKeyTransferDialog,
+    componentProps: {
+      category: authkeyCategory.value,
+      commitment: authkeyUtxo.token?.nft?.commitment,
+      identitySnapshot: identitySnapshot.value,
+      lockedCount: vaultUtxos.value.length,
+      selfAddress: wallet.value?.getTokenDepositAddress(0),
+    },
+    focus: 'none',
+  }).onOk(({ recipient }: { recipient: string }) => transferVaultOwnership(authkeyUtxo, recipient))
+}
+
+const transferVaultOwnership = async (authkeyUtxo: any, recipient: string) => {
+  startLoader(txTaskList, () => {
+    $q.notify({ type: 'warning', message: t('info.cancelled') })
+  })
+
+  updateStep(TASK_INPUTS_CHECK, 'done')
+  updateStep(TASK_PREPARE_TX, 'running')
+
+  try {
+    const signRequest = transferNfts({
+      nfts: [authkeyUtxo],
+      recipientAddress: recipient,
+      changeAddress: wallet.value!.getTokenDepositAddress(0),
+      walletUtxos: (wallet.value!.utxos || []) as any,
+      network: import.meta.env.VITE_BCH_NETWORK as any,
+      userPrompt: t('authguard.transferOwnership.walletPrompt'),
+    })
+
+    updateStep(TASK_PREPARE_TX, 'done')
+    updateStep(TASK_WAIT_FOR_SIG, 'running')
+
+    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
+
+    updateStep(TASK_WAIT_FOR_SIG, 'done')
+    updateStep(TASK_BROADCASTING, 'running')
+
+    const [broadcastError, txid] = await broadcastTransaction({
+      transactionHex: response.signedTransaction,
+      network: import.meta.env.VITE_BCH_NETWORK,
+      onProgress: (progress: string) => {
+        const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+        updateStep(TASK_BROADCASTING, 'running', newLabel)
+      },
+    })
+
+    if (broadcastError) {
+      updateStep(TASK_BROADCASTING, 'failed')
+      throw broadcastError
+    }
+
+    updateStep(TASK_BROADCASTING, 'done')
+    updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
+    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+
+    updateStep(TASK_WAITING_PROPAGATION, 'done')
+    updateStep(TASK_REFRESH_UTXOS, 'running')
+
+    await wallet.value?.sync()
+    await authguardStore.loadAuthkeys(wallet.value, true, true)
+
+    updateStep(TASK_REFRESH_UTXOS, 'done')
+    stopLoader(1000)
+
+    $q.dialog({
+      component: TransactionStatusDialog,
+      componentProps: {
+        statusType: 'success',
+        statusText: t('success.vaultOwnershipTransferred'),
+        txid,
+      },
+    }).onOk(() => {
+      // The vault answers to somebody else now.
+      authguardStore.setActiveAuthhead(null as any)
+      router.push({ name: 'authkeys' })
+    })
+  } catch (error: any) {
+    stopLoader(3000)
+    if (error?.name === 'AbortError') return
+    console.log('Transfer vault ownership error', error)
+    $q.notify({ type: 'negative', message: error.message || t('error.vaultOwnershipTransfer') })
   }
 }
 
