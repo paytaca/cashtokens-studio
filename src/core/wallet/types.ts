@@ -1,4 +1,4 @@
-import { type Utxo } from "mainnet-js-v3"
+import { type Utxo } from "mainnet-js"
 
 export type UtxoWithPath = Utxo & { 
     pathName: 'receive' | 'change' | 'defi',

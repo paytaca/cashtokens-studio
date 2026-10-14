@@ -1,4 +1,4 @@
-import type { TokenI, Utxo } from "mainnet-js-v3";
+import type { TokenI, Utxo } from "mainnet-js";
 import { IdentitySnapshot } from "./bcmr/bcmr-v2.schema";
 
 export type UtxoTxid = string 

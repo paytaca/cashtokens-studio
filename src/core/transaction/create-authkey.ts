@@ -4,7 +4,7 @@ import {
     placeholderP2PKHUnlocker, 
     TransactionBuilder 
 } from "cashscript"
-import { NFTCapability } from "mainnet-js-v3"
+import { NFTCapability } from "mainnet-js"
 import { decodeCashAddress, encodeCashAddress, getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"

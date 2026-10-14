@@ -1,4 +1,4 @@
-import { HDWallet, NetworkType, Utxo } from "mainnet-js-v3";
+import { HDWallet, NetworkType, Utxo } from "mainnet-js";
 import { ExternalWallet, UtxoWithPath } from "./types";
 import { PathXpub } from "@wizardconnect/core";
 import { getHDWalletClass } from "./get-hd-wallet-class";

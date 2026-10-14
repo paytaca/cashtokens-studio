@@ -11,7 +11,7 @@ import {
   TransactionCommon
 } from "bitauth-libauth-v3";
 
-import { Utxo } from 'mainnet-js-v3';
+import { Utxo } from 'mainnet-js';
 import { DecoratedUtxoFormSafe, UtxoWithPath } from "../types";
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize";
 import { SEQUENCE_NUMBER_DISABLE_VALUE } from "../constants";

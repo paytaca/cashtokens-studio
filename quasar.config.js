@@ -239,7 +239,7 @@ export default defineConfig((ctx) => {
       ],
 
       // dist/ssr is a separate yarn project: Quasar only copies `dependencies`, so the root
-      // `resolutions` (which pin @bitauth/libauth for mainnet-js-v3) would be lost and yarn would
+      // `resolutions` (which pin @bitauth/libauth for mainnet-js) would be lost and yarn would
       // resolve its libauth to a version whose API doesn't match.
       extendPackageJson(pkg) {
         const { resolutions } = JSON.parse(

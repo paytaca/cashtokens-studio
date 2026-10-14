@@ -1,5 +1,5 @@
 import { ElectrumNetworkProvider, type Network } from 'cashscript'
-import { delay } from 'mainnet-js-v3'
+import { delay } from 'mainnet-js'
 
 /** Networks this app is expected to run against (cashscript also knows mocknet/regtest). */
 const SUPPORTED_NETWORKS: Network[] = ['mainnet', 'testnet3', 'testnet4', 'chipnet']

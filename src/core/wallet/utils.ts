@@ -1,4 +1,4 @@
-import { Utxo } from "mainnet-js-v3";
+import { Utxo } from "mainnet-js";
 import { UtxoWithPath } from "../types";
 
 export function filterGenesisInputs(utxos: UtxoWithPath[]|Utxo[]) {

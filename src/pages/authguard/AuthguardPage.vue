@@ -193,7 +193,7 @@ import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoading
 import { broadcastTransaction } from 'src/services/transaction'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useQuasar } from 'quasar'
-import { BaseWallet, NetworkType } from 'mainnet-js-v3'
+import { BaseWallet, NetworkType } from 'mainnet-js'
 import CopyText from 'components/CopyText.vue'
 import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
 import BurnAuthheadDialog from 'src/components/dialogs/BurnAuthheadDialog.vue'

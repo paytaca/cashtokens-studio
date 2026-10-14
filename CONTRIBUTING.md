@@ -15,7 +15,7 @@ The codebase used to carry two versions of `mainnet-js`:
 | Package | Version | Use Case |
 |---------|---------|----------|
 | `mainnet-js` | 2.3.0 | Legacy transaction builders — **removed 2026-10-14** |
-| `mainnet-js-v3` | ^3.1.7 | HD wallet, WalletConnect v2 |
+| `mainnet-js` | 3.1.7 | HD wallet, WalletConnect v2 — **the v3 line, now under its real name** |
 
 The v2 entry, and the `@mainnet-cash/contract` package that depended on it, were removed once the last
 callers went: the legacy `src/apps` classes, the WalletConnect v1 composable and the v2 watch-only
@@ -24,6 +24,19 @@ re-adding `mainnet-js@2.3.0`.
 
 `@bitauth/libauth` v2 is still a direct dependency while `src/core/transaction`, `src/core/bcmr` and
 the pages move to v3.
+
+**The libauth v2 entry and its `"@bitauth/libauth": "2.0.0-alpha.8"` resolution are load-bearing.**
+`mainnet-js`'s shipped bundle imports the bare `@bitauth/libauth` name from the project root, and
+pointing that name at v3 trips `[MISSING_EXPORT] OpcodesBtc` inside libauth 3.1.0-next.8's own
+`build/lib/vm` files. Don't remove the pin while migrating the remaining imports to the v3 alias.
+
+**`mainnet-js` is pinned exactly** (`3.1.7`) because `patches/mainnet-js+3.1.7.patch` is keyed to that
+version — bumping the dependency means renaming the patch file *and* the `node_modules/...` paths
+inside it in the same commit.
+
+Since the package is back under the plain `mainnet-js` name, a file restored from the parked v2
+archive (e.g. `src/apps/utils/wallet.ts`, which imports `'mainnet-js'`) would silently resolve to v3 —
+check anything you bring back.
 
 **Note**: The new packages (`mainnet-js` v3, `@bitauth/libauth` v3, `cashscript` v0.8+) have breaking changes and significant improvements. Migration is an opportunity to adopt these.
 
@@ -174,7 +187,7 @@ export interface WalletConfig {
 }
 
 // src/modules/wallet/factory.ts
-import { HDWallet, TestNetHDWallet } from 'mainnet-js-v3';
+import { HDWallet, TestNetHDWallet } from 'mainnet-js';
 
 export const getWalletClass = (config: WalletConfig) => {
   const network = import.meta.env.VITE_BCH_NETWORK;
@@ -183,7 +196,7 @@ export const getWalletClass = (config: WalletConfig) => {
 ```
 
 The v2/v3 adapter pattern this section used to show is no longer needed: with `mainnet-js` v2 removed,
-`mainnet-js-v3` is the only package, so a single factory (above) is enough.
+`mainnet-js` (the v3 line) is the only package, so a single factory (above) is enough.
 
 ### Environment Variables: Use Vite/Quasar Default
 

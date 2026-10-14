@@ -30,7 +30,7 @@
   </q-btn>
 </template>
 <script setup lang="ts">
-import { delay } from 'mainnet-js-v3';
+import { delay } from 'mainnet-js';
 import { copyText } from 'src/core/utils/copy-text'
 import { ref } from 'vue';
 defineProps<{ cashaddr?: string, type?: 'token' | 'cash', toolTip?: string, iconRight?: string }>()

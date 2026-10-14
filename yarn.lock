@@ -7248,7 +7248,7 @@ main-event@^1.0.0, main-event@^1.0.1:
   resolved "https://registry.yarnpkg.com/main-event/-/main-event-1.0.4.tgz#371eb627575ba4379fa35c854b8952208f1fcdc3"
   integrity sha512-sKazUjIy2Jalv5lkQ446iOcrx8Q7TkaCuk6xfnzg5uUqMusMLDMPmRDmSNE2kjSVpSTJo4j1bQZusS+Ib7Bvrg==
 
-"mainnet-js-v3@npm:mainnet-js@^3.1.7":
+mainnet-js@3.1.7:
   version "3.1.7"
   resolved "https://registry.yarnpkg.com/mainnet-js/-/mainnet-js-3.1.7.tgz#bd982e6fd07e9b530ece087d4a5d6ca14b070cd7"
   integrity sha512-rOBN+qVON7Lhh2jrMwIA26xv23dAFULMR+DT+g9al9GnmNSdsUL2RuN50eWwkUxE2T4YFdTWT30FUKZczl8hRw==

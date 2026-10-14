@@ -500,7 +500,7 @@ import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialo
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { Network } from 'cashscript';
 import { decodeCashAddress } from 'bitauth-libauth-v3';
-import { BaseWallet, NetworkType } from 'mainnet-js-v3';
+import { BaseWallet, NetworkType } from 'mainnet-js';
 import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';

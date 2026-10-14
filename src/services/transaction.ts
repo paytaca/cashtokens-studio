@@ -1,7 +1,7 @@
 import { isBroadcastSuccess } from "src/core/transaction";
 import { safeAsync } from "src/core/utils";
 import { broadcastTransaction as watchtowerBroadcast } from "./watchtower";
-import { NetworkType, BaseWallet } from "mainnet-js-v3";
+import { NetworkType, BaseWallet } from "mainnet-js";
 
 export type BroadcastTransactionParams = {
     transactionHex: string,
