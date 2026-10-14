@@ -31,13 +31,18 @@ export type BurnAuthheadParams = {
 }
 
 /**
- * Burns an identity by spending its vaulted identity output with the AuthKey and writing nothing but
- * the final metadata registry publication.
+ * Burns an identity by spending its vaulted identity output with the AuthKey and writing the final
+ * metadata registry publication as that identity output.
  *
  * CashTokens allows tokens to be implicitly destroyed by omission from a transaction's outputs, so
- * the identity's tokens — and the AuthKey itself — are destroyed with it; there is no burn address
- * involved. The AuthKey must be spent to unlock the vault, so it is destroyed too, and once the
- * identity output is a data carrier, CHIP-BCMR considers the identity burned.
+ * the identity's tokens are destroyed with the output that held them; there is no burn address
+ * involved. Once the identity output is a data carrier, CHIP-BCMR considers the identity burned and
+ * the authchain terminated.
+ *
+ * The AuthKey is returned to the owner instead of being destroyed: a single AuthKey unlocks every
+ * vault output at its AuthGuard contract, so burning the key would strand any sibling vault output —
+ * including the funds the registry spec tells clients to reclaim. It is recreated after the identity
+ * output, so a later output cannot continue the authchain and the burn marking is unaffected.
  *
  * The authhead's own value pays the fee: at or above {@link BURN_CHANGE_THRESHOLD_SATS} the fee is
  * {@link BURN_FEE_SATS} and the rest comes back as change, below that the value only has to cover
@@ -49,7 +54,7 @@ export function burnAuthhead(params: BurnAuthheadParams): SignTransactionRequest
         allowImplicitFungibleTokenBurn: true
     })
 
-    addAuthheadSpendInputs({
+    const { authkeyTokenAddress } = addAuthheadSpendInputs({
         transaction,
         authheadUtxo: params.authheadUtxo,
         authkeyUtxo: params.authkeyUtxo,
@@ -64,6 +69,13 @@ export function burnAuthhead(params: BurnAuthheadParams): SignTransactionRequest
         `0x${params.registryPublicationData.contentHash}`,
         ...params.registryPublicationData.uris
     ])
+
+    // The AuthKey comes home: it carries its own value back, so keeping it costs nothing.
+    transaction.addOutput({
+        to: authkeyTokenAddress,
+        amount: params.authkeyUtxo.satoshis,
+        token: params.authkeyUtxo.token
+    })
 
     if (params.authheadUtxo.satoshis >= BURN_CHANGE_THRESHOLD_SATS) {
         const change = params.authheadUtxo.satoshis - BURN_FEE_SATS
