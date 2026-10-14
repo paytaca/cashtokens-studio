@@ -49,7 +49,7 @@
                     <q-icon name="mdi-safe-square-outline" color="yellow-8" size="xs" />
                     <span class="text-caption text-mono text-grey-3">{{
                       shortenCashAddress(props.row.address)
-                    }}</span>
+                      }}</span>
                     <CopyText :text="props.row.address" />
                   </div>
                 </q-td>
@@ -82,7 +82,7 @@
                   <q-icon name="key" size="32px" color="grey-5" />
                 </div>
                 <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
-                  <q-icon name="mdi-safe-outline" size="32px" color="grey-5" />
+                  <q-icon name="mdi-safe-square-outline" size="32px" color="grey-5" />
                 </div>
                 <div class="playing-card" style="
                   z-index: 3;

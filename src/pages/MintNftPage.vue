@@ -36,7 +36,7 @@
                                 </q-badge>
                                 <q-badge v-else color="dark" text-color="grey-4"
                                     class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
-                                    <q-icon name="mdi-safe-outline" size="10px" class="q-mr-xs" />
+                                    <q-icon name="mdi-safe-square-outline" size="10px" class="q-mr-xs" />
                                     Immutable
                                 </q-badge>
                                 <q-badge v-if="isSequentialNftCollection" color="dark" text-color="orange-4"

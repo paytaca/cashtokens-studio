@@ -39,7 +39,7 @@
           <q-card flat bordered class="q-pa-lg text-center feature-card-bg">
             <div class="row items-center justify-center text-grey-4">
               <span class="text-subtitle1">{{ t('authguard.vaultAddress') }}</span>
-              <q-icon name="mdi-safe-outline" size="sm" color="grey-6" />
+              <q-icon name="mdi-safe-square-outline" size="sm" color="grey-6" />
             </div>
 
             <div class="flex flex-center q-mt-md">

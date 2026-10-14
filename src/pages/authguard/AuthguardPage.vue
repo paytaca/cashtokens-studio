@@ -29,7 +29,7 @@
             <div class="row q-gutter-y-md q-mb-lg">
               <div class="col-12 col-sm-6">
                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
-                  <q-icon name="mdi-safe-outline" color="warning"></q-icon>
+                  <q-icon name="mdi-safe-square-outline" color="warning"></q-icon>
                   <div>{{ t('authguard.vaultAddress') }}</div>
                 </div>
                 <div class="flex items-center q-gutter-x-xs">
@@ -56,7 +56,7 @@
                   <div class="row items-center no-wrap q-gutter-x-sm">
                     <div class="text-h6">{{ t('authguard.vaultContents') }}</div>
                     <q-badge color="warning" text-color="dark" class="text-weight-bold">{{ vaultUtxos.length
-                      }}</q-badge>
+                    }}</q-badge>
                   </div>
                 </template>
 
@@ -70,7 +70,7 @@
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
                           <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
-                          }}</q-tooltip>
+                            }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>

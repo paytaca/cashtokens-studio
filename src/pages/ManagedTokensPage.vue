@@ -151,7 +151,7 @@
 
                     <q-item clickable @click="navigateToAuthguard(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="mdi-safe-outline" color="secondary" size="xs" />
+                        <q-icon name="mdi-safe-square-outline" color="secondary" size="xs" />
                       </q-item-section>
                       <q-item-section class="text-caption text-grey-3">
                         {{ $t('dashboard.managed.actionTokenVault') }}
@@ -263,7 +263,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -370,7 +370,7 @@
 
                       <q-item clickable @click="navigateToAuthguard(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-safe-outline" color="secondary" size="xs" />
+                          <q-icon name="mdi-safe-square-outline" color="secondary" size="xs" />
                         </q-item-section>
                         <q-item-section class="text-caption text-grey-3">
                           {{ $t('dashboard.managed.actionTokenVault') }}
