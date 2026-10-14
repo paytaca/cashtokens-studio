@@ -499,7 +499,7 @@ import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { Network } from 'cashscript';
-import { decodeCashAddress } from '@bitauth/libauth';
+import { decodeCashAddress } from 'bitauth-libauth-v3';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
 import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';

@@ -16,7 +16,7 @@ import { uploadFile } from '../core/ipfs';
 import { compactRegistry, extractNftTypeKeys, extractTokenCategories, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
 import { type CompactRegistry } from 'src/core/bcmr/types';
 import { NftCollectionType } from 'src/core/bcmr';
-import { vmNumberToBigInt, hexToBin } from '@bitauth/libauth';
+import { vmNumberToBigInt, hexToBin } from 'bitauth-libauth-v3';
 
 type ProgressErrorListener  = {
   onProgress?: (msg: string) => void,

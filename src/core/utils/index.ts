@@ -1,6 +1,6 @@
 import { binToHex, decodeCashAddress, encodeTransactionOutput, hexToBin, isHex, ReadResult, readTransactionOutput } from 'bitauth-libauth-v3';
 import type { DecoratedUtxo } from '../types'
-import { stringify } from '@bitauth/libauth';
+import { stringify } from 'bitauth-libauth-v3';
 
 export function shortenTokenId(tokenId = '') {
     return tokenId.replace(tokenId.substring(5, 60), '...')

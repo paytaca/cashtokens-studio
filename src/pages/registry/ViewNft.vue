@@ -48,7 +48,7 @@ import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
 import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
 import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { db } from 'src/core/client-db'
-import { vmNumberToBigInt } from '@bitauth/libauth'
+import { vmNumberToBigInt } from 'bitauth-libauth-v3'
 import { hexToBin } from 'bitauth-libauth-v3'
 
 const $q = useQuasar()

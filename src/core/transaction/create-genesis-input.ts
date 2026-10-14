@@ -14,7 +14,7 @@ import {
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
-import { decodeTransactionBCH } from "@bitauth/libauth"
+import { decodeTransactionBCH } from "bitauth-libauth-v3"
 
 
 export type CreateGenesisInputParams = {

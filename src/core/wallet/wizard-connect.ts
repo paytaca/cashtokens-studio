@@ -2,7 +2,7 @@ import { HDWallet, NetworkType, Utxo } from "mainnet-js-v3";
 import { ExternalWallet, UtxoWithPath } from "./types";
 import { PathXpub } from "@wizardconnect/core";
 import { getHDWalletClass } from "./get-hd-wallet-class";
-import { CashAddressNetworkPrefix, decodeHdPublicKey, encodeHdPublicKey, HdKeyParameters, HdPublicNode } from "@bitauth/libauth";
+import { CashAddressNetworkPrefix, decodeHdPublicKey, encodeHdPublicKey } from "bitauth-libauth-v3";
 
 
 export type WZWalletPath = { name: string, xpub: string }
@@ -43,22 +43,36 @@ export class WizardConnectExternalWallet implements ExternalWallet {
             }
             const HDWalletClass = await getHDWalletClass()
 
-            const decodedReceiveXPub = decodeHdPublicKey(receiveXPub as string) as HdKeyParameters<HdPublicNode>
-            const encodedReceiveXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedReceiveXPub.node })
-            const decodedChangeXPub = decodeHdPublicKey(changeXPub as string) as HdKeyParameters<HdPublicNode>
-            const encodedChangeXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedChangeXPub.node })
-            const decodedDefiXPub = decodeHdPublicKey(defiXPub as string) as HdKeyParameters<HdPublicNode>
-            const encodedDefiXPub = encodeHdPublicKey({ network: network as 'mainnet' | 'testnet', node: decodedDefiXPub.node })
-
-            if (receiveXPub) {
-                this.receive =  await HDWalletClass.fromXPub(encodedReceiveXPub)
+            /**
+             * Normalise an xpub for `fromXPub`. libauth v3 hands back a Result union from
+             * `decodeHdPublicKey` (an error string when it fails) and an object from
+             * `encodeHdPublicKey` — v2 returned a bare string from the latter and a cast-able
+             * node from the former. Falsy xpubs stay undefined so the `if` guards below still
+             * decide which wallets get built.
+             */
+            const normalizeXPub = (xpub?: string) => {
+                if (!xpub) return undefined
+                const decoded = decodeHdPublicKey(xpub)
+                if (typeof decoded === 'string') throw new Error(decoded)
+                return encodeHdPublicKey({
+                    network: network as 'mainnet' | 'testnet',
+                    node: decoded.node
+                }).hdPublicKey
             }
-            
-            if (changeXPub) {
+
+            const encodedReceiveXPub = normalizeXPub(receiveXPub)
+            const encodedChangeXPub = normalizeXPub(changeXPub)
+            const encodedDefiXPub = normalizeXPub(defiXPub)
+
+            if (encodedReceiveXPub) {
+                this.receive = await HDWalletClass.fromXPub(encodedReceiveXPub)
+            }
+
+            if (encodedChangeXPub) {
                 this.change = await HDWalletClass.fromXPub(encodedChangeXPub)
                 // this.receive = new HDWallet(network as NetworkType)
             }
-            if (defiXPub) {
+            if (encodedDefiXPub) {
                 this.defi = await HDWalletClass.fromXPub(encodedDefiXPub)
                 // this.receive = new HDWallet(network as NetworkType)
             }

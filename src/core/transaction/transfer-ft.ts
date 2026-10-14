@@ -4,7 +4,7 @@ import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE
 import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
+import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
 
 export type TransferFtsParams = {
     category: string,

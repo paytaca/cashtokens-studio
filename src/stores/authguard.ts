@@ -4,7 +4,7 @@ import { AuthheadId, filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/aut
 import type { UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
 import { LocalStorage } from 'quasar'
-import { stringify } from '@bitauth/libauth'
+import { stringify } from 'bitauth-libauth-v3'
 import { parseLibauthStringified } from 'src/core/utils'
 
 export const useAuthguardStore = defineStore('authguard-store', () => {

@@ -9,7 +9,7 @@ import {
   Output,
   readTransactionOutput,
   TransactionCommon
-} from "@bitauth/libauth";
+} from "bitauth-libauth-v3";
 
 import { Utxo } from 'mainnet-js-v3';
 import { DecoratedUtxoFormSafe, UtxoWithPath } from "../types";

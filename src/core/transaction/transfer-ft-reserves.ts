@@ -5,7 +5,7 @@ import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
 import { jsonReplacer, jsonReviver, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
+import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
 import { AbiFunction, scriptToBytecode } from "@cashscript/utils"
 
 export type TransferFungibleReservesParams = {

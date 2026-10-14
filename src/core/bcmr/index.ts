@@ -1,4 +1,4 @@
-import { binToHex, sha256,utf8ToBin } from '@bitauth/libauth'
+import { binToHex, sha256,utf8ToBin } from 'bitauth-libauth-v3'
 import { IdentitySnapshot, Registry } from './bcmr-v2.schema'
 export * from './enum'
 export * from './indexer'

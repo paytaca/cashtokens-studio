@@ -2,7 +2,7 @@ import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetail
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
-import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "@bitauth/libauth"
+import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 

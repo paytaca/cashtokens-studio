@@ -2,7 +2,7 @@ import { IdentitySnapshot, NftType, ParsableNftCollection, Registry } from "./bc
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { hexToBin } from "bitauth-libauth-v3";
-import { bigIntToVmNumber, binToBigIntUintLE, binToHex, vmNumberToBigInt } from "@bitauth/libauth";
+import { bigIntToVmNumber, binToBigIntUintLE, binToHex, vmNumberToBigInt } from "bitauth-libauth-v3";
 
 export function setNftUnrevealedCtsExtension(nft: NftType) {
     nft.extensions = {

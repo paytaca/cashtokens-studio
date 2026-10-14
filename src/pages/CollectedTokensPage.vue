@@ -248,7 +248,7 @@ import NFTTransferDialog from 'src/components/dialogs/NFTTransferDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
-import { decodeCashAddress } from '@bitauth/libauth';
+import { decodeCashAddress } from 'bitauth-libauth-v3';
 import { decodeCashAddress as decodeCashAddressV3, encodeCashAddress } from 'bitauth-libauth-v3';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
 import { db } from 'src/core/client-db';
