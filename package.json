@@ -53,22 +53,17 @@
   "devDependencies": {
     "@intlify/unplugin-vue-i18n": "^11.2.0",
     "@quasar/app-vite": "^2.6.0",
-    "@types/dropzone": "^5.7.8",
-    "@types/jest": "^29.5.4",
-    "@types/jquery": "^3.5.29",
     "@types/node": "^12.20.21",
     "@typescript-eslint/eslint-plugin": "^5.10.0",
     "@typescript-eslint/parser": "^5.10.0",
     "autoprefixer": "^10.4.27",
-    "browserfs": "^1.4.3",
     "eslint": "^8.10.0",
     "eslint-config-prettier": "^8.1.0",
     "eslint-plugin-vue": "^9.0.0",
     "mocha": "^10.2.0",
     "patch-package": "^8.0.1",
     "prettier": "^2.5.1",
-    "typescript": "^6.0.3",
-    "vite-plugin-node-polyfills": "^0.26.0"
+    "typescript": "^6.0.3"
   },
   "resolutions": {
     "@wizardconnect/core/@bitauth/libauth": "npm:@bitauth/libauth@3.1.0-next.2",
