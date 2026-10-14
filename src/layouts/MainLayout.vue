@@ -7,6 +7,7 @@
         <q-toolbar-title>
           <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_transparent.png"
             alt="CashTokens Studio" class="cursor-pointer app-logo" />
+
         </q-toolbar-title>
         <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
             color: rgb(20, 20, 20);
@@ -69,8 +70,11 @@
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
             <q-btn to="/" size="2em" flat color="primary">
-              <q-avatar size="3em">
+              <q-avatar v-if="route.name === 'dashboard'" size="3em">
                 <q-img src="/images/cts_icon.png"></q-img>
+              </q-avatar>
+              <q-avatar v-else size="4em">
+                <q-img :src="`https://api.dicebear.com/10.x/voxel-art/svg?tags=animation&seed=${avatar}`"></q-img>
               </q-avatar>
             </q-btn>
           </div>
@@ -97,9 +101,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, ref } from 'vue';
+import { computed, inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
+import { LocalStorage, useQuasar } from 'quasar';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import PageSkeleton from 'src/components/PageSkeleton.vue';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
@@ -108,7 +112,7 @@ const leftDrawerOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-
+const avatar = ref<string>('')
 const isIndexPage = computed(() => route.path === '/');
 
 const showHeaderLogo = computed(() => $q.screen.gt.xs);
@@ -127,7 +131,13 @@ const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value;
 };
 
-
+onMounted(() => {
+  avatar.value = LocalStorage.getItem('avatar') || ''
+  if (!avatar.value) {
+    avatar.value = String(Math.floor(Math.random() * 10000))
+    LocalStorage.setItem('avatar', avatar.value)
+  }
+})
 </script>
 
 <style scoped>
