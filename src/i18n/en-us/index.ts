@@ -236,6 +236,15 @@ export default {
       walletPrompt: 'Transfer AuthKey NFT',
       authKeyNotFound: 'Could not find this vault\'s AuthKey NFT in your wallet.',
     },
+    releaseAuthhead: {
+      title: 'Unlock',
+      message:
+        "You are about to release the Auth UTXO (identity output) from the Authguard Vault. Doing so will transfer the token category's identity output to the destination address, and it will be removed from the Managed Tokens dashboard if the destination address is not an Authguard Address or an Authguard address that you don't own.",
+      customDestinationWarning:
+        'Important: Whoever owns this address becomes the new owner of the Auth UTXO.',
+      defaultDestinationLabel: 'Default destination is your first wallet address',
+      useCustomDestination: 'I want to send to a different address',
+    },
     importAuthhead: {
       menu: 'Import Auth UTXO',
       title: 'Importing Auth Utxo',
