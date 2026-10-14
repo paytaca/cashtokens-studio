@@ -15,8 +15,8 @@
             <q-icon name="key" color="warning" size="sm" />
           </template>
           <div class="text-weight-bold text-white">{{ t('nftPage.authKeyNft.bannerTitle') }}</div>
-          <div class="text-caption text-grey-4">{{ t('nftPage.authKeyNft.bannerMessage') }}</div>
-          <div class="text-caption text-grey-4 q-mt-xs row items-center q-gutter-x-xs">
+          <div class="text-body2 text-grey-4">{{ t('nftPage.authKeyNft.bannerMessage') }}</div>
+          <div class="text-body2 text-grey-4 q-mt-xs row items-center q-gutter-x-xs">
             <span>{{ t('nftPage.authKeyNft.lockedTokens') }}:</span>
             <span v-if="lockedTokensLoading" class="text-grey-4">
               {{ t('nftPage.authKeyNft.lockedTokensLoading') }}

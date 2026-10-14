@@ -243,7 +243,7 @@ export default {
       indicator: 'AuthKey NFT',
       bannerTitle: 'This is an AuthKey NFT',
       bannerMessage:
-        'This NFT is the authentication key (AuthKey) for an AuthGuard contract. If you lose or transfer it, you will no longer be able to manage the tokens locked by this AuthGuard.',
+        'This NFT is the authentication key (AuthKey) for an AuthGuard contract. If you lose or transfer it, you will no longer be able to manage the tokens associated with this AuthKey NFT.',
       lockedTokens: 'Locked tokens',
       lockedTokensLoading: 'Checking…',
       lockedTokensUnknown: '?',
