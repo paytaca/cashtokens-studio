@@ -11,15 +11,27 @@ export type UtxoWithPath = Utxo & {
 
 export type UtxoWithAuthKey = UtxoWithPath & { authkey?: UtxoWithPath }
 
+/**
+ * Identity of the snapshot an authhead carries, plus the registry that published it. The authguard
+ * store assigns `registryIdentity` straight off the registry record — a string for an on-chain
+ * registry, an object for an off-chain one — and the registry view/edit pages resolve their record
+ * from IndexedDB by it, so it has to travel with the navigation.
+ */
+export type IdentitySnapshotIdentifier = {
+    contentHash: string,
+    identity: { authbase: string, timestamp: string },
+    registryIdentity?: string | object,
+}
+
 export type AuthheadUtxo = UtxoWithAuthKey & { 
     identitySnapshot?: IdentitySnapshot, 
-    identitySnapshotIdentifier?: { contentHash: string, identity: { authbase: string, timestamp: string } } 
+    identitySnapshotIdentifier?: IdentitySnapshotIdentifier 
 }
 
 export type DecoratedUtxo = UtxoWithAuthKey & { 
     authkey?: UtxoWithPath,
     identitySnapshot?: IdentitySnapshot, 
-    identitySnapshotIdentifier?: { contentHash: string, identity: { authbase: string, timestamp: string } },
+    identitySnapshotIdentifier?: IdentitySnapshotIdentifier,
     isAuthhead?: boolean
 }
 

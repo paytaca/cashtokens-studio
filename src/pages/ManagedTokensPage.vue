@@ -137,7 +137,7 @@
 
           <template v-slot:body-cell-actions="value">
             <q-td :props="value">
-              <q-btn round icon="more_vert" size="sm" @click.stop>
+              <q-btn round icon="more_vert" @click.stop>
                 <q-menu dark auto-close class="bg-dark-2 shadow-2">
                   <q-list dark class="bg-dark" style="min-width: 180px">
                     <q-item v-if="value.row.token" clickable @click="viewRegistry(value.row)">
@@ -263,7 +263,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -605,10 +605,16 @@ const viewRegistry = (authhead: DecoratedUtxo) => {
   const query: Record<string, string> = {
     authbase: authhead.token?.category || '',
   };
+  // The registry pages resolve their record from IndexedDB by `registryIdentity`, so the row's
+  // identity travels with the navigation — the same way the authhead-view row handler passes it.
+  const registryIdentity = authhead.identitySnapshotIdentifier?.registryIdentity;
+  if (typeof registryIdentity === 'string') {
+    query.registryIdentity = registryIdentity;
+  }
   if (authhead.identitySnapshotIdentifier?.contentHash) {
     query.contentHash = authhead.identitySnapshotIdentifier.contentHash;
   }
-  router.push({ path: '/token/metadata-registry', query });
+  router.push({ name: 'edit-registry', query });
 };
 
 const navigateToAuthguard = (row: UtxoWithAuthKey) => {
