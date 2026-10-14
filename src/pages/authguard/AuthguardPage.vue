@@ -9,15 +9,14 @@
           <div class="row">
             <div class="col-12 flex items-center q-gutter-x-md">
               <q-avatar size="3xl" class="profile-avatar bg-grey-9">
-                <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" />
-                <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" />
+                <!-- <q-img v-if="identitySnapshot?.uris?.icon" :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" />
+                <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" /> -->
+                <q-icon name="mdi-safe-square-outline"></q-icon>
               </q-avatar>
               <div>
-                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || t('authguard.vault')
-                  }}
+                <div class="text-h5 text-weight-bold text-white">{{ vaultHeading }}
                 </div>
-                <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
-                  identitySnapshot.description }}</div>
+
               </div>
               <q-btn class="q-ml-auto" outline color="negative" no-caps icon="mdi-shield-alert"
                 :label="t('authguard.transferOwnership.button')" @click="onTransferOwnershipClick" rounded />
@@ -30,7 +29,7 @@
             <div class="row q-gutter-y-md q-mb-lg">
               <div class="col-12 col-sm-6">
                 <div class="text-caption text-grey-5 text-uppercase q-mb-xs q-gutter-x-sm flex no-wrap items-center">
-                  <q-icon name="lock" color="warning"></q-icon>
+                  <q-icon name="mdi-safe-outline" color="warning"></q-icon>
                   <div>{{ t('authguard.vaultAddress') }}</div>
                 </div>
                 <div class="flex items-center q-gutter-x-xs">
@@ -52,36 +51,47 @@
 
             <div class="table-scroll-wrapper">
               <q-table :rows="vaultUtxos" :columns="columns" flat class="border-radius-12 token-reserves-table"
-                :loading="loading" row-key="txid" style="min-width: 640px" title="Vault Contents">
+                :loading="loading" row-key="txid">
+                <template v-slot:top>
+                  <div class="row items-center no-wrap q-gutter-x-sm">
+                    <div class="text-h6">{{ t('authguard.vaultContents') }}</div>
+                    <q-badge color="warning" text-color="dark" class="text-weight-bold">{{ vaultUtxos.length
+                      }}</q-badge>
+                  </div>
+                </template>
+
                 <template v-slot:body-cell-token="props">
                   <q-td :props="props">
                     <div class="flex items-center no-wrap q-gutter-x-md">
                       <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
-                        <q-img v-if="identitySnapshot?.uris?.icon"
-                          :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon)!" fit="cover" />
+                        <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                          :src="ipfsToGatewayUrl(props.row.identitySnapshot.uris.icon)!" fit="cover" />
                         <q-img v-else
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
                           <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
-                            }}</q-tooltip>
+                          }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>
                         <div class="text-caption text-grey-6 flex items-center no-wrap">
-                          UTXO<q-icon name="mdi-identifier" size="sm"></q-icon> = {{ shortenTokenId(props.row.txid)
+                          {{ t('authguard.utxo') }}<q-icon name="mdi-identifier" size="sm"></q-icon> = {{
+                            shortenTokenId(props.row.txid)
                           }}:{{
                             props.row.vout
                           }}
                         </div>
                         <div class="flex items-center q-gutter-x-xs">
                           <span class="text-caption text-weight-medium text-primary">
-                            Symbol: {{ identitySnapshot?.token?.symbol || '<Not able to fetch metadata>' }}
+                            {{ t('authguard.symbol') }}:
+                            {{ props.row.identitySnapshot?.token?.symbol || t('authguard.noMetadata') }}
                           </span>
                         </div>
 
                         <div>
                           <span class="text-caption text-grey-5">
-                            Category: {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
+                            {{ t('authguard.category') }}:
+                            {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
                           </span>
                         </div>
                         <div class="flex items-center q-gutter-x-xs q-mt-xs">
@@ -121,6 +131,12 @@
                             {{ t('authguard.badgeImmutable') }}
                           </q-badge>
                         </div>
+                        <div v-if="$q.screen.lt.sm" class="actions">
+                          <q-btn flat icon="lock_open" :label="t('button.unlock')" dense color="negative"
+                            class="q-mr-sm" @click="confirmUnguard(props.row)" size="sm" />
+                          <q-btn flat icon="mdi-fire" :label="t('button.burn')" dense color="orange"
+                            @click="confirmBurn(props.row)" size="sm" />
+                        </div>
                       </div>
                     </div>
                   </q-td>
@@ -132,12 +148,11 @@
                       props.row.vout }}</span>
                   </q-td>
                 </template>
-
                 <template v-slot:body-cell-actions="props">
-                  <q-td :props="props" class="text-right">
-                    <q-btn flat dense icon="lock_open" :label="t('button.unlock')" size="sm" color="grey-4"
+                  <q-td v-if="$q.screen.gt.xs" :props="props" class="text-right">
+                    <q-btn flat icon="mdi-lock-open-variant" :label="t('button.unlock')" color="negative"
                       class="q-mr-sm" @click="confirmUnguard(props.row)" />
-                    <q-btn flat dense icon="mdi-fire" :label="t('button.burn')" size="sm" color="orange"
+                    <q-btn flat icon="mdi-fire" :label="t('button.burn')" color="orange"
                       @click="confirmBurn(props.row)" />
                   </q-td>
                 </template>
@@ -150,7 +165,7 @@
 
     <UnguardAuthheadDialog v-model="showUnguardDialog" :icon="identitySnapshot?.uris?.icon"
       :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory" @cancel="selectedRow = null"
-      @unguard="onUnguardDialogConfirm" />
+      :default-destination-address="defaultUnguardRecipientAddress" @unguard="onUnguardDialogConfirm" />
 
     <BurnAuthheadDialog v-model="showBurnDialog" :icon="identitySnapshot?.uris?.icon"
       :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory"
@@ -160,7 +175,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
@@ -194,7 +209,7 @@ const { t } = useI18n()
 const { wallet, manager } = useWizardConnectWallet()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
-const { activeAuthhead } = storeToRefs(authguardStore)
+const { activeAuthhead, authheads } = storeToRefs(authguardStore)
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
 const vaultUtxos = ref<any[]>([])
@@ -205,6 +220,18 @@ const identitySnapshot = ref<any>(null)
 const showUnguardDialog = ref(false)
 const showBurnDialog = ref(false)
 const selectedRow = ref<any>(null)
+const defaultUnguardRecipientAddress = computed(() => {
+  return wallet.value?.getTokenDepositAddress(0)
+})
+
+/**
+ * A vault locking a single token is effectively that token's vault, so its symbol is meaningful.
+ * Once it holds several, only the generic label is honest.
+ */
+const vaultHeading = computed(() => {
+  if (vaultUtxos.value.length !== 1) return t('authguard.vault')
+  return identitySnapshot.value?.token?.symbol || identitySnapshot.value?.name || t('authguard.vault')
+})
 
 const columns: QTableColumn[] = [
   {
@@ -222,10 +249,50 @@ const columns: QTableColumn[] = [
   }
 ]
 
+/**
+ * Registry metadata for a category. The authguard store already decorates its authheads with the
+ * registry snapshots — the same data the managed and collected token pages render from — so prefer
+ * that source and only reach for a registry lookup when it comes up empty.
+ */
+const resolveSnapshot = async (category?: string) => {
+  if (!category) return undefined
+
+  const decorated = authheads.value.find(
+    (a) => a.token?.category === category || a.identitySnapshot?.token?.category === category
+  )
+  if (decorated?.identitySnapshot) return decorated.identitySnapshot
+
+  try {
+    return await registryStore.fetchIdentitySnapshot(category)
+  } catch (error) {
+    console.log('Could not resolve identity snapshot for category', category, error)
+    return undefined
+  }
+}
+
+/**
+ * Vault table rows. Each carries its own token's metadata where we can resolve it — a vault can lock
+ * more than one category — falling back to the vault identity's snapshot.
+ */
+const buildVaultRows = async (utxos: any[], contract: { address: string }) => {
+  const snapshots = new Map<string, any>()
+  await Promise.all(
+    utxos.map(async (u) => {
+      const rowCategory = u.token?.category
+      if (!rowCategory || snapshots.has(rowCategory)) return
+      snapshots.set(rowCategory, await resolveSnapshot(rowCategory))
+    })
+  )
+  return utxos.map((u) => ({
+    ...u,
+    address: contract.address,
+    identitySnapshot: snapshots.get(u.token?.category) ?? identitySnapshot.value,
+  }))
+}
+
 const loadAuthguardUtxos = async (a: DecoratedUtxo) => {
   const category = a.authkey!.token!.category
   authkeyCategory.value = category
-  identitySnapshot.value = a.identitySnapshot || null
 
   const contract = createAuthguardContract({
     authkeyTokenId: category,
@@ -233,12 +300,10 @@ const loadAuthguardUtxos = async (a: DecoratedUtxo) => {
   })
   vaultAddress.value = contract.tokenAddress
 
+  identitySnapshot.value = a.identitySnapshot ?? (await resolveSnapshot(category)) ?? null
+
   const utxos: any[] = await contract.getUtxos()
-  vaultUtxos.value = utxos.map(u => ({
-    ...u,
-    address: contract.address,
-    identitySnapshot: a.identitySnapshot,
-  }))
+  vaultUtxos.value = await buildVaultRows(utxos, contract)
 }
 
 const confirmUnguard = (row: any) => {
@@ -251,9 +316,9 @@ const confirmBurn = (row: any) => {
   showBurnDialog.value = true
 }
 
-const onUnguardDialogConfirm = () => {
+const onUnguardDialogConfirm = (finalDestinationAddress: string) => {
   if (selectedRow.value) {
-    handleUnguard(selectedRow.value)
+    handleUnguard(selectedRow.value, finalDestinationAddress)
   }
   selectedRow.value = null
 }
@@ -265,7 +330,7 @@ const onBurnDialogConfirm = () => {
   selectedRow.value = null
 }
 
-const handleUnguard = async (row: any) => {
+const handleUnguard = async (row: any, finalDestinationAddress: string) => {
   const a = activeAuthhead.value
   if (!a?.authkey) {
     $q.notify({ type: 'negative', message: t('info.authkeyNotAvailable') })
@@ -286,12 +351,13 @@ const handleUnguard = async (row: any) => {
   updateStep(TASK_PREPARE_TX, 'running')
 
   try {
-    const ownerAddress = wallet.value!.getTokenDepositAddress(0)
+    // const ownerAddress = wallet.value!.getTokenDepositAddress(0)
+    const ownerAddress = finalDestinationAddress
     const signRequest = unguardAuthhead({
       authheadUtxo: row,
       authkeyUtxo: a.authkey,
       funderUtxos: funderUtxos as any,
-      recipientAddress: ownerAddress,
+      recipientAddress: ownerAddress as string,
       network: import.meta.env.VITE_BCH_NETWORK as any
     })
 
@@ -368,12 +434,8 @@ const handleBurn = async (row: any) => {
   updateStep(TASK_PREPARE_TX, 'running')
 
   try {
-    const sampleAddress = wallet.value!.getTokenDepositAddress(0)
-    const decodedAddress = decodeCashAddress(sampleAddress)
-    if (typeof decodedAddress === 'string') {
-      throw new Error(decodedAddress)
-    }
-    const burnAddress = `${decodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+
+    const burnAddress = import.meta.env.VITE_BURN_ADDRESS
 
     const signRequest = burnAuthhead({
       authheadUtxo: row,
@@ -601,7 +663,7 @@ onMounted(async () => {
       return
     }
 
-    const snap = await registryStore.fetchIdentitySnapshot(category)
+    const snap = await resolveSnapshot(category)
     identitySnapshot.value = snap || null
 
     const decorated: any = {
@@ -613,11 +675,7 @@ onMounted(async () => {
     }
     authguardStore.setActiveAuthhead(decorated)
 
-    vaultUtxos.value = utxos.map(u => ({
-      ...u,
-      address: contract.address,
-      identitySnapshot: snap || undefined,
-    }))
+    vaultUtxos.value = await buildVaultRows(utxos, contract)
   } catch (e) {
     console.log('Failed to resolve authguard', e)
     router.back()
