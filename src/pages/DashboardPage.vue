@@ -1,25 +1,13 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
-      <ExplainerBanner class="q-my-md"
+      <ExplainerBanner class="q-ma-md"
         :avatarSrc="walletIcon || `https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub}`"
-        :title="walletDisplayName">
-        <template #subtitle>
-          <div class="row items-center q-gutter-x-sm">
-            <q-btn icon="img:/images/bitcoin-cash-circle.svg" flat dense no-caps class="q-pa-none">
-              <span class="q-px-xs">{{ formatBch(bchBalance) }}</span>
-            </q-btn>
-            <template v-if="primaryXPub">
-              <span class="text-grey-6">·</span>
-              <span class="text-grey-5">{{ shorten(primaryXPub) }}</span>
-            </template>
-          </div>
-        </template>
+        :title="t('dashboard.welcome')">
+
         <template #default>
           <div class="row items-center q-gutter-sm">
-            <q-chip :color="stateColor" text-color="white" dense :icon="stateIcon">
-              {{ stateLabel }}
-            </q-chip>
+
             <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
               {{ networkLabel }}
             </q-chip>
@@ -64,7 +52,11 @@
             <q-card flat class="dashboard-section-card">
               <q-card-section>
                 <div class="row items-center no-wrap q-gutter-sm">
-                  <q-icon name="account_balance_wallet" color="primary" size="24px" />
+
+                  <q-avatar size="sm">
+                    <q-img v-if="manager?.walletIcon" :src="manager?.walletIcon" size="xs"></q-img>
+                    <q-icon v-else name="account_balance_wallet" color="primary" size="24px" />
+                  </q-avatar>
                   <div class="col" style="min-width: 0">
                     <div class="text-subtitle1 text-weight-bold text-white">{{ t('dashboard.wallet.title') }}</div>
                     <div class="text-caption text-grey-4">{{ t('dashboard.wallet.caption') }}</div>
@@ -117,7 +109,11 @@
                   <div class="col-6 col-sm-4">
                     <div class="stat-tile">
                       <div class="text-caption text-grey-5">{{ t('dashboard.wallet.balanceLabel') }}</div>
-                      <div class="text-subtitle2 text-white">{{ formatBch(bchBalance) }}</div>
+                      <div class="text-subtitle2 text-white">
+                        <q-btn icon="img:/images/bitcoin-cash-circle.svg" flat dense no-caps class="q-pa-none">
+                          <span class="q-px-xs">{{ formatBch(bchBalance) }}</span>
+                        </q-btn>
+                      </div>
                     </div>
                   </div>
                   <div class="col-6 col-sm-4">
@@ -141,8 +137,7 @@
                 <div v-if="sessionPaths.length === 0" class="text-caption text-grey-6">
                   {{ t('dashboard.wallet.notAvailable') }}
                 </div>
-                <div v-for="path in sessionPaths" :key="path.name"
-                  class="row items-center no-wrap q-py-xs">
+                <div v-for="path in sessionPaths" :key="path.name" class="row items-center no-wrap q-py-xs">
                   <div class="col-3">
                     <q-badge color="grey-9" text-color="grey-3" :label="pathLabel(path.name)" />
                   </div>
@@ -150,8 +145,7 @@
                     {{ shorten(path.xpub, 12, 6) }}
                   </div>
                   <div class="col-auto q-ml-sm">
-                    <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
-                      @click="copyValue(path.xpub)">
+                    <q-btn flat dense round size="sm" icon="content_copy" color="grey-5" @click="copyValue(path.xpub)">
                       <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
                     </q-btn>
                   </div>
@@ -202,9 +196,9 @@
                       </q-item-label>
                       <q-item-label class="text-grey-2 q-gutter-x-sm">
                         <q-avatar size="sm">
-                          <q-img v-if="walletIcon" :src="walletIcon" size="xs"></q-img>
-                        </q-avatar>{{ walletName || t('dashboard.wallet.notAvailable')
-                        }}</q-item-label>
+                          <q-img v-if="manager?.walletIcon" :src="manager?.walletIcon" size="xs"></q-img>
+                        </q-avatar><span>{{ walletName || t('dashboard.wallet.notAvailable') }}</span>
+                      </q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
@@ -219,13 +213,13 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.protocol') }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ protocol || t('dashboard.wallet.notAvailable')
-                        }}</q-item-label>
+                      }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.discovered')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ isDiscovered ? t('dashboard.connection.yes') :
                         t('dashboard.connection.no') }}</q-item-label>
                     </q-item-section>
@@ -240,10 +234,10 @@
                   <q-item v-if="walletPublicKey" class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.walletPublicKey')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="row items-center no-wrap q-gutter-x-sm">
                         <span class="ellipsis text-grey-2" :title="walletPublicKey">{{ shorten(walletPublicKey, 12, 6)
-                          }}</span>
+                        }}</span>
                         <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
                           @click="copyValue(walletPublicKey)">
                           <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>

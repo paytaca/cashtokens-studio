@@ -329,6 +329,7 @@ export default {
     },
   },
   dashboard: {
+    welcome: 'Hello, welcome to CashTokens Studio',
     pageTitle: {
       managedTokens: 'Managed Tokens',
       collectedTokens: 'Collected Tokens',
