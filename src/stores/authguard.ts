@@ -22,6 +22,8 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeysLoading = ref<boolean>()
   const activeAuthhead = ref<DecoratedUtxo | null>(LocalStorage.getItem('active_authhead') ? parseLibauthStringified(LocalStorage.getItem('active_authhead') as object) : null)
   const authheadLoading = ref<Record<string, boolean>>({}) // {<txid:vout>: true}
+  /** Authheads handed over by the auth UTXO import flow, spotlighted once on the managed tokens page. */
+  const receivedAuthheads = ref<DecoratedUtxo[]>([])
   
 
   /**
@@ -184,6 +186,16 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     }
   }
 
+  /** Keep the authheads an import just delivered, so the managed tokens page can spotlight them once. */
+  const setReceivedAuthheads = (utxos: DecoratedUtxo[]) => {
+    receivedAuthheads.value = utxos
+  }
+
+  /** Called when the user leaves the page: after that the authheads are just like any other. */
+  const clearReceivedAuthheads = () => {
+    receivedAuthheads.value = []
+  }
+
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {
       try {
@@ -204,10 +216,13 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     authheadsLoading,
     authheadLoading,
     activeAuthhead,
+    receivedAuthheads,
     loadAuthkeys,
     loadAuthheads,
     loadAuthhead,
     setActiveAuthhead,
+    setReceivedAuthheads,
+    clearReceivedAuthheads,
     updateActiveAuthhead
   }
 }) 

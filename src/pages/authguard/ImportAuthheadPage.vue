@@ -90,8 +90,9 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { type Network } from 'cashscript'
 import { createAuthguardContract, filterAuthKeys, findUnusedAuthkey } from 'src/core/authguard'
-import type { UtxoWithPath } from 'src/core/types'
+import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useAuthguardStore } from 'src/stores/authguard'
 import { subscribe } from 'src/services/watchtower'
 import CashAddress from 'src/components/CashAddress.vue'
 import TokenCategory from 'src/components/TokenCategory.vue'
@@ -104,6 +105,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const { wallet, walletIsReady } = useWizardConnectWallet()
+const { setReceivedAuthheads } = useAuthguardStore()
 
 const scanning = ref<boolean>(false)
 const scanError = ref<string>('')
@@ -137,6 +139,13 @@ const watchForDeposit = () => {
       if (utxos.length === 0) return
 
       stopWatchingDeposit()
+
+      // Spotlight the arrival on the managed tokens page, which forgets about it on navigation.
+      setReceivedAuthheads(utxos.map((utxo) => ({
+        ...utxo,
+        authkey: unusedAuthkey.value,
+        isAuthhead: true
+      } as DecoratedUtxo)))
       router.push({ name: 'managed-tokens' })
     } catch (error) {
       console.log('@ImportAuthheadPage deposit poll:', error)

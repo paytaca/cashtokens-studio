@@ -9,6 +9,210 @@
         </template>
       </ExplainerBanner>
 
+      <!-- Transient: the authhead(s) an import just delivered. A copy of the table below so that the
+           filtered table keeps its own behaviour untouched. Emptied when the user navigates away. -->
+      <q-card v-if="receivedRows.length > 0" class="q-pa-lg rounded-borders received-card q-gutter-y-md">
+        <div class="row items-center no-wrap q-gutter-x-sm">
+          <q-avatar rounded color="warning" text-color="dark" size="36px">
+            <q-icon name="move_to_inbox" size="20px" />
+          </q-avatar>
+          <div class="col">
+            <div class="text-h6 text-weight-bold text-white">
+              {{ $t('dashboard.managed.receivedTitle', receivedRows.length) }}
+            </div>
+            <div class="text-body2 text-grey-4">{{ $t('dashboard.managed.receivedDescription') }}</div>
+          </div>
+          <q-btn icon="close" flat round dense color="grey-6" @click="clearReceivedAuthheads" />
+        </div>
+
+        <q-table :rows="receivedRows" :columns="columns" :row-key="rowId" flat
+          class="border-radius-12 token-reserves-table" @row-click.stop="onReceivedRowClick">
+          <template v-slot:body-cell-token="props">
+            <q-td :props="props">
+              <div class="flex items-center no-wrap q-gutter-x-md">
+                <div class="flex column items-center">
+                  <q-avatar size="36px" class="bg-grey-9 border-radius-8 shadow-1">
+                    <q-img v-if="props.row.identitySnapshot?.uris?.icon"
+                      :src="ipfsToGatewayUrl(props.row.identitySnapshot?.uris?.icon)!" fit="cover"></q-img>
+                    <q-img v-else
+                      :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment}`"
+                      fit="cover">
+                      <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip') }}
+                      </q-tooltip>
+                    </q-img>
+                  </q-avatar>
+                  <span v-if="!props.row.identitySnapshot?.uris?.icon" class="text-grey-6 font-8 q-mt-xs"
+                    style="line-height: 1">{{ $t('dashboard.managed.noIcon') }}</span>
+                </div>
+                <div>
+                  <div class="flex items-center q-gutter-x-xs">
+                    <span class="text-caption token-symbol">
+                      {{
+                        props.row.identitySnapshot?.token?.symbol ||
+                        $t('dashboard.managed.symbolUnknown')
+                      }}
+                    </span>
+                    <template v-if="props.row.token?.category">
+                      <span class="text-grey-7">-</span>
+                      <span class="flex items-center text-caption text-grey-5 text-mono">
+                        {{ shortenTokenId(props.row.token.category) }}
+                        <CopyText :text="props.row.token.category" />
+                      </span>
+                    </template>
+                    <!-- A non-token authhead has no category, so identify it by the UTXO itself. -->
+                    <span v-else class="flex items-center text-caption text-grey-5 text-mono">
+                      {{ shortenTokenId(rowId(props.row)) }}
+                      <CopyText :text="rowId(props.row)" />
+                    </span>
+                  </div>
+                  <div class="flex items-center q-gutter-x-xs q-mt-xs">
+                    <q-badge v-if="getTokenType(props.row) === 'mixed'" color="dark" text-color="orange-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeMixed') }}
+                    </q-badge>
+                    <q-badge v-else-if="getTokenType(props.row) === 'nft'" color="dark" text-color="blue-6"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="token" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeNft') }}
+                    </q-badge>
+                    <q-badge v-else color="dark" text-color="green-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="money" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeFungible') }}
+                    </q-badge>
+
+                    <q-badge v-if="props.row.token?.nft?.capability === 'minting'" color="dark" text-color="purple-4"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeMinting') }}
+                    </q-badge>
+                    <q-badge v-else-if="props.row.token?.nft?.capability === 'mutable'" color="dark"
+                      text-color="teal-10"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                      <q-icon name="published_with_changes" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeMutable') }}
+                    </q-badge>
+                    <q-badge v-else-if="props.row.token?.nft?.capability === 'none'" color="dark" text-color="grey-6"
+                      class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge border-grey-8"
+                      dense>
+                      <q-icon name="lock_outline" size="10px" class="q-mr-xs" />
+                      {{ $t('dashboard.managed.badgeImmutable') }}
+                    </q-badge>
+                  </div>
+                </div>
+              </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-fungibleReserves="props">
+            <q-td :props="props" class="text-right">
+              <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                class="text-subtitle1 text-weight-bold text-mono text-white">
+                {{
+                  formatTokenAmount(
+                    props.value,
+                    props.row.identitySnapshot?.token?.symbol || '',
+                    props.row.identitySnapshot?.token?.decimals,
+                    'none'
+                  )
+                }}
+              </div>
+              <div v-else class="text-grey-6 text-caption text-mono">
+                {{ $t('dashboard.managed.unavailable') }}
+              </div>
+              <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                <span>{{ $t('dashboard.managed.decimals') }}</span>
+                <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                  {{
+                    props.row.identitySnapshot?.token?.decimals === undefined
+                      ? $t('dashboard.managed.decimalsUnknown')
+                      : props.row.identitySnapshot?.token?.decimals
+                  }}
+                </q-badge>
+              </div>
+            </q-td>
+          </template>
+
+          <template v-slot:body-cell-actions="value">
+            <q-td :props="value">
+              <q-btn round icon="more_vert" size="sm" @click.stop>
+                <q-menu dark auto-close class="bg-dark-2 shadow-2">
+                  <q-list dark class="bg-dark" style="min-width: 180px">
+                    <q-item v-if="value.row.token" clickable @click="viewRegistry(value.row)">
+                      <q-item-section avatar>
+                        <q-icon name="description" color="secondary" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionViewRegistry') }}
+                      </q-item-section>
+                    </q-item>
+
+                    <q-item clickable @click="navigateToAuthguard(value.row)">
+                      <q-item-section avatar>
+                        <q-icon name="lock" color="secondary" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionTokenVault') }}
+                      </q-item-section>
+                    </q-item>
+
+                    <q-separator dark inset />
+
+                    <q-item v-if="
+                      ['fungible', 'mixed'].includes(getTokenType(value.row))
+                    " clickable @click="openTransferDialog(value.row, 'issuance')">
+                      <q-item-section avatar>
+                        <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionReleaseReserves') }}
+                      </q-item-section>
+                    </q-item>
+
+                    <q-item v-if="
+                      ['fungible', 'mixed'].includes(getTokenType(value.row))
+                    " clickable @click="openTransferDialog(value.row, 'burn')">
+                      <q-item-section avatar>
+                        <q-icon name="mdi-fire" color="orange" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionBurnReserves') }}
+                      </q-item-section>
+                    </q-item>
+
+                    <q-item v-if="
+                      getTokenType(value.row) !== 'fungible' &&
+                      value.row.token?.nft?.capability === 'minting'
+                    " clickable @click="navigateToMint(value.row)">
+                      <q-item-section avatar>
+                        <q-icon name="add_circle" color="primary" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionMintChildNft') }}
+                      </q-item-section>
+                    </q-item>
+
+                    <q-separator dark inset />
+                    <q-separator dark inset />
+                    <q-item v-if="value.row.token" clickable
+                      @click="refreshCache(value.row.token!.category as string)">
+                      <q-item-section avatar>
+                        <q-icon name="refresh" color="grey-5" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionRefreshCache') }}
+                      </q-item-section>
+                    </q-item>
+                  </q-list>
+                </q-menu>
+              </q-btn>
+            </q-td>
+          </template>
+        </q-table>
+      </q-card>
+
       <q-card class="q-pa-lg rounded-borders">
         <template v-if="authkeysLoading || authheadsLoading">
           <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
@@ -264,7 +468,7 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
-import { ref, computed, onUnmounted, watch, triggerRef } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { useRegistryStore } from 'src/stores/registry';
@@ -311,8 +515,8 @@ const router = useRouter();
 const { wallet, manager, walletIsReady } = useWizardConnectWallet();
 
 const authguardStore = useAuthguardStore();
-const { loadAuthkeys } = authguardStore;
-const { authheads, authkeysLoading, authheadsLoading } =
+const { loadAuthkeys, clearReceivedAuthheads } = authguardStore;
+const { authheads, authkeysLoading, authheadsLoading, receivedAuthheads } =
   storeToRefs(authguardStore);
 
 const appStore = useAppStore();
@@ -384,6 +588,19 @@ const filteredAuthheads = computed(() => {
   return rows;
 });
 
+const rowId = (row: any) => `${row.txid}:${row.vout}`;
+
+/**
+ * The authheads an import just delivered. Rendered from the rows the import handed over — the chain
+ * knows them before the registry does — and swapped for their decorated counterpart (icon, symbol,
+ * ...) as soon as a reload brings metadata in. Cleared when the user leaves this page.
+ */
+const receivedRows = computed(() =>
+  receivedAuthheads.value.map(
+    (row) => authheads.value.find((a) => rowId(a) === rowId(row)) ?? row
+  )
+);
+
 const viewRegistry = (authhead: DecoratedUtxo) => {
   authguardStore.setActiveAuthhead(authhead);
   const query: Record<string, string> = {
@@ -419,6 +636,19 @@ const onAuthheadsRowClick = (_evt: Event, row: any, index: number) => {
       timestamp: row.identitySnapshotIdentifier?.identity?.timestamp,
     },
   });
+};
+
+/**
+ * The import flow can hand over a non-token authhead, which the store's loader skips and the shared
+ * row handler cannot key a registry query on. Fall back to the authguard vault that holds it.
+ */
+const onReceivedRowClick = (evt: Event, row: any, index: number) => {
+  if (!row.token?.category) {
+    authguardStore.setActiveAuthhead(row);
+    router.push({ name: 'view-authguard', params: { authkeyCategory: row.authkey?.token?.category } });
+    return;
+  }
+  onAuthheadsRowClick(evt, row, index);
 };
 
 const navigateToMint = (row: UtxoWithAuthKey) => {
@@ -603,7 +833,16 @@ watch(
   { immediate: true }
 );
 
+onMounted(async () => {
+  if (receivedAuthheads.value.length === 0 || !walletIsReady.value) return;
+  // Reach the chain directly: the deposit landed in the vault contract, so the wallet's own
+  // watchers never see it, and this page has no other load on arrival.
+  await loadAuthkeys(wallet.value, true, true);
+  triggerRef(wallet);
+});
+
 onUnmounted(() => {
+  clearReceivedAuthheads();
   cancelChainRefresh();
   walletWatchers.value?.stopWatchingReceiveWallet?.();
   walletWatchers.value?.stopWatchingChangeWallet?.();
@@ -653,6 +892,15 @@ onUnmounted(() => {
 
 .token-reserves-table :deep(tbody tr:hover) {
   background-color: #1e1e1e !important;
+}
+
+.received-card {
+  border: 1px solid rgba(255, 193, 7, 0.35);
+  background: linear-gradient(
+    135deg,
+    rgba(255, 193, 7, 0.07) 0%,
+    rgba(30, 34, 43, 0.98) 55%
+  );
 }
 
 .text-mono {
