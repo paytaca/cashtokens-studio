@@ -173,12 +173,28 @@
                 <q-btn round icon="more_vert" size="sm" @click.stop>
                   <q-menu dark auto-close class="bg-dark-2 shadow-2">
                     <q-list dark class="bg-dark" dense style="min-width: 180px">
-                      <q-item clickable @click="sendCollectedTokens(value.row)">
+                      <!-- Mixed rows get both directions: an amount out, or the whole UTXO out. -->
+                      <q-item v-if="getTokenType(value.row) !== 'nft'" clickable
+                        @click="sendCollectedTokens(value.row)">
                         <q-item-section avatar>
                           <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
                         </q-item-section>
                         <q-item-section class="text-caption text-grey-3">
-                          {{ $t('dashboard.collected.actionSend') }}
+                          {{
+                            getTokenType(value.row) === 'mixed'
+                              ? $t('dashboard.collected.actionTransferFt')
+                              : $t('dashboard.collected.actionSend')
+                          }}
+                        </q-item-section>
+                      </q-item>
+
+                      <q-item v-if="getTokenType(value.row) !== 'fungible'" clickable
+                        @click="transferCollectedNft(value.row)">
+                        <q-item-section avatar>
+                          <q-icon name="mdi-transfer-right" color="primary" size="xs" />
+                        </q-item-section>
+                        <q-item-section class="text-caption text-grey-3">
+                          {{ $t('dashboard.collected.actionTransferNft') }}
                         </q-item-section>
                       </q-item>
 
@@ -189,7 +205,11 @@
                           <q-icon name="mdi-fire" color="orange" size="xs" />
                         </q-item-section>
                         <q-item-section class="text-caption text-grey-3">
-                          {{ $t('dashboard.collected.actionBurn') }}
+                          {{
+                            getTokenType(value.row) === 'nft'
+                              ? $t('dashboard.collected.actionBurnNft')
+                              : $t('dashboard.collected.actionBurn')
+                          }}
                         </q-item-section>
                       </q-item>
                     </q-list>
@@ -216,7 +236,7 @@ import { QTableColumn, useQuasar } from 'quasar';
 import type { UtxoWithPath } from 'src/core/types';
 import { getTokenType, isPureFungible, shortenTokenId } from 'src/core/utils';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
-import { transferFts } from 'src/core/transaction';
+import { transferFts, transferNfts } from 'src/core/transaction';
 import { broadcastTransaction } from 'src/services/transaction';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils';
@@ -224,10 +244,12 @@ import { useRouter } from 'vue-router';
 import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue';
+import NFTTransferDialog from 'src/components/dialogs/NFTTransferDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
 import { decodeCashAddress } from '@bitauth/libauth';
+import { decodeCashAddress as decodeCashAddressV3, encodeCashAddress } from 'bitauth-libauth-v3';
 import { BaseWallet, NetworkType } from 'mainnet-js-v3';
 import { db } from 'src/core/client-db';
 
@@ -520,6 +542,222 @@ const performSendCollectedTokens = (row: any) => {
   });
 };
 
+/** NFTs move whole through transferNfts: the token (amount, capability, commitment) travels as-is. */
+const performSendCollectedNft = (row: any) => {
+  $q.dialog({
+    component: NFTTransferDialog,
+    componentProps: {
+      category: row.token!.category,
+      capability: row.token?.nft?.capability,
+      commitment: row.token?.nft?.commitment,
+      amount: row.token?.amount?.toString(),
+      identitySnapshot: row.identitySnapshot,
+      selfAddress: wallet.value?.getTokenDepositAddress(0),
+    },
+    focus: 'none',
+  }).onOk(async (userInputs: { recipient: string }) => {
+    startLoader(txTaskList, () => {
+      $q.notify({ type: 'warning', message: t('info.cancelled') });
+    });
+
+    updateStep(TASK_INPUTS_CHECK, 'done');
+    updateStep(TASK_PREPARE_TX, 'running');
+
+    try {
+      const signRequest = transferNfts({
+        nfts: [row],
+        recipientAddress: userInputs.recipient,
+        changeAddress: wallet.value!.getTokenDepositAddress(0),
+        walletUtxos: (wallet.value!.utxos || []) as UtxoWithPath[],
+        network: import.meta.env.VITE_BCH_NETWORK as Network,
+        userPrompt: t('nftTransfer.walletPromptSend'),
+      });
+
+      updateStep(TASK_PREPARE_TX, 'done');
+      updateStep(TASK_WAIT_FOR_SIG, 'running');
+
+      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+
+      updateStep(TASK_WAIT_FOR_SIG, 'done');
+      updateStep(TASK_BROADCASTING, 'running');
+
+      const [broadcastError, txid] = await broadcastTransaction({
+        transactionHex: response.signedTransaction,
+        network: import.meta.env.VITE_BCH_NETWORK,
+        onProgress: (progress: string) => {
+          const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress });
+          updateStep(TASK_BROADCASTING, 'running', newLabel);
+        },
+      });
+
+      if (broadcastError) {
+        updateStep(TASK_BROADCASTING, 'failed');
+        throw broadcastError;
+      }
+
+      updateStep(TASK_BROADCASTING, 'done');
+      updateStep(TASK_WAITING_PROPAGATION, 'running');
+
+      const networkType =
+        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+          ? NetworkType.Testnet
+          : NetworkType.Mainnet;
+      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+
+      updateStep(TASK_WAITING_PROPAGATION, 'done');
+      updateStep(TASK_REFRESH_UTXOS, 'running');
+
+      await wallet.value?.sync();
+      triggerRef(wallet);
+
+      updateStep(TASK_REFRESH_UTXOS, 'done');
+
+      await db.saveActivity({
+        event: t('dashboard.notify.activityEventTransferNfts'),
+        txid,
+        status: 'success',
+      });
+
+      stopLoader(1000);
+
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: t('dashboard.notify.nftTransferSent'),
+          txid,
+        },
+      });
+    } catch (error: any) {
+      stopLoader(3000);
+      if (error?.name === 'AbortError') return
+      $q.notify({ type: 'Error', message: error.message });
+    }
+  });
+};
+
+/**
+ * The burn address configured in env, normalised to the token-aware form a token output needs.
+ * The env value may or may not already carry its network prefix, and it may already be token-aware
+ * (the current one is a `p2shWithTokens` address).
+ */
+const getTokenAwareBurnAddress = (): string => {
+  const networkPrefix = wallet.value!.getTokenDepositAddress(0).split(':')[0];
+  const configured = (import.meta.env.VITE_BURN_ADDRESS || '').trim();
+  const burnAddress = configured.includes(':') ? configured : `${networkPrefix}:${configured}`;
+
+  const decoded = decodeCashAddressV3(burnAddress);
+  if (typeof decoded === 'string') throw new Error(decoded);
+  if (decoded.type.includes('WithTokens')) return burnAddress;
+  return encodeCashAddress({
+    ...decoded,
+    throwErrors: true,
+    type: `${decoded.type as 'p2pkh' | 'p2sh'}WithTokens`,
+  }).address;
+};
+
+/** Burning an NFT sends the whole UTXO to the burn address, so there is no recipient to pick. */
+const performBurnCollectedNft = (row: any) => {
+  let burnAddress: string;
+  try {
+    burnAddress = getTokenAwareBurnAddress();
+  } catch (error: any) {
+    $q.notify({ type: 'Error', message: error.message });
+    return;
+  }
+
+  $q.dialog({
+    component: NFTTransferDialog,
+    componentProps: {
+      category: row.token!.category,
+      capability: row.token?.nft?.capability,
+      commitment: row.token?.nft?.commitment,
+      amount: row.token?.amount?.toString(),
+      identitySnapshot: row.identitySnapshot,
+      burnAddress,
+    },
+    focus: 'none',
+  }).onOk(async (userInputs: { recipient: string }) => {
+    startLoader(txTaskList, () => {
+      $q.notify({ type: 'warning', message: t('info.cancelled') });
+    });
+
+    updateStep(TASK_INPUTS_CHECK, 'done');
+    updateStep(TASK_PREPARE_TX, 'running');
+
+    try {
+      const signRequest = transferNfts({
+        nfts: [row],
+        recipientAddress: userInputs.recipient,
+        changeAddress: wallet.value!.getTokenDepositAddress(0),
+        walletUtxos: (wallet.value!.utxos || []) as UtxoWithPath[],
+        network: import.meta.env.VITE_BCH_NETWORK as Network,
+        userPrompt: t('nftTransfer.walletPromptBurn'),
+      });
+
+      updateStep(TASK_PREPARE_TX, 'done');
+      updateStep(TASK_WAIT_FOR_SIG, 'running');
+
+      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+
+      updateStep(TASK_WAIT_FOR_SIG, 'done');
+      updateStep(TASK_BROADCASTING, 'running');
+
+      const [broadcastError, txid] = await broadcastTransaction({
+        transactionHex: response.signedTransaction,
+        network: import.meta.env.VITE_BCH_NETWORK,
+        onProgress: (progress: string) => {
+          const newLabel = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress });
+          updateStep(TASK_BROADCASTING, 'running', newLabel);
+        },
+      });
+
+      if (broadcastError) {
+        updateStep(TASK_BROADCASTING, 'failed');
+        throw broadcastError;
+      }
+
+      updateStep(TASK_BROADCASTING, 'done');
+      updateStep(TASK_WAITING_PROPAGATION, 'running');
+
+      const networkType =
+        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+          ? NetworkType.Testnet
+          : NetworkType.Mainnet;
+      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+
+      updateStep(TASK_WAITING_PROPAGATION, 'done');
+      updateStep(TASK_REFRESH_UTXOS, 'running');
+
+      await wallet.value?.sync();
+      triggerRef(wallet);
+
+      updateStep(TASK_REFRESH_UTXOS, 'done');
+
+      await db.saveActivity({
+        event: t('dashboard.notify.activityEventBurnNfts'),
+        txid,
+        status: 'success',
+      });
+
+      stopLoader(1000);
+
+      $q.dialog({
+        component: TransactionStatusDialog,
+        componentProps: {
+          statusType: 'success',
+          statusText: t('dashboard.notify.nftBurned'),
+          txid,
+        },
+      });
+    } catch (error: any) {
+      stopLoader(3000);
+      if (error?.name === 'AbortError') return
+      $q.notify({ type: 'Error', message: error.message });
+    }
+  });
+};
+
 const performBurnCollectedTokens = (row: any) => {
   const sampleAddress = wallet.value!.getTokenDepositAddress(0);
   const sampleDecodedAddress = decodeCashAddress(sampleAddress);
@@ -658,12 +896,23 @@ const sendCollectedTokens = (row: any) => {
   performSendCollectedTokens(row);
 };
 
-const burnCollectedTokens = (row: any) => {
+/** Moving the NFT means moving the whole UTXO, so any fungible amount it carries travels too. */
+const transferCollectedNft = (row: any) => {
   if (isAuthKeyNft(row)) {
-    promptAuthKeyGuard('burn', () => performBurnCollectedTokens(row));
+    promptAuthKeyGuard('send', () => performSendCollectedNft(row));
     return;
   }
-  performBurnCollectedTokens(row);
+  performSendCollectedNft(row);
+};
+
+const burnCollectedTokens = (row: any) => {
+  // NFTs are burned whole, fungible amounts are burned by amount.
+  const burn = getTokenType(row) === 'nft' ? performBurnCollectedNft : performBurnCollectedTokens;
+  if (isAuthKeyNft(row)) {
+    promptAuthKeyGuard('burn', () => burn(row));
+    return;
+  }
+  burn(row);
 };
 
 watch(

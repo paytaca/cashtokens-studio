@@ -1,4 +1,4 @@
-import { binToHex, encodeTransactionOutput, hexToBin, isHex, ReadResult, readTransactionOutput } from 'bitauth-libauth-v3';
+import { binToHex, decodeCashAddress, encodeTransactionOutput, hexToBin, isHex, ReadResult, readTransactionOutput } from 'bitauth-libauth-v3';
 import type { DecoratedUtxo } from '../types'
 import { stringify } from '@bitauth/libauth';
 
@@ -8,6 +8,16 @@ export function shortenTokenId(tokenId = '') {
 
 export function shortenCashAddress(address = '') {
     return address.replace(address.substring(15, 45), '...')
+}
+
+/**
+ * True when the address is a CashAddr able to receive token outputs. The network rejects a token
+ * output to a plain address, so callers validate the address a user typed instead of rewriting it.
+ */
+export function isTokenAwareAddress(address = ''): boolean {
+    const decoded = decodeCashAddress(address)
+    if (typeof decoded === 'string') return false
+    return decoded.type.includes('WithTokens')
 }
 
 export function formatTokenAmount(

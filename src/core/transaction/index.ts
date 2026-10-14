@@ -1,5 +1,6 @@
 export * from './transfer-ft-reserves'
 export * from './transfer-ft'
+export * from './transfer-nft'
 export * from './create-token'
 export * from './create-genesis-input'
 export * from './create-authkey'
