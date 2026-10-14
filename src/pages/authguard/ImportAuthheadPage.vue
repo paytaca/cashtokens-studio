@@ -7,8 +7,8 @@
             {{ t('authguard.importAuthhead.cashonizeNote') }}
             {{ t('authguard.importAuthhead.explainerVault') }}
           </template>
-          <q-btn icon="key" :label="t('authguard.importAuthhead.createPairCta')" color="secondary" no-caps rounded
-            :to="{ name: 'create-authkey', query: { returnTo: route.fullPath, from: 'import-authhead' } }" />
+          <!-- <q-btn icon="key" :label="t('authguard.importAuthhead.createPairCta')" color="secondary" no-caps rounded
+            :to="{ name: 'create-authkey', query: { returnTo: route.fullPath, from: 'import-authhead' } }" /> -->
         </ExplainerBanner>
 
         <q-card v-if="!walletIsReady" flat bordered class="q-pa-lg text-center feature-card-bg">
