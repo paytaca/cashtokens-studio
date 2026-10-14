@@ -5,11 +5,8 @@
         <q-btn v-if="$q.screen.lt.sm && walletIsReady" flat dense round icon="menu" aria-label="Menu" size="lg"
           @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_icon.png"
-            class="cursor-pointer app-logo" />
-          <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
-            {{ network }}
-          </q-chip>
+          <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_transparent.png"
+            alt="CashTokens Studio" class="cursor-pointer app-logo" />
         </q-toolbar-title>
         <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
             color: rgb(20, 20, 20);
@@ -129,7 +126,8 @@ const showHeader = computed(() => walletIsReady);
 
 const isIndexPage = computed(() => route.path === '/');
 
-const showHeaderLogo = computed(() => $q.screen.xs && !leftDrawerOpen.value);
+/** From sm up the drawer is permanent, so the wordmark lives in the header; on xs the drawer carries the icon. */
+const showHeaderLogo = computed(() => $q.screen.gt.xs);
 
 useWalletConnect();
 
