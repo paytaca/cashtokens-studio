@@ -1,4 +1,3 @@
-import { NFTCollectionType } from "src/apps/bcmr/types";
 import { IdentitySnapshot, NftType, ParsableNftCollection, Registry } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";

@@ -1,7 +1,7 @@
 import { HDWallet, NetworkType, Utxo } from "mainnet-js-v3";
 import { ExternalWallet, UtxoWithPath } from "./types";
 import { PathXpub } from "@wizardconnect/core";
-import { getHDWalletClass } from "src/apps/utils";
+import { getHDWalletClass } from "./get-hd-wallet-class";
 import { CashAddressNetworkPrefix, decodeHdPublicKey, encodeHdPublicKey, HdKeyParameters, HdPublicNode } from "@bitauth/libauth";
 
 

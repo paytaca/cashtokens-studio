@@ -48,7 +48,7 @@
                 v-if="(transferType === 'issuance' || transferType === 'send') && transferAmount && decimalToBigInt(transferAmount, decimals) > 0n"
                 v-model="recipient" ref="recipientInputElement" label="Recipient"
                 placeholder="Paste recipient's token address"
-                :rules="[(v: string) => v && isTokenAddress(v) || 'Value should be a cashtoken address']" outlined>
+                :rules="[(v: string) => v && isTokenAwareAddress(v) || 'Value should be a cashtoken address']" outlined>
                 <template v-slot:append>
                   <q-btn @click="sendToSelf" text-color="primary" no-caps>Self</q-btn>
                 </template>
@@ -76,7 +76,8 @@ import { useDialogPluginComponent } from 'quasar'
 import { type IdentitySnapshot } from 'mainnet-js'
 import { computed, nextTick, onMounted, ref } from 'vue';
 import BigNumber from 'bignumber.js'
-import { ipfsToGatewayUrl, isTokenAddress } from '../../apps/utils';
+import { ipfsToGatewayUrl } from 'src/core/ipfs';
+import { isTokenAwareAddress } from 'src/core/utils';
 import { shortenTokenId } from 'src/core/utils';
 import CopyText from 'components/CopyText.vue'
 

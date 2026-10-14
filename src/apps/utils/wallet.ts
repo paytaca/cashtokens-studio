@@ -39,15 +39,6 @@ export const getWalletClass = () => {
   return WalletClass;
 };
 
-export const getHDWalletClass = async () => {
-  const { HDWallet, TestNetHDWallet } = await import('mainnet-js-v3');
-  if (process.env.NETWORK === 'testnet' || import.meta.env.VITE_BCH_NETWORK === 'chipnet') {
-    return TestNetHDWallet
-  }
-  return HDWallet
-}
-
-
 export const isMultisigWallet = (template?: WalletTemplate) => {
     if (!template) return false
     return Boolean(template.scripts.lock?.script.split('\n').find((op) => op === 'OP_CHECKMULTISIG'))
