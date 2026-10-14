@@ -1,7 +1,7 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container q-mt-xl q-gutter-y-lg">
-      <ExplainerBanner class="q-my-md" icon="grid_view" :title="$t('dashboard.pageTitle.collectedTokens')"
+      <ExplainerBanner class="q-my-md" icon="mdi-rhombus-split" :title="$t('dashboard.pageTitle.collectedTokens')"
         :description="$t('dashboard.collected.caption')" />
       <q-card class="q-pa-lg rounded-borders">
         <div class="row q-gutter-sm q-mb-md">
@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
