@@ -151,7 +151,7 @@
 
                     <q-item clickable @click="navigateToAuthguard(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="lock" color="secondary" size="xs" />
+                        <q-icon name="mdi-safe-outline" color="secondary" size="xs" />
                       </q-item-section>
                       <q-item-section class="text-caption text-grey-3">
                         {{ $t('dashboard.managed.actionTokenVault') }}
@@ -196,8 +196,7 @@
 
                     <q-separator dark inset />
                     <q-separator dark inset />
-                    <q-item v-if="value.row.token" clickable
-                      @click="refreshCache(value.row.token!.category as string)">
+                    <q-item v-if="value.row.token" clickable @click="refreshCache(value.row.token!.category as string)">
                       <q-item-section avatar>
                         <q-icon name="refresh" color="grey-5" size="xs" />
                       </q-item-section>
@@ -264,7 +263,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -371,7 +370,7 @@
 
                       <q-item clickable @click="navigateToAuthguard(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="lock" color="secondary" size="xs" />
+                          <q-icon name="mdi-safe-outline" color="secondary" size="xs" />
                         </q-item-section>
                         <q-item-section class="text-caption text-grey-3">
                           {{ $t('dashboard.managed.actionTokenVault') }}
@@ -896,11 +895,9 @@ onUnmounted(() => {
 
 .received-card {
   border: 1px solid rgba(255, 193, 7, 0.35);
-  background: linear-gradient(
-    135deg,
-    rgba(255, 193, 7, 0.07) 0%,
-    rgba(30, 34, 43, 0.98) 55%
-  );
+  background: linear-gradient(135deg,
+      rgba(255, 193, 7, 0.07) 0%,
+      rgba(30, 34, 43, 0.98) 55%);
 }
 
 .text-mono {

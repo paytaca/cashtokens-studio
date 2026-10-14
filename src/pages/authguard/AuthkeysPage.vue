@@ -59,11 +59,11 @@
                 <div class="flex items-center q-gutter-x-xs no-wrap">
                   <!-- xs hides the header and the authguard column, so the labels move into the cell. -->
                   <span v-if="isXs" class="text-caption text-grey-6">{{ $t('dashboard.authkeys.columnAuthkey')
-                  }}:</span>
+                    }}:</span>
                   <q-icon name="key" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenTokenId(props.row.category)
-                  }}</span>
+                    }}</span>
                   <CopyText :text="props.row.category" />
                 </div>
                 <template v-if="isXs">
@@ -71,10 +71,10 @@
                     {{ $t('dashboard.authkeys.columnAuthguard') }}:
                   </div>
                   <div class="flex items-center q-gutter-x-xs no-wrap q-mt-xs">
-                    <q-icon name="lock" color="yellow-8" size="xs" />
+                    <q-icon name="mdi-safe-outline" color="yellow-8" size="xs" />
                     <span class="text-caption text-mono text-grey-3">{{
                       shortenCashAddress(props.row.authguardAddress)
-                    }}</span>
+                      }}</span>
                     <CopyText :text="props.row.authguardAddress" />
                   </div>
                 </template>
@@ -84,10 +84,10 @@
             <template v-slot:body-cell-authguardAddress="props">
               <q-td :props="props">
                 <div class="flex items-center q-gutter-x-xs no-wrap">
-                  <q-icon name="lock" color="yellow-8" size="xs" />
+                  <q-icon name="mdi-safe-outline" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenCashAddress(props.row.authguardAddress)
-                  }}</span>
+                    }}</span>
                   <CopyText :text="props.row.authguardAddress" />
                 </div>
               </q-td>
@@ -106,7 +106,7 @@
                   <q-icon name="key" size="32px" color="grey-5" />
                 </div>
                 <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
-                  <q-icon name="lock" size="32px" color="grey-5" />
+                  <q-icon name="mdi-safe-outline" size="32px" color="grey-5" />
                 </div>
                 <div class="playing-card" style="
                     z-index: 3;
