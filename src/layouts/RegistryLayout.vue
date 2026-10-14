@@ -182,7 +182,7 @@ const navModeLinks = {
     {
       title: 'Token Identity',
       caption: 'Overview & analytics',
-      icon: 'dashboard',
+      icon: 'assignment',
       to: {
         name: 'view-identity-snapshot',
         params: route.params,
@@ -202,7 +202,7 @@ const navModeLinks = {
     {
       title: 'Registry',
       caption: 'Collaborate with members',
-      icon: 'people',
+      icon: 'assignment',
       to: { name: 'view-registry', params: route.params, query: route.query },
     },
   ],
@@ -214,9 +214,9 @@ const navModeLinks = {
       to: { name: 'view-authhead', query: route.query },
     },
     {
-      title: 'Token Identity',
+      title: 'Token Info',
       caption: 'Overview & analytics',
-      icon: 'dashboard',
+      icon: 'assignment',
       to: {
         name: 'edit-identity-snapshot',
         params: route.params,
@@ -224,7 +224,7 @@ const navModeLinks = {
       },
     },
     {
-      title: 'NFTs',
+      title: 'NFTs Info',
       caption: 'Manage your tasks',
       icon: 'assignment',
       to: {
@@ -234,9 +234,9 @@ const navModeLinks = {
       },
     },
     {
-      title: 'Registry',
+      title: 'Registry Info',
       caption: 'Collaborate with members',
-      icon: 'people',
+      icon: 'assignment',
       to: { name: 'edit-registry', params: route.params, query: route.query },
     },
   ],

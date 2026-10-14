@@ -4,6 +4,7 @@
             <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
                 <q-card v-if="authheadLoading[route.query?.authhead as string] || wallet.initializing"
                     class="dark q-pa-lg rounded-borders">
+
                     <div class="flex justify-end q-mb-lg">
                         <q-skeleton type="rect" width="120px" height="32px" class="bg-grey-9 border-radius-8" />
                     </div>
@@ -47,11 +48,11 @@
                     </div>
                 </q-card>
                 <q-card v-else class="bg-dark q-pa-lg rounded-borders" flat>
+                    <div class="text-right text-caption text-grey-6 text-uppercase">UTXO</div>
                     <div class="flex justify-end ">
                         <q-btn icon="lock" color="secondary"
                             @click="router.push({ name: 'view-authguard', params: { authkeyCategory: activeAuthhead!.authkey!.token!.category }, query: route.query })"
-                            dense no-caps flat>View Vault</q-btn>
-                        <q-btn icon="help" dense></q-btn>
+                            dense no-caps flat>View Authguard Vault</q-btn>
                     </div>
                     <FormField>
                         <label class="flex q-gutter-x-sm">
@@ -77,11 +78,23 @@
                                 <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
                                 Minting
                             </q-badge>
+                            <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'mutable'" color="dark"
+                                text-color="purple-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                                Mutable
+                            </q-badge>
+                            <q-badge v-if="activeAuthhead?.token?.nft?.capability === 'none'" color="dark"
+                                text-color="purple-4"
+                                class="text-uppercase text-caption font-8 q-px-xs border-radius-4 styled-capability-badge">
+                                <q-icon name="auto_awesome" size="10px" class="q-mr-xs" />
+                                Immutable
+                            </q-badge>
                         </label>
                         <q-input :model-value="shortenTokenId(`${activeAuthhead?.txid}:${activeAuthhead?.vout}`)"
-                            disable outlined>
+                            label="UTXO ID = Txid:Vout" disable outlined>
                             <template v-slot:prepend>
-                                <q-btn icon="lock" flat dense></q-btn>
+                                <q-btn icon="mdi-bank" flat dense></q-btn>
                             </template>
                             <template v-slot:append>
                                 <CopyText
