@@ -2,6 +2,15 @@
     <q-page>
         <div class="row justify-center q-pa-md">
             <div class="col-xs-12 col-sm-8">
+                <q-banner v-if="isImportAuthUtxoFlow" class="authkey-banner border-radius-12 q-mt-xl">
+                    <template v-slot:avatar>
+                        <q-icon name="key" color="warning" size="sm" />
+                    </template>
+                    <div class="text-weight-bold text-white">{{ t('authguard.importAuthhead.requirementTitle') }}</div>
+                    <div class="text-body2 text-grey-4 text-justify">{{ t('authguard.importAuthhead.requirement') }}
+                    </div>
+                </q-banner>
+
                 <q-card flat bordered class="feature-card-bg rounded-borders q-mt-xl q-py-md">
                     <q-card-section class="flex justify-between items-center">
                         <q-card-title
@@ -59,6 +68,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuasar } from 'quasar'
+import { useRoute, useRouter } from 'vue-router'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
@@ -72,12 +82,36 @@ import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoading
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
+const route = useRoute()
+const router = useRouter()
 const {
     wallet,
     manager
 } = useWizardConnectWallet()
 
 const { t } = useI18n()
+
+/**
+ * Where to go once the AuthKey exists — set by pages that need one before they can continue (see
+ * ImportAuthheadPage). Only internal paths are honoured so the query cannot redirect off-site.
+ */
+const returnTo = computed(() => {
+    const queryValue = route.query.returnTo
+    const value = Array.isArray(queryValue) ? queryValue[0] : queryValue
+    return typeof value === 'string' && value.startsWith('/') ? value : undefined
+})
+
+/**
+ * True when the auth UTXO import flow sent us here, so the page can explain why it needs an AuthKey.
+ * The import page tags its redirect with `from`, and also hands over a `returnTo`, so either
+ * signal counts (a stale or hand-typed `returnTo` still gets the banner).
+ */
+const isImportAuthUtxoFlow = computed(() => {
+    if (route.query.from === 'import-authhead') return true
+
+    const target = returnTo.value
+    return !!target && router.resolve(target).name === 'import-authhead'
+})
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
@@ -266,6 +300,8 @@ const onCreateAuthKey = async () => {
                 statusText: t('success.authkeyCreation'),
                 txid
             }
+        }).onOk(() => {
+            if (returnTo.value) router.replace(returnTo.value)
         })
 
     } catch (error: any) {
@@ -290,3 +326,14 @@ onMounted(async () => {
 
 
 </script>
+
+<style scoped lang="scss">
+.border-radius-12 {
+    border-radius: 12px;
+}
+
+.authkey-banner {
+    background: rgba(255, 193, 7, 0.08);
+    border: 1px solid rgba(255, 193, 7, 0.35);
+}
+</style>

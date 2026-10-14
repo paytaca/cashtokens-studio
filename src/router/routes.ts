@@ -97,17 +97,6 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
-  // {
-  //   path: '/issuer',
-  //   component: () => import('layouts/MainLayout.vue'),
-  //   children: [
-  //     {
-  //       name: 'import-auth-utxo',
-  //       path: 'tokens/import-auth-utxo',
-  //       component: () => import('pages/authguard/ImportAuthheadPage.vue'),
-  //     },
-  //   ],
-  // },
   {
     path: '/authguard',
     component: () => import('layouts/MainLayout.vue'),
@@ -116,6 +105,11 @@ const routes: RouteRecordRaw[] = [
         name: 'create-authkey',
         path: 'authkeys/create',
         component: () => import('pages/authguard/CreateAuthkeyPage.vue'),
+      },
+      {
+        name: 'import-authhead',
+        path: 'authheads/import',
+        component: () => import('pages/authguard/ImportAuthheadPage.vue'),
       },
       {
         name: 'authkeys',

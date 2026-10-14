@@ -18,12 +18,14 @@
 
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { useUser } from 'src/stores/user'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 
 defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
 const router = useRouter()
+const { t } = useI18n()
 const user = useUser()
 const hrefs = {
   dashboard: '/dashboard',
@@ -32,6 +34,7 @@ const hrefs = {
   activities: '/dashboard/activities',
   createNewToken: '/token/create',
   createAuthKey: '/authguard/authkeys/create',
+  importAuthhead: '/authguard/authheads/import',
   authguards: '/authguard/authguards',
   authguardKeys: '/authguard/authkeys',
   requests: '/wizard-connect/requests',
@@ -55,6 +58,11 @@ const menu = computed<any[]>(() => {
       label: 'Create New AuthKey',
       href: hrefs.createAuthKey,
       icon: 'add',
+    },
+    {
+      label: t('authguard.importAuthhead.menu'),
+      href: hrefs.importAuthhead,
+      icon: 'move_to_inbox',
     },
 
     {
@@ -95,7 +103,10 @@ const menu = computed<any[]>(() => {
 const menuHrefs = computed(() => menu.value.map((node) => node.href))
 
 watch(() => selected.value, (currentlySelected) => {
-  if (currentlySelected) {
+  // Navigate only on a real selection change. The route watcher below also updates `selected` when
+  // the user navigates by other means — e.g. a programmatic redirect that carries a query string —
+  // and replacing with the bare path there would silently drop that query.
+  if (currentlySelected && currentlySelected !== route.path) {
     router.replace(currentlySelected)
   }
 })

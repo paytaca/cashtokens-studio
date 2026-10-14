@@ -197,6 +197,22 @@ export default {
     badgeMinting: 'Minting',
     badgeMutable: 'Mutable',
     badgeImmutable: 'Immutable',
+    importAuthhead: {
+      menu: 'Import Auth UTXO',
+      title: 'Importing Auth Utxo',
+      cashonizeNote: 'If you created a token in Cashonize, you can import the AuthUtxo by transferring it to your AuthGuard Vault.',
+      createPairCta: 'Create AuthGuard/AuthKey Pair',
+      explainerVault: 'You can transfer the Auth UTXO to this Authguard Vault address for safe keeping. You can use the Authkey NFT as key to this.',
+      sendToAddress: 'Send the Auth UTXO to this address',
+      scanning: 'Checking for an unused AuthKey NFT ...',
+      noAuthkey: 'No unused AuthKey NFT found. Create one to continue.',
+      waitingDeposit: 'Waiting for the Auth UTXO to arrive ...',
+      requirementTitle: 'An AuthKey NFT is required',
+      requirement: 'To import, we need an AuthKey NFT that will serve as the access key for your Auth UTXO later. Creating one also sets up the AuthGuard Vault the UTXO will be imported into, so you will be brought back to the import step right after.',
+      connectWallet: 'Connect your wallet to import an Auth UTXO.',
+      scanFailed: 'We could not check your AuthKeys just now. Please try again.',
+      retry: 'Check again',
+    },
   },
   index: {
     hero: {
