@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
 import { DialogChainObject } from 'quasar'
-import { AuthchainIdentity, CashToken } from 'src/apps'
 import { TokenCategory, URIs } from 'mainnet-js'
 
 type TokenIdCache = {
@@ -29,17 +28,12 @@ type UIState = {
   statusMessageRecipient: string,
   statusUrl: string,
   transactionLogs?: any[],
-  /**
-   * The token that will loaded in Token Page
-   */
-  tokenInView?: CashToken | AuthchainIdentity,
   tokenBasicMetadataCache: {tokenId: string, symbol: string, decimals: number|undefined, icon: string|undefined}[],
   tokenIconCache: TokenIdCache,
   tokenSymbolCache: TokenIdCache,
   tokenDecimalsCache: TokenIdCache,
   tokenCategoryCache: TokenCategoryCache,
   tokenUrisCache: TokenUrisCache,
-  minterInView?: CashToken,
   routeBack: string|boolean // The previous route, can be used by page to route back
   pageTitle?: string
   dialog?: DialogChainObject

@@ -106,8 +106,6 @@ import WalletInitializing from 'src/components/WalletInitializing.vue';
 import { useUser } from 'src/stores/user';
 import { useInit } from 'src/composables/useInit';
 import { useWalletConnect } from 'src/composables/useWalletConnect';
-import { AuthKey, Watchtower } from 'src/apps';
-import { delay, Wallet } from 'mainnet-js';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 
@@ -117,7 +115,6 @@ const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 const pendingMultisigTransactions = ref([]);
-const scanning = ref<string | boolean>(false);
 const eventBus = inject<EventBus>('eventBus');
 
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
@@ -155,32 +152,6 @@ const onBeforeMenuShow = () => {
   db.getPendingMultisigTransactions().then((v) => {
     pendingMultisigTransactions.value = v;
   });
-};
-
-const scanReserves = async () => {
-  scanning.value = 'Checking wallet for AuthKeys...';
-  try {
-    if (user.wallet) {
-      const watchtower = new Watchtower();
-      const paginatedAuthKeys = await watchtower.fetchAuthKeys(
-        user.wallet.getTokenDepositAddress()
-      );
-      for (const a of paginatedAuthKeys?.results) {
-        const authKey = new AuthKey(
-          { ...a, ownerWallet: user.wallet as Wallet },
-          user.transactionSigner
-        );
-        scanning.value = 'AuthKey found, scanning for managed tokens...';
-        await delay(2000);
-        watchtower.subscribe(
-          authKey.authGuard.contract!.getTokenDepositAddress()
-        );
-      }
-    }
-  } catch (error) {
-  } finally {
-    scanning.value = false;
-  }
 };
 
 useInit();
