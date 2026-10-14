@@ -1,7 +1,7 @@
 <template>
   <q-page class="bg-dark-page text-white">
     <div class="row justify-center q-pa-md">
-      <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-gutter-y-lg">
+      <div class="col-xs-12 col-sm-10 q-my-lg q-gutter-y-lg">
         <div class="q-mb-md q-px-sm">
           <q-btn flat dense icon="arrow_back" :label="t('button.back')" color="grey-4" @click="router.back()" />
         </div>
@@ -13,7 +13,9 @@
                 <q-img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${authkeyCategory}`" />
               </q-avatar>
               <div>
-                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || t('authguard.vault') }}</div>
+                <div class="text-h5 text-weight-bold text-white">{{ identitySnapshot?.name || t('authguard.vault')
+                }}
+                </div>
                 <div v-if="identitySnapshot?.description" class="text-caption text-grey-4 q-mt-xs">{{
                   identitySnapshot.description }}</div>
               </div>
@@ -48,7 +50,7 @@
 
             <div class="table-scroll-wrapper">
               <q-table :rows="vaultUtxos" :columns="columns" flat class="border-radius-12 token-reserves-table"
-                :loading="loading" row-key="txid" style="min-width: 640px">
+                :loading="loading" row-key="txid" style="min-width: 640px" title="Vault Contents">
                 <template v-slot:body-cell-token="props">
                   <q-td :props="props">
                     <div class="flex items-center no-wrap q-gutter-x-md">
@@ -59,17 +61,25 @@
                           :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token?.commitment || authkeyCategory}`"
                           fit="cover">
                           <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ t('authguard.noIconTooltip')
-                            }}</q-tooltip>
+                          }}</q-tooltip>
                         </q-img>
                       </q-avatar>
                       <div>
+                        <div class="text-caption text-grey-6 flex items-center no-wrap">
+                          UTXO<q-icon name="mdi-identifier" size="sm"></q-icon> = {{ shortenTokenId(props.row.txid)
+                          }}:{{
+                            props.row.vout
+                          }}
+                        </div>
                         <div class="flex items-center q-gutter-x-xs">
                           <span class="text-caption text-weight-medium text-primary">
-                            {{ identitySnapshot?.token?.symbol || '?' }}
+                            Symbol: {{ identitySnapshot?.token?.symbol || '<Not able to fetch metadata>' }}
                           </span>
-                          <span class="text-grey-7">•</span>
-                          <span class="text-caption text-grey-5 text-mono">
-                            {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
+                        </div>
+
+                        <div>
+                          <span class="text-caption text-grey-5">
+                            Category: {{ shortenTokenId(props.row.token?.category || authkeyCategory) }}
                           </span>
                         </div>
                         <div class="flex items-center q-gutter-x-xs q-mt-xs">
@@ -123,8 +133,8 @@
 
                 <template v-slot:body-cell-actions="props">
                   <q-td :props="props" class="text-right">
-                    <q-btn flat dense icon="lock_open" :label="t('button.unlock')" size="sm" color="grey-4" class="q-mr-sm"
-                      @click="confirmUnguard(props.row)" />
+                    <q-btn flat dense icon="lock_open" :label="t('button.unlock')" size="sm" color="grey-4"
+                      class="q-mr-sm" @click="confirmUnguard(props.row)" />
                     <q-btn flat dense icon="mdi-fire" :label="t('button.burn')" size="sm" color="orange"
                       @click="confirmBurn(props.row)" />
                   </q-td>
@@ -195,16 +205,10 @@ const selectedRow = ref<any>(null)
 const columns: QTableColumn[] = [
   {
     name: 'token',
-    label: 'Token',
+    label: 'Auth UTXO',
     field: (row) => row.token?.category,
     align: 'left',
     sortable: true
-  },
-  {
-    name: 'utxoRef',
-    label: 'UTXO',
-    field: (row) => `${row.txid}:${row.vout}`,
-    align: 'left'
   },
   {
     name: 'actions',

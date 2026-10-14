@@ -8,7 +8,7 @@ export default {
     registryPublication: 'Registry published successfully.',
     saved: 'Saved',
     savedDescription: 'Changes saved successfully.',
-    authheadRelease: 'Authhead released from AuthGuard successfully.',
+    authheadRelease: 'Authhead released from Authguard successfully.',
     authheadBurn: 'Token identity burned successfully.',
   },
   info: {
@@ -23,8 +23,8 @@ export default {
     broadcastingTx: 'Broadcasting transaction, please wait...',
     authkeyTokenIdCandidateHint:
       'This will become the token id of your Authkey NFT',
-    authkeyTokenIdCandidateNotFoundHint: 'No available token id candidate',
-    createAuthKeyNftExplainer: `<p>The AuthKey is the key to an <b>AuthGuard</b> vault: it grants you the authority to manage the token identity output that the AuthGuard protects, while the vault guards that output from being accidentally spent.</p>`,
+    authkeyTokenIdCandidateNotFoundHint: 'No available token category candidate',
+    createAuthkeyNftExplainer: `<p>The Authkey is the key to an <b>Authguard</b> vault: it grants you the authority to manage the token identity output that the Authguard protects, while the vault guards that output from being accidentally spent.</p>`,
     nftCollectionTypeExplainer: `<p>When you create an NFT collection, you choose how each NFT stores its information on-chain. There are two styles to pick from: Sequential and Parsable.</p>
 <p><b>Sequential collection</b> — every NFT is simply numbered in order (1, 2, 3…). The only thing stored on-chain is that number, which makes it the simplest and cheapest option.</p>
 <p>It's ideal for a plain series of collectibles — artworks, tickets, or membership cards — where the only thing that sets each item apart is its place in the line.</p>
@@ -51,7 +51,7 @@ export default {
     loadingRegistry: 'Error loading token registry',
     initializingWizardConnectWalle: 'Error initializing wizard connect wallet',
     registryPublication: 'Error publishing registry',
-    authheadRelease: 'Error releasing authhead from AuthGuard.',
+    authheadRelease: 'Error releasing authhead from Authguard.',
     authheadBurn: 'Error burning token identity.',
   },
   warning: {
@@ -259,10 +259,10 @@ export default {
   nftPage: {
     noName: '<Unknown NFT>',
     authKeyNft: {
-      indicator: 'AuthKey NFT',
-      bannerTitle: 'This is an AuthKey NFT',
+      indicator: 'Authkey NFT',
+      bannerTitle: 'This is an Authkey NFT',
       bannerMessage:
-        'This NFT is the authentication key (AuthKey) for an AuthGuard contract. If you lose or transfer it, you will no longer be able to manage the tokens associated with this AuthKey NFT.',
+        'This NFT is the authentication key (Authkey) for an Authguard contract. If you lose or transfer it, you will no longer be able to manage the tokens associated with this Authkey NFT.',
       lockedTokens: 'Locked tokens',
       lockedTokensLoading: 'Checking…',
       lockedTokensUnknown: '?',
@@ -432,8 +432,8 @@ export default {
       bannerTitle: "Protecting Your Token's Identity",
       bannerMessage:
         "<p>When you create a token in CashTokens Studio, the created token also becomes your token's identity-output. This is used to authenticate updates to your token's metadata. <strong>It's important to protect this output—accidentally spending it could compromise your token's ability to be updated.</strong></p>" +
-        '<p>That\'s why CashTokens Studio uses <a href="https://github.com/mr-zwets/AuthGuard" target="_blank" rel="noopener noreferrer">AuthGuard</a>, a digital vault designed to protect this important output.</p>' +
-        '<p>An <strong>AuthKey NFT</strong> gives you the authority to make changes to your token. You can keep the AuthKey in your wallet, while AuthGuard protects the underlying identity output from accidental spending.</p>' +
+        '<p>That\'s why CashTokens Studio uses <a href="https://github.com/mr-zwets/Authguard" target="_blank" rel="noopener noreferrer">Authguard</a>, a digital vault designed to protect this important output.</p>' +
+        '<p>An <strong>Authkey NFT</strong> gives you the authority to make changes to your token. You can keep the Authkey in your wallet, while Authguard protects the underlying identity output from accidental spending.</p>' +
         '<p><strong>Your token stays protected, while its authority remains easy to manage.</strong></p>',
       caption:
         'Authguard contracts created from your Authkeys, with the token reserves they lock.',
@@ -452,7 +452,11 @@ export default {
       noAuthkeys: 'No Authkeys created yet',
       searchPlaceholder: 'Search by category or address...',
       columnAuthkey: 'Authkey',
+      columnAuthkeyCaption: '(NFT Category)',
       columnAuthguard: 'Authguard',
+      columnAuthguardCaption: '(Vault Address)',
+      selfCustodyWarning:
+        'These AuthKey NFTs are in your wallet. Do not send them to anybody unless you intend to.',
     },
     activity: {
       caption: 'Your recent token transaction history.',

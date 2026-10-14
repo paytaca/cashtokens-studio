@@ -1,86 +1,83 @@
 <template>
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
-      <ExplainerBanner
-        class="q-my-md"
-        icon="key"
-        :title="$t('dashboard.pageTitle.authkeys')"
-        :description="$t('dashboard.authkeys.caption')"
-      />
-
-      <template v-if="authkeysLoading">
-        <div
-          v-for="i in 3"
-          :key="i"
-          class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders"
-        >
-          <q-skeleton type="rect" size="36px" class="rounded-borders" />
-          <div class="column q-gutter-y-xs" style="flex: 1">
-            <q-skeleton
-              type="rect"
-              height="14px"
-              width="40%"
-              class="rounded-borders"
-            />
-            <q-skeleton
-              type="rect"
-              height="12px"
-              width="25%"
-              class="rounded-borders"
-            />
+      <ExplainerBanner class="q-my-md" icon="key" :title="$t('dashboard.pageTitle.authkeys')">
+        <template #subtitle>
+          <div>{{ $t('dashboard.authkeys.caption') }}</div>
+          <div class="text-warning q-mt-xs">
+            {{ $t('dashboard.authkeys.selfCustodyWarning') }}
           </div>
-          <q-skeleton
-            type="rect"
-            height="14px"
-            width="80px"
-            class="rounded-borders"
-          />
-        </div>
-      </template>
-      <template v-else-if="authkeys.length > 0">
-        <div class="row justify-end q-gutter-sm q-mb-md">
-          <q-input
-            v-model="searchQuery"
-            dark
-            dense
-            outlined
-            :placeholder="$t('dashboard.authkeys.searchPlaceholder')"
-            class="bg-grey-10"
-            style="border-radius: 0.75rem; min-width: 280px"
-          >
-            <template v-slot:prepend>
-              <q-icon name="search" color="grey-6" size="xs" />
+        </template>
+      </ExplainerBanner>
+
+      <q-card class="q-pa-lg rounded-borders">
+        <template v-if="authkeysLoading">
+          <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+            <q-skeleton type="rect" size="36px" class="rounded-borders" />
+            <div class="column q-gutter-y-xs" style="flex: 1">
+              <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
+              <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+            </div>
+            <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
+          </div>
+        </template>
+        <template v-else-if="authkeys.length > 0">
+          <div class="row justify-end q-gutter-sm q-mb-md">
+            <q-input v-model="searchQuery" dark dense outlined :placeholder="$t('dashboard.authkeys.searchPlaceholder')"
+              class="bg-grey-10" style="border-radius: 0.75rem; min-width: 280px">
+              <template v-slot:prepend>
+                <q-icon name="search" color="grey-6" size="xs" />
+              </template>
+              <template v-slot:append v-if="searchQuery">
+                <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="searchQuery = ''" />
+              </template>
+            </q-input>
+          </div>
+          <q-table :rows="filteredRows" :columns="columns" :row-key="(row: AuthkeyRow) => row.category"
+            :visible-columns="visibleColumns" :hide-header="isXs" flat class="border-radius-12 token-reserves-table"
+            @row-click.stop="onRowClick">
+            <template v-slot:header-cell-authkey="props">
+              <q-th :props="props">
+                <div>{{ props.col.label }}</div>
+                <div class="column-caption">
+                  {{ $t('dashboard.authkeys.columnAuthkeyCaption') }}
+                </div>
+              </q-th>
             </template>
-            <template v-slot:append v-if="searchQuery">
-              <q-icon
-                name="close"
-                color="grey-6"
-                size="xs"
-                class="cursor-pointer"
-                @click="searchQuery = ''"
-              />
+
+            <template v-slot:header-cell-authguardAddress="props">
+              <q-th :props="props">
+                <div>{{ props.col.label }}</div>
+                <div class="column-caption">
+                  {{ $t('dashboard.authkeys.columnAuthguardCaption') }}
+                </div>
+              </q-th>
             </template>
-          </q-input>
-        </div>
-        <div class="table-scroll-wrapper">
-          <q-table
-            :rows="filteredRows"
-            :columns="columns"
-            :row-key="(row: AuthkeyRow) => row.category"
-            flat
-            class="border-radius-12 token-reserves-table"
-            style="min-width: 440px"
-            @row-click.stop="onRowClick"
-          >
+
             <template v-slot:body-cell-authkey="props">
               <q-td :props="props">
                 <div class="flex items-center q-gutter-x-xs no-wrap">
+                  <!-- xs hides the header and the authguard column, so the labels move into the cell. -->
+                  <span v-if="isXs" class="text-caption text-grey-6">{{ $t('dashboard.authkeys.columnAuthkey')
+                  }}:</span>
                   <q-icon name="key" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenTokenId(props.row.category)
                   }}</span>
                   <CopyText :text="props.row.category" />
                 </div>
+                <template v-if="isXs">
+                  <div class="text-caption text-grey-6 q-mt-sm">
+                    {{ $t('dashboard.authkeys.columnAuthguard') }}:
+                  </div>
+                  <div class="flex items-center q-gutter-x-xs no-wrap q-mt-xs">
+                    <q-icon name="lock" color="yellow-8" size="xs" />
+                    <span class="text-caption text-mono text-grey-3">{{
+                      shortenCashAddress(props.row.authguardAddress)
+                    }}</span>
+                    <CopyText :text="props.row.authguardAddress" />
+                  </div>
+                </template>
               </q-td>
             </template>
 
@@ -96,48 +93,36 @@
               </q-td>
             </template>
           </q-table>
-        </div>
-      </template>
-      <template v-else>
-        <div class="bg-dark q-pa-lg rounded-borders">
-          <div class="flex flex-center column q-py-lg">
-            <div
-              class="flex flex-center q-mb-lg"
-              style="height: 120px; width: 260px"
-            >
-              <div
-                class="playing-card"
-                style="
-                  z-index: 1;
-                  transform: rotate(-12deg) translateX(22px);
-                  margin-right: -30px;
-                "
-              >
-                <q-icon name="key" size="32px" color="grey-5" />
+        </template>
+        <template v-else>
+          <div class="bg-dark q-pa-lg rounded-borders">
+            <div class="flex flex-center column q-py-lg">
+              <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px">
+                <div class="playing-card" style="
+                    z-index: 1;
+                    transform: rotate(-12deg) translateX(22px);
+                    margin-right: -30px;
+                  ">
+                  <q-icon name="key" size="32px" color="grey-5" />
+                </div>
+                <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
+                  <q-icon name="lock" size="32px" color="grey-5" />
+                </div>
+                <div class="playing-card" style="
+                    z-index: 3;
+                    transform: rotate(8deg) translateX(-22px);
+                    margin-left: -30px;
+                  ">
+                  <q-icon name="add" size="32px" color="grey-5" />
+                </div>
               </div>
-              <div
-                class="playing-card"
-                style="z-index: 2; transform: rotate(-2deg)"
-              >
-                <q-icon name="lock" size="32px" color="grey-5" />
+              <div class="text-grey-5 text-h6 q-mb-lg">
+                {{ $t('dashboard.authkeys.noAuthkeys') }}
               </div>
-              <div
-                class="playing-card"
-                style="
-                  z-index: 3;
-                  transform: rotate(8deg) translateX(-22px);
-                  margin-left: -30px;
-                "
-              >
-                <q-icon name="add" size="32px" color="grey-5" />
-              </div>
-            </div>
-            <div class="text-grey-5 text-h6 q-mb-lg">
-              {{ $t('dashboard.authkeys.noAuthkeys') }}
             </div>
           </div>
-        </div>
-      </template>
+        </template>
+      </q-card>
     </div>
   </q-page>
 </template>
@@ -147,7 +132,7 @@ import { ref, computed, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { storeToRefs } from 'pinia';
-import { QTableColumn } from 'quasar';
+import { QTableColumn, useQuasar } from 'quasar';
 import type { UtxoWithPath } from 'src/core/types';
 import { shortenCashAddress, shortenTokenId } from 'src/core/utils';
 import { getAuthguardContractAddress } from 'src/core/authguard';
@@ -164,6 +149,7 @@ interface AuthkeyRow {
 
 const { t } = useI18n();
 const router = useRouter();
+const $q = useQuasar();
 
 const { wallet, walletIsReady } = useWizardConnectWallet();
 
@@ -210,13 +196,20 @@ const columns: QTableColumn[] = [
     sortable: true,
   },
   {
-    name: 'authguardAddress',
-    label: t('dashboard.authkeys.columnAuthguard'),
-    field: (row: AuthkeyRow) => row.authguardAddress,
+    name: '',
+    label: '',
     align: 'left',
     sortable: true,
+    field: ''
   },
 ];
+
+/** On xs the two columns fold into one cell and the header is hidden, so labels move into the row. */
+const isXs = computed(() => $q.screen.lt.sm);
+
+const visibleColumns = computed(() =>
+  isXs.value ? ['authkey'] : ['authkey', 'authguardAddress']
+);
 
 const onRowClick = (_evt: Event, row: AuthkeyRow) => {
   const authkey = authkeys.value.find(
@@ -330,32 +323,13 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.rounded-borders {
-  border-radius: 6px;
-}
 
-.table-scroll-wrapper {
-  display: block;
-  width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1rem;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
-}
-
-.table-scroll-wrapper::-webkit-scrollbar {
-  height: 4px;
-}
-
-.table-scroll-wrapper::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.table-scroll-wrapper::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
+/* Sub-label under a column header, e.g. "(Category)" under "Authkey". */
+.column-caption {
+  font-size: 9px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: #666666;
 }
 </style>

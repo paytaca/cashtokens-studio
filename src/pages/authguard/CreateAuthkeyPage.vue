@@ -13,8 +13,7 @@
 
                 <q-card flat bordered class="feature-card-bg rounded-borders q-mt-xl q-py-md">
                     <q-card-section class="flex justify-between items-center">
-                        <q-card-title
-                            class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
+                        <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm ">
                             <span>{{ t('createAuthkey.title') }}</span>
                             <q-icon name="key" size="lg" color="warning" style="transform: rotate(-25deg);" />
                         </q-card-title>
@@ -44,11 +43,11 @@
                             </FormField>
                             <FormField class="full-width">
                                 <label>{{ t('createAuthkey.commitment') }}</label>
-                                <q-input model-value="00" class="full-width" outlined readonly />
+                                <q-input model-value="00" class="full-width" outlined disable />
                             </FormField>
                             <FormField class="full-width">
                                 <label>{{ t('createAuthkey.capability') }}</label>
-                                <q-input model-value="none" class="full-width" outlined readonly />
+                                <q-input model-value="none" class="full-width" outlined disable />
                             </FormField>
                         </q-form>
                     </q-card-section>
