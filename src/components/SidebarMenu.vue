@@ -1,5 +1,10 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
+    <div class="text-center">
+      <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
+        {{ network }}
+      </q-chip>
+    </div>
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
       <template v-slot:default-header="prop">
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
@@ -21,6 +26,7 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useUser } from 'src/stores/user'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
+const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
 defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
