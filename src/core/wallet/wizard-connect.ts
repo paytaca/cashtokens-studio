@@ -147,6 +147,24 @@ export class WizardConnectExternalWallet implements ExternalWallet {
         return 'wizard-connect'
     }
 
+    /*
+     * Parked for later — the multisig check that src/apps/utils/wallet.ts used to patch onto the
+     * mainnet-js v2 Wallet prototype (`getTokenDepositAddress`/`getDepositAddress` need no patch:
+     * v3's WatchWallet has both natively). It reads the wallet template a WalletConnect session
+     * carries, so with wizard-connect the equivalent is the session the manager exposes. Wire that up
+     * (as an isMultisig() on this class) and the pending-multisig lookup can return txs again — the
+     * store and ClientDB that used to drive it are parked in .git/exclude/archive/dead-files-2026-10-14.
+     *
+     *   isMultisig() {
+     *       if (this.walletConnectSession?.sessionProperties?.wallet?.template) {
+     *           return isMultisigWallet(this.walletConnectSession.sessionProperties.wallet.template)
+     *       }
+     *       return false
+     *   }
+     *
+     * isMultisigWallet() itself lives in src/core/wallet/multisig-template.ts.
+     */
+
     async sync() {
         if (!this.ready) return 
         await this.getUtxos({ sync: true })

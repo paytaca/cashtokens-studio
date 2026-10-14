@@ -24,7 +24,6 @@
 import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { useUser } from 'src/stores/user'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
@@ -32,7 +31,6 @@ defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
-const user = useUser()
 const hrefs = {
   dashboard: '/dashboard',
   managedTokens: '/dashboard/managed-tokens',

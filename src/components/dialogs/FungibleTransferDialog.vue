@@ -73,9 +73,8 @@
 
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
-import { type IdentitySnapshot } from 'mainnet-js'
+import { type IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { computed, nextTick, onMounted, ref } from 'vue';
-import BigNumber from 'bignumber.js'
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { isTokenAwareAddress } from 'src/core/utils';
 import { shortenTokenId } from 'src/core/utils';

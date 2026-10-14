@@ -3,8 +3,8 @@
     :class="copied ? 'text-primary' : ''" flat dense no-caps></q-btn>
 </template>
 <script setup lang="ts">
-import { delay } from 'mainnet-js';
-import copyText from 'src/apps/utils/copyText'
+import { delay } from 'mainnet-js-v3';
+import { copyText } from 'src/core/utils/copy-text'
 import { ref } from 'vue';
 defineProps<{ text: string }>()
 const copied = ref<string>('')

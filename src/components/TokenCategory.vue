@@ -16,8 +16,8 @@
   </q-btn>
 </template>
 <script setup lang="ts">
-import { delay } from 'mainnet-js';
-import copyText from 'src/apps/utils/copyText'
+import { delay } from 'mainnet-js-v3';
+import { copyText } from 'src/core/utils/copy-text'
 import { ref } from 'vue';
 defineOptions({ name: 'TokenCategory' })
 defineProps<{ tokenId?: string, iconRight?: string }>()

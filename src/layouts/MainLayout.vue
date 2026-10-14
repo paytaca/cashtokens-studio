@@ -29,7 +29,7 @@
           Boolean(manager) && (state !== 'disconnected' || wallet?.ready)
         " class="q-mx-sm">
           <q-btn-group class="text-right q-my-sm" style="position: relative">
-            <q-btn-dropdown size="lg" @before-show="onBeforeMenuShow" style="
+            <q-btn-dropdown size="lg" style="
                 color: rgb(20, 20, 20);
                 padding: 10px;
                 border-radius: 10px;
@@ -97,25 +97,18 @@
 </template>
 
 <script setup lang="ts">
-import { computed, inject, onMounted, ref, watch } from 'vue';
+import { computed, inject, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { EventBus, useQuasar } from 'quasar';
-import ClientDB from 'src/apps/clientonly/ClientDB';
+import { useQuasar } from 'quasar';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import WalletInitializing from 'src/components/WalletInitializing.vue';
-import { useUser } from 'src/stores/user';
-import { useInit } from 'src/composables/useInit';
-import { useWalletConnect } from 'src/composables/useWalletConnect';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 
 const leftDrawerOpen = ref(false);
-const user = useUser();
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-const pendingMultisigTransactions = ref([]);
-const eventBus = inject<EventBus>('eventBus');
 
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
@@ -126,8 +119,10 @@ const isIndexPage = computed(() => route.path === '/');
 /** From sm up the drawer is permanent, so the wordmark lives in the header; on xs the drawer carries the icon. */
 const showHeaderLogo = computed(() => $q.screen.gt.xs);
 
-useWalletConnect();
-
+// The legacy WalletConnect v1 composable is gone from the tree: wizard-connect (provided in App.vue)
+// owns the wallet session now. It is parked in
+// .git/exclude/archive/dead-files-2026-10-14/src/composables/useWalletConnect.ts — restoring that file
+// and calling it here brings the old v1 path back.
 const { state, manager, disconnect, showQR, uri, qrUri, wallet, walletIsReady } =
   inject('wizardConnectWallet') as any;
 
@@ -138,36 +133,14 @@ const onQRUpdateShow = (val: boolean) => {
   if (!val) showQR.value = false;
 };
 
-eventBus?.on('updatedPendingMultisigTransactions', async () => {
-  pendingMultisigTransactions.value =
-    await user.getPendingMultisigTransactions();
-});
-
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value;
 };
-
-const onBeforeMenuShow = () => {
-  const db = ClientDB.getInstance();
-  db.getPendingMultisigTransactions().then((v) => {
-    pendingMultisigTransactions.value = v;
-  });
-};
-
-useInit();
 
 const onDisconnectClick = async () => {
   await disconnect();
   router.push('/');
 };
-
-onMounted(async () => {
-  const db = ClientDB.getInstance();
-  pendingMultisigTransactions.value =
-    await user.getPendingMultisigTransactions();
-
-  console.log('manager', manager.value);
-});
 </script>
 
 <style scoped>
