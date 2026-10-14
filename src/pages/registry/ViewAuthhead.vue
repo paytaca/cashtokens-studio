@@ -1,7 +1,7 @@
 <template>
     <q-page class="bg-dark-page text-grey-2">
         <div class="row justify-center">
-            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
+            <div class="col-xs-12 col-sm-10  q-my-lg q-pa-md">
                 <q-card v-if="authheadLoading[route.query?.authhead as string] || wallet.initializing"
                     class="dark q-pa-lg rounded-borders">
 

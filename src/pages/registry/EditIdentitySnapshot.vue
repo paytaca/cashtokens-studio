@@ -1,7 +1,7 @@
 <template>
     <q-page class="bg-dark-page q-pb-xl">
         <div class="row justify-center">
-            <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg q-pa-md">
+            <div class="col-xs-12 col-sm-10 q-my-lg q-pa-md">
                 <q-card v-if="identitySnapshot" flat class="bg-dark q-pa-lg rounded-borders">
                     <div class="text-right text-caption text-grey-6 text-uppercase">Metadata</div>
                     <q-banner v-if="identitySnapshotHasNoRegistry">
@@ -77,14 +77,16 @@
                                 <div class="col-12">
                                     <FormField>
                                         <label for="">Symbol</label>
-                                        <q-input v-model="identitySnapshot.token.symbol" :rules="symbolRules" outlined></q-input>
+                                        <q-input v-model="identitySnapshot.token.symbol" :rules="symbolRules"
+                                            outlined></q-input>
                                     </FormField>
                                 </div>
                                 <div class="col-12">
                                     <FormField>
                                         <label for="">Decimals</label>
 
-                                        <q-input v-model="identitySnapshot.token.decimals" :rules="decimalsRules" outlined></q-input>
+                                        <q-input v-model="identitySnapshot.token.decimals" :rules="decimalsRules"
+                                            outlined></q-input>
                                         <div v-if="showDecimalsWarning" class="text-warning text-caption q-mt-xs">
                                             {{ t('warning.decimalsOnPureNft') }}
                                         </div>

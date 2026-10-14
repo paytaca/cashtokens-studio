@@ -5,7 +5,7 @@
     </template>
     <template v-else>
       <div class="row justify-center registry-row">
-        <div class="col-xs-12 col-sm-10 col-md-8 registry-col">
+        <div class="col-xs-12 col-sm-10 registry-col">
           <div class="q-mb-md q-px-sm">
             <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
           </div>
