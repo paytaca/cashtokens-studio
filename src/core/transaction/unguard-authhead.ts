@@ -1,7 +1,7 @@
 import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType } from "bitauth-libauth-v3"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
@@ -117,7 +117,7 @@ function finalizeTransaction(
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 3n
     const minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+        BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
     const estimatedCost = fixedCost + minimumFee
@@ -146,7 +146,7 @@ function finalizeTransaction(
         transactionHex = transaction.build()
 
         const newMinimumFee = getMinimumFee(
-            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
             DEFAULT_FEE_RATE_SATS_PER_KB
         )
         const newEstimatedCost = fixedCost + newMinimumFee

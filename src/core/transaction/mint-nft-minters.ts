@@ -26,7 +26,8 @@ import { createAuthguardContract } from "../authguard"
 import { 
     DEFAULT_FEE_RATE_SATS_PER_KB, 
     DEFAULT_TOKEN_VALUE, 
-    P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE 
+    P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, 
+    P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 
@@ -153,7 +154,7 @@ export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequ
     const minOutputCount = authguard ? 3: 2
     const fixedCost = DEFAULT_TOKEN_VALUE * BigInt(minOutputCount + params.mintQuantity)
     const minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
+        BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
     const estimatedCost = fixedCost + minimumFee
@@ -181,7 +182,7 @@ export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequ
         transactionHex = transaction.build()
 
         const newMinimumFee = getMinimumFee(
-            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
             DEFAULT_FEE_RATE_SATS_PER_KB
         )
         const newEstimatedCost = fixedCost + newMinimumFee

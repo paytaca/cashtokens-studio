@@ -9,7 +9,7 @@ import { decodeCashAddress, encodeCashAddress, getMinimumFee, hexToBin } from "b
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
 import { UtxoTxid, UtxoVout, UtxoWithPath } from "../types"
-import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE } from "../constants"
+import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 
 export type CreateAuthkeyParams = {
     genesisInputId: `${UtxoTxid}:${UtxoVout}`,
@@ -80,7 +80,7 @@ export function createAuthkey(params: CreateAuthkeyParams): SignTransactionReque
 
     const fixedCost = DEFAULT_TOKEN_VALUE
     const minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
+        BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
     const estimatedCost = fixedCost + minimumFee
@@ -113,7 +113,7 @@ export function createAuthkey(params: CreateAuthkeyParams): SignTransactionReque
 
         const newMinimumFee = getMinimumFee(
             // Taking change into consideration
-            BigInt(hexToBin(transactionHex).length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+            BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
             DEFAULT_FEE_RATE_SATS_PER_KB
         )
         const newEstimatedCost = fixedCost + newMinimumFee

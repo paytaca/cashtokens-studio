@@ -55,7 +55,7 @@ export function createGenesisInput(params: CreateGenesisInputParams): SignTransa
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE
     let minimumFee = getMinimumFee(
-        BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
+        BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
         feeRateSatsPerKb
     )
 

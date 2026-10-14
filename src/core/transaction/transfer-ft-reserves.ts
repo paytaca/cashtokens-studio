@@ -96,7 +96,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
     
     let transactionHex = transaction.build()
     const fixedCost = DEFAULT_TOKEN_VALUE * 3n
-    const unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * 2
+    let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         feeRateSatsPerKb
@@ -124,7 +124,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
         spentUtxos.push(additionalFunderInput)
         totalSatoshiFunds += additionalFunderInput.satoshis
         transactionHex = transaction.build()
-        const unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length - 1
+        unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
         const newMinimumFee = getMinimumFee(
             // Taking change into consideration
             BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
