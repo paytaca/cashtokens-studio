@@ -2,7 +2,7 @@
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
       <ExplainerBanner class="q-ma-md"
-        :avatarSrc="`https://api.dicebear.com/10.x/miniavs/svg?seed=${primaryXPub + `${Math.floor(Math.random() * 1000)}`}`"
+        :avatarSrc="`https://api.dicebear.com/10.x/miniavs/svg?seed=${`${Math.floor(Math.random() * 100000)}`}`"
         :title="t('dashboard.welcome')">
 
         <template #default>
@@ -212,13 +212,13 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.protocol') }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ protocol || t('dashboard.wallet.notAvailable')
-                        }}</q-item-label>
+                      }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.discovered')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ isDiscovered ? t('dashboard.connection.yes') :
                         t('dashboard.connection.no') }}</q-item-label>
                     </q-item-section>
@@ -233,10 +233,10 @@
                   <q-item v-if="walletPublicKey" class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.walletPublicKey')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="row items-center no-wrap q-gutter-x-sm">
                         <span class="ellipsis text-grey-2" :title="walletPublicKey">{{ shorten(walletPublicKey, 12, 6)
-                          }}</span>
+                        }}</span>
                         <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
                           @click="copyValue(walletPublicKey)">
                           <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>
