@@ -12,9 +12,9 @@
           </div>
           <div class="col-12 text-center text-wrap q-py-sm"
             style="max-width:100%;text-wrap: wrap;overflow-wrap: normal;">
-            <q-btn v-if="statusType !== 'pending'" :href="openTxInExplorer(txid)" target="_blank" flat dense
+            <q-btn v-if="statusType !== 'pending'" :href="txExplorerUrl(txid)" target="_blank" flat dense
               color="secondary" label="View Tx in Explorer" />
-            <div v-if="statusType !== 'pending'">Tx: {{ shortenTx(txid) }} <q-btn dense icon="content_copy" size="xs"
+            <div v-if="statusType !== 'pending'">Tx: {{ shortenTokenId(txid) }} <q-btn dense icon="content_copy" size="xs"
                 @click.stop="copyText(txid)"></q-btn>
             </div>
           </div>
@@ -30,7 +30,9 @@
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
 import { computed, ref } from 'vue';
-import { openTxInExplorer, shortenTx, copyText } from 'src/apps/utils';
+import { copyText } from 'src/core/utils/copy-text';
+import { txExplorerUrl } from 'src/core/utils/tx-explorer-url';
+import { shortenTokenId } from 'src/core/utils';
 
 const props = defineProps<{
   statusType: 'error' | 'info' | 'success' | 'pending'
