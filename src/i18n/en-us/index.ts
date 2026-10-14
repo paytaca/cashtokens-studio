@@ -62,6 +62,8 @@ export default {
       'This will delete {count} unpublished NFT(s) and reset your changes. Continue?',
     symbolRequired: 'Symbol is required',
     symbolReserved: 'This symbol is reserved. Please choose a different symbol.',
+    decimalsInvalid: 'Decimals must be a whole number between 0 and {max}.',
+    decimalsOnPureNft: 'The Reserve UTXO is an NFT. Are you sure you want to set the Decimals value? It has no use if this is a pure NFT collection.',
   },
   button: {
     ok: 'Ok',

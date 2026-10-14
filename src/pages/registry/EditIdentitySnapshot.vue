@@ -84,7 +84,10 @@
                                     <FormField>
                                         <label for="">Decimals</label>
 
-                                        <q-input v-model="identitySnapshot.token.decimals" outlined></q-input>
+                                        <q-input v-model="identitySnapshot.token.decimals" :rules="decimalsRules" outlined></q-input>
+                                        <div v-if="showDecimalsWarning" class="text-warning text-caption q-mt-xs">
+                                            {{ t('warning.decimalsOnPureNft') }}
+                                        </div>
                                     </FormField>
                                 </div>
                                 <!-- <h6 class="q-my-xs">NFTs</h6>
@@ -172,7 +175,7 @@ import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { NftType, IdentitySnapshot, Registry } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, IdentitySnapshotRecord, NftRecord } from 'src/core/client-db'
-import { getErrorMessage } from 'src/core/utils'
+import { getErrorMessage, getTokenType } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
 import { uploadFile } from 'src/core/ipfs'
 
@@ -225,6 +228,36 @@ const modified = computed(() => {
     if (!initialSnapshotJson.value || !identitySnapshot.value) return false
     return JSON.stringify(identitySnapshot.value) !== initialSnapshotJson.value
 })
+
+/** BCMR defines `decimals` as an integer between `0` (indivisible) and `18` (inclusive). */
+const MAX_TOKEN_DECIMALS = 18
+
+/** Decimals are a whole number of digits — no fractions, no negatives, nothing above the BCMR maximum. */
+const isValidTokenDecimals = (value: unknown) => {
+    const decimals = Number(value ?? 0)
+    return Number.isInteger(decimals) && decimals >= 0 && decimals <= MAX_TOKEN_DECIMALS
+}
+
+const decimalsRules = [
+    (val: string) => isValidTokenDecimals(val) || t('warning.decimalsInvalid', { max: MAX_TOKEN_DECIMALS }),
+]
+
+const decimalsIsValid = computed(() => isValidTokenDecimals(identitySnapshot.value?.token?.decimals))
+
+/**
+ * The authhead UTXO is this identity's reserve. When it holds NFTs only, the identity describes a
+ * pure NFT collection, and a Decimals value — which only ever describes fungible amounts — has
+ * nothing to apply to.
+ */
+const reserveIsPureNft = computed(() => {
+    const reserve = activeAuthhead.value
+    return !!reserve?.token && getTokenType(reserve) === 'nft'
+})
+
+/** Only warn once the user has actually entered a non-zero Decimals value. */
+const showDecimalsWarning = computed(() =>
+    reserveIsPureNft.value && Number(identitySnapshot.value?.token?.decimals ?? 0) !== 0
+)
 
 const identitySnapshotRecord = useObservable(
     liveQuery(async () => {
@@ -346,6 +379,10 @@ const deleteNft = (nft: NftRecord) => {
 }
 
 const onPublishClick = async () => {
+    if (!decimalsIsValid.value) {
+        $q.notify({ type: 'warning', message: t('warning.decimalsInvalid', { max: MAX_TOKEN_DECIMALS }) })
+        return
+    }
 
     publishing.value = true
 
