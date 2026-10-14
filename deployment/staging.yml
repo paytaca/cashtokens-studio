@@ -1,10 +1,21 @@
 services:
   web:
-    container_name: cts-staging
+    container_name: cts
     build:
       context: ../
       dockerfile: ./deployment/staging.Dockerfile
+      args:
+        NODE_ENV: development
+        PORT: 3000
+        BUILD_ENV: dev
     env_file:
       - .env.dev
+    environment:
+      # NOTE: currently inert — Quasar bakes PORT from .env.dev into the SSR
+      # bundle at build time (see the analysis), so the server always listens on
+      # 3000 until the envFilter fix lands. Publish that port below.
+      PORT: '3000'
     ports:
-      - '3001:3001'
+      # nginx proxies chipnet.cashtokens.studio to 127.0.0.1:3001 (upstream
+      # ctswebstaging), so publish 3001 on the host against the port the bundle binds.
+      - '3001:3000'

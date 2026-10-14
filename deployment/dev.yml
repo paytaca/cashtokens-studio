@@ -6,7 +6,7 @@ services:
       dockerfile: ./deployment/dev.Dockerfile
       args:
         NODE_ENV: development
-        PORT: 3001
+        PORT: 3000
         BUILD_ENV: dev
     env_file:
       - .env.dev
@@ -14,6 +14,6 @@ services:
       # NOTE: currently inert — Quasar bakes PORT from .env.dev into the SSR
       # bundle at build time (see the analysis), so the server always listens on
       # 3000 until the envFilter fix lands. Publish that port below.
-      PORT: 3001
+      PORT: '3000'
     ports:
       - '3000:3000'
