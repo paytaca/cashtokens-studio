@@ -1,6 +1,8 @@
 .env
 .env.*
 deployment/.env.*
+# Server-side nginx config; the tracked vhost template is deployment/nginx-vh-cts
+deployment/nginx.conf
 *.log
 *Zone.Identifier
 .DS_Store
