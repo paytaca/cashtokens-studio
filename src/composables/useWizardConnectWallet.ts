@@ -72,7 +72,8 @@ export const useWizardConnectWallet = () => {
             pingManager = mgr
             lastPongAt.value = null
             pongCount.value = 0
-            mgr.on('messagereceived', (msg: ProtocolMessage) => {
+            // Read the ref here: the watcher hands us the unwrapped manager, which has no `.value`.
+            manager.value?.on('messagereceived', (msg: ProtocolMessage) => {
                 if (msg?.action === RelayMsgAction.Pong) {
                     lastPongAt.value = Date.now()
                     pongCount.value += 1
