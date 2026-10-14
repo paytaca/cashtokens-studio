@@ -81,8 +81,7 @@
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <PageSkeleton v-if="wallet?.initializing && !isIndexPage"
-          :message="$t('info.initializingWallet')" />
+        <PageSkeleton v-if="wallet?.initializing && !isIndexPage" :message="$t('info.initializingWallet')" />
         <router-view v-else />
       </q-page-container>
     </q-scroll-area>
@@ -105,31 +104,18 @@ import SidebarMenu from 'components/SidebarMenu.vue';
 import PageSkeleton from 'src/components/PageSkeleton.vue';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
-
 const leftDrawerOpen = ref(false);
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
 
-const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
-
 const isIndexPage = computed(() => route.path === '/');
 
-/** From sm up the drawer is permanent, so the wordmark lives in the header; on xs the drawer carries the icon. */
 const showHeaderLogo = computed(() => $q.screen.gt.xs);
 
-// The legacy WalletConnect v1 composable is gone from the tree: wizard-connect (provided in App.vue)
-// owns the wallet session now. It is parked in
-// .git/exclude/archive/dead-files-2026-10-14/src/composables/useWalletConnect.ts — restoring that file
-// and calling it here brings the old v1 path back.
-const { state, manager, disconnect, showQR, uri, qrUri, wallet } =
+const { state, manager, disconnect, wallet } =
   inject('wizardConnectWallet') as any;
 
-/**
- * The header and drawer are about being inside the app, not about the wallet being usable yet. They
- * follow the session rather than `walletIsReady`, so initializing a restored session no longer tears
- * the chrome down and rebuilds it — which read as the whole layout refreshing.
- */
 const showAppChrome = computed(
   () =>
     Boolean(manager.value) ||
@@ -137,24 +123,23 @@ const showAppChrome = computed(
     Boolean(wallet.value?.initializing)
 );
 
-const closeQR = () => {
-  showQR.value = false;
-};
-const onQRUpdateShow = (val: boolean) => {
-  if (!val) showQR.value = false;
-};
-
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value;
 };
 
-const onDisconnectClick = async () => {
-  await disconnect();
-  router.push('/');
-};
+
 </script>
 
 <style scoped>
+.sidebar-drawer {
+  background-color: #002b5c;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+}
+
 .app-logo {
   max-height: 3em;
   max-width: 8em;

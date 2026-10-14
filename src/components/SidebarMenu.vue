@@ -10,7 +10,7 @@
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
           <img v-if="prop.node.img" :src="prop.node.img" class="sidebar-logo q-mr-sm" alt="" />
           <q-icon v-else :name="prop.node.icon || 'share'"
-            :color="prop.node.label == 'Authguards' || prop.node.label == 'Authguard Keys' ? 'orange' : undefined"
+            :color="prop.node.label == 'Authguard Vaults' || prop.node.label == 'Authguard Keys' ? 'orange' : undefined"
             size="28px" class="q-mr-sm" />
           <div>{{ prop.node.label }}</div>
         </div>
@@ -30,11 +30,6 @@ const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
 const { walletIsReady } = useWizardConnectWallet();
 
-/**
- * The drawer stays up while a restored session initializes, but the pages behind these links need a
- * ready wallet — so the entries are inert until then. QTree refuses to select a disabled node, which
- * stops the navigation watcher below from ever firing.
- */
 const linksDisabled = computed(() => !walletIsReady.value);
 
 defineOptions({ name: 'SidebarMenu' })
@@ -135,7 +130,7 @@ watch(() => route.path, (currentPath) => {
 /* q-tree__node-header relative-position row no-wrap items-center q-tree__node--link q-hoverable q-focusable q-tree__node--selected {} */
 .q-tree__node--selected {
   color: rgb(254, 254, 254);
-  background: linear-gradient(90deg, rgba(39, 48, 68, 0.978) 0%, rgba(24, 27, 36, 0.98), 42%, rgb(26, 41, 62) 77%, rgb(22, 39, 52) 100%);
+  background: linear-gradient(90deg, rgba(39, 48, 68, 0.978) 0%, rgba(24, 27, 36, 0.98), 42%, rgb(26, 41, 62) 77%, rgb(42, 70, 91) 100%);
   border-radius: 25px
 }
 

@@ -2,7 +2,7 @@
   <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
     <div class="q-px-md q-px-md-xl content-container">
       <ExplainerBanner class="q-ma-md"
-        :avatarSrc="`https://api.dicebear.com/10.x/miniavs/svg?seed=${`${Math.floor(Math.random() * 100000)}`}`"
+        :avatarSrc="`https://api.dicebear.com/10.x/voxel-art/svg?tags=animation&seed=${`${Math.floor(Math.random() * 100000)}`}`"
         :title="t('dashboard.welcome')">
 
         <template #default>
