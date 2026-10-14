@@ -4,7 +4,7 @@
 
       <q-toolbar>
         <q-toolbar-title class="text-h5 text-bold">
-          Burn Token Identity
+          {{ t('authguard.burnTokenIdentity') }}
           <q-avatar class="q-mx-sm" v-if="icon">
             <img :src="ipfsToGatewayUrl(icon) as string" alt="">
           </q-avatar>
@@ -13,32 +13,32 @@
       <div class="q-mx-md text-justify">
         <q-icon name="warning" color="warning" size="sm"></q-icon>
         <span>
-          Warning! This action will burn this token (token of the utxo will be discarded).
-          Any fungible token amount and/or minting capability will be lost. This will also
-          burn this token identity's AuthHead, this means you'll no longer be able to publish
-          an update to the registry.
+          {{ t('authguard.burnWarning') }}
           <q-btn href="https://github.com/bitjson/chip-bcmr#burned-identities" target="_blank" dense flat no-caps
             color="grey-8" icon="info" size="sm" />
         </span>
       </div>
       <q-card-section>
         <div class="row q-gutter-sm">
-          <q-input class="col-12" :model-value="symbol" disable label="Symbol" filled></q-input>
-          <q-input class="col-12" :model-value="category" disable label="Token ID/Category" filled></q-input>
-          <q-input class="col-12" :model-value="amount" disable label="Fungible Reserves" filled></q-input>
-          <q-input class="col-12" :model-value="capability" disable label="NFT Capability" filled></q-input>
+          <q-input class="col-12" :model-value="symbol" disable :label="t('authguard.symbol')" filled></q-input>
+          <q-input class="col-12" :model-value="category" disable :label="t('authguard.tokenIdCategory')" filled></q-input>
+          <q-input class="col-12" :model-value="amount" disable :label="t('authguard.fungibleReserves')" filled></q-input>
+          <q-input class="col-12" :model-value="capability" disable :label="t('authguard.nftCapability')" filled></q-input>
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn flat label="Cancel" color="grey-6" @click="onCancel" />
-        <q-btn flat icon="mdi-fire" label="Burn" text-color="orange" @click="onBurn" />
+        <q-btn flat :label="t('button.cancel')" color="grey-6" @click="onCancel" />
+        <q-btn flat icon="mdi-fire" :label="t('button.burn')" text-color="orange" @click="onBurn" />
       </q-card-actions>
     </q-card>
   </q-dialog>
 </template>
 
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean

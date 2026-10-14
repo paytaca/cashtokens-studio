@@ -77,7 +77,7 @@ const menu = computed<any[]>(() => {
     },
 
     {
-      label: 'Authguard Vaults',
+      label: t('dashboard.authguards.menu'),
       href: hrefs.authguards,
       icon: 'mdi-safe-square-outline',
     },

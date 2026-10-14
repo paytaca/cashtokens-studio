@@ -62,7 +62,7 @@
                       <img v-if="a.iconSrc" :src="a.iconSrc" alt="" fit="cover" />
                       <img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${a.category}`" alt="" />
                     </q-avatar> <span class="token-symbol text-grey-6">
-                      {{ a.label || '<No Symbol>' }}
+                      {{ a.label || $t('dashboard.authguards.noSymbol') }}
                     </span>
                   </q-chip>
                 </q-td>

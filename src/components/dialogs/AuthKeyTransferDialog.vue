@@ -25,8 +25,9 @@
 
         <q-form ref="transferForm" @submit.prevent="onSubmit" class="authkey-transfer-form q-gutter-md q-mt-md">
           <FormField>
-            <label for="">Token Symbol</label>
-            <q-input :model-value="identitySnapshot?.token?.symbol || 'Unknown Token'" outlined readonly size="lg">
+            <label for="">{{ $t('authguard.tokenSymbol') }}</label>
+            <q-input :model-value="identitySnapshot?.token?.symbol || $t('authguard.unknownToken')" outlined readonly
+              size="lg">
 
             </q-input>
           </FormField>

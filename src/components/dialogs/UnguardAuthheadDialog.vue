@@ -18,11 +18,11 @@
         </div>
         <div class="q-gutter-sm">
           <FormField>
-            <label>Token Symbol</label>
+            <label>{{ t('authguard.tokenSymbol') }}</label>
             <q-input :model-value="symbol" outlined disable autogrow></q-input>
           </FormField>
           <FormField>
-            <label>Token Category</label>
+            <label>{{ t('authguard.tokenCategory') }}</label>
             <q-input :model-value="category" outlined disable autogrow></q-input>
           </FormField>
           <FormField>
@@ -40,8 +40,8 @@
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn flat label="Cancel" color="grey-6" @click="onCancel" />
-        <q-btn icon="lock_open" label="Unlock" color="negative" @click="onUnguard" />
+        <q-btn flat :label="t('button.cancel')" color="grey-6" @click="onCancel" />
+        <q-btn icon="lock_open" :label="t('button.unlock')" color="negative" @click="onUnguard" />
       </q-card-actions>
     </q-card>
   </q-dialog>
