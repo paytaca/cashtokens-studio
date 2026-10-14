@@ -7,8 +7,9 @@
 
         <template #default>
           <div class="row items-center q-gutter-sm">
-            <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
-              {{ networkLabel }}
+
+            <q-chip color="grey-9" text-color="warning" dense icon="lan">
+              <span class="text-caption text-italic">{{ networkLabel }}</span>
             </q-chip>
           </div>
         </template>
@@ -190,7 +191,6 @@
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption>
-
                         <div>{{ t('dashboard.connection.wallet') }}</div>
                       </q-item-label>
                       <q-item-label class="text-grey-2 q-gutter-x-sm">
@@ -204,7 +204,9 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.state') }}</q-item-label>
                       <q-item-label>
-                        <q-badge :color="stateColor" text-color="white" :label="stateLabel" />
+                        <q-badge :color="stateColor">
+                          <span class="text-black">{{ stateLabel }}</span>
+                        </q-badge>
                       </q-item-label>
                     </q-item-section>
                   </q-item>
@@ -257,8 +259,10 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.ping.lastPong') }}</q-item-label>
                       <q-item-label class="row items-center no-wrap q-gutter-x-sm">
-                        <span class="text-grey-2">{{ lastPongAgo }}</span>
-                        <q-badge :color="pingHealth.color" text-color="white" :label="pingHealth.label" />
+                        <span class="text-grey">{{ lastPongAgo }}</span>
+                        <q-badge :color="pingHealth.color">
+                          <span class="text-black">{{ pingHealth.label }}</span>
+                        </q-badge>
                         <q-btn flat dense round size="sm" icon="info_outline" color="grey-5">
                           <q-tooltip>{{ t('dashboard.ping.hint') }}</q-tooltip>
                         </q-btn>

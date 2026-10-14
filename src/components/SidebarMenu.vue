@@ -1,8 +1,8 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <div class="text-center">
-      <q-chip v-if="route.name !== 'dashboard'" color="grey-9" text-color="grey-3" dense icon="lan">
-        {{ network }}
+      <q-chip v-if="route.name !== 'dashboard'" color="grey-9" text-color="warning" dense icon="lan">
+        <span class="text-caption text-italic">{{ network }}</span>
       </q-chip>
     </div>
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
