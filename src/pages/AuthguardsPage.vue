@@ -16,87 +16,90 @@
           </div>
         </template>
       </ExplainerBanner>
-
-      <template v-if="authkeysLoading || authheadsLoading">
-        <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
-          <q-skeleton type="rect" size="36px" class="rounded-borders" />
-          <div class="column q-gutter-y-xs" style="flex: 1">
-            <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
-            <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+      <q-card class="q-pa-lg rounded-borders">
+        <template v-if="authkeysLoading || authheadsLoading">
+          <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
+            <q-skeleton type="rect" size="36px" class="rounded-borders" />
+            <div class="column q-gutter-y-xs" style="flex: 1">
+              <q-skeleton type="rect" height="14px" width="40%" class="rounded-borders" />
+              <q-skeleton type="rect" height="12px" width="25%" class="rounded-borders" />
+            </div>
+            <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
           </div>
-          <q-skeleton type="rect" height="14px" width="80px" class="rounded-borders" />
-        </div>
-      </template>
-      <template v-else-if="rows.length > 0">
-        <div class="row justify-end q-gutter-sm q-mb-md">
-          <q-input v-model="searchQuery" dark dense outlined :placeholder="$t('dashboard.authguards.searchPlaceholder')"
-            class="bg-grey-10" style="border-radius: 0.75rem; min-width: 280px">
-            <template v-slot:prepend>
-              <q-icon name="search" color="grey-6" size="xs" />
-            </template>
-            <template v-slot:append v-if="searchQuery">
-              <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="searchQuery = ''" />
-            </template>
-          </q-input>
-        </div>
-        <div class="table-scroll-wrapper">
-          <q-table :rows="filteredRows" :columns="columns" :row-key="(row: AuthguardRow) => row.authkeyCategory" flat
-            class="border-radius-12 token-reserves-table" style="min-width: 440px" @row-click.stop="onRowClick">
-            <template v-slot:body-cell-authguardAddress="props">
-              <q-td :props="props">
-                <div class="flex items-center q-gutter-x-xs no-wrap">
-                  <q-icon name="mdi-safe-square-outline" color="yellow-8" size="xs" />
-                  <span class="text-caption text-mono text-grey-3">{{
-                    shortenCashAddress(props.row.address)
-                  }}</span>
-                  <CopyText :text="props.row.address" />
-                </div>
-              </q-td>
-            </template>
+        </template>
+        <template v-else-if="rows.length > 0">
+          <div class="row justify-end q-gutter-sm q-mb-md">
+            <q-input v-model="searchQuery" dark dense outlined
+              :placeholder="$t('dashboard.authguards.searchPlaceholder')" class="bg-grey-10"
+              style="border-radius: 0.75rem; min-width: 280px">
+              <template v-slot:prepend>
+                <q-icon name="search" color="grey-6" size="xs" />
+              </template>
+              <template v-slot:append v-if="searchQuery">
+                <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="searchQuery = ''" />
+              </template>
+            </q-input>
+          </div>
+          <div class="table-scroll-wrapper">
+            <q-table :rows="filteredRows" :columns="columns" :row-key="(row: AuthguardRow) => row.authkeyCategory" flat
+              class="border-radius-12 token-reserves-table" style="min-width: 440px" @row-click.stop="onRowClick">
+              <template v-slot:body-cell-authguardAddress="props">
+                <q-td :props="props">
+                  <div class="flex items-center q-gutter-x-xs no-wrap">
+                    <q-icon name="mdi-safe-square-outline" color="yellow-8" size="xs" />
+                    <span class="text-caption text-mono text-grey-3">{{
+                      shortenCashAddress(props.row.address)
+                    }}</span>
+                    <CopyText :text="props.row.address" />
+                  </div>
+                </q-td>
+              </template>
 
-            <template v-slot:body-cell-lockedTokens="props">
-              <q-td :props="props">
-                <q-chip v-for="a in props.row.lockAvatars" :key="a.key">
-                  <q-avatar size="sm" class="bg-grey-9 shadow-1 token-avatar">
-                    <img v-if="a.iconSrc" :src="a.iconSrc" alt="" fit="cover" />
-                    <img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${a.category}`" alt="" />
-                  </q-avatar> <span class="token-symbol text-grey-6">
-                    {{ a.label || '<No Symbol>' }}
-                  </span>
-                </q-chip>
-              </q-td>
-            </template>
-          </q-table>
-        </div>
-      </template>
-      <template v-else>
-        <div class="bg-dark q-pa-lg rounded-borders">
-          <div class="flex flex-center column q-py-lg">
-            <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px">
-              <div class="playing-card" style="
+              <template v-slot:body-cell-lockedTokens="props">
+                <q-td :props="props">
+                  <q-chip v-for="a in props.row.lockAvatars" :key="a.key">
+                    <q-avatar size="sm" class="bg-grey-9 shadow-1 token-avatar">
+                      <img v-if="a.iconSrc" :src="a.iconSrc" alt="" fit="cover" />
+                      <img v-else :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${a.category}`" alt="" />
+                    </q-avatar> <span class="token-symbol text-grey-6">
+                      {{ a.label || '<No Symbol>' }}
+                    </span>
+                  </q-chip>
+                </q-td>
+              </template>
+            </q-table>
+          </div>
+        </template>
+        <template v-else>
+          <div class="bg-dark q-pa-lg rounded-borders">
+            <div class="flex flex-center column q-py-lg">
+              <div class="flex flex-center q-mb-lg" style="height: 120px; width: 260px">
+                <div class="playing-card" style="
                   z-index: 1;
                   transform: rotate(-12deg) translateX(22px);
                   margin-right: -30px;
                 ">
-                <q-icon name="key" size="32px" color="grey-5" />
-              </div>
-              <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
-                <q-icon name="mdi-safe-outline" size="32px" color="grey-5" />
-              </div>
-              <div class="playing-card" style="
+                  <q-icon name="key" size="32px" color="grey-5" />
+                </div>
+                <div class="playing-card" style="z-index: 2; transform: rotate(-2deg)">
+                  <q-icon name="mdi-safe-outline" size="32px" color="grey-5" />
+                </div>
+                <div class="playing-card" style="
                   z-index: 3;
                   transform: rotate(8deg) translateX(-22px);
                   margin-left: -30px;
                 ">
-                <q-icon name="token" size="32px" color="grey-5" />
+                  <q-icon name="token" size="32px" color="grey-5" />
+                </div>
+              </div>
+              <div class="text-grey-5 text-h6 q-mb-lg">
+                {{ $t('dashboard.authguards.noAuthguards') }}
               </div>
             </div>
-            <div class="text-grey-5 text-h6 q-mb-lg">
-              {{ $t('dashboard.authguards.noAuthguards') }}
-            </div>
           </div>
-        </div>
-      </template>
+        </template>
+      </q-card>
+
     </div>
   </q-page>
 </template>
@@ -425,9 +428,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.rounded-borders {
-  border-radius: 6px;
-}
 
 .table-scroll-wrapper {
   display: block;
