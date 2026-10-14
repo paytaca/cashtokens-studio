@@ -56,6 +56,29 @@ export async function subscribe(address: string, options?: RetryOptions): Promis
     }, options);
   }
 
+export type BchBalance = {
+    valid?: boolean;
+    address?: string;
+    spendable?: number;
+    balance?: number;
+};
+
+/**
+ * BCH balance of an address from the AuthKey watchtower.
+ *
+ * Still reads `VITE_WATCHTOWER_API`: unlike broadcast, subscribe and authenticate, the balance
+ * endpoint has not moved to `VITE_WATCHTOWER_URL`.
+ */
+export async function fetchBchBalance(ownerAddress: string, options?: RetryOptions): Promise<BchBalance> {
+    return withRetry(async (signal) => {
+        const response = await fetch(`${import.meta.env.VITE_WATCHTOWER_API}balance/bch/${ownerAddress}`, { signal });
+        if (!response.ok) {
+            throw new HttpError(response.status, `HTTP Error ${response.status}: ${response.statusText}`);
+        }
+        return response.json();
+    }, options);
+}
+
 /**
  * Authenticates an authhead against its authbase via Watchtower
  * (`POST /api/cts/authhead/authenticate/`).

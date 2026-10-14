@@ -2,7 +2,7 @@ import SignClient from '@walletconnect/sign-client';
 import { onMounted, ref } from 'vue';
 import { formatAddress, getWalletClass } from 'src/apps/utils';
 import { useUser } from 'src/stores/user';
-import { Watchtower } from 'src/apps';
+import { subscribe } from 'src/services/watchtower';
 import { delay } from 'mainnet-js';
 import { stringify } from '@bitauth/libauth';
 import { TransactionSigner } from 'src/apps/types';
@@ -140,12 +140,7 @@ export const useWalletConnect = () => {
         }
       }
       if (address) {
-        const watchtower = new Watchtower();
-        let counter = 0;
-        while (counter < 3) {
-          await watchtower.subscribe(address);
-          counter++;
-        }
+        await subscribe(address);
       }
     } catch (error) {
       console.log(error);

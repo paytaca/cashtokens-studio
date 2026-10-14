@@ -4,8 +4,8 @@ import { useUser } from 'src/stores/user';
 import {
   ADDRESS_WATCHER_TRIGGERED,
   DEFAULT_TOKEN_VALUE,
-  Watchtower,
 } from 'src/apps';
+import { fetchBchBalance } from 'src/services/watchtower';
 import { UtxoI, delay } from 'mainnet-js';
 import { useRouter } from 'vue-router';
 import { EventBus } from 'quasar';
@@ -19,15 +19,12 @@ export const useInit = () => {
   const ui = useUI();
   const localForage = useLocalForage();
   const page = usePage();
-  const watchtower = ref<Watchtower>();
   const router = useRouter();
   const eventBus = inject<EventBus>('eventBus');
   const unwatchAddress = ref();
 
   onMounted(() => {
     ui.routeBack = '';
-
-    watchtower.value = new Watchtower();
 
     window.onbeforeunload = () => {
       localStorage.setItem('user.walletType', user.walletType || '');
@@ -48,7 +45,7 @@ export const useInit = () => {
     if (address) {
       await delay(3000);
       try {
-        const balance = await watchtower.value!.fetchBchBalance(address);
+        const balance = await fetchBchBalance(address);
         user.walletBchBalance = balance?.balance;
       } catch (error) {
         user.walletBchBalance = (await user.wallet?.getBalance(
