@@ -1,7 +1,7 @@
 <template>
   <div class="q-pa-md q-gutter-sm">
     <div class="text-center">
-      <q-chip color="grey-9" text-color="grey-3" dense icon="lan">
+      <q-chip v-if="route.name !== 'dashboard'" color="grey-9" text-color="grey-3" dense icon="lan">
         {{ network }}
       </q-chip>
     </div>
