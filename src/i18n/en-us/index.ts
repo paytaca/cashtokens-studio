@@ -226,7 +226,9 @@ export default {
     unknownToken: 'Unknown Token',
     burnTokenIdentity: 'Burn Token Identity',
     burnWarning:
-      "Warning! This action will burn this token (the token of the utxo will be discarded). Any fungible token amount and/or minting capability will be lost. This will also burn this token identity's AuthHead, meaning you will no longer be able to publish an update to the registry.",
+      "Warning! This action will burn this Auth UTXO (identity output). This means you will no longer be able to publish an update to the registry. Any fungible token amount and/or minting capability will also be discarded. ",
+    burnNeedsRegistry: 'This identity has no published registry, so there is nothing to burn with.',
+    burnPublicationFailed: 'Could not prepare the final registry publication for the burn.',
     noIconTooltip: 'No Icon — generated placeholder',
     badgeMixed: 'Mixed',
     badgeNft: 'NFT',

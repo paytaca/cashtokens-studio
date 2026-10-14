@@ -1,25 +1,15 @@
 import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
-import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
-import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType } from "bitauth-libauth-v3"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
-import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "@bitauth/libauth"
+import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
+import { addAuthheadSpendInputs, buildSignRequest, usableFunderUtxos } from "./utils"
+import { SignTransactionRequest } from "@wizardconnect/core"
 
 export type UnguardAuthheadParams = {
     authheadUtxo: UtxoWithPath
     authkeyUtxo: UtxoWithPath
     funderUtxos: UtxoWithPath[]
     recipientAddress: string
-    network?: Network
-}
-
-export type BurnAuthheadParams = {
-    authheadUtxo: UtxoWithPath
-    authkeyUtxo: UtxoWithPath
-    funderUtxos: UtxoWithPath[]
-    burnAddress: string
     network?: Network
 }
 
@@ -31,71 +21,32 @@ function buildAuthheadTransaction(
         network?: Network
     }
 ) {
-    if (!params.authheadUtxo?.token) {
-        throw new Error('Authhead UTXO must have a token.')
-    }
-    if (!params.authkeyUtxo?.token) {
-        throw new Error('Authkey UTXO is missing.')
-    }
-    if (params.authkeyUtxo.token.nft?.commitment !== '00') {
-        throw new Error('Invalid AuthKey.')
-    }
+    const transaction = new TransactionBuilder({
+        provider: new ElectrumNetworkProvider(params.network)
+    })
 
-    const authguardContract = createAuthguardContract({
-        authkeyTokenId: params.authkeyUtxo.token.category,
+    const { authguardContract, authkeyTokenAddress } = addAuthheadSpendInputs({
+        transaction,
+        authheadUtxo: params.authheadUtxo,
+        authkeyUtxo: params.authkeyUtxo,
         network: params.network
     })
 
-    if (authguardContract.unlock?.unlockWithNft === undefined) {
-        throw new Error('Error creating Authguard contract.')
-    }
-
-    const funderUtxos = [
-        ...params.funderUtxos
-            .filter(utxo =>
-                !utxo.token &&
-                `${utxo.txid}:${utxo.vout}` !== `${params.authkeyUtxo.txid}:${params.authkeyUtxo.vout}`
-            )
-            .sort((a, b) => Number(b.satoshis) - Number(a.satoshis))
-    ]
-
+    const funderUtxos = usableFunderUtxos(params.funderUtxos, params.authkeyUtxo)
     const funderInput = funderUtxos.shift()
     if (!funderInput) {
         throw new Error('Insufficient BCH balance to fund the transaction')
     }
-
-    const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
-    })
+    transaction.addInput(
+        funderInput,
+        placeholderP2PKHUnlocker(funderInput.address)
+    )
 
     const spentUtxos = [
         params.authheadUtxo,
         params.authkeyUtxo,
         funderInput
     ]
-
-    transaction.addInput(
-        params.authheadUtxo,
-        authguardContract.unlock.unlockWithNft(false) as any
-    )
-    transaction.addInput(
-        params.authkeyUtxo,
-        placeholderP2PKHUnlocker(params.authkeyUtxo.address)
-    )
-    transaction.addInput(
-        funderInput,
-        placeholderP2PKHUnlocker(funderInput.address)
-    )
-
-    const decodedAuthkeyAddress = decodeCashAddress(params.authkeyUtxo.address)
-    if (typeof decodedAuthkeyAddress === 'string') {
-        throw new Error('Error decoding Authkey address')
-    }
-    const authkeyTokenAddress = encodeCashAddress({
-        payload: decodedAuthkeyAddress.payload,
-        prefix: decodedAuthkeyAddress.prefix,
-        type: CashAddressType.p2pkhWithTokens
-    }).address
 
     return {
         transaction,
@@ -174,55 +125,6 @@ function finalizeTransaction(
     return { transactionHex, spentUtxos }
 }
 
-function buildSignRequest(
-    transaction: TransactionBuilder,
-    transactionHex: string,
-    spentUtxos: UtxoWithPath[],
-    userPrompt: string
-): SignTransactionRequest {
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = { utxo }
-        return utxoToWcSourceOutput(args)
-    })
-
-    const authheadIndex = sourceOutputs.findIndex(s =>
-        `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` ===
-        `${spentUtxos?.[0]?.txid}:${spentUtxos?.[0]?.vout}`
-    )
-    if (authheadIndex === -1) {
-        throw new Error('Authhead UTXO not found in source outputs')
-    }
-
-    const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex)) as TransactionCommon
-    const unlockingBytecode = transaction.inputs[authheadIndex]?.unlocker.generateUnlockingBytecode({
-        transaction: decodedTransaction as TransactionCommon,
-        sourceOutputs: sourceOutputs.map((sourceOutput) => ({
-            lockingBytecode: sourceOutput.lockingBytecode,
-            token: sourceOutput.token,
-            valueSatoshis: sourceOutput.valueSatoshis
-        })) as Output[],
-        inputIndex: authheadIndex
-    })
-
-    sourceOutputs[authheadIndex]!.unlockingBytecode = unlockingBytecode as Uint8Array
-
-    return {
-        action: RelayMsgAction.SignTransactionRequest,
-        transaction: {
-            transaction: transactionHex,
-            sourceOutputs: JSON.parse(JSON.stringify(sourceOutputs, jsonReplacer)),
-            userPrompt: userPrompt,
-            broadcast: false
-        },
-        inputPaths: spentUtxos.map((utxo, inputIndex) => {
-            if (!utxo.pathName) {
-                return []
-            }
-            return [inputIndex, utxo.pathName, utxo.addressIndex]
-        }).filter(p => p.length === 3) as [number, string, number][]
-    } as SignTransactionRequest
-}
-
 /**
  * Releases an authhead UTXO from the AuthGuard contract back to the owner's wallet.
  *
@@ -275,54 +177,3 @@ export function unguardAuthhead(params: UnguardAuthheadParams): SignTransactionR
     )
 }
 
-/**
- * Sends an authhead UTXO to the burn address, discarding its token permanently.
- *
- * The authhead is unlocked with `keepGuarded = false`, and the output is directed to
- * the network's burn address. This destroys any fungible token amount and/or NFT
- * minting capability, and prevents further registry updates for this token category.
- *
- * @param params.authheadUtxo - The vault UTXO currently locked in the AuthGuard contract
- * @param params.authkeyUtxo - The controlling AuthKey UTXO (proves ownership)
- * @param params.funderUtxos - Non-token wallet UTXOs to fund BCH fees
- * @param params.burnAddress - The burn address to send the authhead token to
- * @param params.network - BCH network (defaults to VITE_BCH_NETWORK)
- * @returns A SignTransactionRequest for WalletConnect signing
- * @throws If the authhead UTXO has no token, authkey is invalid, or insufficient BCH
- */
-export function burnAuthhead(params: BurnAuthheadParams): SignTransactionRequest {
-    const {
-        transaction,
-        spentUtxos,
-        funderUtxos,
-        funderInput,
-        authkeyTokenAddress
-    } = buildAuthheadTransaction(params)
-
-    transaction.addOutput({
-        to: params.burnAddress,
-        amount: params.authheadUtxo.satoshis,
-        token: params.authheadUtxo.token
-    })
-
-    transaction.addOutput({
-        to: authkeyTokenAddress,
-        amount: params.authkeyUtxo.satoshis,
-        token: params.authkeyUtxo.token
-    })
-
-    const { transactionHex, spentUtxos: finalSpentUtxos } = finalizeTransaction(
-        transaction,
-        spentUtxos,
-        funderUtxos,
-        funderInput,
-        authkeyTokenAddress
-    )
-
-    return buildSignRequest(
-        transaction,
-        transactionHex,
-        finalSpentUtxos,
-        'Burn Token Identity'
-    )
-}

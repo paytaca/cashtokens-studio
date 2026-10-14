@@ -169,7 +169,8 @@
 
     <BurnAuthheadDialog v-model="showBurnDialog" :icon="identitySnapshot?.uris?.icon"
       :symbol="identitySnapshot?.token?.symbol" :category="authkeyCategory"
-      :amount="selectedRow?.token?.amount?.toString()" :capability="selectedRow?.token?.nft?.capability"
+      :amount="selectedRow?.token?.amount?.toString()"
+      :decimals="selectedRow?.identitySnapshot?.token?.decimals" :capability="selectedRow?.token?.nft?.capability"
       @cancel="selectedRow = null" @burn="onBurnDialogConfirm" />
   </q-page>
 </template>
@@ -186,12 +187,13 @@ import { unguardAuthhead, burnAuthhead, transferNfts } from 'src/core/transactio
 import { filterAuthKeys } from 'src/core/authguard'
 import { shortenTokenId, getTokenType, shortenCashAddress } from 'src/core/utils'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
+import { db } from 'src/core/client-db'
+import { getRegistryWorker } from 'src/workers'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useQuasar } from 'quasar'
-import { decodeCashAddress } from '@bitauth/libauth'
 import { BaseWallet, NetworkType } from 'mainnet-js-v3'
 import CopyText from 'components/CopyText.vue'
 import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
@@ -420,29 +422,82 @@ const handleBurn = async (row: any) => {
     return
   }
 
-  const funderUtxos = (wallet.value?.utxos || []).filter((u: any) => !u.token)
-  if (funderUtxos.length === 0) {
-    $q.notify({ type: 'negative', message: t('info.insufficientBchBalance') })
-    return
-  }
-
   startLoader(txTaskList, () => {
     $q.notify({ type: 'warning', message: t('info.cancelled') })
   })
 
   updateStep(TASK_INPUTS_CHECK, 'done')
-  updateStep(TASK_PREPARE_TX, 'running')
 
   try {
 
-    const burnAddress = import.meta.env.VITE_BURN_ADDRESS
+    updateStep(TASK_PREPARE_TX, 'running', t('info.uploadingRegistryToIpfs'))
+
+    // Burning is a final registry publication: the publication data-carrier becomes the identity
+    // output (CHIP-BCMR's burned marker), so the same revision is published with only its status
+    // changed — the worker bumps the patch and stamps latestRevision.
+    // The identity being burned is the token the vault holds, so the registry authbase is that
+    // token's category. authkeyCategory is the AuthKey NFT in the wallet and only derives the
+    // contract address.
+    const authbase = row.token?.category
+    if (!authbase) {
+      throw new Error(t('authguard.burnNeedsRegistry'))
+    }
+
+    const registryRecord = await db.registry.where('authbase').equals(authbase).first()
+    const revisionTimestamps = registryRecord?.registry?.identities?.[authbase]
+    if (!registryRecord?.contentHash || !revisionTimestamps?.length) {
+      throw new Error(t('authguard.burnNeedsRegistry'))
+    }
+
+    const { contentHash } = registryRecord
+    const timestamp = [...revisionTimestamps].sort((x, y) => y.localeCompare(x))[0]!
+
+    // Write the status into the snapshot row the bump reads, exactly like a metadata modify does.
+    const existingRecord = await db.identitySnapshot
+      .where('[contentHash+authbase+timestamp]')
+      .equals([contentHash, authbase, timestamp] as [string, string, string])
+      .first()
+    const burnedSnapshot = {
+      ...(existingRecord?.identitySnapshot ?? identitySnapshot.value),
+      status: 'burned'
+    }
+    if (existingRecord?.id) {
+      await db.identitySnapshot
+        .where('id')
+        .equals(existingRecord.id)
+        .modify({ identitySnapshot: burnedSnapshot, status: 'modified' })
+    } else {
+      await db.identitySnapshot.add({
+        contentHash,
+        authbase,
+        timestamp,
+        category: authbase,
+        registryIdentity: registryRecord.registryIdentity,
+        identitySnapshot: burnedSnapshot,
+        nftTypeKeys: [],
+        status: 'modified'
+      })
+    }
+
+    const publication = await getRegistryWorker().bumpRegistry({
+      originalContentHash: contentHash,
+      bumpType: 'patch',
+      targetIdentity: { authbase, timestamp }
+    })
+    if (!publication) {
+      throw new Error(t('authguard.burnPublicationFailed'))
+    }
 
     const signRequest = burnAuthhead({
       authheadUtxo: row,
       authkeyUtxo: a.authkey,
-      funderUtxos: funderUtxos as any,
-      burnAddress,
-      network: import.meta.env.VITE_BCH_NETWORK as any
+      registryPublicationData: {
+        contentHash: publication.contentHash,
+        uris: publication.uris
+      },
+      changeAddress: wallet.value!.getTokenDepositAddress(0),
+      network: import.meta.env.VITE_BCH_NETWORK as any,
+      userPrompt: t('authguard.burnTokenIdentity')
     })
 
     updateStep(TASK_PREPARE_TX, 'done')
@@ -488,6 +543,10 @@ const handleBurn = async (row: any) => {
         statusText: t('success.authheadBurn'),
         txid
       }
+    }).onOk(() => {
+      // The identity output is gone: the vault no longer has anything to guard.
+      authguardStore.setActiveAuthhead(null as any)
+      router.push({ name: 'authkeys' })
     })
   } catch (error: any) {
     stopLoader(3000)

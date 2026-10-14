@@ -19,11 +19,23 @@
         </span>
       </div>
       <q-card-section>
-        <div class="row q-gutter-sm">
-          <q-input class="col-12" :model-value="symbol" disable :label="t('authguard.symbol')" filled></q-input>
-          <q-input class="col-12" :model-value="category" disable :label="t('authguard.tokenIdCategory')" filled></q-input>
-          <q-input class="col-12" :model-value="amount" disable :label="t('authguard.fungibleReserves')" filled></q-input>
-          <q-input class="col-12" :model-value="capability" disable :label="t('authguard.nftCapability')" filled></q-input>
+        <div class="q-gutter-sm">
+          <FormField>
+            <label>{{ t('authguard.symbol') }}</label>
+            <q-input :model-value="symbol" outlined disable autogrow></q-input>
+          </FormField>
+          <FormField>
+            <label>{{ t('authguard.tokenIdCategory') }}</label>
+            <q-input :model-value="category" outlined disable autogrow></q-input>
+          </FormField>
+          <FormField>
+            <label>{{ t('authguard.fungibleReserves') }}</label>
+            <q-input :model-value="formattedReserves" outlined disable autogrow></q-input>
+          </FormField>
+          <FormField>
+            <label>{{ t('authguard.nftCapability') }}</label>
+            <q-input :model-value="capability" outlined disable autogrow></q-input>
+          </FormField>
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
@@ -35,8 +47,11 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import FormField from '../FormField.vue';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
+import { formatTokenAmount } from 'src/core/utils';
 
 const { t } = useI18n();
 
@@ -47,7 +62,23 @@ const props = defineProps<{
   category: string
   amount?: string
   capability?: string
+  /** Divisibility of the token, so the raw reserve amount can be shown the way wallets display it. */
+  decimals?: number
 }>()
+
+/**
+ * The fungible reserves as a human-readable amount, matching how the managed tokens page renders it.
+ * A pure NFT has no reserves, and an unparseable amount is reported rather than shown raw.
+ */
+const formattedReserves = computed(() => {
+  try {
+    const amount = props.amount ? BigInt(props.amount) : 0n
+    if (amount === 0n) return t('dashboard.managed.unavailable')
+    return formatTokenAmount(amount, props.symbol || '', props.decimals, 'none')
+  } catch {
+    return t('dashboard.managed.unavailable')
+  }
+})
 
 const emit = defineEmits<{
   'update:modelValue': [value: boolean]
