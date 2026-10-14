@@ -495,7 +495,7 @@ export default {
     authkeys: {
       caption: 'Authkey NFTs that grant authority over their Authguard vault.',
       noAuthkeys: 'No Authkeys created yet',
-      searchPlaceholder: 'Search by category or address...',
+      searchPlaceholder: 'Search by Authkey NFT category',
       columnAuthkey: 'Authkey',
       columnAuthkeyCaption: '(NFT Category)',
       columnAuthguard: 'Authguard',

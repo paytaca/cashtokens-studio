@@ -23,7 +23,7 @@
         </template>
         <template v-else-if="authkeys.length > 0">
           <div class="row justify-end q-gutter-sm q-mb-md">
-            <q-input v-model="searchQuery" dark dense outlined :placeholder="$t('dashboard.authkeys.searchPlaceholder')"
+            <q-input v-model="searchQuery" dark dense outlined :label="$t('dashboard.authkeys.searchPlaceholder')"
               class="bg-grey-10" style="border-radius: 0.75rem; min-width: 280px">
               <template v-slot:prepend>
                 <q-icon name="search" color="grey-6" size="xs" />
@@ -59,11 +59,11 @@
                 <div class="flex items-center q-gutter-x-xs no-wrap">
                   <!-- xs hides the header and the authguard column, so the labels move into the cell. -->
                   <span v-if="isXs" class="text-caption text-grey-6">{{ $t('dashboard.authkeys.columnAuthkey')
-                  }}:</span>
+                    }}:</span>
                   <q-icon name="key" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenTokenId(props.row.category)
-                  }}</span>
+                    }}</span>
                   <CopyText :text="props.row.category" />
                 </div>
                 <template v-if="isXs">
@@ -74,7 +74,7 @@
                     <q-icon name="mdi-safe-square-outline" color="yellow-8" size="xs" />
                     <span class="text-caption text-mono text-grey-3">{{
                       shortenCashAddress(props.row.authguardAddress)
-                    }}</span>
+                      }}</span>
                     <CopyText :text="props.row.authguardAddress" />
                   </div>
                 </template>
@@ -87,7 +87,7 @@
                   <q-icon name="mdi-safe-square-outline" color="yellow-8" size="xs" />
                   <span class="text-caption text-mono text-grey-3">{{
                     shortenCashAddress(props.row.authguardAddress)
-                  }}</span>
+                    }}</span>
                   <CopyText :text="props.row.authguardAddress" />
                 </div>
               </q-td>
