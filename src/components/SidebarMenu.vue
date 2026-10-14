@@ -68,18 +68,18 @@ const menu = computed<any[]>(() => {
     {
       label: 'Managed Tokens',
       href: hrefs.managedTokens,
-      icon: 'brush',
+      icon: 'copyright',
     },
     {
       label: 'Collected Tokens',
       href: hrefs.collectedTokens,
-      icon: 'grid_view',
+      icon: 'mdi-rhombus-split',
     },
 
     {
       label: t('dashboard.authguards.menu'),
       href: hrefs.authguards,
-      icon: 'mdi-safe-square-outline',
+      icon: 'mdi-safe-square-outline'
     },
     {
       label: 'Authguard Keys',
@@ -87,7 +87,7 @@ const menu = computed<any[]>(() => {
       icon: 'key',
     },
     {
-      label: 'My Activity',
+      label: 'Activities',
       href: hrefs.activities,
       icon: 'history',
     },
