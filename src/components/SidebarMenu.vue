@@ -54,7 +54,7 @@ const menu = computed<any[]>(() => {
       icon: 'dashboard',
     },
     {
-      label: 'Create New Token',
+      label: t('createToken.title'),
       href: hrefs.createNewToken,
       icon: 'add',
     },

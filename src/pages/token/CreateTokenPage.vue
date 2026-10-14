@@ -4,8 +4,8 @@
             <div class="col-xs-12 col-sm-8">
                 <q-card flat class="feature-card-bg rounded-borders q-mt-xl" bordered>
                     <q-card-title class="text-h5 text-weight-bold text-grey-6 flex items-center q-gutter-x-sm q-pa-lg">
-                        <span>Create Token</span>
-                        <q-icon name="mdi-creation" size="lg" />
+                        <span>{{ $t('createToken.title') }}</span>
+                        <q-icon name="mdi-creation" color="warning" size="lg" />
                     </q-card-title>
                     <q-card-section>
                         <q-stepper v-model="step" ref="stepperRef" flat header-class="bg-transparent"

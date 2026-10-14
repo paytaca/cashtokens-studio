@@ -190,6 +190,9 @@ export default {
     generate: 'Generate',
     submit: 'Create Authkey',
   },
+  createToken: {
+    title: 'Create New Token',
+  },
   nftTransfer: {
     title: 'Transfer NFT',
     category: 'Token ID',
