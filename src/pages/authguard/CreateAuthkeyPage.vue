@@ -20,7 +20,7 @@
                         <q-btn @click="$q.dialog({
                             class: 'q-py-sm text-body1 text-justify',
                             html: true,
-                            message: t('info.createAuthKeyNftExplainer')
+                            message: t('info.createAuthkeyNftExplainer')
                         })" flat no-caps dense text-color="secondary">
                             {{ t('info.whatsThis') }}
                         </q-btn>
@@ -53,8 +53,7 @@
                     </q-card-section>
                     <q-card-actions class="q-mt-lg">
                         <q-btn :label="t('createAuthkey.submit')" color="primary" class="full-width"
-                            :disable="!genesisInputCandidate?.txid" @click="onCreateAuthKey" rounded no-caps
-                            size="lg" />
+                            :disable="!genesisInputCandidate?.txid" @click="onCreateAuthKey" rounded />
                     </q-card-actions>
                 </q-card>
             </div>
