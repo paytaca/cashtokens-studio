@@ -140,14 +140,14 @@
               <q-btn round icon="more_vert" @click.stop>
                 <q-menu dark auto-close class="bg-dark-2 shadow-2">
                   <q-list dark class="bg-dark" style="min-width: 180px">
-                    <q-item v-if="value.row.token" clickable @click="viewRegistry(value.row)">
+                    <!-- <q-item v-if="value.row.token" clickable @click="viewRegistry(value.row)">
                       <q-item-section avatar>
                         <q-icon name="description" color="secondary" size="xs" />
                       </q-item-section>
                       <q-item-section class="text-caption text-grey-3">
                         {{ $t('dashboard.managed.actionViewRegistry') }}
                       </q-item-section>
-                    </q-item>
+                    </q-item> -->
 
                     <q-item clickable @click="navigateToAuthguard(value.row)">
                       <q-item-section avatar>
@@ -263,7 +263,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
