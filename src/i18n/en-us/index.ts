@@ -478,9 +478,9 @@ export default {
     authguards: {
       bannerTitle: "Protecting Your Token's Identity",
       bannerMessage:
-        "<p>When you create a token in CashTokens Studio, the created token also becomes your token's identity-output. This is used to authenticate updates to your token's metadata. <strong>It's important to protect this output—accidentally spending it could compromise your token's ability to be updated.</strong></p>" +
+        "<p>When you create a token in CashTokens Studio, the created token also becomes your token's identity-output (Auth UTXO). This is used to authenticate updates to your token's metadata. <strong>It's important to protect this output—accidentally spending it could compromise your token's ability to be updated.</strong></p>" +
         '<p>That\'s why CashTokens Studio uses <a href="https://github.com/mr-zwets/Authguard" target="_blank" rel="noopener noreferrer">Authguard</a>, a digital vault designed to protect this important output.</p>' +
-        '<p>An <strong>Authkey NFT</strong> gives you the authority to make changes to your token. You can keep the Authkey in your wallet, while Authguard protects the underlying identity output from accidental spending.</p>' +
+        '<p>An Authguard Vault always has an accompanying<strong>Authkey NFT</strong>, this NFT gives you access to the identity-output. You can keep the Authkey in your wallet, while Authguard protects the underlying identity output from accidental spending.</p>' +
         '<p><strong>Your token stays protected, while its authority remains easy to manage.</strong></p>',
       caption:
         'Authguard contracts created from your Authkeys, with the token reserves they lock.',
@@ -508,7 +508,7 @@ export default {
         'These AuthKey NFTs are in your wallet. Do not send them to anybody unless you intend to.',
     },
     activity: {
-      caption: 'Your recent token transaction history.',
+      caption: 'Your recent Cashtokens Studio activities.',
       searchPlaceholder: 'Search by event or txid...',
       clearActivities: 'Clear Activities',
       columnEvent: 'Event',
