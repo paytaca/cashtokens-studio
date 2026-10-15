@@ -422,7 +422,6 @@ const openMintChildNftDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | '
                 }
             }
         } catch (error: any) {
-            console.log('error', error)
             $q.notify({
                 type: 'Error',
                 message: error.message
@@ -439,7 +438,6 @@ const viewRegistry = (authhead: UtxoWithAuthKey) => {
 }
 
 const navigateToCollection = (_evt: Event, row: UtxoWithAuthKey) => {
-    console.log('ROW', row)
     authguardStore.setActiveAuthhead(row)
     router.push({ name: 'nft-collection-detail', params: { category: row.token!.category } })
 }
@@ -471,7 +469,6 @@ watch(walletLasySync, async (recentSync, lastSync) => {
 
 onMounted(async () => {
     await loadAuthkeys(wallet.value, shouldForceSync())
-    console.log('AUTHHEADS', typeof (authheads.value[0]))
 })
 
 </script>

@@ -175,7 +175,6 @@ export type UtxoToWcSourceOutputParams = {
 
 export function utxoToWcSourceOutput (params: UtxoToWcSourceOutputParams): WcSourceOutput {
 
-  console.log('PARARMS', params)
   const lockingBytecode = cashAddressToLockingBytecode(params.utxo.address)
   if (typeof(lockingBytecode) === 'string') throw new Error('Error decoding utxo address')
   const output: WcSourceOutput = {

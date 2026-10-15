@@ -412,13 +412,7 @@ const loadCollectedIdentitySnapshots = async () => {
   );
   results.forEach((result, index) => {
     if (result.status === 'rejected') {
-      console.log(
-        'Identity snapshot rejected for category',
-        categories[index],
-        result.reason
-      );
     } else if (result.value === null || result.value === undefined) {
-      console.log('No identity snapshot found for category', categories[index]);
     }
   });
 };

@@ -29,12 +29,6 @@ export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
   });
 
   app.post('/api/ipfs', async (req: any, res) => {
-    console.log(
-      'ENVS ',
-      process.env.VITE_PAYTACA_IPFS_GATEWAY,
-      process.env.PINATA_GATEWAY_TOKEN,
-      process.env.PINATA_JWT_V2
-    );
     try {
       await uploadFileMiddleware(req, res);
       if (!req.file) {
@@ -48,7 +42,7 @@ export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
       const uploadResult = await pinata.upload.public.file(file);
       res.send(uploadResult);
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.send(error);
     }
   });
@@ -65,7 +59,7 @@ export default defineSsrMiddleware(({ app, resolve, render, serve }) => {
         res.send(response.data);
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
       res.send(error);
     }
   });

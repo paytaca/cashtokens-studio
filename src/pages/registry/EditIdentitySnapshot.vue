@@ -361,10 +361,6 @@ const unpublishedColumns: QTableColumn[] = [
     { name: 'actions', label: '', field: 'actions', align: 'center' },
 ]
 
-const editNft = (nft: NftRecord) => {
-    console.log('edit', nft)
-}
-
 const deleteNft = (nft: NftRecord) => {
     $q.dialog({
         title: 'Delete NFT',
@@ -659,7 +655,6 @@ const onPublishedRequest = async (props: any) => {
 }
 
 watch(isUploadTriggered, (newValue) => {
-    console.log('@newvalue')
     if (newValue === true) {
         uploadIcon()
         resetUploadTrigger()

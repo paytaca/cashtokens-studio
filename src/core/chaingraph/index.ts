@@ -250,10 +250,8 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
   const responseText = await response.text()
   const { data } = JSON.parse(responseText || '')
   if (!data) return result
-  console.log('@data', data)
   const lastPublicationTxid = data.transaction?.[0]?.authchains?.[0]?.migrations?.[0]?.transaction[0]?.hash 
   const opReturnOutput = data.transaction?.[0]?.authchains?.[0]?.migrations?.[0]?.transaction[0]?.outputs?.[0]
-  console.log('@opReturnOutput', opReturnOutput)
   if (!opReturnOutput?.locking_bytecode) return result
   const opReturnOutputLockingBytecode = opReturnOutput.locking_bytecode.replace('\\x', '')
   if (!opReturnOutputLockingBytecode.startsWith(BCMR_PREFIX)) {
@@ -262,7 +260,6 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
   const opReturnOutputLockingBytecodeBytes = hexToBin(opReturnOutputLockingBytecode)
   try {
     const opReturnOutputLockingBytecodeBytesDecoded = decodeAuthenticationInstructions(opReturnOutputLockingBytecodeBytes)
-    console.log('@opReturnOutputLockingBytecodeBytesDecoded', (opReturnOutputLockingBytecodeBytesDecoded[2] as AuthenticationInstructionPush)?.data)
     
     const contentHash = (opReturnOutputLockingBytecodeBytesDecoded[2] as AuthenticationInstructionPush)?.data
 
@@ -326,13 +323,12 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
           }
 
         } catch (error) {
-          console.log('@fetchLastRegistryPublication:', error)
+          console.error('@fetchLastRegistryPublication:', error)
         }
         result.uris.push(uri as string)
       })
     }
 
-    console.log('@result', result)
     // if (chunks.length === 2) { 
     //   // IPFS Publication Output
     //   result.contentHash = binToHex(chunks[1]);
@@ -341,7 +337,7 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
     //   result.httpsUrl = `${Config.DefaultIpfsGateway}${ipfsCid}`;
     return result
   } catch (error) {
-    console.log('@fetchLastRegistryPublication:', error)
+    console.error('@fetchLastRegistryPublication:', error)
     return result
   }
 

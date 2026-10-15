@@ -14,7 +14,6 @@ import {
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
 import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
-import { decodeTransactionBCH } from "bitauth-libauth-v3"
 
 
 export type CreateGenesisInputParams = {
@@ -27,7 +26,6 @@ export type CreateGenesisInputParams = {
 export function createGenesisInput(params: CreateGenesisInputParams): SignTransactionRequest {
 
     const feeRateSatsPerKb = params.feeRateSatsPerKb || DEFAULT_FEE_RATE_SATS_PER_KB
-    console.log('Params', params)
     
     const funderUtxos = 
         params.funderUtxos.filter((utxo) => {
@@ -105,12 +103,6 @@ export function createGenesisInput(params: CreateGenesisInputParams): SignTransa
         return utxoToWcSourceOutput(args)
     }) 
     
-    console.log('Transaction', transaction)
-    console.log("Decoded Tranasction", decodeTransactionBCH(hexToBin(transactionHex)))
-    console.log('Estimated Cost', estimatedCost)
-    console.log('Transaction Bytesize', hexToBin(transactionHex).length)
-    console.log('Total Change', change)
-    console.log('Minimum Fee', minimumFee)
 
     return {
         action: RelayMsgAction.SignTransactionRequest,

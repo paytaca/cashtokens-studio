@@ -416,7 +416,6 @@ const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRe
             limit,
             status: statusFilter || nftsStatusFilter.value
         })
-        console.log('@result, result', result)
         if (result) {
             nfts.value = result.items
             nftsTotal.value = result.total
@@ -545,10 +544,6 @@ const onSaveClick = async () => {
     if (!identitySnapshotRecord.value || !identitySnapshot.value) return
     try {
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
-        console.log('@clonedSnapshot, clonedSnapshot', clonedSnapshot)
-        console.log('@@', route.query.contentHash,
-            route.query.authbase,
-            route.query.timestamp)
         const x = await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([
@@ -557,7 +552,6 @@ const onSaveClick = async () => {
                 route.query.timestamp
             ] as [string, string, string])
 
-        console.log('@x, x', x.first())
         await db.identitySnapshot
             .where('[contentHash+authbase+timestamp]')
             .equals([

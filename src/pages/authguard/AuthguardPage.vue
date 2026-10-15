@@ -266,7 +266,6 @@ const resolveSnapshot = async (category?: string) => {
   try {
     return await registryStore.fetchIdentitySnapshot(category)
   } catch (error) {
-    console.log('Could not resolve identity snapshot for category', category, error)
     return undefined
   }
 }
@@ -409,7 +408,6 @@ const handleUnguard = async (row: any, finalDestinationAddress: string) => {
   } catch (error: any) {
     stopLoader(3000)
     if (error?.name === 'AbortError') return
-    console.log('Unguard error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.authheadRelease') })
   }
 }
@@ -550,7 +548,6 @@ const handleBurn = async (row: any) => {
   } catch (error: any) {
     stopLoader(3000)
     if (error?.name === 'AbortError') return
-    console.log('Burn error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.authheadBurn') })
   }
 }
@@ -677,7 +674,6 @@ const transferVaultOwnership = async (authkeyUtxo: any, recipient: string) => {
   } catch (error: any) {
     stopLoader(3000)
     if (error?.name === 'AbortError') return
-    console.log('Transfer vault ownership error', error)
     $q.notify({ type: 'negative', message: error.message || t('error.vaultOwnershipTransfer') })
   }
 }
@@ -689,7 +685,6 @@ onMounted(async () => {
     try {
       await loadAuthguardUtxos(a)
     } catch (e) {
-      console.log('Failed to load authguard UTXOs', e)
     } finally {
       loading.value = false
     }
@@ -735,7 +730,6 @@ onMounted(async () => {
 
     vaultUtxos.value = await buildVaultRows(utxos, contract)
   } catch (e) {
-    console.log('Failed to resolve authguard', e)
     router.back()
   } finally {
     loading.value = false

@@ -204,7 +204,6 @@ const onGenerateGenesisInput = async () => {
 
     } catch (error: any) {
         if (error?.name === 'AbortError') return
-        console.log(error)
         $q.notify({
             type: 'Error',
             message: t('error.genesisInputCreation')
@@ -304,7 +303,7 @@ const onCreateAuthKey = async () => {
 
     } catch (error: any) {
         if (error?.name === 'AbortError') return
-        console.log(error)
+        console.error(error)
     } finally {
         stopLoader(1000)
     }

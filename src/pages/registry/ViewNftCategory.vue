@@ -285,7 +285,6 @@ const onNftRowDelete = async (_evt: Event, row: { type: string, nft: NftType }) 
             type: row.type
         })
     } catch (error) {
-        console.log(error)
     }
 }
 

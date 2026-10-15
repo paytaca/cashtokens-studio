@@ -104,7 +104,6 @@ const loadLockedTokensCount = async () => {
     const utxos = await authguard.getUtxos()
     lockedTokensCount.value = utxos?.length ?? 0
   } catch (e) {
-    console.log('Failed to load locked tokens', e)
     lockedTokensCount.value = null
   } finally {
     lockedTokensLoading.value = false
@@ -211,7 +210,6 @@ onMounted(async () => {
     }
     return
   } catch (e) {
-    console.log('No existing NFT Type')
   }
 })
 

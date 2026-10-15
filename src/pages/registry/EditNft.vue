@@ -105,7 +105,6 @@ const handleSave = async (rawNft: NftType) => {
 }
 
 onMounted(async () => {
-  console.log('activenft on edit', activeNft.value)
   if (!activeNft.value) {
     // goBack()
     return

@@ -107,8 +107,6 @@ const handleSave = async (rawNft: NftType) => {
 }
 
 const onEditNftClick = () => {
-  console.log('ROUTE PARAMS', route.params)
-  console.log('Return to', route.path)
   router.push({
     name: 'edit-nft',
     query: { ...route.query, returnTo: route.path },
@@ -138,7 +136,6 @@ onMounted(async () => {
     }
     return
   } catch (e) {
-    console.log('No existing NFT Type')
   }
 })
 

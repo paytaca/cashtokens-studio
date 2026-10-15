@@ -20,7 +20,6 @@ export function setAuthguardExtension(registry: Registry, authkeyNftCategory: st
 }
 
 export function extractNftTypeKeys(identitySnapshot: IdentitySnapshot) {
-    console.log('extracting nft types', identitySnapshot)
     return Object.keys(identitySnapshot.token?.nfts?.parse?.types || {})
 }
 

@@ -148,7 +148,6 @@ const watchForDeposit = () => {
       } as DecoratedUtxo)))
       router.push({ name: 'managed-tokens' })
     } catch (error) {
-      console.log('@ImportAuthheadPage deposit poll:', error)
     }
   }, DEPOSIT_POLL_MS)
 }
@@ -179,15 +178,9 @@ const scanForUnusedAuthkey = async () => {
     const authkeys = filterAuthKeys(utxos) as UtxoWithPath[]
     const unused = await findUnusedAuthkey(authkeys, network())
 
-    console.log('@ImportAuthheadPage scan:', {
-      authkeys: authkeys.length,
-      unusedAuthkey: unused?.token?.category,
-      alreadyScanned: !!route.query.scanned
-    })
 
     if (!unused) {
       if (!route.query.scanned) {
-        console.log('@ImportAuthheadPage: no unused AuthKey, sending the user to create one')
         return await router.replace({
           name: 'create-authkey',
           query: { returnTo: route.fullPath, scanned: '1', from: 'import-authhead' }
@@ -198,7 +191,6 @@ const scanForUnusedAuthkey = async () => {
 
     await showVault(unused)
   } catch (error: any) {
-    console.log('@ImportAuthheadPage scan:', error)
     scanError.value = error?.message || String(error)
   } finally {
     scanning.value = false

@@ -106,11 +106,9 @@ const onSaveClick = async (rawNft: NftType) => {
 
 onMounted(async () => {
 
-  console.log('@commitmentOrBottomAltStack last', props.lastKnownType)
   if ((!props.collectionType || props.collectionType === NftCollectionType.sequential) && props.lastKnownType) {
     const nextSequenceNumber = (commitmentToSequenceNumber(props.lastKnownType) as bigint) + 1n
     commitmentOrBottomAltStack.value = sequenceNumberToCommitment(nextSequenceNumber)
-    console.log('@commitmentOrBottomAltStack', commitmentOrBottomAltStack.value)
   }
 
   nft.value = createNftTypeTemplate({
@@ -118,7 +116,6 @@ onMounted(async () => {
     tokenSymbol: props.tokenSymbol,
     collectionType: props.collectionType as NftCollectionType || NftCollectionType.sequential
   })
-  console.log('nft.value', nft.value)
 })
 
 </script>

@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -108,14 +108,6 @@ watch(() => registryRecord.value as RegistryRecord, (newRecord: RegistryRecord) 
     }
 }, { immediate: true })
 
-
-onMounted(async () => {
-    console.log('registry record', registry.value)
-    const x = await db.registry.where({
-        registryIdentity: route.query.registryIdentity
-    }).first()
-    console.log('registry record', x)
-})
 
 </script>
 

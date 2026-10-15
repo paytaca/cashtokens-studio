@@ -318,14 +318,12 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
             offset,
             limit
         })
-        console.log('RESULT', result)
         if (result) {
             publishedNfts.value = result.items
             publishedTotal.value = result.total
         }
     }
     catch (error) {
-        console.log('ERROR', error)
         $q.notify({
             type: 'warning',
             message: t('warning.errorLoadingPublishedNfts')
@@ -337,18 +335,15 @@ const loadPublishedNfts = async (offset: number, limit: number) => {
 
 const refresh = async () => {
     try {
-        console.log('authhead', authhead.value)
         if (!authhead.value?.identitySnapshotIdentifier) return
         refreshing.value = true
         const { identity } = authhead.value.identitySnapshotIdentifier
-        console.log('identity', identity)
         await registryStore.loadRegistry(identity.authbase, true)
         await Promise.allSettled([
             loadUnpublishedNfts(),
             loadPublishedNfts(0, 10)
         ])
     } catch (error) {
-        console.log(error)
         $q.notify({
             type: 'warning',
             message: 'Failed to refresh collection data. Please check your connection or try again later.',
@@ -368,7 +363,7 @@ const unpublishedColumns: QTableColumn[] = [
 ]
 
 const editNft = (nft: NftRecord) => {
-    console.log('edit', nft)
+    // Editing an unpublished NFT isn't wired up yet; the row action is a placeholder for now.
 }
 
 const deleteNft = (nft: NftRecord) => {

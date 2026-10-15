@@ -18,7 +18,6 @@ export async function uploadFile(file: File|Blob, filename: string, abortControl
         return await resp.json();
 
       } catch (error: any) {
-        console.log(error);
         throw new Error(error?.message || error.toString());
       }
 }

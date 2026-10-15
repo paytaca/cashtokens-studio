@@ -392,7 +392,6 @@ const validateVmNumber = (val: string) => {
         }
         return true
     } catch (e) {
-        console.log(e)
         return 'Invalid amount'
     }
 }
@@ -767,7 +766,6 @@ watch(() => iconFile.value, async (v) => {
             })
             identitySnapshot.value.uris!.icon = `ipfs://${uploadResponse.cid}`
         } catch (error) {
-            console.log(error)
         } finally {
             iconFileUploading.value = false
         }
