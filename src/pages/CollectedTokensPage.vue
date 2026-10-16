@@ -226,7 +226,7 @@
 </template>
 
 <script setup lang="ts">
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
@@ -258,7 +258,7 @@ const $q = useQuasar();
 const router = useRouter();
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog();
 
-const { wallet, manager, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady, signTransaction } = useWalletSigner();
 
 const authguardStore = useAuthguardStore();
 const { authkeysLoading, authheadsLoading } = storeToRefs(authguardStore);
@@ -476,7 +476,7 @@ const performSendCollectedTokens = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+      const response = await signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');
@@ -570,7 +570,7 @@ const performSendCollectedNft = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+      const response = await signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');
@@ -692,7 +692,7 @@ const performBurnCollectedNft = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+      const response = await signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');
@@ -794,7 +794,7 @@ const performBurnCollectedTokens = (row: any) => {
       updateStep(TASK_PREPARE_TX, 'done');
       updateStep(TASK_WAIT_FOR_SIG, 'running');
 
-      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+      const response = await signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done');
       updateStep(TASK_BROADCASTING, 'running');

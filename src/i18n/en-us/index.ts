@@ -300,6 +300,18 @@ export default {
       connecting: 'Connecting Wallet...',
       reconnecting: 'Reconnecting Wallet...',
       hint: 'Please authorize the connection request inside your WizardConnect extension.',
+      wizardConnect: {
+        title: 'Wizard Connect',
+        subtitle: 'Connect an HD wallet over the WizardConnect relay',
+      },
+      walletConnect: {
+        title: 'WalletConnect',
+        subtitle: 'Connect a single-address wallet',
+        action: 'WalletConnect',
+        connecting: 'Connecting via WalletConnect...',
+        hint: 'Scan the QR code or pick a wallet in the WalletConnect dialog.',
+        failed: 'Could not connect via WalletConnect',
+      },
     },
   },
   nftPage: {
@@ -406,6 +418,17 @@ export default {
       yes: 'Yes',
       no: 'No',
       noSession: 'No active session',
+    },
+    walletConnect: {
+      title: 'WalletConnect Connection',
+      caption: 'Details about your active WalletConnect session.',
+      wallet: 'Wallet',
+      state: 'State',
+      address: 'Address',
+      chain: 'Chain',
+      topic: 'Session Topic',
+      expiry: 'Expires',
+      noExpiry: 'Unknown',
     },
     copy: {
       tooltip: 'Copy',

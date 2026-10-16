@@ -124,7 +124,8 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { getAuthguardContractAddress } from 'src/core/authguard';
 import { useRouter } from 'vue-router';
 import { Network } from 'cashscript';
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
+import { watchWalletActivity } from 'src/core/wallet';
 import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 
@@ -148,7 +149,7 @@ interface AuthguardRow {
 const { t } = useI18n();
 const router = useRouter();
 
-const { wallet, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady } = useWalletSigner();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys, loadAuthheads } = authguardStore;
@@ -284,8 +285,7 @@ watch(
       triggerRef(wallet);
 
       walletWatchers.value.stopWatchingReceiveWallet =
-        await wallet.value?.receive?.watchStatus(
-          async (status: any, address: any) => {
+        await watchWalletActivity(wallet.value, async () => {
             await wallet.value?.sync();
             loadAuthkeys(wallet.value).then((authkeys) => {
               loadAuthheads(authkeys);

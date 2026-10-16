@@ -54,7 +54,7 @@
                 <div class="row items-center no-wrap q-gutter-sm">
 
                   <q-avatar size="sm">
-                    <q-img v-if="manager?.walletIcon" :src="manager?.walletIcon" size="xs"></q-img>
+                    <q-img v-if="activeWalletIcon" :src="activeWalletIcon" size="xs"></q-img>
                     <q-icon v-else name="account_balance_wallet" color="primary" size="24px" />
                   </q-avatar>
                   <div class="col" style="min-width: 0">
@@ -155,7 +155,7 @@
           </div>
 
           <!-- WizardConnect connection information -->
-          <div class="col-12 col-md-5">
+          <div v-if="activeProvider !== 'wallet-connect'" class="col-12 col-md-5">
             <q-card flat class="dashboard-section-card">
               <q-card-section>
                 <div class="row items-center no-wrap q-gutter-sm">
@@ -288,6 +288,10 @@
               </q-card-section>
             </q-card>
           </div>
+
+          <!-- WalletConnect connection information. Deleting this tag and the component file is the
+               whole retirement of the provider on this page. -->
+          <WalletConnectConnectionCard />
         </div>
       </div>
     </div>
@@ -296,6 +300,7 @@
 
 <script setup lang="ts">
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n'
 import { LocalStorage, useQuasar } from 'quasar'
@@ -306,6 +311,7 @@ import { isPureFungible } from 'src/core/utils'
 import { db } from 'src/core/client-db'
 import { useRouter } from 'vue-router'
 import ExplainerBanner from 'src/components/ExplainerBanner.vue'
+import WalletConnectConnectionCard from 'src/components/WalletConnectConnectionCard.vue'
 import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 
@@ -313,17 +319,23 @@ const { t } = useI18n()
 const $q = useQuasar()
 const router = useRouter()
 
+// The WizardConnect connection card below reads WizardConnect's own state and never the provider in
+// use — it stays exactly as it is. `wallet`/`walletIsReady` come from the signer because the general
+// wallet card and the authguard watcher must work under either provider.
 const {
-  wallet,
-  walletIsReady,
   state,
   manager,
-  walletName,
-  walletIcon,
   relayUrls,
   lastPongAt,
   pongCount,
+  walletName,
 } = useWizardConnectWallet()
+const {
+  wallet,
+  walletIsReady,
+  activeProvider,
+  walletIcon: activeWalletIcon,
+} = useWalletSigner()
 
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, loadAuthheads } = authguardStore

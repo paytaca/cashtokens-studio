@@ -188,7 +188,7 @@ import { shortenTokenId, getTokenType, shortenCashAddress } from 'src/core/utils
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import { db } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
@@ -207,7 +207,7 @@ const router = useRouter()
 const route = useRoute()
 const $q = useQuasar()
 const { t } = useI18n()
-const { wallet, manager } = useWizardConnectWallet()
+const { wallet, signTransaction } = useWalletSigner()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead, authheads } = storeToRefs(authguardStore)
@@ -364,7 +364,7 @@ const handleUnguard = async (row: any, finalDestinationAddress: string) => {
     updateStep(TASK_PREPARE_TX, 'done')
     updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
+    const response = await signTransaction(signRequest, { signal: getSignal() })
 
     updateStep(TASK_WAIT_FOR_SIG, 'done')
     updateStep(TASK_BROADCASTING, 'running')
@@ -500,7 +500,7 @@ const handleBurn = async (row: any) => {
     updateStep(TASK_PREPARE_TX, 'done')
     updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
+    const response = await signTransaction(signRequest, { signal: getSignal() })
 
     updateStep(TASK_WAIT_FOR_SIG, 'done')
     updateStep(TASK_BROADCASTING, 'running')
@@ -625,7 +625,7 @@ const transferVaultOwnership = async (authkeyUtxo: any, recipient: string) => {
     updateStep(TASK_PREPARE_TX, 'done')
     updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-    const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() })
+    const response = await signTransaction(signRequest, { signal: getSignal() })
 
     updateStep(TASK_WAIT_FOR_SIG, 'done')
     updateStep(TASK_BROADCASTING, 'running')

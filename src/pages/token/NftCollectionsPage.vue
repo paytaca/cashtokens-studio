@@ -222,17 +222,22 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { storeToRefs } from 'pinia'
 import { useRouter } from 'vue-router'
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useRegistryStore } from 'src/stores/registry'
 import CopyText from 'components/CopyText.vue'
 
 const $q = useQuasar()
 const router = useRouter()
 
+// `walletLasySync` is WizardConnect's own sync tick; the wallet and the signer come from the
+// provider-agnostic layer so a WalletConnect session works here too.
 const {
-    manager,
-    wallet,
     walletLasySync
 } = useWizardConnectWallet()
+const {
+    wallet,
+    signTransaction
+} = useWalletSigner()
 
 const {
     loadRegistry
@@ -395,7 +400,7 @@ const openMintChildNftDialog = (v: DecoratedUtxoFormSafe, action: 'issuance' | '
             loadingGroup({
                 message: 'Preparing transaction. Waiting for signature. Please check your wallet...'
             })
-            const response = await manager.value!.signTransaction(signRequest);
+            const response = await signTransaction(signRequest);
 
             loadingGroup({
                 message: 'Broadcasting transaction, please wait...'

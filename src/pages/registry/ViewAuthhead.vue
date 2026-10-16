@@ -176,7 +176,6 @@ import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import FormField from 'components/FormField.vue'
 import CopyText from 'src/components/CopyText.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { useQuasar } from 'quasar'
 import { decodeCashAddress } from 'bitauth-libauth-v3'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
@@ -204,8 +203,7 @@ const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const wizardConnectWallet = inject('wizardConnectWallet') as any
-const { wallet, manager } = wizardConnectWallet
+const { wallet, signTransaction } = inject('walletSigner') as any
 
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
@@ -353,7 +351,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
             })
             updateStep(TASK_PREPARE_TX, 'done')
             updateStep(TASK_WAIT_FOR_SIG, 'running')
-            const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+            const response = await signTransaction(signRequest, { signal: getSignal() });
 
             updateStep(TASK_WAIT_FOR_SIG, 'done')
 

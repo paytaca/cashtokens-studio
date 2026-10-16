@@ -25,10 +25,10 @@ import { useRouter, useRoute } from 'vue-router'
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
-const { walletIsReady } = useWizardConnectWallet();
+const { walletIsReady } = useWalletSigner();
 
 const linksDisabled = computed(() => !walletIsReady.value);
 
