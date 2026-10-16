@@ -5,6 +5,8 @@
 <script setup lang="ts">
 import { watch, provide, ref, onMounted, triggerRef } from 'vue';
 import { useWizardConnectWallet } from './composables/useWizardConnectWallet';
+import { useWalletSigner } from './composables/useWalletSigner';
+import { isWalletConnectEnabled, useWalletConnectWallet } from './composables/useWalletConnectWallet';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthguardStore } from './stores/authguard';
 import { UtxoWithAuthKey, UtxoWithPath } from './core/types';
@@ -16,7 +18,13 @@ import { useI18n } from 'vue-i18n';
 
 const { setActiveIdentitySnapshot } = useRegistryStore();
 const wizardConnectWallet = useWizardConnectWallet();
-const { state, manager, connect, walletIsReady, wallet } = wizardConnectWallet;
+const { state, manager, connect } = wizardConnectWallet;
+
+// `wallet` and `walletIsReady` come from the signer so both connect paths are visible app-wide;
+// WizardConnect's own `state`/`manager` still drive its reconnect and QR flow.
+const walletSigner = useWalletSigner();
+const { wallet, walletIsReady } = walletSigner;
+const { restore: restoreWalletConnect } = useWalletConnectWallet();
 
 const authguardStore = useAuthguardStore();
 const { setActiveAuthhead, loadAuthhead, loadAuthkeys, loadAuthheads } =
@@ -24,6 +32,13 @@ const { setActiveAuthhead, loadAuthhead, loadAuthkeys, loadAuthheads } =
 const { activeAuthhead } = storeToRefs(authguardStore);
 
 provide('wizardConnectWallet', wizardConnectWallet);
+provide('walletSigner', walletSigner);
+
+/**
+ * False until the WalletConnect restore attempt has settled. The redirect watcher below has to wait
+ * for it, otherwise a restored WalletConnect session would be bounced to the index page on load.
+ */
+const walletConnectRestoreDone = ref(!isWalletConnectEnabled());
 
 const route = useRoute();
 const router = useRouter();
@@ -43,7 +58,7 @@ const warmUpAuthguardData = () => {
 };
 
 watch(
-  () => wallet.value.ready,
+  () => wallet.value?.ready,
   async (walletIsReady) => {
     if (walletIsReady) warmUpAuthguardData();
     if (
@@ -79,20 +94,35 @@ watch(
   }
 );
 
+/**
+ * Redirects to the index page when no wallet is connected. `flush: 'sync'` matters: the mount hook
+ * restores the current path with `router.replace` right after the WalletConnect restore settles, and
+ * a queued watcher would otherwise push '/' after that replace and lose the deep link.
+ */
 watch(
-  () => state.value,
-  (newState, oldState) => {
+  () => [state.value, walletConnectRestoreDone.value, walletSigner.activeProvider.value] as const,
+  () => {
+    if (!walletConnectRestoreDone.value) return;
+    if (walletSigner.activeProvider.value === 'wallet-connect') return;
     if (
-      newState === 'disconnected' ||
-      (newState === 'idle' && !Boolean(manager.value))
+      state.value === 'disconnected' ||
+      (state.value === 'idle' && !Boolean(manager.value))
     ) {
       router.push('/');
     }
   },
-  { immediate: true }
+  { immediate: true, flush: 'sync' }
 );
 
-onMounted(() => {
+onMounted(async () => {
+  // Re-attach to a WalletConnect session the wallet still remembers. Runs here (not during setup)
+  // because it touches localStorage and the relay.
+  try {
+    await restoreWalletConnect();
+  } finally {
+    walletConnectRestoreDone.value = true;
+  }
+
   if (process.env.CLIENT) {
     const [navigation] = performance.getEntriesByType('navigation');
     if ((navigation as PerformanceNavigationTiming)?.type === 'reload') {

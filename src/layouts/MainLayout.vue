@@ -9,26 +9,26 @@
             alt="CashTokens Studio" class="cursor-pointer app-logo" />
 
         </q-toolbar-title>
-        <q-btn v-if="(!Boolean(manager) || state === 'disconnected') && !isIndexPage" to="/wizard-connect" style="
-            color: rgb(20, 20, 20);
-            padding: 10px;
-            border-radius: 10px;
-            background-color: #282829d4;
-            border: 2px solid #484854d4;
-          " rounded class="text-grey-2">
-          <template v-slot:default>
-            <q-avatar rounded size="md" :class="{
-              pulse: state === 'connecting' || state === 'reconnecting',
-            }">
-              <q-img v-if="manager?.walletIcon" :src="manager?.walletIcon"></q-img>
-              <q-img v-else :src="WIZARDCONNECT_LOGO"></q-img>
-            </q-avatar>
-            {{ $t('Connect') }}
-          </template>
-        </q-btn>
-        <div v-else-if="
-          Boolean(manager) && (state !== 'disconnected' || wallet?.ready)
-        " class="q-mx-sm">
+        <div v-if="!walletIsReady && !isIndexPage" class="row items-center">
+          <q-btn to="/wizard-connect" style="
+              color: rgb(20, 20, 20);
+              padding: 10px;
+              border-radius: 10px;
+              background-color: #282829d4;
+              border: 2px solid #484854d4;
+            " rounded class="text-grey-2">
+            <template v-slot:default>
+              <q-avatar rounded size="md" :class="{
+                pulse: isConnecting,
+              }">
+                <q-img :src="WIZARDCONNECT_LOGO"></q-img>
+              </q-avatar>
+              {{ $t('Connect') }}
+            </template>
+          </q-btn>
+          <WalletConnectButton class="q-ml-sm" />
+        </div>
+        <div v-else-if="walletIsReady" class="q-mx-sm">
           <q-btn-group class="text-right q-my-sm" style="position: relative">
             <q-btn-dropdown size="lg" style="
                 color: rgb(20, 20, 20);
@@ -36,22 +36,27 @@
                 border-radius: 10px;
                 background-color: #282829d4;
                 border: 2px solid #484854d4;
-              " auto-close rounded :disable="!wallet?.ready">
+              " auto-close rounded :disable="!walletIsReady">
               <template v-slot:label>
                 <q-avatar rounded size="md" :class="{
-                  pulse: state === 'connecting' || state === 'reconnecting',
+                  pulse: isConnecting,
                 }">
-                  <q-img v-if="manager.walletIcon" :src="manager.walletIcon"></q-img>
+                  <q-img v-if="walletIcon" :src="walletIcon"></q-img>
                   <q-img v-else :src="WIZARDCONNECT_LOGO"></q-img>
                 </q-avatar>
               </template>
-              <q-list padding style="width: 200px">
+              <q-list padding style="width: 220px">
+                <q-item v-if="walletName">
+                  <q-item-section>
+                    <q-item-label caption>{{ walletName }}</q-item-label>
+                  </q-item-section>
+                </q-item>
                 <q-item clickable @click="disconnect">
                   <q-item-section avatar>
                     <q-avatar color="negative" icon="link_off"></q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>Disconnect</q-item-label>
+                    <q-item-label>{{ $t('button.disconnect') }}</q-item-label>
                   </q-item-section>
                 </q-item>
               </q-list>
@@ -85,7 +90,12 @@
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <PageSkeleton v-if="wallet?.initializing && !isIndexPage" :message="$t('info.initializingWallet')" />
+        <!-- Only a *first* initialization blanks the app. A relay reconnect re-emits `walletready`,
+             which re-runs `initWallet()` and flips `initializing` back on mid-session — blanking the
+             page (and unmounting the router-view) long after the wallet was usable. A wallet that is
+             already `ready` keeps rendering; its UTXO refresh happens behind the page. -->
+        <PageSkeleton v-if="wallet?.initializing && !wallet?.ready && !isIndexPage"
+          :message="$t('info.initializingWallet')" />
         <router-view v-else />
       </q-page-container>
     </q-scroll-area>
@@ -106,6 +116,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { LocalStorage, useQuasar } from 'quasar';
 import SidebarMenu from 'components/SidebarMenu.vue';
 import PageSkeleton from 'src/components/PageSkeleton.vue';
+import WalletConnectButton from 'src/components/WalletConnectButton.vue';
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 const leftDrawerOpen = ref(false);
@@ -117,8 +128,11 @@ const isIndexPage = computed(() => route.path === '/');
 
 const showHeaderLogo = computed(() => $q.screen.gt.xs);
 
-const { state, manager, disconnect, wallet } =
-  inject('wizardConnectWallet') as any;
+// WizardConnect's own state/manager still drive its QR route and connecting pulse; everything the
+// header shows about the connected wallet comes from the provider-agnostic signer.
+const { state, manager } = inject('wizardConnectWallet') as any;
+const { wallet, walletIsReady, walletName, walletIcon, isConnecting, disconnect } =
+  inject('walletSigner') as any;
 
 const showAppChrome = computed(
   () =>

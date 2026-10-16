@@ -263,7 +263,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -326,31 +326,40 @@
 
             <template v-slot:body-cell-fungibleReserves="props">
               <q-td :props="props" class="text-right">
-                <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                  class="text-subtitle1 text-weight-bold text-mono text-white">
-                  {{
-                    formatTokenAmount(
-                      props.value,
-                      props.row.identitySnapshot?.token?.symbol || '',
-                      props.row.identitySnapshot?.token?.decimals,
-                      'none'
-                    )
-                  }}
+                <!-- The reserves are read back from a different electrum server than the wallet's own
+                     UTXOs, so a release lands a moment before this row can show the new amount. A
+                     skeleton beats a number that is already wrong. -->
+                <div v-if="isRefreshing(props.row)" class="flex column items-end q-gutter-y-xs">
+                  <q-skeleton type="rect" height="20px" width="90px" class="rounded-borders" />
+                  <q-skeleton type="rect" height="12px" width="60px" class="rounded-borders" />
                 </div>
-                <div v-else class="text-grey-6 text-caption text-mono">
-                  {{ $t('dashboard.managed.unavailable') }}
-                </div>
-                <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
-                  class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
-                  <span>{{ $t('dashboard.managed.decimals') }}</span>
-                  <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                <template v-else>
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                    class="text-subtitle1 text-weight-bold text-mono text-white">
                     {{
-                      props.row.identitySnapshot?.token?.decimals === undefined
-                        ? $t('dashboard.managed.decimalsUnknown')
-                        : props.row.identitySnapshot?.token?.decimals
+                      formatTokenAmount(
+                        props.value,
+                        props.row.identitySnapshot?.token?.symbol || '',
+                        props.row.identitySnapshot?.token?.decimals,
+                        'none'
+                      )
                     }}
-                  </q-badge>
-                </div>
+                  </div>
+                  <div v-else class="text-grey-6 text-caption text-mono">
+                    {{ $t('dashboard.managed.unavailable') }}
+                  </div>
+                  <div v-if="['fungible', 'mixed'].includes(getTokenType(props.row))"
+                    class="text-caption text-grey-5 flex justify-end items-center q-gutter-x-xs">
+                    <span>{{ $t('dashboard.managed.decimals') }}</span>
+                    <q-badge outline color="grey-7" class="text-weight-bold text-mono font-10 text-grey-4">
+                      {{
+                        props.row.identitySnapshot?.token?.decimals === undefined
+                          ? $t('dashboard.managed.decimalsUnknown')
+                          : props.row.identitySnapshot?.token?.decimals
+                      }}
+                    </q-badge>
+                  </div>
+                </template>
               </q-td>
             </template>
 
@@ -466,7 +475,7 @@
 </template>
 
 <script setup lang="ts">
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
@@ -511,7 +520,7 @@ const { t } = useI18n();
 const $q = useQuasar();
 const router = useRouter();
 
-const { wallet, manager, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady, signTransaction } = useWalletSigner();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys, clearReceivedAuthheads } = authguardStore;
@@ -588,6 +597,42 @@ const filteredAuthheads = computed(() => {
 });
 
 const rowId = (row: any) => `${row.txid}:${row.vout}`;
+
+/**
+ * The authhead row whose reserves are being re-read after a transaction.
+ *
+ * A release spends the vaulted output and creates a new one, so the row the user acted on keeps
+ * showing its pre-transaction amount until the refresh replaces it — and that refresh is a chain
+ * round-trip against a different electrum server than the wallet's own UTXOs. Marking the row lets
+ * its reserves cell show a skeleton instead of a number that is already wrong.
+ *
+ * Identity is the pre-transaction `txid:vout`, which is exactly what disappears once the refresh
+ * lands, so the flag clears itself rather than needing to be timed.
+ */
+const refreshingRowId = ref<string>();
+let refreshingRowTimer: ReturnType<typeof setTimeout> | undefined;
+
+const isRefreshing = (row: any) => refreshingRowId.value === rowId(row);
+
+const endRowRefresh = () => {
+  if (refreshingRowTimer) clearTimeout(refreshingRowTimer);
+  refreshingRowTimer = undefined;
+  refreshingRowId.value = undefined;
+};
+
+const beginRowRefresh = (id: string) => {
+  refreshingRowId.value = id;
+  if (refreshingRowTimer) clearTimeout(refreshingRowTimer);
+  // Safety net: if the refreshed row never arrives (a re-read that fails outright), the skeleton
+  // must not outlive the refresh attempt.
+  refreshingRowTimer = setTimeout(endRowRefresh, 20_000);
+};
+
+watch(authheads, (rows) => {
+  if (refreshingRowId.value && !rows.some((row) => rowId(row) === refreshingRowId.value)) {
+    endRowRefresh();
+  }
+});
 
 /**
  * The authheads an import just delivered. Rendered from the rows the import handed over — the chain
@@ -733,15 +778,16 @@ const openTransferDialog = (
         recipientAddress: recipientAddress,
         transferTokenAmount: userInputs.tokenAmount,
         network: import.meta.env.VITE_BCH_NETWORK as Network,
-        funderUtxos: (wallet.value.utxos || []) as UtxoWithPath[],
+        funderUtxos: (wallet.value?.utxos || []) as UtxoWithPath[],
         transferType: action,
       });
 
+      const tokenChange = issuerTokenUtxo.token.amount - userInputs.tokenAmount
 
       updateStep(TASK_PREPARE_TX, 'done')
       updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-      const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+      const response = await signTransaction(signRequest, { signal: getSignal() });
 
       updateStep(TASK_WAIT_FOR_SIG, 'done')
 
@@ -764,19 +810,53 @@ const openTransferDialog = (
 
 
       updateStep(TASK_BROADCASTING, 'done')
+      // The row the user acted on is stale from here on: mark it before the wait so its reserves
+      // cell shows the refresh instead of the previous amount.
+      beginRowRefresh(rowId(v))
       updateStep(TASK_WAITING_PROPAGATION, 'running')
 
       const networkType =
         import.meta.env.VITE_BCH_NETWORK === 'chipnet'
           ? NetworkType.Testnet
           : NetworkType.Mainnet;
-      await new BaseWallet(networkType).waitForTransaction({
-        txHash: txid,
-      });
+
+      // Two providers, two views of the same chain. `waitForTransaction` resolves on mainnet-js's
+      // electrum server, but the authhead's reserves are read back through cashscript's — a
+      // different host entirely. Waiting only on the former let a landed release leave the reserves
+      // column showing its previous amount, so also wait on the AuthGuard contract's own address,
+      // the client the refresh actually uses.
+      await Promise.all([
+        new BaseWallet(networkType).waitForTransaction({
+          txHash: txid,
+        }),
+        // waitForAuthheadSpent({
+        //   address: v.address,
+        //   authheadId: `${v.txid}:${v.vout}`,
+        //   network: import.meta.env.VITE_BCH_NETWORK as Network,
+        // }),
+      ]);
+
+      const spentAuthhead = authheads.value.find((authhead) => {
+        return authhead.txid === issuerTokenUtxo.txid && authhead.vout === 0
+      })
+
+      let authheadUpdated = false
+
+      if (spentAuthhead) {
+        spentAuthhead.txid = txid
+        spentAuthhead.vout = 0
+        spentAuthhead.token!.amount = tokenChange
+        spentAuthhead.authkey!.txid = txid
+        spentAuthhead.authkey!.vout = 1
+        authheadUpdated = true
+      }
 
       updateStep(TASK_WAITING_PROPAGATION, 'done')
       updateStep(TASK_REFRESH_UTXOS, 'running')
-      await loadAuthkeys(wallet.value, true, true);
+      if (!authheadUpdated) {
+        await loadAuthkeys(wallet.value, true, true);
+      }
+
       updateStep(TASK_REFRESH_UTXOS, 'done')
       stopLoader(1000)
 
@@ -804,6 +884,7 @@ const openTransferDialog = (
       });
     } catch (error: any) {
       stopLoader(3000)
+      endRowRefresh()
       if (error?.name === 'AbortError') return
       $q.notify({
         type: 'Error',
@@ -849,6 +930,7 @@ onMounted(async () => {
 onUnmounted(() => {
   clearReceivedAuthheads();
   cancelChainRefresh();
+  endRowRefresh();
   walletWatchers.value?.stopWatchingReceiveWallet?.();
   walletWatchers.value?.stopWatchingChangeWallet?.();
   walletWatchers.value?.stopWatchingDefiWallet?.();

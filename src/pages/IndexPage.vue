@@ -26,7 +26,7 @@
                   {{ connectingLabel }}
                 </div>
 
-                <div class="text-caption text-grey-5 q-mt-xs">
+                <div v-if="!isConnecting" class="text-caption text-grey-5 q-mt-xs">
                   {{ t('index.connect.hint') }}
                 </div>
 
@@ -50,6 +50,27 @@
 
           </q-card-section>
         </q-card>
+
+        <q-card v-if="walletConnectEnabled" class="connect-card q-mt-md">
+          <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
+
+            <div class="connect-icon">
+              <q-icon name="mdi-link-variant" size="38px" color="primary" />
+            </div>
+
+            <div class="col q-ml-md">
+              <div class="text-subtitle1 text-weight-bold text-white">
+                {{ t('index.connect.walletConnect.title') }}
+              </div>
+
+              <div class="text-caption text-grey-5 q-mt-xs">
+                {{ t('index.connect.walletConnect.subtitle') }}
+              </div>
+            </div>
+
+            <WalletConnectButton class="connect-button text-weight-bold" />
+          </q-card-section>
+        </q-card>
       </div>
 
       <!-- Create token -->
@@ -66,8 +87,8 @@
 
         <div class="row q-col-gutter-md">
           <div v-for="card in featureCards" :key="card.name" class="col-12 col-sm-6">
-            <q-card class="feature-card feature-card-bg" :class="{ 'card-muted': !walletIsReady }" :clickable="walletIsReady"
-              :aria-disabled="!walletIsReady" @click="onFeatureCardClick(card)">
+            <q-card class="feature-card feature-card-bg" :class="{ 'card-muted': !walletIsReady }"
+              :clickable="walletIsReady" :aria-disabled="!walletIsReady" @click="onFeatureCardClick(card)">
               <q-card-section class="feature-card-content">
 
                 <div class="feature-graphic" :class="`graphic-${card.name}`">
@@ -111,6 +132,9 @@ import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import { WIZARDCONNECT_LOGO, WizardConnectQRDialog } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
+import { useWalletConnectWallet } from 'src/composables/useWalletConnectWallet';
+import WalletConnectButton from 'src/components/WalletConnectButton.vue';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -118,8 +142,10 @@ const router = useRouter();
 
 $q.dark.set(true);
 
-const { walletIsReady, state, connect, showQR, uri, qrUri, closeConnectDialog } =
+const { state, connect, showQR, uri, qrUri, closeConnectDialog } =
   useWizardConnectWallet();
+const { walletIsReady } = useWalletSigner();
+const { isEnabled: walletConnectEnabled } = useWalletConnectWallet();
 
 const bannerSize = computed(() => {
   if ($q.screen.lt.sm) {

@@ -91,7 +91,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { type Network } from 'cashscript'
 import { createAuthguardContract, filterAuthKeys, findUnusedAuthkey } from 'src/core/authguard'
 import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { subscribe } from 'src/services/watchtower'
 import CashAddress from 'src/components/CashAddress.vue'
@@ -104,7 +104,7 @@ const DEPOSIT_POLL_MS = 5000
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { wallet, walletIsReady } = useWizardConnectWallet()
+const { wallet, walletIsReady } = useWalletSigner()
 const { setReceivedAuthheads } = useAuthguardStore()
 
 const scanning = ref<boolean>(false)

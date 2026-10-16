@@ -266,7 +266,7 @@ import { shortenCashAddress } from 'src/core/utils'
 import FormField from 'src/components/FormField.vue'
 import { filterGenesisInputs } from 'src/core/wallet'
 import { TokenType } from 'src/core/types'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { importMetadataRegistry } from 'bitauth-libauth-v3'
@@ -287,9 +287,9 @@ const symbolRules = [
     (val: string) => !isReservedTokenSymbol(val) || t('warning.symbolReserved'),
 ]
 const {
-    manager,
-    wallet
-} = useWizardConnectWallet()
+    wallet,
+    signTransaction
+} = useWalletSigner()
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const authguardStore = useAuthguardStore()
@@ -436,7 +436,7 @@ const onGenerateGenesisInput = async () => {
 
         let response: any = {}
 
-        response = await manager.value?.signTransaction(signRequest, { signal: getSignal() });
+        response = await signTransaction(signRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -647,7 +647,7 @@ const onSubmit = async () => {
 
         const createTokenSignRequest = createToken(createTokenArgs)
 
-        response = await manager.value?.signTransaction(createTokenSignRequest, { signal: getSignal() });
+        response = await signTransaction(createTokenSignRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')

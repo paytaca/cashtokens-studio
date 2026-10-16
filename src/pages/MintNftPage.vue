@@ -193,7 +193,6 @@ import { useI18n } from 'vue-i18n'
 import { type Output as TransactionOutput } from 'cashscript'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { storeToRefs } from 'pinia'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
@@ -226,9 +225,8 @@ const authguardStore = useAuthguardStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const appStore = useAppStore()
 const { activeMinter } = storeToRefs(appStore)
-const wizardConnectWallet = inject('wizardConnectWallet') as any
 
-const { manager, wallet } = wizardConnectWallet
+const { wallet, signTransaction } = inject('walletSigner') as any
 
 const minter = computed<DecoratedUtxo | undefined>(() => activeMinter.value)
 
@@ -426,7 +424,7 @@ const mint = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(restOfSignRequest, { signal: getSignal() })
+        const response = await signTransaction(restOfSignRequest, { signal: getSignal() })
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')

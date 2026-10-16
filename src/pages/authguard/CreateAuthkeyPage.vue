@@ -72,7 +72,7 @@ import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FormField from 'src/components/FormField.vue'
 import { UtxoWithPath } from 'src/core/types'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { createAuthguardContract } from 'src/core/authguard'
 import { subscribe } from 'src/services/watchtower'
 import { broadcastTransaction } from 'src/services/transaction'
@@ -84,8 +84,8 @@ const route = useRoute()
 const router = useRouter()
 const {
     wallet,
-    manager
-} = useWizardConnectWallet()
+    signTransaction
+} = useWalletSigner()
 
 const { t } = useI18n()
 
@@ -156,7 +156,7 @@ const onGenerateGenesisInput = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value?.signTransaction(genesisInputSignReq, { signal: getSignal() });
+        const response = await signTransaction(genesisInputSignReq, { signal: getSignal() });
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')
@@ -253,7 +253,7 @@ const onCreateAuthKey = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value?.signTransaction(signRequest, { signal: getSignal() });
+        const response = await signTransaction(signRequest, { signal: getSignal() });
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')

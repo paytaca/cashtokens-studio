@@ -166,7 +166,7 @@ import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
@@ -202,9 +202,9 @@ const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead, setActiveAuthhead } = authguardStore
 const {
-    manager,
     wallet,
-} = useWizardConnectWallet()
+    signTransaction,
+} = useWalletSigner()
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 
@@ -477,7 +477,7 @@ const onPublishClick = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() });
+        const response = await signTransaction(publishRegistryRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')

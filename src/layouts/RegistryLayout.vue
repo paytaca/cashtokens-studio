@@ -1,6 +1,8 @@
 <template>
   <div>
-    <template v-if="wallet?.initializing">
+    <!-- Same rule as MainLayout: a reconnect-driven re-init must not blank a wallet that is already
+         usable. -->
+    <template v-if="wallet?.initializing && !wallet?.ready">
       <PageSkeleton :message="$t('info.initializingWallet')" />
     </template>
     <template v-else>
@@ -116,7 +118,7 @@ const registryStore = useRegistryStore();
 const { activeIdentitySnapshot } = storeToRefs(registryStore);
 const authguardStore = useAuthguardStore();
 const { activeAuthhead } = storeToRefs(authguardStore);
-const { wallet } = inject('wizardConnectWallet') as any;
+const { wallet } = inject('walletSigner') as any;
 
 
 const route = useRoute();

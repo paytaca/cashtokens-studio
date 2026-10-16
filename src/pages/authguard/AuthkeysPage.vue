@@ -138,7 +138,8 @@ import { shortenCashAddress, shortenTokenId } from 'src/core/utils';
 import { getAuthguardContractAddress } from 'src/core/authguard';
 import { useRouter } from 'vue-router';
 import { Network } from 'cashscript';
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
+import { useWalletSigner } from 'src/composables/useWalletSigner';
+import { watchWalletActivity } from 'src/core/wallet';
 import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 
@@ -151,7 +152,7 @@ const { t } = useI18n();
 const router = useRouter();
 const $q = useQuasar();
 
-const { wallet, walletIsReady } = useWizardConnectWallet();
+const { wallet, walletIsReady } = useWalletSigner();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys } = authguardStore;
@@ -235,8 +236,7 @@ watch(
       triggerRef(wallet);
 
       walletWatchers.value.stopWatchingReceiveWallet =
-        await wallet.value?.receive?.watchStatus(
-          async (status: any, address: any) => {
+        await watchWalletActivity(wallet.value, async () => {
             await wallet.value?.sync();
             await loadAuthkeys(wallet.value);
             triggerRef(wallet);
