@@ -532,7 +532,7 @@ export default {
       columnAuthguard: 'Authguard',
       columnAuthguardCaption: '(Vault Address)',
       selfCustodyWarning:
-        'These AuthKey NFTs are in your wallet. Do not send them to anybody unless you intend to.',
+        'These Authkey NFTs are in your wallet. Do not send them to anybody unless you intend to transfer ownership of the token associated with the Authkey NFT.',
     },
     activity: {
       caption: 'Your recent Cashtokens Studio activities.',
