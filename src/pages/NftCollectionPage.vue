@@ -601,7 +601,7 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
         if (typeof (sampleDecodedAddress) === 'string') {
             throw new Error(sampleDecodedAddress)
         }
-        componentProps.burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS}`
+        componentProps.burnAddress = import.meta.env.VITE_BURN_ADDRESS
     }
 
     $q.dialog({

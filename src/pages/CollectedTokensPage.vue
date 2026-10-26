@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -248,8 +248,6 @@ import NFTTransferDialog from 'src/components/dialogs/NFTTransferDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
-import { decodeCashAddress } from 'bitauth-libauth-v3';
-import { decodeCashAddress as decodeCashAddressV3, encodeCashAddress } from 'bitauth-libauth-v3';
 import { BaseWallet, NetworkType } from 'mainnet-js';
 import { db } from 'src/core/client-db';
 
@@ -630,36 +628,10 @@ const performSendCollectedNft = (row: any) => {
   });
 };
 
-/**
- * The burn address configured in env, normalised to the token-aware form a token output needs.
- * The env value may or may not already carry its network prefix, and it may already be token-aware
- * (the current one is a `p2shWithTokens` address).
- */
-const getTokenAwareBurnAddress = (): string => {
-  const networkPrefix = wallet.value!.getTokenDepositAddress(0).split(':')[0];
-  const configured = (import.meta.env.VITE_BURN_ADDRESS || '').trim();
-  const burnAddress = configured.includes(':') ? configured : `${networkPrefix}:${configured}`;
-
-  const decoded = decodeCashAddressV3(burnAddress);
-  if (typeof decoded === 'string') throw new Error(decoded);
-  if (decoded.type.includes('WithTokens')) return burnAddress;
-  return encodeCashAddress({
-    ...decoded,
-    throwErrors: true,
-    type: `${decoded.type as 'p2pkh' | 'p2sh'}WithTokens`,
-  }).address;
-};
 
 /** Burning an NFT sends the whole UTXO to the burn address, so there is no recipient to pick. */
 const performBurnCollectedNft = (row: any) => {
-  let burnAddress: string;
-  try {
-    burnAddress = getTokenAwareBurnAddress();
-  } catch (error: any) {
-    $q.notify({ type: 'Error', message: error.message });
-    return;
-  }
-
+  const burnAddress = import.meta.env.VITE_BURN_ADDRESS
   $q.dialog({
     component: NFTTransferDialog,
     componentProps: {
@@ -753,14 +725,7 @@ const performBurnCollectedNft = (row: any) => {
 };
 
 const performBurnCollectedTokens = (row: any) => {
-  const sampleAddress = wallet.value!.getTokenDepositAddress(0);
-  const sampleDecodedAddress = decodeCashAddress(sampleAddress);
-  if (typeof sampleDecodedAddress === 'string') {
-    throw new Error(sampleDecodedAddress);
-  }
-  const burnAddress = `${sampleDecodedAddress.prefix}:${import.meta.env.VITE_BURN_ADDRESS
-    }`;
-
+  const burnAddress = import.meta.env.VITE_BURN_ADDRESS
   $q.dialog({
     component: FungibleTransferDialog,
     componentProps: {
