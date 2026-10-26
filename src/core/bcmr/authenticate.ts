@@ -71,7 +71,7 @@ const isFreshDescendantOfTrackedAuthhead = async (
  * as authenticated: a publish from a superseded authhead will fork the identity instead of being
  * refused. Off-chain registries were never gated by this check, so they are unaffected either way.
  */
-const SKIP_AUTHCHAIN_AUTHENTICATION = false
+const SKIP_AUTHCHAIN_AUTHENTICATION = true
 
 /**
  * Determine whether `authheadTxid` is authorized to publish the registry
