@@ -264,12 +264,6 @@ const DEFAULT_NFT_CATEGORY: NftCategoryI = {
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
 const TASK_VERIFY_AUTHHEAD = 'verify-authhead'
 
-const publishTaskList = [
-    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
-    { id: TASK_UPLOAD_REGISTRY, label: 'Uploading registry to IPFS' },
-    ...txTaskList,
-]
-
 const { wallet, signTransaction } = inject('walletSigner') as any
 const $q = useQuasar()
 const { t } = useI18n()
@@ -281,6 +275,16 @@ const { activeAuthhead } = storeToRefs(authguardStore)
 const registryStore = useRegistryStore()
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const { ensureAuthorized } = useRegistryPublishAuthorization()
+
+/**
+ * Declared after `useI18n()`: the labels call `t`, and a `const` referenced before its declaration
+ * inside `<script setup>` throws "Cannot access 't' before initialization" when the page mounts.
+ */
+const publishTaskList = [
+    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
+    { id: TASK_UPLOAD_REGISTRY, label: t('info.uploadingRegistryToIpfs') },
+    ...txTaskList,
+]
 
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
