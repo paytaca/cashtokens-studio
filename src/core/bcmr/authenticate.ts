@@ -28,8 +28,10 @@ export async function authenticate(
   authheadTxid: string,
   registryIdentity: OffChainRegistryIdentity | string
 ): Promise<RegistryAuthenticationResult> {
-  // Off-chain registry identity → authenticated via DNS/HTTPS, not the authchain.
-  if (typeof registryIdentity !== 'string') {
+  // Off-chain registry identity → authenticated via DNS/HTTPS, not the authchain. Registry records
+  // persist that identity as `offchain:<hash>` (see the registry worker), so the prefixed string
+  // must take the same path as the object form.
+  if (typeof registryIdentity !== 'string' || registryIdentity.startsWith('offchain:')) {
     return { authenticated: true }
   }
 
