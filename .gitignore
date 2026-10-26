@@ -8,6 +8,7 @@ deployment/nginx.conf
 .DS_Store
 .thumbs.db
 .venv
+.python-version
 node_modules
 
 
