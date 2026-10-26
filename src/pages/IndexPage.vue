@@ -49,9 +49,8 @@
           </q-card-section>
         </q-card>
 
-        <q-card v-if="walletConnectEnabled" class="connect-card connect-card--action q-mt-md" role="button"
-          tabindex="0" @click="onWalletConnect" @keydown.enter="onWalletConnect"
-          @keydown.space.prevent="onWalletConnect">
+        <q-card v-if="walletConnectEnabled" class="connect-card connect-card--action q-mt-md" role="button" tabindex="0"
+          @click="onWalletConnect" @keydown.enter="onWalletConnect" @keydown.space.prevent="onWalletConnect">
           <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
 
             <div class="connect-icon">
@@ -75,7 +74,7 @@
       </div>
 
       <!-- Create token -->
-      <div class="create-section full-width">
+      <div class="create-section full-width" :class="{ 'card-muted': !walletIsReady }">
         <div class="section-heading">
           <div class="text-overline text-grey-6">
             {{ t('index.create.title', 'CREATE TOKEN') }}

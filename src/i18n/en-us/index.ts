@@ -301,7 +301,7 @@ export default {
       action: 'Connect',
       connecting: 'Connecting Wallet...',
       reconnecting: 'Reconnecting Wallet...',
-      hint: 'Please authorize the connection request inside your WizardConnect extension.',
+      hint: 'Please connect your wallet using WizardConnect or WalletConnect.',
       wizardConnect: {
         title: 'Wizard Connect',
         subtitle: 'Connect an HD wallet over the WizardConnect relay',
