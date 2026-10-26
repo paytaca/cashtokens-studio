@@ -4,7 +4,7 @@ import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 
 export type CreateTokenParams = {
     tokenSpec: Omit<TokenDetails, 'category'>,                   // The new spec of the new token to be created
@@ -158,12 +158,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
         transactionHex = transaction.build()  // Rebuild with change
     }
     
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = {
-            utxo
-        }
-        return utxoToWcSourceOutput(args)
-    }) 
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     return {
         action: RelayMsgAction.SignTransactionRequest,

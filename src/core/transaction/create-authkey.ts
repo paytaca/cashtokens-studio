@@ -7,7 +7,7 @@ import {
 import { NFTCapability } from "mainnet-js"
 import { decodeCashAddress, encodeCashAddress, getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 import { UtxoTxid, UtxoVout, UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 
@@ -136,12 +136,7 @@ export function createAuthkey(params: CreateAuthkeyParams): SignTransactionReque
 
     if (!enoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
 
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = {
-            utxo
-        }
-        return utxoToWcSourceOutput(args)
-    })    
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     return {
         action: RelayMsgAction.SignTransactionRequest,

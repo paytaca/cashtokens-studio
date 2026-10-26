@@ -3,7 +3,7 @@ import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { bigIntToVmNumber, binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
 
@@ -66,6 +66,9 @@ export function mintNftSequence(params: MintNftSequenceParams): SignTransactionR
     const spentUtxos = [
         params.minterUtxo
     ]
+
+    /** Change is paid back to the AuthKey holder when one is spent, otherwise to the funder. */
+    const changeAddress = params.authkeyUtxo?.address ?? funderInput.address
 
     if (authguard && authkeyReturnAddress) {
         
@@ -144,7 +147,7 @@ export function mintNftSequence(params: MintNftSequenceParams): SignTransactionR
     let changeOutputIndex = -1
     if (change > 546n) {
         transaction.addOutput({
-            to: params.authkeyUtxo!.address,
+            to: changeAddress,
             amount: change
         })
         changeOutputIndex = transaction.outputs.length - 1
@@ -171,7 +174,7 @@ export function mintNftSequence(params: MintNftSequenceParams): SignTransactionR
         if (newChange > 546n) {
             if (changeOutputIndex === -1) {
                 transaction.addOutput({
-                    to: params.authkeyUtxo!.address,
+                    to: changeAddress,
                     amount: newChange
                 })
                 changeOutputIndex = transaction.outputs.length - 1
@@ -184,10 +187,7 @@ export function mintNftSequence(params: MintNftSequenceParams): SignTransactionR
     }
 
     if (!enoughfunderUtxos) throw new Error('Insufficient BCH balance to fund the transaction')
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = { utxo }
-        return utxoToWcSourceOutput(args)
-    })    
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     const minterTokenSourceOutputIndex = sourceOutputs.findIndex(s => {
         return `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` === `${params.minterUtxo.txid}:${params.minterUtxo.vout}`

@@ -3,7 +3,7 @@ import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
 
@@ -160,10 +160,7 @@ export function mintNfts(params: MintChildNftParams): SignTransactionRequest {
     }
 
     if (!enoughFunds) throw new Error('Insufficient BCH balance to fund the transaction')
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = { utxo }
-        return utxoToWcSourceOutput(args)
-    })    
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     const issuerTokenSourceOutputIndex = sourceOutputs.findIndex(s => {
         return `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` === `${params.minterUtxo.txid}:${params.minterUtxo.vout}`

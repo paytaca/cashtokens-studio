@@ -29,7 +29,7 @@ import {
     P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, 
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 
 export type MintNftMutableParams = {
     minterUtxo: UtxoWithPath,
@@ -205,10 +205,7 @@ export function mintNftMutables(params: MintNftMutableParams): SignTransactionRe
     }
 
     if (!enoughfunderUtxos) throw new Error('Insufficient BCH balance to fund the transaction')
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = { utxo }
-        return utxoToWcSourceOutput(args)
-    })    
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     const minterTokenSourceOutputIndex = sourceOutputs.findIndex(s => {
         return `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` === `${params.minterUtxo.txid}:${params.minterUtxo.vout}`

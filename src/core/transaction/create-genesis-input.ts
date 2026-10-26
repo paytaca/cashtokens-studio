@@ -13,7 +13,7 @@ import {
     P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, 
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 
 
 export type CreateGenesisInputParams = {
@@ -96,12 +96,7 @@ export function createGenesisInput(params: CreateGenesisInputParams): SignTransa
         transactionHex = transaction.build()  
     }
 
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = {
-            utxo
-        }
-        return utxoToWcSourceOutput(args)
-    }) 
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
     
 
     return {

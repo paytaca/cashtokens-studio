@@ -29,7 +29,7 @@ import {
     P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, 
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
-import { jsonReplacer, utxoToWcSourceOutput, UtxoToWcSourceOutputParams } from "./utils"
+import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 
 export type MintNextNftSequence = {
     minterUtxo: UtxoWithPath,
@@ -90,13 +90,27 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         params.minterUtxo
     ]
 
+    /**
+     * Output 0 keeps the minter's token and its commitment is bumped to the end sequence below.
+     * Clone it first: the very same token object also backs this transaction's `sourceOutputs`,
+     * which the wallet signs against, so mutating it in place would advertise a commitment that
+     * is not on-chain and invalidate the wallet's signatures.
+     */
+    const minterOutputToken = { ...params.minterUtxo.token }
+    if (minterOutputToken.nft) {
+        minterOutputToken.nft = { ...minterOutputToken.nft }
+    }
+
+    /** Change is paid back to the AuthKey holder when one is spent, otherwise to the funder. */
+    const changeAddress = params.authkeyUtxo?.address ?? funderInput.address
+
     if (authguard && authkeyReturnAddress) {
         transaction.addInput(params.minterUtxo, authguard.unlock.unlockWithNft!(true) as any)
         transaction.addInput(params.authkeyUtxo!, placeholderP2PKHUnlocker(params.authkeyUtxo!.address))
         transaction.addOutput({
             to: authguard.tokenAddress,
             amount: params.minterUtxo.satoshis,
-            token: params.minterUtxo.token
+            token: minterOutputToken
         })
         transaction.addOutput({
             to: authkeyReturnAddress,
@@ -123,7 +137,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         transaction.addOutput({
             to: minterReturnAddress,
             amount: params.minterUtxo.satoshis,
-            token: params.minterUtxo.token
+            token: minterOutputToken
         })
     }
 
@@ -173,7 +187,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
     let changeOutputIndex = -1
     if (change > 546n) {
         transaction.addOutput({
-            to: params.authkeyUtxo!.address,
+            to: changeAddress,
             amount: change
         })
         changeOutputIndex = transaction.outputs.length - 1
@@ -200,7 +214,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
         if (newChange > 546n) {
             if (changeOutputIndex === -1) {
                 transaction.addOutput({
-                    to: params.authkeyUtxo!.address,
+                    to: changeAddress,
                     amount: newChange
                 })
                 changeOutputIndex = transaction.outputs.length - 1
@@ -213,10 +227,7 @@ export function mintNextNftSequence(params: MintNextNftSequence): SignTransactio
     }
 
     if (!enoughfunderUtxos) throw new Error('Insufficient BCH balance to fund the transaction')
-    const sourceOutputs = spentUtxos.map((utxo) => {
-        const args: UtxoToWcSourceOutputParams = { utxo }
-        return utxoToWcSourceOutput(args)
-    })    
+    const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
     const minterTokenSourceOutputIndex = sourceOutputs.findIndex(s => {
         return `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` === `${params.minterUtxo.txid}:${params.minterUtxo.vout}`

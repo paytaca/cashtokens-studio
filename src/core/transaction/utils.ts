@@ -14,7 +14,6 @@ import {
 import { Utxo } from 'mainnet-js';
 import { DecoratedUtxoFormSafe, UtxoWithPath } from "../types";
 import { SourceOutput } from "@wizardconnect/core/hdwalletv1-serialize";
-import { SEQUENCE_NUMBER_DISABLE_VALUE } from "../constants";
 import { Network, placeholderP2PKHUnlocker, TransactionBuilder, WcContractInfo, WcSourceOutput } from "cashscript";
 import { createAuthguardContract } from "../authguard";
 import { CashAddressType, decodeCashAddress, encodeCashAddress } from "bitauth-libauth-v3";
@@ -170,7 +169,9 @@ export function utxoToLibauthSourceOutput (utxo: Utxo, transportSafe = false) {
 export type UtxoToWcSourceOutputParams = {
   utxo: UtxoWithPath, 
   unlockingBytecode?: Uint8Array, 
-  contractInfo?: WcContractInfo
+  contractInfo?: WcContractInfo,
+  /** Sequence number of this input as it appears in the transaction being signed. */
+  sequenceNumber: number
 }
 
 export function utxoToWcSourceOutput (params: UtxoToWcSourceOutputParams): WcSourceOutput {
@@ -183,7 +184,7 @@ export function utxoToWcSourceOutput (params: UtxoToWcSourceOutputParams): WcSou
     valueSatoshis: params.utxo.satoshis,
     unlockingBytecode: params.unlockingBytecode || new Uint8Array([]),
     lockingBytecode: lockingBytecode.bytecode,
-    sequenceNumber: SEQUENCE_NUMBER_DISABLE_VALUE
+    sequenceNumber: params.sequenceNumber
   }
 
   if (params.utxo.token) {
@@ -205,6 +206,26 @@ export function utxoToWcSourceOutput (params: UtxoToWcSourceOutputParams): WcSou
   }
 
    return output
+}
+
+/**
+ * Source outputs for a WizardConnect/WalletConnect sign request.
+ *
+ * The input descriptors (outpoint and sequence number) are read back from the transaction that will
+ * be broadcast instead of being copied from the UTXOs. The BCH signing serialization commits to the
+ * input sequence numbers, so a payload that disagrees with its own transaction produces signatures
+ * the node rejects with "mandatory-script-verify-flag-failed (Signature must be zero for failed
+ * CHECK(MULTI)SIG operation)".
+ */
+export function buildWcSourceOutputs(transactionHex: string, spentUtxos: UtxoWithPath[]): WcSourceOutput[] {
+  const decodedTransaction = decodeTransactionCommon(hexToBin(transactionHex))
+  if (typeof decodedTransaction === 'string') throw new Error(decodedTransaction)
+
+  return spentUtxos.map((utxo, inputIndex) => {
+    const input = decodedTransaction.inputs[inputIndex]
+    if (!input) throw new Error(`Unexpected state, input ${inputIndex} not found in the transaction`)
+    return utxoToWcSourceOutput({ utxo, sequenceNumber: input.sequenceNumber })
+  })
 }
 
 
@@ -292,10 +313,7 @@ export function buildSignRequest(
   spentUtxos: UtxoWithPath[],
   userPrompt: string
 ): SignTransactionRequest {
-  const sourceOutputs = spentUtxos.map((utxo) => {
-    const args: UtxoToWcSourceOutputParams = { utxo }
-    return utxoToWcSourceOutput(args)
-  })
+  const sourceOutputs = buildWcSourceOutputs(transactionHex, spentUtxos)
 
   const authheadIndex = sourceOutputs.findIndex(s =>
     `${binToHex(s.outpointTransactionHash)}:${s.outpointIndex}` ===
