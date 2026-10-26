@@ -6,6 +6,7 @@ import { useRegistryStore } from './registry'
 import { LocalStorage } from 'quasar'
 import { stringify } from 'bitauth-libauth-v3'
 import { parseLibauthStringified } from 'src/core/utils'
+import { db } from 'src/core/client-db'
 
 export const useAuthguardStore = defineStore('authguard-store', () => {
 
@@ -24,6 +25,11 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authheadLoading = ref<Record<string, boolean>>({}) // {<txid:vout>: true}
   /** Authheads handed over by the auth UTXO import flow, spotlighted once on the managed tokens page. */
   const receivedAuthheads = ref<DecoratedUtxo[]>([])
+  /**
+   * Wallet fingerprint for the authhead snapshot cache: the index-0 deposit address, derived
+   * locally from the receive xpub — no chain I/O, stable per wallet and network.
+   */
+  const walletFingerprint = ref<string>()
   
 
   /**
@@ -116,10 +122,67 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     }
   } 
   
+  /**
+   * Render the last known authheads immediately on boot: live rows win, and a snapshot stored
+   * under a different wallet fingerprint is never shown. Cached rows count as a completed load
+   * (they stamp `authheadsLastSync`), so "first load pending" UIs hand over to the table at once.
+   */
+  async function hydrateAuthheadsSnapshot() {
+    if (authheads.value.length > 0) return
+    const walletId = walletFingerprint.value
+    if (!walletId) return
+    const snapshot = await db.getAuthheadSnapshot(walletId)
+    if (!snapshot?.payload) return
+    const rows = parseLibauthStringified(snapshot.payload) as unknown
+    if (!Array.isArray(rows)) return
+    authheads.value = rows as DecoratedUtxo[]
+    authheadsLastSync.value = Date.now()
+  }
+
+  /** Persist the decorated rows for the next boot, keyed by the wallet fingerprint. Stored as a
+   * libauth-stringified payload (same encode/revive pair as `activeAuthhead`): writing the
+   * reactive array directly would fail IndexedDB's structured clone on Vue proxies.
+   */
+  async function persistAuthheadSnapshot() {
+    const walletId = walletFingerprint.value
+    if (!walletId) return
+    const payload = stringify(authheads.value)
+    await db.saveAuthheadSnapshot({ walletId, payload })
+  }
+
+  /**
+   * Background refreshes must not visually "undress" tokens: a scanned row that has no registry
+   * decoration yet inherits it from the row already known under the same id (hydrated from the
+   * snapshot or a previous load). Rows only change when the chain data actually changed.
+   */
+  function carryOverIdentitySnapshots(
+    scannedRows: DecoratedUtxo[],
+    knownRows: DecoratedUtxo[]
+  ): DecoratedUtxo[] {
+    const knownById = new Map(knownRows.map((row) => [`${row.txid}:${row.vout}`, row]))
+    return scannedRows.map((row) => {
+      if (row.identitySnapshot) return row
+      const known = knownById.get(`${row.txid}:${row.vout}`)
+      if (!known?.identitySnapshot) return row
+      return {
+        ...row,
+        identitySnapshot: known.identitySnapshot,
+        identitySnapshotIdentifier: known.identitySnapshotIdentifier,
+      }
+    })
+  }
+
   async function loadAuthheads(authkeyList?: UtxoWithPath[], sync?: boolean, silent = false) {
     try {
       if (!silent) authheadsLoading.value = true;
-      authheads.value = await getLockedAuthheadUtxos(authkeyList || authkeys.value);
+      const scannedRows = await getLockedAuthheadUtxos(authkeyList || authkeys.value);
+      // Background refresh keeps the known identity decoration (see carryOverIdentitySnapshots),
+      // so hydrated rows survive the scan without an icon/symbol flash.
+      authheads.value = carryOverIdentitySnapshots(scannedRows, authheads.value);
+      // The scan result is in hand (possibly empty), so the "first load pending" state ends
+      // HERE — before the registry decoration pipeline below, which is the slow part. Pages
+      // keep rendering rows while icons and symbols fill in progressively.
+      authheadsLastSync.value = Date.now();
       // Create a pipeline task for each individual authhead
       const tasks = authheads.value.map(async (authhead) => {
         if (!authhead.token) return;
@@ -159,6 +222,11 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
     } finally {
       authheadsLoading.value = false;
+      // Safety stamp: a thrown load must also end "pending", so pages fall back to the plain
+      // empty state instead of holding the scanning skeleton forever.
+      authheadsLastSync.value = Date.now();
+      // Never let a cache write fail the load itself.
+      persistAuthheadSnapshot().catch((error) => console.error('authhead snapshot persist failed:', error));
     }
   } 
 
@@ -170,6 +238,9 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
         
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
         authkeysLastSync.value = Date.now()
+        walletFingerprint.value = externalWallet?.getDepositAddress?.(0) || undefined
+        // Last known rows before the (slower) chain scan refreshes them: pages render instantly.
+        await hydrateAuthheadsSnapshot().catch((error) => console.error('authhead snapshot hydrate failed:', error))
         return authkeys.value
     } finally {
         authkeysLoading.value = false
@@ -195,6 +266,15 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const clearReceivedAuthheads = () => {
     receivedAuthheads.value = []
   }
+
+  /** Hydrate the snapshot the moment the wallet fingerprint becomes known, on any load path. */
+  watch(() => walletFingerprint.value, (walletId, previousWalletId) => {
+    if (!walletId) return
+    // A different wallet means the in-memory rows belong to someone else: drop them before
+    // hydrating that wallet's snapshot, rather than flashing one wallet's tokens under another.
+    if (previousWalletId && previousWalletId !== walletId) authheads.value = []
+    hydrateAuthheadsSnapshot().catch((error) => console.error('authhead snapshot hydrate failed:', error))
+  })
 
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
     if (authkeysLastSync !== authkeysPrevSync) {

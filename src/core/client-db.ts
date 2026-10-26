@@ -62,6 +62,18 @@ export type UtxoRecord = UtxoWithPath & {
   id: `${UtxoTxid}:${UtxoVout}`,
 }
 
+/**
+ * Last known authheads for a wallet, written after every successful `loadAuthheads` run so pages
+ * can render rows instantly on the next boot. The payload is libauth-stringified (`stringify` /
+ * `parseLibauthStringified`): it survives `bigint` and `Uint8Array` fields, and — unlike handing
+ * the reactive array to IndexedDB — cannot hit structured-clone `DataCloneError` on Vue proxies.
+ */
+export type AuthheadSnapshotRecord = {
+  walletId: string,
+  payload: string,
+  savedAt: number,
+}
+
 export type MaybeUtxoRecord = Omit<UtxoRecord, 'id' | 'walletId'> & {
   id?: `${UtxoTxid}:${UtxoVout}`
   walletId?: string
@@ -84,7 +96,7 @@ class CashtokensStudioDB extends Dexie {
   nfts!: EntityTable<NftRecord, 'id'>
   utxo!: EntityTable<UtxoRecord, 'id'>
   activity!: EntityTable<ActivityRecord, 'id'>
-  authhead!: EntityTable<UtxoRecord, 'id'>
+  authheadSnapshot!: EntityTable<AuthheadSnapshotRecord, 'walletId'>
 
   constructor(network: 'chipnet' | 'mainnet') {
     super(`CashtokensStudioDB${network}`);
@@ -94,6 +106,10 @@ class CashtokensStudioDB extends Dexie {
       nfts: '++id, [contentHash+authbase+timestamp+type], [contentHash+authbase+timestamp+status], contentHash, authbase, timestamp, category, type',
       utxo: 'id, walletId',
       activity: '++id, event, timestamp, status'
+    })
+    // Authhead snapshot cache: one row per wallet fingerprint (see saveAuthheadSnapshot).
+    this.version(2).stores({
+      authheadSnapshot: 'walletId',
     })
   }
 
@@ -135,6 +151,23 @@ class CashtokensStudioDB extends Dexie {
       .where('walletId')
       .equals(walletId)
       .toArray();
+  }
+
+  async getAuthheadSnapshot(walletId: string): Promise<AuthheadSnapshotRecord | undefined> {
+    return await this.authheadSnapshot.get(walletId)
+  }
+
+  async saveAuthheadSnapshot(params: { walletId: string, payload: string }): Promise<void> {
+    if (typeof params.payload !== 'string') {
+      // IndexedDB's structured clone fails with a cryptic DataCloneError on non-strings —
+      // fail loudly with the actual contract instead.
+      throw new Error('authheadSnapshot payload must be a libauth-stringified string')
+    }
+    await this.authheadSnapshot.put({
+      walletId: params.walletId,
+      payload: params.payload,
+      savedAt: Date.now(),
+    })
   }
 
   /**

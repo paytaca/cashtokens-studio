@@ -421,6 +421,7 @@ export default {
       createNew: 'Create New',
       createToken: 'Create Token',
       noCreatedTokens: 'No created tokens yet',
+      scanningAuthguard: 'Scanning Authguard Contracts For Identity Outputs',
       filterAll: 'All ({count})',
       filterFungible: 'Fungible ({count})',
       filterNft: 'NFT ({count})',

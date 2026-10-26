@@ -3,7 +3,12 @@
     <div class="q-px-md q-px-md-xl content-container q-mt-xl q-gutter-y-lg">
       <ExplainerBanner class="q-my-md" icon="brush" :title="$t('dashboard.pageTitle.managedTokens')"
         :description="$t('dashboard.managed.caption')">
-        <template v-if="authheads.length > 0">
+        <template v-if="firstLoadPending">
+          <!-- Reserve the button's space while the first load is pending, so the banner neither
+               hides the action nor pops it in on token-holding wallets. -->
+          <q-skeleton type="QBtn" style="width: 8.5rem" />
+        </template>
+        <template v-else-if="authheads.length > 0">
           <q-btn icon="mdi-creation" :label="$t('dashboard.managed.createNew')" color="secondary" no-caps
             @click="router.push({ name: 'create-token' })" rounded />
         </template>
@@ -213,7 +218,13 @@
       </q-card>
 
       <q-card class="q-pa-lg rounded-borders">
-        <template v-if="authkeysLoading || authheadsLoading">
+        <template v-if="firstLoadPending">
+          <q-banner rounded class="bg-grey-10 text-grey-4 q-mb-md">
+            <template v-slot:avatar>
+              <q-spinner-dots color="grey-5" />
+            </template>
+            {{ $t('dashboard.managed.scanningAuthguard') }}
+          </q-banner>
           <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
             <q-skeleton type="rect" size="36px" class="rounded-borders" />
             <div class="column q-gutter-y-xs" style="flex: 1">
@@ -515,8 +526,13 @@ const { wallet, manager, walletIsReady } = useWizardConnectWallet();
 
 const authguardStore = useAuthguardStore();
 const { loadAuthkeys, clearReceivedAuthheads } = authguardStore;
-const { authheads, authkeysLoading, authheadsLoading, receivedAuthheads } =
-  storeToRefs(authguardStore);
+const {
+  authheads,
+  authheadsLastSync,
+  authkeysLoading,
+  authheadsLoading,
+  receivedAuthheads,
+} = storeToRefs(authguardStore);
 
 const appStore = useAppStore();
 const registryStore = useRegistryStore();
@@ -542,6 +558,20 @@ const nftCount = computed(
 );
 const mixedCount = computed(
   () => authheads.value.filter((r) => getTokenType(r) === 'mixed').length
+);
+
+/**
+ * True while the first authhead load has not landed yet: an empty `authheads` list then means
+ * "not known yet", never "the user has no tokens". Drops as soon as rows exist or a completed
+ * load came back empty. Wallet-initializing signals keep it pending for the connecting window;
+ * a never-connecting wallet falls back to the plain empty state, as before.
+ */
+const firstLoadPending = computed(
+  () =>
+    (authheads.value.length === 0 &&
+      (Boolean(authkeysLoading.value) || Boolean(authheadsLoading.value))) ||
+    (!authheadsLastSync.value &&
+      (walletIsReady.value || Boolean(wallet.value?.initializing)))
 );
 
 const columns: QTableColumn[] = [
