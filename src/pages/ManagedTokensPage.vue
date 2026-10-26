@@ -218,13 +218,13 @@
       </q-card>
 
       <q-card class="q-pa-lg rounded-borders">
+
         <template v-if="firstLoadPending">
-          <q-banner rounded class="bg-grey-10 text-grey-4 q-mb-md">
-            <template v-slot:avatar>
-              <q-spinner-dots color="grey-5" />
-            </template>
-            {{ $t('dashboard.managed.scanningAuthguard') }}
+          <q-banner class="flex items-bottom q-gutter-x-sm">
+            <span class="text-italic q-mr-sm text-warning">{{ $t('dashboard.managed.checkingForManagedTokens')
+            }}</span><q-spinner-dots color="grey-5" size="sm" />
           </q-banner>
+
           <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
             <q-skeleton type="rect" size="36px" class="rounded-borders" />
             <div class="column q-gutter-y-xs" style="flex: 1">
