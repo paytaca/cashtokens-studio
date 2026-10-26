@@ -1,6 +1,6 @@
 <template>
   <div>
-    <template v-if="wallet?.initializing">
+    <template v-if="wallet?.initializing && !walletEverReady">
       <PageSkeleton :message="$t('info.initializingWallet')" />
     </template>
     <template v-else>
@@ -116,7 +116,7 @@ const registryStore = useRegistryStore();
 const { activeIdentitySnapshot } = storeToRefs(registryStore);
 const authguardStore = useAuthguardStore();
 const { activeAuthhead } = storeToRefs(authguardStore);
-const { wallet } = inject('wizardConnectWallet') as any;
+const { wallet, walletEverReady } = inject('wizardConnectWallet') as any;
 
 
 const route = useRoute();

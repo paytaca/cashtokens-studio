@@ -85,7 +85,7 @@
     <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
       :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <PageSkeleton v-if="wallet?.initializing && !isIndexPage" :message="$t('info.initializingWallet')" />
+        <PageSkeleton v-if="wallet?.initializing && !isIndexPage && !walletEverReady" :message="$t('info.initializingWallet')" />
         <router-view v-else />
       </q-page-container>
     </q-scroll-area>
@@ -117,7 +117,7 @@ const isIndexPage = computed(() => route.path === '/');
 
 const showHeaderLogo = computed(() => $q.screen.gt.xs);
 
-const { state, manager, disconnect, wallet } =
+const { state, manager, disconnect, wallet, walletEverReady } =
   inject('wizardConnectWallet') as any;
 
 const showAppChrome = computed(

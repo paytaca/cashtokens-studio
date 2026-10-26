@@ -5,6 +5,15 @@ import { WizardConnectExternalWallet } from 'src/core/wallet'
 
 const wallet = shallowRef(new WizardConnectExternalWallet({ network: import.meta.env.VITE_BCH_NETWORK}))
 const walletLasySync = ref<number>()
+
+/**
+ * True once a wallet has finished initializing in this app session. The layouts only show the
+ * full-page initializing splash while this is false: keepalive reconnects replay `wallet_ready`
+ * and re-run the init, and blanking the page the user is reading for a background refresh is
+ * never acceptable. A user-initiated disconnect clears it, so the next explicit connect still
+ * shows the splash.
+ */
+const walletEverReady = ref(false)
 const showQR = ref(false)
 const qrURI = ref<string | null>(null)
 const qrDataURI = ref<string | null>(null)
@@ -23,6 +32,17 @@ export const wizardConnectRelayUrls = [
 ]
 
 export const wizardConnectSessionKey = 'wizardconnect-session'
+
+/**
+ * Stable fingerprint of the xpubs a session carries. A replayed `wallet_ready` uses the same
+ * xpubs; a different fingerprint means the wallet switched accounts, which needs a full rebuild.
+ */
+const sessionPathsFingerprint = (paths?: Array<{ name?: string; xpub?: string }>) =>
+    (paths || [])
+        .filter((path) => ['receive', 'change', 'defi'].includes(path.name ?? ''))
+        .map((path) => `${path.name}:${path.xpub}`)
+        .sort()
+        .join('|')
 
 const walletIsReady = computed(() => {
     return wallet.value?.ready
@@ -128,6 +148,21 @@ export const useWizardConnectWallet = () => {
                                 network: import.meta.env.VITE_BCH_NETWORK
                             })
                         }
+                        // `wallet_ready` is also the wallet's keepalive: it replays on every
+                        // reconnect (background/foreground, relay flap, ping timeout). When the
+                        // xpubs are the same the wallet needs no rebuild — refresh balances
+                        // quietly instead of re-deriving and blanking the page behind the splash.
+                        const currentPaths = (wallet.value.session as { paths?: PathXpub[] } | undefined)?.paths
+                        const sameSession = wallet.value.ready &&
+                            sessionPathsFingerprint(currentPaths) === sessionPathsFingerprint(session.paths)
+                        if (sameSession) {
+                            // A failed refresh here is harmless: the next keepalive retries it.
+                            await wallet.value.getBalance({ sync: true }).catch(() => undefined)
+                            walletLasySync.value = Date.now()
+                            return
+                        }
+                        // An init from the state watcher is already in flight; let it finish.
+                        if (wallet.value.initializing) return
                         // Flag the window before awaiting: initWallet()'s import and UTXO
                         // fetches are the lag that used to show the Connect button.
                         beginWalletInit()
@@ -135,6 +170,7 @@ export const useWizardConnectWallet = () => {
                             await wallet.value!.initWallet(session)
                             wallet.value.getBalance({ sync: true })
                             walletLasySync.value = Date.now()
+                            if (wallet.value.ready) walletEverReady.value = true
                         } finally {
                             endWalletInit()
                         }
@@ -152,6 +188,8 @@ export const useWizardConnectWallet = () => {
         wallet.value = new WizardConnectExternalWallet({
             network: import.meta.env.VITE_BCH_NETWORK
         })
+        // The next explicit connect is a fresh session: show the splash again.
+        walletEverReady.value = false
         triggerRef(wallet)
     }
 
@@ -173,6 +211,8 @@ export const useWizardConnectWallet = () => {
         const sessionPaths = manager.value?.getSessionPaths() || []
         if((newState === 'connected' && newState !== oldState) || sessionPaths.length > 0) {
             if (!wallet.value?.session && manager.value?.getSessionPaths()) {
+                // Another init (a replayed wallet_ready) is already building the wallet.
+                if (wallet.value?.initializing) return
                 wallet.value = new WizardConnectExternalWallet({
                     network: import.meta.env.VITE_BCH_NETWORK
                 })
@@ -181,6 +221,7 @@ export const useWizardConnectWallet = () => {
                     await wallet.value!.initWallet({ paths: manager.value!.getSessionPaths() as PathXpub[] })
                     await wallet.value.getBalance({ sync: true })
                     walletLasySync.value = Date.now()
+                    if (wallet.value.ready) walletEverReady.value = true
                 } finally {
                     endWalletInit()
                 }
@@ -198,6 +239,7 @@ export const useWizardConnectWallet = () => {
         wallet,
         walletLasySync,
         walletIsReady,
+        walletEverReady,
         showQR,
         qrURI,
         qrDataURI,
