@@ -1,6 +1,7 @@
 import type { Utxo, WatchWallet } from 'mainnet-js'
 import { ExternalWallet } from '../types'
 import { getWatchWalletClass } from '../get-watch-wallet-class'
+import { walletConnectCacheId } from '../wallet-cache-id'
 
 /**
  * The wallet behind a WalletConnect session.
@@ -48,6 +49,11 @@ export class WalletConnectExternalWallet implements ExternalWallet {
 
     getTokenDepositAddress(_index?: number): string {
         return this.watchWallet?.getTokenDepositAddress() ?? ''
+    }
+
+    /** The connected address is the only identity a WalletConnect session carries. */
+    getCacheId(): string {
+        return this.address ? walletConnectCacheId(this.address) : ''
     }
 
     async getBalance(options?: { sync: boolean }) {

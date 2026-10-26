@@ -2,6 +2,7 @@ import { HDWallet, NetworkType, Utxo } from "mainnet-js";
 import { ExternalWallet, UtxoWithPath } from "./types";
 import { PathXpub } from "@wizardconnect/core";
 import { getHDWalletClass } from "./get-hd-wallet-class";
+import { wizardConnectCacheId } from "./wallet-cache-id";
 import { CashAddressNetworkPrefix, decodeHdPublicKey, encodeHdPublicKey } from "bitauth-libauth-v3";
 
 
@@ -17,6 +18,8 @@ export class WizardConnectExternalWallet implements ExternalWallet {
     balance: bigint | undefined 
     utxos: UtxoWithPath[] | undefined
     session: any | undefined
+    /** Receive xpub from the session — the wallet's cache identity (see `getCacheId`). */
+    receiveXpub?: string
     network: 'chipnet' | 'mainnet' | 'testnet'
 
     constructor(options?: { ready?: boolean, network?: 'chipnet' | 'mainnet' | 'testnet'}) {
@@ -35,6 +38,7 @@ export class WizardConnectExternalWallet implements ExternalWallet {
             const receiveXPub = session.paths.find((p: WZWalletPath) => p.name === 'receive')?.xpub
             const changeXPub = session.paths.find((p: WZWalletPath) => p.name === 'change')?.xpub
             const defiXPub = session.paths.find((p: WZWalletPath) => p.name === 'defi')?.xpub
+            this.receiveXpub = receiveXPub
             
             let network: string  = this.network
 
@@ -95,6 +99,14 @@ export class WizardConnectExternalWallet implements ExternalWallet {
 
     getTokenDepositAddress(index?: number): string {
         return this.receive?.getTokenDepositAddress(index ?? 0) as string
+    }
+
+    /**
+     * The receive xpub identifies this wallet independently of the addresses the scan happens to
+     * find, so the authhead snapshot survives address discovery changes and reconnects unchanged.
+     */
+    getCacheId(): string {
+        return this.receiveXpub ? wizardConnectCacheId(this.receiveXpub) : ''
     }
 
     async getBalance(option?: { sync: boolean }) {
