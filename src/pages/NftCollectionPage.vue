@@ -260,6 +260,7 @@ import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, NftRecord } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { useRegistryPublishAuthorization } from 'src/composables/useRegistryPublishAuthorization'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
@@ -267,6 +268,7 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+const { ensureAuthorized } = useRegistryPublishAuthorization()
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
 const registryStore = useRegistryStore()
@@ -382,8 +384,10 @@ const deleteNft = (nft: NftRecord) => {
 }
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
+const TASK_VERIFY_AUTHHEAD = 'verify-authhead'
 
 const publishTaskList = [
+    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
     { id: TASK_UPLOAD_REGISTRY, label: 'Uploading registry to IPFS' },
     ...txTaskList,
 ]
@@ -402,11 +406,26 @@ const publishNfts = async () => {
         $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
-    updateStep(TASK_UPLOAD_REGISTRY, 'running')
-
     try {
 
-        const { contentHash, identity } = authhead.value.identitySnapshotIdentifier
+        const currentAuthhead = authhead.value!
+        const { contentHash, identity } = currentAuthhead.identitySnapshotIdentifier!
+
+        // Authorization first: an authhead the authchain no longer tracks for this registry must not
+        // spend or upload anything.
+        updateStep(TASK_VERIFY_AUTHHEAD, 'running')
+        const authorized = await ensureAuthorized({
+            authheadTxid: currentAuthhead.txid,
+            registryIdentity: identity.authbase,
+        })
+        updateStep(TASK_VERIFY_AUTHHEAD, authorized ? 'done' : 'failed')
+        if (!authorized) {
+            // The dialog already explains why; this is a stop, not a failure notification.
+            stopLoader(0)
+            return
+        }
+
+        updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
         const bumpArtifact = await getRegistryWorker().bumpRegistry({
             originalContentHash: contentHash,

@@ -186,6 +186,7 @@ import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import { broadcastTransaction } from 'src/services/transaction'
 import { createSquareThumbnail } from 'src/utils'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { useRegistryPublishAuthorization } from 'src/composables/useRegistryPublishAuthorization'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
@@ -207,9 +208,12 @@ const {
 } = useWalletSigner()
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+const { ensureAuthorized } = useRegistryPublishAuthorization()
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
+const TASK_VERIFY_AUTHHEAD = 'verify-authhead'
 const publishTaskList = [
+    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
     { id: TASK_UPLOAD_REGISTRY, label: t('info.uploadingRegistryToIpfs') },
     ...txTaskList,
 ]
@@ -388,12 +392,30 @@ const onPublishClick = async () => {
         $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
-    updateStep(TASK_UPLOAD_REGISTRY, 'running')
-
     try {
 
         const authhead = activeAuthhead.value as UtxoWithAuthKey
         const existingIdentifier = authhead.identitySnapshotIdentifier
+        // The registry's authbase, shared by both branches below: an existing identity's authbase
+        // is authoritative; the route and token category are only fallbacks for a brand-new one.
+        const authbase = existingIdentifier?.identity.authbase ||
+            (route.query.authbase as string) || authhead.token?.category
+
+        // Authorization first: an authhead the authchain no longer tracks for this registry must not
+        // spend or upload anything.
+        updateStep(TASK_VERIFY_AUTHHEAD, 'running')
+        const authorized = await ensureAuthorized({
+            authheadTxid: authhead.txid,
+            registryIdentity: authbase,
+        })
+        updateStep(TASK_VERIFY_AUTHHEAD, authorized ? 'done' : 'failed')
+        if (!authorized) {
+            // The dialog already explains why; this is a stop, not a failure notification.
+            stopLoader(0)
+            return
+        }
+
+        updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value)) as IdentitySnapshot
 
@@ -430,8 +452,6 @@ const onPublishClick = async () => {
             uris = bumpArtifact.uris
         } else {
             // No registry yet — create and publish a brand-new full registry.
-            const authbase = (route.query.authbase as string) || authhead.token!.category
-
             if (clonedSnapshot.token) {
                 clonedSnapshot.token.category = authbase
             }
@@ -495,8 +515,6 @@ const onPublishClick = async () => {
             updateStep(TASK_BROADCASTING, 'failed')
             throw broadcastError
         }
-
-        const authbase = (route.query.authbase as string) || authhead.token!.category
 
         if (existingIdentifier) {
             await getRegistryWorker().commitBumpRegistry(existingIdentifier.contentHash, `${txid}:0`)

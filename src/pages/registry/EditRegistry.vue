@@ -111,6 +111,7 @@ import { BaseWallet, NetworkType } from 'mainnet-js'
 import { getRegistryWorker } from 'src/workers'
 import { broadcastTransaction } from 'src/services/transaction'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { useRegistryPublishAuthorization } from 'src/composables/useRegistryPublishAuthorization'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
@@ -119,9 +120,12 @@ const router = useRouter()
 const { t } = useI18n()
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+const { ensureAuthorized } = useRegistryPublishAuthorization()
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
+const TASK_VERIFY_AUTHHEAD = 'verify-authhead'
 const publishTaskList = [
+    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
     { id: TASK_UPLOAD_REGISTRY, label: t('info.uploadingRegistryToIpfs') },
     ...txTaskList,
 ]
@@ -213,11 +217,25 @@ const onPublishClick = async () => {
         $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
-    updateStep(TASK_UPLOAD_REGISTRY, 'running')
-
     let broadcastTxidCopy = ''
 
     try {
+        // Authorization first: an authhead the authchain no longer tracks for this registry must not
+        // spend or upload anything.
+        updateStep(TASK_VERIFY_AUTHHEAD, 'running')
+        const authorized = await ensureAuthorized({
+            authheadTxid: activeAuthhead.value.txid,
+            registryIdentity: record.registryIdentity as string,
+        })
+        updateStep(TASK_VERIFY_AUTHHEAD, authorized ? 'done' : 'failed')
+        if (!authorized) {
+            // The dialog already explains why; this is a stop, not a failure notification.
+            stopLoader(0)
+            return
+        }
+
+        updateStep(TASK_UPLOAD_REGISTRY, 'running')
+
         // Persist the registry-level edits so bumpRegistry picks them up from the
         // compact registry record, then let it merge any pending identity/nft changes.
         await db.registry.update(record.id, {

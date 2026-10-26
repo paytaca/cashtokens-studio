@@ -252,6 +252,7 @@ import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { getNftCollectionType } from 'src/core/bcmr'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { useRegistryPublishAuthorization } from 'src/composables/useRegistryPublishAuthorization'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const ROWS_PER_PAGE = 10
@@ -261,8 +262,10 @@ const DEFAULT_NFT_CATEGORY: NftCategoryI = {
 }
 
 const TASK_UPLOAD_REGISTRY = 'upload-registry'
+const TASK_VERIFY_AUTHHEAD = 'verify-authhead'
 
 const publishTaskList = [
+    { id: TASK_VERIFY_AUTHHEAD, label: t('info.verifyingAuthhead') },
     { id: TASK_UPLOAD_REGISTRY, label: 'Uploading registry to IPFS' },
     ...txTaskList,
 ]
@@ -277,6 +280,7 @@ const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const { activeAuthhead } = storeToRefs(authguardStore)
 const registryStore = useRegistryStore()
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+const { ensureAuthorized } = useRegistryPublishAuthorization()
 
 const identitySnapshot = ref<IdentitySnapshot>()
 const identitySnapshotRecord = useObservable(
@@ -574,11 +578,25 @@ const onPublishClick = async () => {
         $q.notify({ type: 'warning', message: 'Cancelled by user' })
     })
 
-    updateStep(TASK_UPLOAD_REGISTRY, 'running')
-
     try {
 
         const { contentHash, identity } = activeAuthhead.value!.identitySnapshotIdentifier!
+
+        // Authorization first: an authhead the authchain no longer tracks for this registry must not
+        // spend or upload anything.
+        updateStep(TASK_VERIFY_AUTHHEAD, 'running')
+        const authorized = await ensureAuthorized({
+            authheadTxid: activeAuthhead.value!.txid,
+            registryIdentity: identity.authbase,
+        })
+        updateStep(TASK_VERIFY_AUTHHEAD, authorized ? 'done' : 'failed')
+        if (!authorized) {
+            // The dialog already explains why; this is a stop, not a failure notification.
+            stopLoader(0)
+            return
+        }
+
+        updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
         const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value))
 
