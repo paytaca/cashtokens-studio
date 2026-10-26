@@ -111,6 +111,12 @@ class CashtokensStudioDB extends Dexie {
     this.version(2).stores({
       authheadSnapshot: 'walletId',
     })
+    // v3: wallet ids changed from raw index-0 addresses to hashed identities (`ctswz…`/`ctswc…`,
+    // see core/wallet/wallet-cache-id), so every v2 row sits under a key nothing will look up
+    // again. The payload is a rebuildable cache — drop it once instead of carrying dead rows.
+    this.version(3).stores({}).upgrade((transaction) =>
+      transaction.table('authheadSnapshot').clear()
+    )
   }
 
   async saveUtxos(utxos: MaybeUtxoRecord[], walletId: string) {

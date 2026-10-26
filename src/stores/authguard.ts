@@ -21,13 +21,36 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
   const authkeys = ref<UtxoWithPath[]>([])
   const authkeysLastSync = ref<number>()
   const authkeysLoading = ref<boolean>()
-  const activeAuthhead = ref<DecoratedUtxo | null>(LocalStorage.getItem('active_authhead') ? parseLibauthStringified(LocalStorage.getItem('active_authhead') as object) : null)
+  /**
+   * The persisted active authhead is wallet-bound: the stored `walletId` has to match the current
+   * wallet's cache id before the row is trusted. A row written without an id (older builds) could
+   * belong to any wallet, so it is dropped rather than restored.
+   */
+  const readStoredActiveAuthhead = (): { walletId: string, authhead: DecoratedUtxo } | undefined => {
+    const stored = LocalStorage.getItem('active_authhead') as object | null
+    if (!stored) return undefined
+    try {
+      const parsed = parseLibauthStringified(stored) as { walletId?: string, authhead?: DecoratedUtxo } | null
+      if (parsed?.walletId && parsed?.authhead) {
+        return { walletId: parsed.walletId, authhead: parsed.authhead }
+      }
+    } catch (error) {
+      console.error('active authhead restore failed:', error)
+    }
+    LocalStorage.removeItem('active_authhead')
+    return undefined
+  }
+  const storedActiveAuthhead = readStoredActiveAuthhead()
+  const activeAuthhead = ref<DecoratedUtxo | null>(storedActiveAuthhead?.authhead ?? null)
+  /** Wallet the restored `activeAuthhead` belongs to; kept in sync with it, never persisted on its own. */
+  const activeAuthheadWalletId = ref<string | undefined>(storedActiveAuthhead?.walletId)
   const authheadLoading = ref<Record<string, boolean>>({}) // {<txid:vout>: true}
   /** Authheads handed over by the auth UTXO import flow, spotlighted once on the managed tokens page. */
   const receivedAuthheads = ref<DecoratedUtxo[]>([])
   /**
-   * Wallet fingerprint for the authhead snapshot cache: the index-0 deposit address, derived
-   * locally from the receive xpub — no chain I/O, stable per wallet and network.
+   * Wallet fingerprint for the authhead snapshot cache: an opaque, wallet-scoped id derived by the
+   * wallet itself (`ctswz…` from the receive xpub, `ctswc…` from the session address — see
+   * `core/wallet/wallet-cache-id`). Stable per wallet and network, and never the raw key material.
    */
   const walletFingerprint = ref<string>()
   
@@ -238,7 +261,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
         
         authkeys.value = filterAuthKeys(utxos) as UtxoWithPath[]
         authkeysLastSync.value = Date.now()
-        walletFingerprint.value = externalWallet?.getDepositAddress?.(0) || undefined
+        walletFingerprint.value = externalWallet?.getCacheId?.() || undefined
         // Last known rows before the (slower) chain scan refreshes them: pages render instantly.
         await hydrateAuthheadsSnapshot().catch((error) => console.error('authhead snapshot hydrate failed:', error))
         return authkeys.value
@@ -250,8 +273,14 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
 
   const setActiveAuthhead = (authhead: UtxoWithAuthKey) => {
     activeAuthhead.value = authhead
-    if (authhead) {
-      LocalStorage.setItem('active_authhead', JSON.parse(stringify(authhead)))
+    // Only a wallet-bound selection may survive a reload: an unbound one could surface under a
+    // different wallet later. Choosing `null` clears both the value and the binding.
+    activeAuthheadWalletId.value = authhead ? walletFingerprint.value : undefined
+    if (authhead && walletFingerprint.value) {
+      LocalStorage.setItem('active_authhead', JSON.parse(stringify({
+        walletId: walletFingerprint.value,
+        authhead,
+      })))
     } else {
       LocalStorage.removeItem('active_authhead')
     }
@@ -273,10 +302,16 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     // A different wallet means the in-memory rows belong to someone else: drop them before
     // hydrating that wallet's snapshot, rather than flashing one wallet's tokens under another.
     if (previousWalletId && previousWalletId !== walletId) authheads.value = []
+    // Same rule for the selected authhead: a selection made under another wallet is not valid here.
+    if (activeAuthheadWalletId.value && activeAuthheadWalletId.value !== walletId) {
+      setActiveAuthhead(null as any)
+    }
     hydrateAuthheadsSnapshot().catch((error) => console.error('authhead snapshot hydrate failed:', error))
   })
 
   watch(() => authkeysLastSync.value, async (authkeysLastSync, authkeysPrevSync) => {
+    // A reset stamps this back to undefined; with no wallet there is nothing to reload.
+    if (!walletFingerprint.value) return
     if (authkeysLastSync !== authkeysPrevSync) {
       try {
         await loadAuthheads(authkeys.value || [], true, true)
@@ -285,6 +320,28 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
       }
     }
   })
+
+  /**
+   * Ends a wallet session: every wallet-scoped row in memory goes away, so the pages never show
+   * one wallet's data under another. The on-disk authhead snapshot stays — it is that wallet's
+   * cache and hydrates again the next time the same wallet connects.
+   *
+   * `activeAuthhead` is deliberately left to the fingerprint watcher above: it keeps the selection
+   * for the same wallet reconnecting, and clears it (storage included) the moment a different
+   * wallet's fingerprint arrives.
+   */
+  const resetWalletScopedState = () => {
+    // Clear the id first: the fingerprint watcher above must stay quiet on the way down.
+    walletFingerprint.value = undefined
+    authheads.value = []
+    authkeys.value = []
+    authheadsLastSync.value = undefined
+    authkeysLastSync.value = undefined
+    authheadsLoading.value = false
+    authkeysLoading.value = false
+    authheadLoading.value = {}
+    receivedAuthheads.value = []
+  }
 
 
   return {
@@ -303,7 +360,8 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     setActiveAuthhead,
     setReceivedAuthheads,
     clearReceivedAuthheads,
-    updateActiveAuthhead
+    updateActiveAuthhead,
+    resetWalletScopedState
   }
 }) 
 
