@@ -40,6 +40,33 @@ check anything you bring back.
 
 **Note**: The new packages (`mainnet-js` v3, `@bitauth/libauth` v3, `cashscript` v0.8+) have breaking changes and significant improvements. Migration is an opportunity to adopt these.
 
+## WalletConnect: an additive, unpluggable connect path
+
+The app connects through two independent stacks. WizardConnect (`src/composables/useWizardConnectWallet.ts`
++ `src/core/wallet/wizard-connect.ts`) is the base one; WalletConnect (`src/composables/useWalletConnectWallet.ts`
++ `src/core/wallet/wallet-connect/`) is the second, for the non-HD wallets that expose a single address.
+`src/composables/useWalletSigner.ts` is the only file that knows both exist — it picks one and forwards
+the call, without merging the two implementations.
+
+The transaction builders are shared and untouched: they already emit a `SignTransactionRequest` whose
+`transaction` field is the WalletConnect payload (`WcSignTransactionRequest`), so the same request feeds
+either wallet. A WalletConnect session only differs in that its UTXOs carry no `pathName`/`addressIndex`
+(which every builder already tolerates) and that it signs through `WatchWallet` over one address.
+
+**The one wire-format difference.** WalletConnect's BCH schema validates libauth's `stringify` encoding
+strictly — `Uint8Array` as `"<Uint8Array: 0x…>"`, `bigint` as `"<bigint: …n>"`, and the transaction as a
+decoded object. The builders emit plain hex and decimal strings (which WizardConnect's lenient parser
+accepts) and a hex transaction, so `toWalletConnectParams()` in
+`src/core/wallet/wallet-connect/session.ts` re-encodes the payload at the edge. It mirrors cashscript's
+`generateWcTransactionObject` plus the reference connector's `JSON.parse(stringify(options))`. Sending
+the builders' raw payload gets you `Error in validation wallet connect schema` from the wallet.
+
+To remove the feature: delete `src/core/wallet/wallet-connect/`, `src/core/wallet/get-watch-wallet-class.ts`,
+`src/composables/useWalletConnectWallet.ts`, `src/composables/useWalletSigner.ts` and
+`src/components/WalletConnectButton.vue`; revert the pages to `manager.value!.signTransaction(...)`; then
+`yarn remove @walletconnect/sign-client @walletconnect/modal`. Nothing in WizardConnect depends on any of it.
+`@walletconnect/*` is imported lazily, so its chunks are only fetched when WalletConnect is actually used.
+
 ## Migration Goals
 
 1. **Consolidate dependencies** - Move to consistent package usage

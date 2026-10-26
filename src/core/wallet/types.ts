@@ -7,7 +7,12 @@ export type UtxoWithPath = Utxo & {
 
 export interface ExternalWallet {
     ready?: boolean,
-    utxos?: UtxoWithPath[]
+    initializing?: boolean
+    /**
+     * `Utxo[]` as well as `UtxoWithPath[]`: a single-address WalletConnect session has no derivation
+     * path to attach, and every builder already tolerates a missing `pathName`.
+     */
+    utxos?: UtxoWithPath[] | Utxo[]
     balance?: bigint
     session?: any
 

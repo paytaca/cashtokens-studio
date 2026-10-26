@@ -243,7 +243,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
 import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
@@ -273,9 +273,9 @@ const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const {
-    manager,
     wallet,
-} = useWizardConnectWallet()
+    signTransaction,
+} = useWalletSigner()
 
 const authhead = computed(() => activeAuthhead.value)
 
@@ -442,7 +442,7 @@ const publishNfts = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() });
+        const response = await signTransaction(publishRegistryRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')
@@ -621,7 +621,7 @@ const openMintChildNftDialog = (action: 'issuance' | 'burn') => {
             updateStep(TASK_PREPARE_TX, 'done')
             updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-            const response = await manager.value!.signTransaction(signRequest, { signal: getSignal() });
+            const response = await signTransaction(signRequest, { signal: getSignal() });
 
             updateStep(TASK_WAIT_FOR_SIG, 'done')
             updateStep(TASK_BROADCASTING, 'running')

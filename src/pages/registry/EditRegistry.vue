@@ -94,7 +94,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
-import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet'
+import { useWalletSigner } from 'src/composables/useWalletSigner'
 
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
@@ -131,9 +131,9 @@ const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const {
-    manager,
     wallet,
-} = useWizardConnectWallet()
+    signTransaction,
+} = useWalletSigner()
 
 const registry = ref<CompactRegistry>()
 const initialRegistryJson = ref('')
@@ -254,7 +254,7 @@ const onPublishClick = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() })
+        const response = await signTransaction(publishRegistryRequest, { signal: getSignal() })
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')

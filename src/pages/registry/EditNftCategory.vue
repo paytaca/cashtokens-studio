@@ -267,7 +267,7 @@ const publishTaskList = [
     ...txTaskList,
 ]
 
-const { wallet, manager } = inject('wizardConnectWallet') as any
+const { wallet, signTransaction } = inject('walletSigner') as any
 const $q = useQuasar()
 const { t } = useI18n()
 const route = useRoute()
@@ -627,7 +627,7 @@ const onPublishClick = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await manager.value!.signTransaction(publishRegistryRequest, { signal: getSignal() });
+        const response = await signTransaction(publishRegistryRequest, { signal: getSignal() });
 
         updateStep(TASK_WAIT_FOR_SIG, 'done')
         updateStep(TASK_BROADCASTING, 'running')

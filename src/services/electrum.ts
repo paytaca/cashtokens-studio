@@ -58,3 +58,54 @@ export async function isTransactionInMempool({
 
     throw new Error('Request timed out verifying tx in mempool. Please check address history in explorer.')
 }
+
+export type AuthheadSpentParams = {
+    /** The AuthGuard contract address the vaulted output lives at. */
+    address: string
+    /** `${txid}:${vout}` of the vaulted output the transaction spends. */
+    authheadId: string
+    /** Chain the transaction was broadcast on. Defaults to `VITE_BCH_NETWORK`. */
+    network?: Network
+    /** Total budget for polling before giving up. */
+    timeout?: number
+    /** Delay between polls. */
+    interval?: number
+}
+
+/**
+ * Wait for a vaulted authhead output to leave its AuthGuard address.
+ *
+ * The authhead's fungible reserves are read back through cashscript's `ElectrumNetworkProvider`
+ * (`getLockedAuthheadUtxos` → `Contract.getUtxos`), which talks to a **different electrum server**
+ * than mainnet-js's `waitForTransaction` does (`chipnet.bch.ninja` vs `chipnet.imaginary.cash`, and
+ * likewise on mainnet). Waiting for the transaction on the mainnet-js provider therefore says
+ * nothing about whether the vaulted UTXO has moved yet, which is how a release could land and leave
+ * the reserves column showing its previous amount.
+ *
+ * Polls the contract's own address on the same client the refresh will use. Resolves `false` when
+ * the budget runs out — the transaction itself already succeeded, so that is not an error.
+ */
+export async function waitForAuthheadSpent({
+    address,
+    authheadId,
+    network,
+    timeout = 15000,
+    interval = 1000,
+}: AuthheadSpentParams): Promise<boolean> {
+    const provider = new ElectrumNetworkProvider(network ?? configuredNetwork())
+    const deadline = Date.now() + timeout
+
+    for (;;) {
+        try {
+            const utxos = await provider.getUtxos(address)
+
+            if (!utxos.some((utxo) => `${utxo.txid}:${utxo.vout}` === authheadId)) return true
+        } catch {
+            // A flaky electrum round must not turn a landed transaction into a failure.
+        }
+
+        if (Date.now() >= deadline) return false
+
+        await delay(interval)
+    }
+}
