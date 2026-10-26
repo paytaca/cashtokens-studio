@@ -15,6 +15,7 @@ import {
   type WalletConnectSession,
   type WalletConnectSigner
 } from 'src/core/wallet/wallet-connect'
+import { useAuthguardStore } from 'src/stores/authguard'
 
 export type WalletConnectState = 'idle' | 'connecting' | 'connected'
 
@@ -61,6 +62,9 @@ const resetWallet = () => {
   walletIcon.value = null
   state.value = 'idle'
   triggerRef(wallet)
+  // Ending the session ends its authguard state too: the next wallet must never inherit rows that
+  // were loaded for this one. Called at runtime only (connect/disconnect/restore), never during SSR.
+  useAuthguardStore().resetWalletScopedState()
 }
 
 const ensureClient = async (): Promise<WalletConnectClient> => {

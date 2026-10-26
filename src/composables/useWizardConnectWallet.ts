@@ -2,6 +2,7 @@ import { DisconnectReason, RelayMsgAction, type PathXpub, type ProtocolMessage, 
 import { useWizardConnect } from 'wizardconnect-vue'
 import { computed, ref, shallowRef, triggerRef, watch } from 'vue'
 import { WizardConnectExternalWallet } from 'src/core/wallet'
+import { useAuthguardStore } from 'src/stores/authguard'
 
 const wallet = shallowRef(new WizardConnectExternalWallet({ network: import.meta.env.VITE_BCH_NETWORK}))
 const walletLasySync = ref<number>()
@@ -137,6 +138,9 @@ export const useWizardConnectWallet = () => {
                     wallet.value = new WizardConnectExternalWallet({
                         network: import.meta.env.VITE_BCH_NETWORK
                     })
+                    // The session is gone, so its authguard state is too. The next wallet must not
+                    // inherit rows that were loaded for this one.
+                    useAuthguardStore().resetWalletScopedState()
                 })
 
                 mgr.on('walletready', async (message: WalletReadyMessage) => {
@@ -188,6 +192,8 @@ export const useWizardConnectWallet = () => {
         wallet.value = new WizardConnectExternalWallet({
             network: import.meta.env.VITE_BCH_NETWORK
         })
+        // Same rule as the manager-level handler: a disconnect ends every wallet-scoped row.
+        useAuthguardStore().resetWalletScopedState()
         // The next explicit connect is a fresh session: show the splash again.
         walletEverReady.value = false
         triggerRef(wallet)
