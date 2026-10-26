@@ -273,6 +273,7 @@ import { importMetadataRegistry } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
 import { DEFAULT_TOKEN_VALUE } from 'src/apps'
 import { broadcastTransaction } from 'src/services/transaction'
+import { waitForAuthheadVisible } from 'src/services/electrum'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList } from 'src/utils'
 import { subscribe } from 'src/services/watchtower'
@@ -676,6 +677,15 @@ const onSubmit = async () => {
         const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
         await (new BaseWallet(networkType)).waitForTransaction({
             txHash: txid
+        })
+
+        // The new authhead sits in the AuthGuard contract at output 0. Wait for it on the electrum
+        // host the authhead scan reads from, otherwise the refresh below runs before that host has
+        // the output and the new token only shows up after a manual page reload.
+        await waitForAuthheadVisible({
+            authkeyCategory: authKeyInput.token?.category || authKeyInput.txid,
+            authheadId: `${txid}:0`,
+            network: import.meta.env.VITE_BCH_NETWORK,
         })
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')

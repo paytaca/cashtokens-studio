@@ -1,5 +1,6 @@
 import { ElectrumNetworkProvider, type Network } from 'cashscript'
 import { delay } from 'mainnet-js'
+import { createAuthguardContract } from 'src/core/authguard'
 
 /** Networks this app is expected to run against (cashscript also knows mocknet/regtest). */
 const SUPPORTED_NETWORKS: Network[] = ['mainnet', 'testnet3', 'testnet4', 'chipnet']
@@ -57,6 +58,71 @@ export async function isTransactionInMempool({
     }
 
     throw new Error('Request timed out verifying tx in mempool. Please check address history in explorer.')
+}
+
+/**
+ * Raw transaction hex from the configured electrum host.
+ *
+ * Electrum serves mempool transactions here as well as confirmed ones, which is what lets the BCMR
+ * authorization guard recognise an authhead that was just spent but is not indexed yet.
+ */
+export async function fetchTransactionHex(txId: string, network?: Network): Promise<string> {
+    const provider = new ElectrumNetworkProvider(network ?? configuredNetwork())
+    return provider.performRequest('blockchain.transaction.get', txId)
+}
+
+export type AuthheadVisibleParams = {
+    /** Category of the AuthKey token that guards the authhead. */
+    authkeyCategory: string
+    /** `${txid}:${vout}` of the authhead the transaction created. */
+    authheadId: string
+    /** Chain the transaction was broadcast on. Defaults to `VITE_BCH_NETWORK`. */
+    network?: Network
+    /** Total budget for polling before giving up. */
+    timeout?: number
+    /** Delay between polls. */
+    interval?: number
+}
+
+/**
+ * Wait for an authhead to appear in its AuthGuard address on the electrum host the authhead scan
+ * uses.
+ *
+ * Creating a token or minting an NFT locks the new authhead into the AuthGuard contract, and the
+ * managed tokens table reads it back through cashscript's electrum host. `BaseWallet.waitForTransaction`
+ * resolves on mainnet-js's host instead — a different server — so refreshing right after the buy
+ * transaction can scan before this host has the output, leaving the new token missing from the table
+ * until a manual reload. Poll on the host the refresh actually reads from.
+ *
+ * Resolves `false` when the budget runs out — the transaction itself already succeeded, so that is
+ * not an error.
+ */
+export async function waitForAuthheadVisible({
+    authkeyCategory,
+    authheadId,
+    network,
+    timeout = 15000,
+    interval = 1000,
+}: AuthheadVisibleParams): Promise<boolean> {
+    const authguard = createAuthguardContract({
+        authkeyTokenId: authkeyCategory,
+        network: network ?? configuredNetwork(),
+    })
+    const deadline = Date.now() + timeout
+
+    for (;;) {
+        try {
+            const utxos = await authguard.getUtxos()
+
+            if (utxos.some((utxo) => `${utxo.txid}:${utxo.vout}` === authheadId)) return true
+        } catch {
+            // A flaky electrum round must not turn a landed transaction into a failure.
+        }
+
+        if (Date.now() >= deadline) return false
+
+        await delay(interval)
+    }
 }
 
 export type AuthheadSpentParams = {

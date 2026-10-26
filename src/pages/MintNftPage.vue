@@ -207,6 +207,7 @@ import FormField from 'components/FormField.vue'
 import { useAppStore } from 'src/stores/app'
 import { db } from 'src/core/client-db'
 import { broadcastTransaction } from 'src/services/transaction'
+import { waitForAuthheadVisible } from 'src/services/electrum'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { mintNftMutables } from 'src/core/transaction/mint-nft-mutables'
@@ -459,6 +460,18 @@ const mint = async () => {
             txHash: txid
         })
 
+        // The minted authhead sits in the AuthGuard contract at output 0. Wait for it on the electrum
+        // host the authhead scan reads from (`waitForTransaction` watches a different one), so the
+        // refresh below adopts it instead of keeping the authhead this transaction just spent.
+        const minterAuthkeyCategory = activeMinter.value?.authkey?.token?.category
+        if (minterAuthkeyCategory) {
+            await waitForAuthheadVisible({
+                authkeyCategory: minterAuthkeyCategory,
+                authheadId: `${txid}:0`,
+                network: import.meta.env.VITE_BCH_NETWORK,
+            })
+        }
+
         updateStep(TASK_WAITING_PROPAGATION, 'done')
 
         await db.saveActivity({
@@ -469,11 +482,10 @@ const mint = async () => {
 
         updateStep(TASK_REFRESH_UTXOS, 'running')
 
-        loadAuthkeys(wallet.value, true).then(() => {
-            triggerRef(wallet)
-        })
+        await loadAuthkeys(wallet.value, true).catch((error) => console.error(error))
+        triggerRef(wallet)
 
-        await updateActiveAuthhead()
+        await updateActiveAuthhead({ authheadTxid: txid, bumpedRegistry: false })
 
         updateStep(TASK_REFRESH_UTXOS, 'done')
 
@@ -489,11 +501,12 @@ const mint = async () => {
         }).onDismiss(() => {
 
             if (activeMinter.value?.isAuthhead) {
-                const authheadUtxo = activeMinter.value
-                if (authheadUtxo) {
-                    authguardStore.setActiveAuthhead(authheadUtxo)
-                }
-                const authkey = authheadUtxo?.authkey
+                // `activeMinter` is the authhead this mint spent; `updateActiveAuthhead()` above moved
+                // the store's selection to the authhead the mint created. Redirect with the fresh one:
+                // publishing from the spent one is refused by the authchain guard (or forks the
+                // identity), and the mint builder would spend a UTXO that no longer exists.
+                const authheadUtxo = (authguardStore.activeAuthhead ?? activeMinter.value) as UtxoWithAuthKey
+                const authkey = authheadUtxo.authkey
                 return router.push({
                     name: 'edit-identity-snapshot-nfts',
                     query: {
