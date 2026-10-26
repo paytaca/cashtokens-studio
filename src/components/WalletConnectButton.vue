@@ -2,8 +2,9 @@
   <q-btn v-if="isEnabled" :color="color" :unelevated="unelevated" :rounded="rounded" :no-caps="noCaps"
     :loading="state === 'connecting'" :disable="state === 'connecting' || walletIsReady" class="wallet-connect-button"
     @click="onConnect">
-    <q-icon name="mdi-link-variant" size="18px" class="q-mr-sm" />
-    <span>{{ state === 'connecting' ? t('index.connect.walletConnect.connecting') : (label ?? t('index.connect.walletConnect.action')) }}</span>
+    <img src="/images/walletconnect_icon.png" alt="" class="wallet-connect-button-icon q-mr-sm" />
+    <span>{{ state === 'connecting' ? t('index.connect.walletConnect.connecting') : (label ??
+      t('index.connect.walletConnect.action')) }}</span>
   </q-btn>
 </template>
 
@@ -46,3 +47,11 @@ const onConnect = async () => {
   }
 }
 </script>
+
+<style scoped>
+.wallet-connect-button-icon {
+  height: 18px;
+  width: auto;
+  display: block;
+}
+</style>

@@ -13,7 +13,8 @@
 
       <!-- Wallet connection -->
       <div v-if="!walletIsReady" class="connect-section">
-        <q-card class="connect-card">
+        <q-card class="connect-card connect-card--action" role="button" tabindex="0" @click="onConnect"
+          @keydown.enter="onConnect" @keydown.space.prevent="onConnect">
           <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
 
             <div class="connect-icon">
@@ -36,7 +37,7 @@
 
               <template v-else>
                 <div class="text-subtitle1 text-weight-bold text-white">
-                  {{ t('index.connect.title') }}
+                  {{ t('index.connect.wizardConnect.title') }}
                 </div>
 
                 <div class="text-caption text-grey-5 q-mt-xs">
@@ -45,17 +46,16 @@
               </template>
             </div>
 
-            <q-btn v-if="!isConnecting && !walletIsReady" color="primary" unelevated rounded no-caps
-              class="connect-button text-weight-bold" :label="t('index.connect.action')" @click="onConnect" />
-
           </q-card-section>
         </q-card>
 
-        <q-card v-if="walletConnectEnabled" class="connect-card q-mt-md">
+        <q-card v-if="walletConnectEnabled" class="connect-card connect-card--action q-mt-md" role="button"
+          tabindex="0" @click="onWalletConnect" @keydown.enter="onWalletConnect"
+          @keydown.space.prevent="onWalletConnect">
           <q-card-section class="row items-center no-wrap q-pa-md q-pa-sm-lg">
 
             <div class="connect-icon">
-              <q-icon name="mdi-link-variant" size="38px" color="primary" />
+              <q-img src="/images/walletconnect_icon.png" fit="contain" class="connect-icon-img" />
             </div>
 
             <div class="col q-ml-md">
@@ -64,11 +64,12 @@
               </div>
 
               <div class="text-caption text-grey-5 q-mt-xs">
-                {{ t('index.connect.walletConnect.subtitle') }}
+                {{ walletConnectState === 'connecting'
+                  ? t('index.connect.walletConnect.connecting')
+                  : t('index.connect.walletConnect.subtitle') }}
               </div>
             </div>
 
-            <WalletConnectButton class="connect-button text-weight-bold" />
           </q-card-section>
         </q-card>
       </div>
@@ -134,7 +135,6 @@ import { WIZARDCONNECT_LOGO, WizardConnectQRDialog } from 'wizardconnect-vue';
 import { useWizardConnectWallet } from 'src/composables/useWizardConnectWallet';
 import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { useWalletConnectWallet } from 'src/composables/useWalletConnectWallet';
-import WalletConnectButton from 'src/components/WalletConnectButton.vue';
 
 const { t } = useI18n();
 const $q = useQuasar();
@@ -145,7 +145,11 @@ $q.dark.set(true);
 const { state, connect, showQR, uri, qrUri, closeConnectDialog } =
   useWizardConnectWallet();
 const { walletIsReady } = useWalletSigner();
-const { isEnabled: walletConnectEnabled } = useWalletConnectWallet();
+const {
+  isEnabled: walletConnectEnabled,
+  state: walletConnectState,
+  connect: connectWalletConnect,
+} = useWalletConnectWallet();
 
 const bannerSize = computed(() => {
   if ($q.screen.lt.sm) {
@@ -191,7 +195,21 @@ const onFeatureCardClick = (card: { query: Record<string, string> }) => {
 };
 
 const onConnect = () => {
+  if (isConnecting.value || walletIsReady.value) return;
   connect();
+};
+
+/** The WalletConnect card is its own button: connect from the card click. */
+const onWalletConnect = async () => {
+  if (walletConnectState.value === 'connecting' || walletIsReady.value) return;
+  try {
+    await connectWalletConnect();
+  } catch (error) {
+    $q.notify({
+      type: 'negative',
+      message: `${t('index.connect.walletConnect.failed')}: ${error instanceof Error ? error.message : String(error)}`,
+    });
+  }
 };
 
 const closeQR = () => {
@@ -276,8 +294,8 @@ const onQRUpdateShow = (val: boolean) => {
 }
 
 .connect-icon {
-  width: 52px;
-  height: 52px;
+  width: 64px;
+  height: 64px;
 
   flex-shrink: 0;
 
@@ -285,25 +303,49 @@ const onQRUpdateShow = (val: boolean) => {
   align-items: center;
   justify-content: center;
 
-  border-radius: 15px;
+  border-radius: 18px;
 
   background: rgba(var(--q-primary), 0.1);
   border: 1px solid rgba(var(--q-primary), 0.2);
+
+  transition: background-color 160ms ease, border-color 160ms ease;
 }
 
 .connect-icon-img {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
 }
 
-.connect-button {
-  flex-shrink: 0;
-  min-width: 150px;
-  padding: 9px 20px;
+.connect-card--action {
+  cursor: pointer;
+
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+
+  -webkit-tap-highlight-color: transparent;
+}
+
+.connect-card--action:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(var(--q-primary), 0.5);
 
   box-shadow:
-    0 5px 15px rgba(var(--q-primary), 0.18);
+    0 16px 40px rgba(0, 0, 0, 0.4),
+    0 0 32px rgba(var(--q-primary), 0.18);
+}
+
+.connect-card--action:hover .connect-icon {
+  background: rgba(var(--q-primary), 0.18);
+  border-color: rgba(var(--q-primary), 0.35);
+}
+
+.connect-card--action:focus-visible {
+  outline: 2px solid rgba(var(--q-primary), 0.6);
+  outline-offset: 2px;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -524,11 +566,6 @@ const onQRUpdateShow = (val: boolean) => {
 
   .connect-card .q-card__section {
     flex-wrap: wrap;
-  }
-
-  .connect-button {
-    width: 100%;
-    margin-top: 14px;
   }
 
   .feature-card,

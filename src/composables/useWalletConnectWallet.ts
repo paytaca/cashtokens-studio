@@ -8,6 +8,7 @@ import {
   initWalletConnectClient,
   restoreWalletConnectSession,
   walletConnectChainId,
+  WalletConnectCancelledError,
   WalletConnectExternalWallet,
   type WalletConnectClient,
   type WalletConnectModal,
@@ -147,7 +148,8 @@ export const useWalletConnectWallet = () => {
       else resetWallet()
     } catch (error) {
       resetWallet()
-      throw error
+      // Closing the dialog is a cancel, not a failure: back to idle without an error toast.
+      if (!(error instanceof WalletConnectCancelledError)) throw error
     }
   }
 

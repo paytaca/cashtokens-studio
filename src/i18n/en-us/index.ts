@@ -305,9 +305,9 @@ export default {
         subtitle: 'Connect an HD wallet over the WizardConnect relay',
       },
       walletConnect: {
-        title: 'WalletConnect',
+        title: 'Wallet Connect',
         subtitle: 'Connect a single-address wallet',
-        action: 'WalletConnect',
+        action: 'Connect',
         connecting: 'Connecting via WalletConnect...',
         hint: 'Scan the QR code or pick a wallet in the WalletConnect dialog.',
         failed: 'Could not connect via WalletConnect',

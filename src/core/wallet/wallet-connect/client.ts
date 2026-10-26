@@ -26,6 +26,19 @@ export type WalletConnectSession = {
 export type WalletConnectModal = {
   openModal(options: { uri: string }): Promise<void>
   closeModal(): void
+  /** Fires on open/close transitions; returns the unsubscribe function. */
+  subscribeModal(callback: (state: { open: boolean }) => void): () => void
+}
+
+/**
+ * Thrown when the user closes the WalletConnect dialog before approving. Callers should treat it as
+ * a cancel — return to idle silently — not as a connection failure.
+ */
+export class WalletConnectCancelledError extends Error {
+  constructor(message = 'WalletConnect dialog closed before approval') {
+    super(message)
+    this.name = 'WalletConnectCancelledError'
+  }
 }
 
 export type WalletConnectClientConfig = {
@@ -102,10 +115,37 @@ export async function connectWalletConnect(
   params: { chainId: string; modal: WalletConnectModal }
 ): Promise<WalletConnectSession | undefined> {
   const { uri, approval } = await client.connect(connectNamespaces(params.chainId))
-  if (uri) await params.modal.openModal({ uri })
+  if (!uri) return approval()
+
+  // `approval()` only settles on approval, protocol rejection, or pairing expiry (~5 min) — closing
+  // the dialog settles nothing. Watch the modal's own open state and race it against approval, so a
+  // user who closes the dialog gets an immediate, distinguishable cancel instead of a stuck session.
+  let unsubscribeModal: () => void = () => undefined
+  const cancelled = new Promise<never>((_resolve, reject) => {
+    let sawOpen = false
+    unsubscribeModal = params.modal.subscribeModal((modalState) => {
+      // modal-core publishes the current state on subscribe: ignore it, react to transitions.
+      if (modalState.open) {
+        sawOpen = true
+        return
+      }
+      if (!sawOpen) return
+      unsubscribeModal()
+      reject(new WalletConnectCancelledError())
+    })
+    void params.modal.openModal({ uri }).catch(() => undefined)
+  })
+
+  const approvalSettled = approval()
+  // After a cancel (or expiry) nothing reads approval()'s outcome; keep its eventual rejection from
+  // surfacing as an unhandled one.
+  approvalSettled.catch(() => undefined)
+
   try {
-    return await approval()
+    return await Promise.race([approvalSettled, cancelled])
   } finally {
+    // Unsubscribe before closing: the programmatic close must not look like a user cancel.
+    unsubscribeModal()
     params.modal.closeModal()
   }
 }
