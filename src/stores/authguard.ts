@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
 import { AuthheadId, filterAuthKeys, getLockedAuthheadUtxos } from 'src/core/authguard'
+import { fetchAuthheadTxid } from 'src/core/chaingraph'
 import type { UtxoWithPath, UtxoWithAuthKey, DecoratedUtxo} from 'src/core/types'
 import { useRegistryStore } from './registry'
 import { LocalStorage } from 'quasar'
@@ -65,7 +66,10 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     if (params?.bumpedRegistry !== false) {
       const refreshed = await loadAuthhead({
         authkey: activeAuthhead.value.authkey,
-        sync: true
+        sync: true,
+        // Pin the scan to the expected authhead when the caller knows it: the authguard address can
+        // hold more than one unspent authhead, and the first one is not necessarily this one.
+        ...(params?.authheadTxid ? { authheadId: `${params.authheadTxid}:0` as AuthheadId } : {})
       })
 
       if (refreshed) {
@@ -286,6 +290,63 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     }
   }
 
+  /**
+   * Point the selection at the authhead the authchain actually tracks.
+   *
+   * The stored selection is only refreshed by the page that spends it (publish/mint), so a mint or
+   * publish that ran in another tab, another device or a previous session leaves this session
+   * pointing at an ancestor — publishing is then refused by the BCMR guard, and minting would spend
+   * a spent UTXO.
+   *
+   * The authguard address can hold more than one unspent authhead (an abandoned branch left behind
+   * by an earlier publication never disappears), so the provider's order is not a tie-breaker:
+   * consult chaingraph for the head it tracks and prefer that one. When the tracked head is not
+   * among the unspent outputs it has already been spent by a newer, still-unconfirmed transaction —
+   * in that case the current selection is the freshest thing this session knows about, so keep it.
+   */
+  async function reconcileActiveAuthhead() {
+    const current = activeAuthhead.value
+    const category = current?.authkey?.token?.category
+    if (!current || !category) return
+
+    const unspentAuthheads = await getLockedAuthheadUtxos([current.authkey])
+    if (unspentAuthheads.length === 0) return
+
+    const authbase = current.identitySnapshotIdentifier?.identity?.authbase || current.token?.category
+    let trackedTxid: string | undefined
+    if (authbase) {
+      try {
+        trackedTxid = await fetchAuthheadTxid({ authbase })
+      } catch (error) {
+        // Offline or a provider outage: fall back to what the scan found.
+        console.error(error)
+      }
+    }
+
+    const currentId = `${current.txid}:${current.vout}`
+    const trackedAuthhead = trackedTxid
+      ? unspentAuthheads.find((authhead) => authhead.txid === trackedTxid)
+      : undefined
+    const currentAuthhead = unspentAuthheads.find((authhead) => `${authhead.txid}:${authhead.vout}` === currentId)
+
+    // The tracked head wins even when the current selection is still unspent: only the tracked one
+    // may publish without forking the identity.
+    const latestAuthhead = trackedAuthhead ?? currentAuthhead ?? unspentAuthheads[0]!
+    if (latestAuthhead.txid === current.txid && latestAuthhead.vout === current.vout) return
+
+    const authkey = authkeys.value.find((utxo) =>
+      utxo.token?.category === category && utxo.token.nft?.commitment === '00'
+    )
+
+    setActiveAuthhead({
+      ...latestAuthhead,
+      authkey: authkey ?? current.authkey,
+      identitySnapshot: current.identitySnapshot,
+      identitySnapshotIdentifier: current.identitySnapshotIdentifier,
+      isAuthhead: true,
+    } as UtxoWithAuthKey)
+  }
+
   /** Keep the authheads an import just delivered, so the managed tokens page can spotlight them once. */
   const setReceivedAuthheads = (utxos: DecoratedUtxo[]) => {
     receivedAuthheads.value = utxos
@@ -361,6 +422,7 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
     setReceivedAuthheads,
     clearReceivedAuthheads,
     updateActiveAuthhead,
+    reconcileActiveAuthhead,
     resetWalletScopedState
   }
 }) 

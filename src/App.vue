@@ -27,7 +27,7 @@ const { wallet, walletIsReady } = walletSigner;
 const { restore: restoreWalletConnect } = useWalletConnectWallet();
 
 const authguardStore = useAuthguardStore();
-const { setActiveAuthhead, loadAuthhead, loadAuthkeys, loadAuthheads } =
+const { setActiveAuthhead, loadAuthhead, loadAuthkeys, loadAuthheads, reconcileActiveAuthhead } =
   authguardStore;
 const { activeAuthhead } = storeToRefs(authguardStore);
 
@@ -50,11 +50,18 @@ const dashboardVisited = ref<boolean>(false);
  * rows instead of a skeleton. Silent and fire-and-forget: it must not delay the connect flow, and
  * it must not replace rows that are already on screen. The wallet's UTXO set is already cached by
  * then (initWallet syncs it), so this costs no extra chain request.
+ *
+ * The tail of the warm-up reconciles a restored authhead with the chain: the stored selection is
+ * otherwise only refreshed by the page that spends it, so a mint or publish that ran elsewhere
+ * leaves this session pointing at an authhead that has already been superseded.
  */
-const warmUpAuthguardData = () => {
-  loadAuthkeys(wallet.value, undefined, true).catch((error) =>
+const warmUpAuthguardData = async () => {
+  try {
+    await loadAuthkeys(wallet.value, undefined, true)
+    await reconcileActiveAuthhead()
+  } catch (error) {
     console.error(error)
-  );
+  }
 };
 
 watch(
@@ -72,7 +79,7 @@ watch(
         return;
       }
       const authkey = wallet.value?.utxos?.find((authkeyUtxo) => {
-        return authkeyUtxo.txid === txid && Number(vout) === Number(vout);
+        return authkeyUtxo.txid === txid && Number(authkeyUtxo.vout) === Number(vout);
       });
 
       if (!authkey) {
