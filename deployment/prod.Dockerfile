@@ -1,23 +1,79 @@
-FROM nikolaik/python-nodejs:python3.11-nodejs18
-#For libpq
-RUN apt-get update && apt-get install postgresql -y
-RUN mkdir -p /cashtoken-studio
-WORKDIR /cashtoken-studio
-COPY packag*.json .
-COPY yarn.lock .
-RUN yarn --ignore-engines
-RUN yarn add source-map && yarn global add pm2
+# syntax=docker/dockerfile:1
+
+# Production build (mainnet). Mirrors deployment/staging.Dockerfile with the
+# production runtime defaults: NODE_ENV=production for the app process and no
+# BUILD_ENV override, so `quasar build` selects `.env.prod` automatically (the
+# fabfile copies `deployment/.env.prod` to the build context as `.env.prod`).
+# Can also be built directly:
+#   docker build -f deployment/prod.Dockerfile -t cts-prod .
+
+ARG NODE_VERSION=22
+
+# ---------------------------------------------------------------------------
+# Stage 1 — build the SSR bundle and install its production dependencies
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-bookworm-slim AS builder
+
+# The Quasar build needs devDependencies, so this stage must keep
+# NODE_ENV=development (yarn skips devDependencies when it is `production`).
+ARG NODE_ENV=development
+ARG PORT=3000
+ENV NODE_ENV=${NODE_ENV} \
+    PORT=${PORT} \
+    YARN_CACHE_FOLDER=/tmp/yarn-cache
+
+# git                       -> required for the `github:paytaca/wizardconnect-vue` dependency
+# ca-certificates           -> lets git verify HTTPS while resolving that dependency
+# python3 + build-essential -> fallback toolchain for native modules
+#                              (node-datachannel, @parcel/watcher)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends git ca-certificates python3 build-essential \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy manifests first so source edits don't invalidate the dependency layer.
+# `patches/` must be present too: the postinstall runs patch-package, which
+# needs the patch files before the rest of the source is copied.
+COPY package.json yarn.lock ./
+COPY patches ./patches
+RUN yarn install --ignore-engines --network-timeout 600000
+
 COPY . .
-# RUN yarn --ignore-engines
-# RUN yarn add source-map &&    yarn global add pm2
-ENV NODE_ENV=production
-# ENV PORT=3000
 RUN yarn run build -m ssr
-RUN cd dist/ssr && yarn --ignore-engines
-WORKDIR /cashtoken-studio/dist/ssr
-EXPOSE 3000
-# ENV NODE_OPTIONS="--experimental-specifier-resolution=node index"
+
+# Quasar emits its own manifest in dist/ssr; install only its runtime deps there.
+WORKDIR /app/dist/ssr
+RUN yarn install --production --ignore-engines --network-timeout 600000
+
+# wizardconnect-vue is a git dependency that only produces dist/ by running its
+# `prepare` build (tsc), which needs devDependencies that a --production install
+# skips. Reuse the built (and patched) copy from the root install above.
+RUN cp -r /app/node_modules/wizardconnect-vue/dist /app/dist/ssr/node_modules/wizardconnect-vue/dist
+
+# Older @bitauth/libauth bundles ship build/lib/key/bip39.js using the legacy
+# `assert { type: 'json' }` import attribute, which Node >=22.23 rejects when the SSR
+# server loads it at runtime. Rewrite it to the supported form (a no-op if none match).
+RUN grep -rlZ --include='*.js' --include='*.mjs' --include='*.cjs' \
+      "assert { type: 'json' }" /app/dist/ssr/node_modules \
+  | xargs -0 -r sed -i "s/assert { type: 'json' }/with { type: 'json' }/g"
+
+# ---------------------------------------------------------------------------
+# Stage 2 — minimal runtime image: built output + production deps only
+# ---------------------------------------------------------------------------
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime
+
+ARG PORT=3000
+ENV NODE_ENV=production \
+    PORT=${PORT}
+
+RUN yarn global add pm2@^5.4.0 --ignore-engines \
+ && yarn cache clean
+
+WORKDIR /app
+COPY --from=builder /app/dist/ssr ./
+
+EXPOSE ${PORT}
+
+# Quasar SSR exposes index.js; pm2-runtime keeps it running as PID 1.
 CMD ["pm2-runtime", "index.js", "-i", "max"]
-
-
-

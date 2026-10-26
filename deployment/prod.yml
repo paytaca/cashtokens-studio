@@ -4,6 +4,11 @@ services:
     build:
       context: ../
       dockerfile: ./deployment/prod.Dockerfile
+      args:
+        # Builder stage keeps NODE_ENV=development so yarn installs the
+        # devDependencies the Quasar build needs; the runtime stage sets
+        # NODE_ENV=production itself.
+        PORT: 3000
     env_file:
       - .env.prod
     ports:
