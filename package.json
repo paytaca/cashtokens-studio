@@ -12,7 +12,7 @@
     "dev": "quasar dev -m ssr",
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build",
-    "dev:prod": "FORCE_PROD=true quasar dev -m ssr -- --mode production",
+    "local:prod": "FORCE_PROD=true quasar dev -m ssr -- --mode production",
     "postinstall": "patch-package && cd node_modules/wizardconnect-vue && yarn install && yarn build"
   },
   "dependencies": {
