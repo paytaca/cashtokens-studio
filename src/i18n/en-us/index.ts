@@ -154,7 +154,7 @@ export default {
       publishedCaption:
         'These are the NFT metadata you have revelealed/published on chain',
       nftCategory: 'NFT Category',
-      nftCategoryHint: 'This are the NFT metadata found on Token\'s Registry'
+      nftCategoryHint: 'These are the NFT metadata found on your token\'s metadata registry'
     },
   },
   onChainTokens: {
