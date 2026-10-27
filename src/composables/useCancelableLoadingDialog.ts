@@ -22,14 +22,23 @@ export function useCancelableLoadingDialog() {
   let loadingDialog: DialogChainObject | null = null;
   let abortController: AbortController | null = null;
   let suppressCancel = false;
+  /**
+   * Latches once an irreversible step has run: cancellation must not become available again
+   * after a broadcast, even while the next step is spinning up or the success list is on screen.
+   */
+  let cancelLocked = false;
 
   /**
-   * Cancelling only makes sense while the active step is still reversible, so
-   * the dialog's Cancel button is disabled on steps flagged `cancelable: false`.
+   * Cancelling only makes sense while no irreversible step has started, so the dialog's Cancel
+   * button is disabled from the first `cancelable: false` step (broadcasting) onwards.
    */
   const syncDialog = () => {
-    const runningStep = steps.value.find((step) => step.status === 'running');
-    canCancel.value = runningStep ? runningStep.cancelable !== false : true;
+    const reachedIrreversibleStep = steps.value.some(
+      (step) => step.cancelable === false && step.status !== 'pending',
+    );
+    if (reachedIrreversibleStep) cancelLocked = true;
+
+    canCancel.value = !cancelLocked;
 
     loadingDialog?.update({
       componentProps: { steps: [...steps.value], canCancel: canCancel.value },
@@ -45,6 +54,7 @@ export function useCancelableLoadingDialog() {
   ) => {
     abortController = new AbortController();
     suppressCancel = false;
+    cancelLocked = false;
     canCancel.value = true;
 
     steps.value = initialSteps.map((step) => ({
@@ -82,9 +92,11 @@ export function useCancelableLoadingDialog() {
   };
 
   const stopLoader = (delayMs = 0) => {
+    // Stop accepting cancels immediately: the delayed hide is only for showing the final state.
+    suppressCancel = true;
+
     setTimeout(() => {
       if (loadingDialog) {
-        suppressCancel = true;
         loadingDialog.hide();
         loadingDialog = null;
       }
