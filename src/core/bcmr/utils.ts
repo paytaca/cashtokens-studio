@@ -1,8 +1,86 @@
-import { IdentitySnapshot, NftType, ParsableNftCollection, Registry } from "./bcmr-v2.schema";
+import { ChainSnapshot, IdentitySnapshot, NftType, ParsableNftCollection, Registry, RegistryTimestampKeyedValues } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { hexToBin } from "bitauth-libauth-v3";
 import { bigIntToVmNumber, binToBigIntUintLE, binToHex, vmNumberToBigInt } from "bitauth-libauth-v3";
+
+/**
+ * BCMR declares `decimals` as an integer between `0` and `18`, but registries in the wild (and
+ * identities edited through the registry form) can carry it as a numeric string. This parse is
+ * deliberately strict: it only returns a value for a real integer or a plain integer string in
+ * range, so canonicalization can never invent or corrupt a number.
+ */
+export function parseBcmrDecimals(value: unknown): number | undefined {
+    if (typeof value === 'number') {
+        return Number.isInteger(value) && value >= 0 && value <= 18 ? value : undefined
+    }
+    if (typeof value === 'string') {
+        const trimmed = value.trim()
+        if (!/^\d+$/.test(trimmed)) return undefined
+        const parsed = Number(trimmed)
+        return parsed <= 18 ? parsed : undefined
+    }
+    return undefined
+}
+
+/** Display fallback: a missing or unparseable value is treated as an indivisible amount. */
+export function normalizeTokenDecimals(value: unknown): number {
+    return parseBcmrDecimals(value) ?? 0
+}
+
+/**
+ * Returns the snapshot with `token.decimals` coerced to a number when it is a valid BCMR value.
+ * Absent or invalid values are left untouched so publication validation can reject them.
+ */
+export function normalizeIdentitySnapshotDecimals(snapshot: IdentitySnapshot): IdentitySnapshot {
+    if (!snapshot.token || snapshot.token.decimals === undefined) return snapshot
+    const parsed = parseBcmrDecimals(snapshot.token.decimals)
+    return parsed === undefined || parsed === snapshot.token.decimals
+        ? snapshot
+        : { ...snapshot, token: { ...snapshot.token, decimals: parsed } }
+}
+
+function normalizeChainSnapshotDecimals(snapshot: ChainSnapshot): ChainSnapshot {
+    if (snapshot.token.decimals === undefined) return snapshot
+    const parsed = parseBcmrDecimals(snapshot.token.decimals)
+    return parsed === undefined || parsed === snapshot.token.decimals
+        ? snapshot
+        : { ...snapshot, token: { ...snapshot.token, decimals: parsed } }
+}
+
+const mapRecord = <T>(record: Record<string, T>, map: (value: T) => T): Record<string, T> =>
+    Object.fromEntries(Object.entries(record).map(([key, value]) => [key, map(value)])) as Record<string, T>
+
+const normalizeIdentityHistory = (history: RegistryTimestampKeyedValues<IdentitySnapshot>) =>
+    mapRecord(history, normalizeIdentitySnapshotDecimals)
+
+const normalizeChainHistory = (history: RegistryTimestampKeyedValues<ChainSnapshot>) =>
+    mapRecord(history, normalizeChainSnapshotDecimals)
+
+const normalizeIdentities = (identities: Registry['identities']) =>
+    identities && mapRecord(identities, normalizeIdentityHistory)
+
+const normalizeChains = (chains: Registry['chains']) =>
+    chains && mapRecord(chains, normalizeChainHistory)
+
+/**
+ * Coerces `token.decimals` to a number across every snapshot in a registry: identity histories,
+ * chain histories, and any locale overrides. Absent or invalid values are preserved as-is.
+ */
+export function normalizeRegistryDecimals(registry: Registry): Registry {
+    const locales = registry.locales && mapRecord(registry.locales, locale => ({
+        ...locale,
+        identities: normalizeIdentities(locale.identities),
+        chains: normalizeChains(locale.chains),
+    }))
+
+    return {
+        ...registry,
+        identities: normalizeIdentities(registry.identities),
+        chains: normalizeChains(registry.chains),
+        locales,
+    }
+}
 
 export function setNftUnrevealedCtsExtension(nft: NftType) {
     nft.extensions = {
