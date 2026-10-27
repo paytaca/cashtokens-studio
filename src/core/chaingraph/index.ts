@@ -1,26 +1,8 @@
 import { decodeAuthenticationInstructions, hexToBin, binToHex, binToUtf8, type AuthenticationInstructionPush } from 'bitauth-libauth-v3'
+import { fetchWithTimeout } from '../utils/fetch-with-timeout';
 import { BCMR_PREFIX } from '../bcmr';
-import { gatewayUrlToIpfs, inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs';
-
-export type BaseParams = {
-    authbase: string,
-    chainGraphUrl?: string
-}
-
-// eslint-disable-next-line @typescript-eslint/no-inferrable-types
-function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number = 15_000): Promise<Response> {
-    return new Promise((resolve, reject) => {
-        const controller = new AbortController()
-        const id = setTimeout(() => {
-            controller.abort()
-            reject(new Error(`Chaingraph query timed out after ${timeoutMs}ms`))
-        }, timeoutMs)
-        fetch(url, { ...options, signal: controller.signal })
-            .then(resolve)
-            .catch(reject)
-            .finally(() => clearTimeout(id))
-    })
-}
+import { inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs';
+import { type BaseParams } from './types';
 
 export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
     
@@ -342,3 +324,4 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
   }
 
 }
+
