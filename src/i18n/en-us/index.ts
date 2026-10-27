@@ -61,6 +61,7 @@ export default {
   warning: {
     errorLoadingUnpublishedNfts: 'Error loading unpublished NFTs',
     errorLoadingPublishedNfts: 'Error loading published NFTs',
+    errorLoadingOnChainTokens: 'Error loading on-chain tokens',
     resetNftCategoryTitle: 'Reset changes',
     resetNftCategoryMessage:
       'This will delete {count} unpublished NFT(s) and reset your changes. Continue?',
@@ -153,7 +154,22 @@ export default {
       publishedCaption:
         'These are the NFT metadata you have revelealed/published on chain',
       nftCategory: 'NFT Category',
+      nftCategoryHint: 'This are the NFT metadata found on Token\'s Registry'
     },
+  },
+  onChainTokens: {
+    title: 'Minted Tokens',
+    banner: 'These are the NFTs that are already minted and in circulation.',
+    nft: 'NFT',
+    noMetadata: '<no info>',
+    noIcon: 'No Icon',
+    commitment: 'Commitment',
+    fungibleAmount: 'Fungible Amount:',
+    amount: 'Amount',
+    capabilityMinting: 'Minting',
+    capabilityMutable: 'Mutable',
+    capabilityImmutable: 'Immutable',
+    noData: 'No on-chain tokens found for this category',
   },
   mint: {
     mintChildNft: 'Mint Child NFT',

@@ -1,4 +1,4 @@
-import { ChainSnapshot, IdentitySnapshot, NftType, ParsableNftCollection, Registry, RegistryTimestampKeyedValues } from "./bcmr-v2.schema";
+import { ChainSnapshot, IdentitySnapshot, NftCategory, NftType, ParsableNftCollection, Registry, RegistryTimestampKeyedValues } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { hexToBin } from "bitauth-libauth-v3";
@@ -116,6 +116,40 @@ export function extractTokenCategories(registry: Registry) {
 
 export function getNftCollectionType(identitySnapshot: IdentitySnapshot): NftCollectionType {
   return (identitySnapshot.token?.nfts?.parse as ParsableNftCollection)?.bytecode ? NftCollectionType.parsable: NftCollectionType.sequential 
+}
+
+/**
+ * Resolve an on-chain NFT commitment to its metadata in the registry.
+ *
+ * Sequential collections index types by the full commitment, so the lookup is exact. Parsable
+ * collections index types by the bottom altstack item, which commonly appears as a prefix of the
+ * commitment (split-byte parsing bytecode), so the longest matching prefix is used as a fallback.
+ */
+export function resolveNftType(
+    nftCategory: NftCategory | null | undefined,
+    commitment: string
+): NftType | undefined {
+    const types = nftCategory?.parse?.types
+    if (!types) return undefined
+
+    const normalizedCommitment = commitment.toLowerCase()
+    const directMatch = Object.entries(types).find(([key]) => key.toLowerCase() === normalizedCommitment)
+    if (directMatch) return directMatch[1]
+
+    const isParsable = !!(nftCategory?.parse as ParsableNftCollection | undefined)?.bytecode
+    if (!isParsable) return undefined
+
+    let bestMatch: NftType | undefined
+    let bestLength = -1
+    for (const [key, nftType] of Object.entries(types)) {
+        const normalizedKey = key.toLowerCase()
+        if (!normalizedKey || normalizedKey.length <= bestLength) continue
+        if (normalizedCommitment.startsWith(normalizedKey)) {
+            bestMatch = nftType
+            bestLength = normalizedKey.length
+        }
+    }
+    return bestMatch
 }
 
 // eslint-disable-next-line @typescript-eslint/no-inferrable-types
