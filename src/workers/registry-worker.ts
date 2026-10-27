@@ -12,7 +12,7 @@ import { getErrorMessage } from '../core/utils';
 import type { 
   IdentitySnapshot, NftType, OffChainRegistryIdentity, Registry, RegistryTimestampKeyedValues 
 } from '../core/bcmr/bcmr-v2.schema';
-import { uploadFile } from '../core/ipfs';
+import { tryParseIpfsUrl, uploadFile } from '../core/ipfs';
 import { compactRegistry, extractNftTypeKeys, extractTokenCategories, normalizeRegistryDecimals, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
 import { type CompactRegistry } from 'src/core/bcmr/types';
 import { NftCollectionType } from 'src/core/bcmr';
@@ -90,27 +90,24 @@ const registryWorker = {
         params.onProgress?.('Downloading registry...');
 
         const httpUris = Array.from(new Set(
-          uris.map((uri: string) => {
+          uris.flatMap((uri: string) => {
 
-            let cid = ''
-  
-            if (uri.startsWith('ipfs://') ) {
-              cid = uri.replace('ipfs://', '')
-            }
-  
-            if (uri.startsWith('ipfs.paytaca.com/ipfs/')) {
-              cid = uri.replace('ipfs.paytaca.com/ipfs/', '')
-            }
-  
-            if (cid) {
+            // Published URIs can be native (`ipfs://`) or any HTTP gateway (nftstorage, Pinata,
+            // ipfs.io…). Normalize every form to a CID so the registry is fetched through the
+            // app's proxy instead of a retired gateway.
+            const parsed = tryParseIpfsUrl(uri)
+
+            if (parsed?.scheme === 'ipfs' && parsed.id) {
+              const filePath = parsed.path ? `?filePath=${encodeURIComponent(parsed.path)}` : ''
+              const path = parsed.path ? `/${parsed.path}` : ''
               return [
-                `/api/ipfs/${cid}`,
-                `https://gateway.pinata.cloud/ipfs/${cid}`
+                `/api/ipfs/${parsed.id}${filePath}`,
+                `https://gateway.pinata.cloud/ipfs/${parsed.id}${path}`
               ]
             }
   
             return [uri]
-          })?.flat()
+          })
         ))
         
         const fetchPromises = httpUris.map(async (uri: string) => {
