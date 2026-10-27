@@ -30,7 +30,7 @@
                 style="font-variant-numeric: tabular-nums; font-size: large" class="text-positive" readonly
                 hide-bottom-space>
               </q-input>
-              <q-input :model-value="decimals" label="Decimals" outlined readonly></q-input>
+              <q-input :model-value="tokenDecimals" label="Decimals" outlined readonly></q-input>
               <q-input v-if="Number(transferAmount) > 0" :model-value="newBalance" label="New Balance After Send"
                 outlined class="currency-amount" readonly>
               </q-input>
@@ -45,7 +45,7 @@
                 </template>
               </q-input>
               <q-input
-                v-if="(transferType === 'issuance' || transferType === 'send') && transferAmount && decimalToBigInt(transferAmount, decimals) > 0n"
+                v-if="(transferType === 'issuance' || transferType === 'send') && transferAmount && decimalToBigInt(transferAmount, tokenDecimals) > 0n"
                 v-model="recipient" ref="recipientInputElement" label="Recipient"
                 placeholder="Paste recipient's token address"
                 :rules="[(v: string) => v && isTokenAwareAddress(v) || 'Value should be a cashtoken address']" outlined>
@@ -60,11 +60,11 @@
       <q-card-actions class="row justify-end">
         <q-btn v-if="transferType === 'issuance' || transferType === 'send'" text-color="primary" label="Send"
           icon="send" @click.stop="(e) => transferForm.submit(e)" size="lg"
-          :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
+          :disable="!transferAmount || decimalToBigInt(transferAmount, tokenDecimals) <= 0n">
         </q-btn>
         <q-btn v-else-if="transferType === 'burn'" color="orange" text-color="dark" label="Burn"
           icon="local_fire_department" @click.stop="(e) => transferForm.submit(e)" size="lg"
-          :disable="!transferAmount || decimalToBigInt(transferAmount, decimals) <= 0n">
+          :disable="!transferAmount || decimalToBigInt(transferAmount, tokenDecimals) <= 0n">
         </q-btn>
       </q-card-actions>
     </q-card>
@@ -78,6 +78,7 @@ import { computed, nextTick, onMounted, ref } from 'vue';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { isTokenAwareAddress } from 'src/core/utils';
 import { shortenTokenId } from 'src/core/utils';
+import { normalizeTokenDecimals } from 'src/core/bcmr';
 import CopyText from 'components/CopyText.vue'
 
 defineEmits([
@@ -118,7 +119,10 @@ const transferLabel = computed(() => {
   return 'Burn Tokens'
 })
 
-const balanceDecimal = computed(() => bigIntToDecimal(props.balance, props.decimals))
+/** Snapshots can carry `decimals` as a string; helpers below require a real integer. */
+const tokenDecimals = computed(() => normalizeTokenDecimals(props.decimals))
+
+const balanceDecimal = computed(() => bigIntToDecimal(props.balance, tokenDecimals.value))
 
 const recipient = ref<string>()
 const recipientInputElement = ref()
@@ -127,7 +131,7 @@ const transferAmount = ref<string>('0')
 const transferAmountRules = [
   (v: string) => {
     try {
-      const rawAmount = decimalToBigInt(v, props.decimals)
+      const rawAmount = decimalToBigInt(v, tokenDecimals.value)
       return BigInt(props.balance) - rawAmount >= 0n || 'Amount should not exceed current balance'
     } catch {
       return 'Invalid amount'
@@ -136,7 +140,7 @@ const transferAmountRules = [
   (v: string) => {
     const i = v.indexOf('.')
     if (i === -1) return true
-    const expectedMaxDecimals = Number(props.decimals || 0)
+    const expectedMaxDecimals = tokenDecimals.value
     if (expectedMaxDecimals === 0) return 'Violates max decimal value'
     return v.substring(i + 1).length <= expectedMaxDecimals || 'Violates max decimal value'
   },
@@ -150,9 +154,9 @@ const transferAmountRules = [
 const newBalance = computed(() => {
   if (transferAmount.value) {
     try {
-      const rawTransferAmount = decimalToBigInt(transferAmount.value, props.decimals)
+      const rawTransferAmount = decimalToBigInt(transferAmount.value, tokenDecimals.value)
       const remaining = BigInt(props.balance) - rawTransferAmount
-      return bigIntToDecimal(remaining, props.decimals)
+      return bigIntToDecimal(remaining, tokenDecimals.value)
     } catch {
       return balanceDecimal.value
     }
@@ -161,7 +165,7 @@ const newBalance = computed(() => {
 })
 
 const confirmIssuance = () => {
-  const rawAmount = decimalToBigInt(transferAmount.value, props.decimals)
+  const rawAmount = decimalToBigInt(transferAmount.value, tokenDecimals.value)
   onDialogOK({
     tokenAmount: rawAmount,
     recipient: recipient.value
@@ -170,7 +174,7 @@ const confirmIssuance = () => {
 }
 
 const confirmBurn = () => {
-  const rawAmount = decimalToBigInt(transferAmount.value, props.decimals)
+  const rawAmount = decimalToBigInt(transferAmount.value, tokenDecimals.value)
   onDialogOK({
     tokenAmount: rawAmount,
     recipient: props.burnAddress
