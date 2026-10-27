@@ -1,33 +1,44 @@
 
+const INBROWSER_GATEWAY = 'inbrowser.link'
+
+/** True for `nftstorage.link` and its subdomains (`<cid>.ipfs.nftstorage.link`). */
+const isNftStorageHost = (hostname: string) =>
+  hostname === 'nftstorage.link' || hostname.endsWith('.nftstorage.link')
+
 /**
- * @param {string} ipfsUrl
+ * Builds an `inbrowser.link` subdomain-gateway URL:
+ *   https://<cid>.ipfs.inbrowser.link/<path>
  */
-export function ipfsToGatewayUrl(ipfsUrl: string){
-    
+export function inbrowserGatewayUrl(id: string, path = '', search = ''): string {
+  return `https://${id}.ipfs.${INBROWSER_GATEWAY}/${path.replace(/^\/+/, '')}${search}`
+}
+
+/**
+ * Resolves a token/NFT media URI for display.
+ *
+ * NFT.Storage's gateway (`nftstorage.link`) is no longer available, and `inbrowser.link` is a
+ * browser-only verified-fetch gateway (direct requests receive an HTML bootstrap instead of the
+ * file), so nftstorage references are proxied through the SSR `/api/ipfs-image` endpoint, which
+ * fetches the file with the configured Pinata token. Both forms are supported:
+ *   - path-based:    https://nftstorage.link/ipfs/<cid>/<path>
+ *   - subdomain:     https://<cid>.ipfs.nftstorage.link/<path>
+ *
+ * Everything else keeps the previous behaviour: absolute HTTP(S) URLs are returned as-is and
+ * native `ipfs://` URIs are proxied through the SSR endpoint.
+ */
+export function ipfsToGatewayUrl(ipfsUrl: string) {
     if (ipfsUrl?.startsWith('http')) {
-      if (ipfsUrl?.includes('ipfs.nftstorage.link')) {
-        // return convertToPaytacaGateway(ipfsUrl, pinataGatewayToken);
-        try {
-          // Example:
-          // https://bafy...ha.ipfs.nftstorage.link/2551825...
-          const u = new URL(ipfsUrl);
-      
-          // Extract CID from subdomain: "<cid>.ipfs.nftstorage.link"
-          const hostParts = u.hostname.split(".");
-          const cid = hostParts[0]; // e.g., bafybeibf2y...
-      
-          // Extract filename path
-          // Example path: /2551825308fa885e6202106d92899448fbf9127348cb80ba37e6f3177666e8ee.png
-          const filename = u.pathname.replace(/^\//, "");
-      
-          // Construct new URL
-          return `/api/ipfs-image?url=${encodeURIComponent(`ipfs://${cid}/${filename}`)}`;
-      
-          
-        } catch (e) {
-          console.error("Invalid URL:", e);
-          return null;
+      try {
+        const url = new URL(ipfsUrl)
+        if (isNftStorageHost(url.hostname)) {
+          const parsed = tryParseIpfsUrl(ipfsUrl)
+          if (parsed?.scheme === 'ipfs' && parsed.id) {
+            const path = parsed.path ? `/${parsed.path}` : ''
+            return `/api/ipfs-image?url=${encodeURIComponent(`ipfs://${parsed.id}${path}`)}`
+          }
         }
+      } catch (e) {
+        console.error("Invalid URL:", e)
       }
       return ipfsUrl
     }

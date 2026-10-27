@@ -1,6 +1,6 @@
 import { decodeAuthenticationInstructions, hexToBin, binToHex, binToUtf8, type AuthenticationInstructionPush } from 'bitauth-libauth-v3'
 import { BCMR_PREFIX } from '../bcmr';
-import { gatewayUrlToIpfs, isCID, parseIpfsUrl } from '../ipfs';
+import { gatewayUrlToIpfs, inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs';
 
 export type BaseParams = {
     authbase: string,
@@ -276,7 +276,7 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
       const cid = payload ? binToUtf8(payload) : ''
       if (isCID(cid)) {
         result.uris.push(`ipfs://${cid}`)
-        result.httpsUrl = `https://${cid}.ipfs.inbrowser.link`
+        result.httpsUrl = inbrowserGatewayUrl(cid)
       }
     }
 
@@ -289,7 +289,7 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
         try {
 
           if (isCID(uri)) { // handle maybe older publications that didn't include ipfs:// scheme to the cid
-            result.httpsUrl = `https://${uri}.ipfs.inbrowser.link`
+            result.httpsUrl = inbrowserGatewayUrl(uri)
             return result.uris.push(`ipfs://${uri}`)
           }
           
@@ -297,7 +297,7 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
           
           if (url.protocol === 'ipfs:' || url.protocol === 'ipns:') {
             const { id: cid }  = parseIpfsUrl(uri)
-            result.httpsUrl = `https://${cid}.ipfs.inbrowser.link`
+            result.httpsUrl = inbrowserGatewayUrl(cid)
             return result.uris.push(uri as string)
           }
 
