@@ -141,11 +141,8 @@
                                         v-model:sequential-nft-collection="(nftCategory.parse as SequentialNftCollectionI)">
                                         <template #nftTypes>
                                             <div class="flex justify-between">
-                                                <div class="q-my-xs q-gutter-x-sm">
-                                                    <span class="text-h6">NFT Collection Info</span>
-                                                </div>
-                                                <div class="flex q-gutter-x-sm items-center">
 
+                                                <div class="flex q-gutter-x-sm items-center justify-right">
                                                     <q-btn flat no-caps icon="mdi-table-filter" label="Filter"
                                                         v-close-popup dense>
                                                         <q-menu anchor="bottom left" self="top end"
@@ -177,7 +174,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                            }})</span>
+                                                        }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -262,7 +259,7 @@ import type {
 import { type NftCategory as NftCategoryI } from 'src/core/bcmr/bcmr-v2.schema'
 import { db, IdentitySnapshotRecord, NftRecord, RegistryRecordStatus } from 'src/core/client-db'
 import { getRegistryWorker } from 'src/workers'
-import { getErrorMessage } from 'src/core/utils'
+import { getErrorMessage, retryOnHang } from 'src/core/utils'
 import FormField from 'components/FormField.vue'
 import ParsableNftCollection from 'components/bcmr/ParsableNftCollection.vue'
 import SequentialNftCollection from 'components/bcmr/SequentialNftCollection.vue'
@@ -347,6 +344,16 @@ const unpublishedLoading = ref(false)
  * If collection type is 'parsable' this would be the last type when when 'types' is sorted using localeCompare.
  */
 const nftsLastNftTypeKey = ref<string>('')
+/** Identical in-flight `loadNfts` call, so concurrent duplicates share one worker round-trip. */
+let nftsLoadInFlight: { key: string, promise: Promise<PaginatedNftTypesResultLike | undefined> } | undefined
+
+type PaginatedNftTypesResultLike = {
+    items: NftRecord[],
+    total: number,
+    offset: number,
+    limit: number,
+    lastNftTypeKey: string
+}
 
 const onChainTokens = ref<CashtokenOutput[]>([])
 const onChainTotal = ref(0)
@@ -455,21 +462,42 @@ const onNftsRequest = async (props: any) => {
 const loadNfts = async (offset: number, limit: number, statusFilter?: RegistryRecordStatus) => {
     const keys = nftKeys.value
     if (!keys) return
-    nftsLoading.value = true
-    try {
+
+    /** Run the actual load. */
+    const runNftsLoad = async () => {
         const worker = getRegistryWorker()
-        const result = await worker.getNfts({
+        // The very first worker call after a cold app start can hang instead of settling, so
+        // each call gets a window to resolve and is re-invoked once if it stays hung.
+        return await retryOnHang(() => worker.getNfts({
             contentHash: keys.contentHash,
             authbase: keys.authbase,
             timestamp: keys.timestamp,
             offset,
             limit,
             status: statusFilter || nftsStatusFilter.value
-        })
-        if (result) {
-            nfts.value = result.items
-            nftsTotal.value = result.total
-            nftsLastNftTypeKey.value = result.lastNftTypeKey
+        }))
+    }
+
+    const loadKey = `${offset}:${limit}:${statusFilter || nftsStatusFilter.value}`
+    nftsLoading.value = true
+    try {
+        // Two triggers race on the first visit (the init watcher and the table's own initial
+        // pagination event) — route the second identical call into the first one's promise.
+        if (nftsLoadInFlight && nftsLoadInFlight.key === loadKey) {
+            await nftsLoadInFlight.promise
+        } else {
+            const inFlightLoad = { key: loadKey, promise: runNftsLoad() }
+            nftsLoadInFlight = inFlightLoad
+            try {
+                const result = await inFlightLoad.promise
+                if (result) {
+                    nfts.value = result.items
+                    nftsTotal.value = result.total
+                    nftsLastNftTypeKey.value = result.lastNftTypeKey
+                }
+            } finally {
+                nftsLoadInFlight = undefined
+            }
         }
     }
     catch (error) {
@@ -587,12 +615,12 @@ const loadOnChainTypeMetadata = async () => {
         if (onChainTypes.value.has(token.commitment)) continue
         try {
             const nftType = resolveNftType(nftCategory.value, token.commitment)
-                || (await worker.getNft({
+                || (await retryOnHang(() => worker.getNft({
                     contentHash: keys.contentHash,
                     authbase: keys.authbase,
                     timestamp: keys.timestamp,
                     type: token.commitment
-                }))?.nft
+                })))?.nft
             if (nftType) {
                 // Replace the map immutably so the table updates as soon as each NFT resolves.
                 onChainTypes.value = new Map(onChainTypes.value).set(token.commitment, nftType)
@@ -645,9 +673,13 @@ watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activ
         collectionType.value = isParsable ? 'parsable' : 'sequential'
         initialSnapshotJson.value = JSON.stringify(identitySnapshot.value)
         loading.value = false
-        await loadNfts(0, ROWS_PER_PAGE)
-        await loadUnpublishedNfts()
-        await loadOnChainTokens(1)
+        // Load the three tables concurrently: a slow cold registry parse must not block the
+        // unpublished list or the on-chain tokens.
+        await Promise.allSettled([
+            loadNfts(0, ROWS_PER_PAGE),
+            loadUnpublishedNfts(),
+            loadOnChainTokens(1)
+        ])
     }
 }, { immediate: true })
 

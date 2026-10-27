@@ -127,6 +127,35 @@ export async function safeAsync<T, E = Error>(
       .catch<[E, null]>((error: E) => [error, null]);
   };
 
+export type HangRetryOptions = {
+    /** Window a call gets to settle before it is considered hung, in ms. Defaults to 20_000. */
+    timeoutMs?: number;
+    /** Called before each re-invocation of the task. */
+    onRetry?: () => void;
+};
+
+/**
+ * Invoke a task that may hang without ever settling — e.g. a Comlink worker call issued while the
+ * worker module is still initializing. Re-invokes the task once; resolves `undefined` if it stays
+ * hung. A slow-but-eventually-settling task is left alone after the single retry pass.
+ */
+export async function retryOnHang<T>(
+    task: () => Promise<T>,
+    options: HangRetryOptions = {}
+): Promise<T | undefined> {
+    const timeoutMs = options.timeoutMs ?? 20_000
+    const attempts = 2
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+        const outcome: T | 'hang' = await Promise.race([
+            task(),
+            new Promise<'hang'>((resolve) => setTimeout(resolve, timeoutMs, 'hang'))
+        ])
+        if (outcome !== 'hang') return outcome
+        if (attempt < attempts) options.onRetry?.()
+    }
+    return undefined
+}
+
 export class HttpError extends Error {
     constructor(public status: number, message: string) {
         super(message);
