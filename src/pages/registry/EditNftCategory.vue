@@ -75,6 +75,12 @@
                     <template v-if="nftCategory">
                         <div class="q-mt-md" flat>
                             <h6 class="q-my-xs">NFT Category Info</h6>
+                            <q-banner dense rounded class="bg-grey-9 text-grey-4 q-mb-md border-radius-8">
+                                <template v-slot:avatar>
+                                    <q-icon name="info" color="primary" />
+                                </template>
+                                {{ t('label.registry.nftCategoryHint') }}
+                            </q-banner>
                             <FormField>
                                 <label class="q-mb-xs">Description</label>
                                 <q-input v-model="nftCategory.description" class="full-width" outlined />
@@ -171,7 +177,7 @@
                                                         </q-menu>
                                                         <span class="q-ml-sm text-caption text-grey-6">({{
                                                             nftsStatusFilter
-                                                        }})</span>
+                                                            }})</span>
                                                     </q-btn>
                                                     <div>|</div>
                                                     <q-btn icon="mdi-table-plus" color="secondary" label="Add"
@@ -205,6 +211,29 @@
                     <template v-else>
                         <div>No NFT metadata</div>
                     </template>
+                </q-card>
+
+                <q-card flat class="bg-dark q-pa-lg rounded-borders q-mt-lg">
+                    <div class="flex justify-between items-center q-mb-sm">
+                        <h6 class="q-my-xs">{{ t('onChainTokens.title') }}</h6>
+                        <div class="flex items-center q-gutter-x-sm">
+                            <q-badge color="primary" :label="onChainTotal" />
+                            <q-btn flat dense round icon="refresh" @click="loadOnChainTokens(onChainPage)" />
+                        </div>
+                    </div>
+
+                    <q-banner dense rounded class="bg-grey-9 text-grey-4 q-mb-md border-radius-8">
+                        <template v-slot:avatar>
+                            <q-icon name="info" color="primary" />
+                        </template>
+                        {{ t('onChainTokens.banner') }}
+                    </q-banner>
+
+                    <div class="table-scroll-wrapper">
+                        <OnChainTokensTable :rows="onChainTokens" :nft-types="onChainTypes" :loading="onChainLoading"
+                            :total="onChainTotal" :decimals="identitySnapshot?.token?.decimals ?? 0"
+                            @request="onOnChainTokensRequest" />
+                    </div>
                 </q-card>
             </div>
         </div>
@@ -245,12 +274,13 @@ import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 import NftTable from 'src/components/bcmr/NftTable.vue'
+import OnChainTokensTable from 'src/components/bcmr/OnChainTokensTable.vue'
 import { publishRegistry } from 'src/core/transaction'
 import { UtxoWithAuthKey } from 'src/core/types'
 import { UtxoWithPath } from 'src/core/wallet'
 import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { getNftCollectionType } from 'src/core/bcmr'
+import { getCategoryCashtokens, getNftCollectionType, resolveNftType, type CashtokenOutput } from 'src/core/bcmr'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { useRegistryPublishAuthorization } from 'src/composables/useRegistryPublishAuthorization'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
@@ -317,6 +347,18 @@ const unpublishedLoading = ref(false)
  * If collection type is 'parsable' this would be the last type when when 'types' is sorted using localeCompare.
  */
 const nftsLastNftTypeKey = ref<string>('')
+
+const onChainTokens = ref<CashtokenOutput[]>([])
+const onChainTotal = ref(0)
+const onChainLoading = ref(false)
+const onChainPage = ref(1)
+
+/** The token category whose live outputs we display (may differ from the registry authbase). */
+const tokenCategory = computed(() =>
+    identitySnapshot.value?.token?.category
+    || activeAuthhead.value?.token?.category
+    || (route.query.authbase as string | undefined)
+)
 
 const unpublishedCount = computed(() => unpublishedNfts.value.length)
 
@@ -460,6 +502,34 @@ const loadUnpublishedNfts = async () => {
     }
 }
 
+const loadOnChainTokens = async (page = onChainPage.value) => {
+    const category = tokenCategory.value
+    if (!category) return
+    onChainPage.value = page
+    onChainLoading.value = true
+    try {
+        const result = await getCategoryCashtokens(category, page)
+        if (!result) {
+            onChainTokens.value = []
+            onChainTotal.value = 0
+            throw new Error('Unable to load on-chain tokens')
+        }
+        onChainTokens.value = result.results
+        onChainTotal.value = result.count
+    } catch (error) {
+        $q.notify({
+            type: 'warning',
+            message: t('warning.errorLoadingOnChainTokens')
+        })
+    } finally {
+        onChainLoading.value = false
+    }
+}
+
+const onOnChainTokensRequest = async (pagination: { page: number }) => {
+    await loadOnChainTokens(pagination.page)
+}
+
 const deleteUnpublishedNfts = async () => {
     const keys = nftKeys.value
     if (!keys) return
@@ -493,6 +563,67 @@ const nftCategory = computed<NftCategoryI | null>({
     }
 })
 
+/**
+ * Commitment → registry NFT type for the displayed on-chain outputs.
+ *
+ * Populated in a deferred pass so the table renders the raw tokens immediately and metadata
+ * is applied afterwards: each on-chain commitment is first matched against the locally edited
+ * category, then resolved through the worker `getNft`, which reads a hot record from the
+ * `nfts` table or lazily loads that single NFT from the raw registry (heating it for later).
+ */
+const onChainTypes = ref<Map<string, NftType>>(new Map())
+
+const loadOnChainTypeMetadata = async () => {
+    const keys = nftKeys.value
+    if (!keys) return
+
+    // Only sequential collections map commitments to types directly; a parsable type (the
+    // bottom altstack) cannot be derived from a raw commitment without evaluating parse bytecode.
+    const isParsable = !!((identitySnapshot.value?.token?.nfts?.parse as ParsableNftCollectionI | undefined)?.bytecode)
+    if (isParsable) return
+
+    const worker = getRegistryWorker()
+    for (const token of onChainTokens.value) {
+        if (onChainTypes.value.has(token.commitment)) continue
+        try {
+            const nftType = resolveNftType(nftCategory.value, token.commitment)
+                || (await worker.getNft({
+                    contentHash: keys.contentHash,
+                    authbase: keys.authbase,
+                    timestamp: keys.timestamp,
+                    type: token.commitment
+                }))?.nft
+            if (nftType) {
+                // Replace the map immutably so the table updates as soon as each NFT resolves.
+                onChainTypes.value = new Map(onChainTypes.value).set(token.commitment, nftType)
+            }
+        } catch {
+            // Leave this commitment unresolved; the row stays displayed with its raw commitment.
+        }
+    }
+}
+
+let nftTypeEnrichTimer: ReturnType<typeof setTimeout> | undefined
+let nftTypeEnrichRunning = false
+const scheduleOnChainTypeEnrichment = () => {
+    if (nftTypeEnrichTimer) clearTimeout(nftTypeEnrichTimer)
+    nftTypeEnrichTimer = setTimeout(async () => {
+        if (nftTypeEnrichRunning) {
+            scheduleOnChainTypeEnrichment()
+            return
+        }
+        nftTypeEnrichRunning = true
+        try {
+            await loadOnChainTypeMetadata()
+        } finally {
+            nftTypeEnrichRunning = false
+        }
+    })
+}
+
+watch(onChainTokens, scheduleOnChainTypeEnrichment, { immediate: true, deep: true })
+watch(nftCategory, scheduleOnChainTypeEnrichment, { deep: true })
+
 const collectionType = ref<'sequential' | 'parsable'>('sequential')
 
 watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activeAuthhead.value as UtxoWithAuthKey], async ([newRecord, newActiveAuthhead]) => {
@@ -516,6 +647,7 @@ watch([() => identitySnapshotRecord.value as IdentitySnapshotRecord, () => activ
         loading.value = false
         await loadNfts(0, ROWS_PER_PAGE)
         await loadUnpublishedNfts()
+        await loadOnChainTokens(1)
     }
 }, { immediate: true })
 
@@ -717,6 +849,7 @@ const onPublishClick = async () => {
             registryStore.loadRegistry(identity.authbase, true).then(async () => {
                 loadNfts(0, ROWS_PER_PAGE)
                 loadUnpublishedNfts()
+                loadOnChainTokens(onChainPage.value)
             })
         })
     } catch (error: any) {

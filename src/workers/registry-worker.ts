@@ -620,6 +620,43 @@ const registryWorker = {
     }
   },
 
+  async getNft(params: ProgressErrorListener & {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    type: string
+  }): Promise<NftRecord | undefined> {
+    try {
+      // Hot lookup first: a record already in the nfts table is returned as-is.
+      const nftRecord = await db.nfts
+          .where('[contentHash+authbase+timestamp+type]')
+          .equals([params.contentHash, params.authbase, params.timestamp, params.type])
+          .first()
+      if (nftRecord) return nftRecord
+
+      // Cold load: pull the single NFT type out of the raw registry for this contentHash.
+      const rawRegistry = (await db.registry.where('contentHash').equals(params.contentHash).first())?.rawRegistry
+      if (!rawRegistry) return undefined
+      const parsedRegistry = await parseRegistryBlob(rawRegistry)
+      const identity = parsedRegistry.identities?.[params.authbase]?.[params.timestamp]
+      const nft = identity?.token?.nfts?.parse?.types[params.type]
+      if (!nft) return undefined
+
+      // Materialize it in the nfts table so subsequent lookups are hot.
+      return await db.createNftRecord({
+          contentHash: params.contentHash,
+          authbase: params.authbase,
+          timestamp: params.timestamp,
+          category: identity?.token?.category || '',
+          type: params.type,
+          nft: nft,
+          status: 'published' as RegistryRecordStatus
+      })
+    } catch (e) {
+      params.onError?.(getErrorMessage(e))
+    }
+  },
+
   async getNftsLastType(params: ProgressErrorListener & {
     contentHash: string,
     authbase: string,
