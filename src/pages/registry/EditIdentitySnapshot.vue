@@ -181,7 +181,7 @@ import { getErrorMessage, getTokenType } from 'src/core/utils'
 import { getRegistryWorker } from 'src/workers'
 import { uploadFile } from 'src/core/ipfs'
 
-import { createIdentitySnapshotTemplate, createTokenRegistry, isReservedTokenSymbol } from 'src/core/bcmr'
+import { createIdentitySnapshotTemplate, createTokenRegistry, isReservedTokenSymbol, normalizeIdentitySnapshotDecimals } from 'src/core/bcmr'
 import AddUriDialog from 'src/components/dialogs/AddUriDialog.vue'
 import { broadcastTransaction } from 'src/services/transaction'
 import { createSquareThumbnail } from 'src/utils'
@@ -417,7 +417,11 @@ const onPublishClick = async () => {
 
         updateStep(TASK_UPLOAD_REGISTRY, 'running')
 
-        const clonedSnapshot = JSON.parse(JSON.stringify(identitySnapshot.value)) as IdentitySnapshot
+        // The Decimals field is a plain text input, so `token.decimals` can still be a string here.
+        // Publish it as a real integer when it parses; invalid values are left for validation to reject.
+        const clonedSnapshot = normalizeIdentitySnapshotDecimals(
+            JSON.parse(JSON.stringify(identitySnapshot.value)) as IdentitySnapshot
+        )
 
         let contentHash: string
         let uris: string[]

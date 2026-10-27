@@ -1,5 +1,6 @@
 import { binToHex, sha256,utf8ToBin } from 'bitauth-libauth-v3'
 import { IdentitySnapshot, Registry } from './bcmr-v2.schema'
+import { normalizeIdentitySnapshotDecimals } from './utils'
 export * from './enum'
 export * from './indexer'
 export * from './utils'
@@ -19,6 +20,8 @@ export function createTokenRegistry(options: CreateBcmrOptions) {
 
     const latestRevision = new Date().toISOString() 
 
+    const identitySnapshot = normalizeIdentitySnapshotDecimals(options.identitySnapshot)
+
     const registry: Registry = {
         $schema: 'https://cashtokens.org/bcmr-v2.schema.json',
         version: {
@@ -30,7 +33,7 @@ export function createTokenRegistry(options: CreateBcmrOptions) {
         registryIdentity: options.authbase,
         identities: {
             [options.authbase]: {
-                [latestRevision]: options.identitySnapshot
+                [latestRevision]: identitySnapshot
             }    
         },
         extensions: {
@@ -57,6 +60,7 @@ export type UpdateTokenRegistryOptions = {
 
 export function updateTokenRegistry(options: UpdateTokenRegistryOptions) {
     const registry = structuredClone(options.registry)
+    const identitySnapshot = normalizeIdentitySnapshotDecimals(options.identitySnapshot)
     const flattenHistory = options.flattenHistory ?? true
     registry.latestRevision = new Date().toISOString()
     if (!registry.identities) {
@@ -71,10 +75,10 @@ export function updateTokenRegistry(options: UpdateTokenRegistryOptions) {
 
     if (flattenHistory) {
         registry.identities[options.authbase] = {
-            [registry.latestRevision]: options.identitySnapshot
+            [registry.latestRevision]: identitySnapshot
         }
     } else {
-        registry.identities[options.authbase]![registry.latestRevision] = options.identitySnapshot
+        registry.identities[options.authbase]![registry.latestRevision] = identitySnapshot
     }
 
     if (options.authKeyNftCategory) {

@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import { binToHex, sha256, utf8ToBin } from 'bitauth-libauth-v3';
+import { binToHex, importMetadataRegistry, sha256, utf8ToBin } from 'bitauth-libauth-v3';
 import { 
   db, 
   IdentitySnapshotRecord, 
@@ -13,7 +13,7 @@ import type {
   IdentitySnapshot, NftType, OffChainRegistryIdentity, Registry, RegistryTimestampKeyedValues 
 } from '../core/bcmr/bcmr-v2.schema';
 import { uploadFile } from '../core/ipfs';
-import { compactRegistry, extractNftTypeKeys, extractTokenCategories, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
+import { compactRegistry, extractNftTypeKeys, extractTokenCategories, normalizeRegistryDecimals, parseRegistryBlob, sortNftTypeKeys } from 'src/core/bcmr/utils';
 import { type CompactRegistry } from 'src/core/bcmr/types';
 import { NftCollectionType } from 'src/core/bcmr';
 import { vmNumberToBigInt, hexToBin } from 'bitauth-libauth-v3';
@@ -420,6 +420,15 @@ const registryWorker = {
       })
     }
 
+    // Canonicalize every snapshot's `decimals` before hashing/uploading, then refuse to publish
+    // anything the BCMR schema rejects. Reusing this exact string keeps the CID and the on-chain
+    // contentHash in sync with what was validated.
+    const registryJson = JSON.stringify(normalizeRegistryDecimals(registryCandidate))
+    const validation = importMetadataRegistry(registryJson)
+    if (typeof validation === 'string') {
+      throw new Error(`BCMR validation failed, refusing to publish: ${validation}`)
+    }
+
     let contentHash: string
     let uris: string[]
     let jsonBlob: Blob
@@ -427,25 +436,23 @@ const registryWorker = {
     if (registryRecord.bumpArtifact) {
       contentHash = registryRecord.bumpArtifact.contentHash
       uris = registryRecord.bumpArtifact.uris
-      const rebuiltJson = JSON.stringify(registryCandidate)
-      const savedContentHash = binToHex(sha256.hash(utf8ToBin(rebuiltJson)))
+      const savedContentHash = binToHex(sha256.hash(utf8ToBin(registryJson)))
       if (savedContentHash !== contentHash) {
         // registry changed since last bump, re-upload
-        jsonBlob = new Blob([rebuiltJson], { type: 'application/json' })
+        jsonBlob = new Blob([registryJson], { type: 'application/json' })
         const artifact = await uploadFile(jsonBlob, 'bitcoin-cash-metadata-registry.json')
-        contentHash = binToHex(sha256.hash(utf8ToBin(rebuiltJson)))
+        contentHash = binToHex(sha256.hash(utf8ToBin(registryJson)))
         uris = [`ipfs://${artifact.cid}`]
         await db.registry.update(registryRecord.id!, {
           bumpArtifact: { contentHash, uris, cid: artifact.cid, registry: jsonBlob}
         })
       } else {
-        jsonBlob = new Blob([rebuiltJson], { type: 'application/json' })
+        jsonBlob = new Blob([registryJson], { type: 'application/json' })
       }
     } else {
-      const jsonString = JSON.stringify(registryCandidate)
-      jsonBlob = new Blob([jsonString], { type: 'application/json' })
+      jsonBlob = new Blob([registryJson], { type: 'application/json' })
       const artifact = await uploadFile(jsonBlob, 'bitcoin-cash-metadata-registry.json')
-      contentHash = binToHex(sha256.hash(utf8ToBin(jsonString)))
+      contentHash = binToHex(sha256.hash(utf8ToBin(registryJson)))
       uris = [`ipfs://${artifact.cid}`]
       await db.registry.update(registryRecord.id!, {
         bumpArtifact: { contentHash, uris, cid: artifact.cid, registry: jsonBlob }
