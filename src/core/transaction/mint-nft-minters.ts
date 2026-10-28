@@ -1,5 +1,4 @@
 import { 
-    ElectrumNetworkProvider,
     Network, 
     placeholderP2PKHUnlocker, 
     TransactionBuilder, 
@@ -13,8 +12,6 @@ import {
     getMinimumFee,
     hexToBin, 
     binToHex, 
-    binToBigIntUintLE, 
-    bigIntToVmNumber, 
     decodeCashAddress, 
     CashAddressType, 
     type Output, 
@@ -30,6 +27,7 @@ import {
     P2PKH_UNLOCKING_BYTECODE_BYTESIZE
 } from "../constants"
 import { buildWcSourceOutputs, jsonReplacer } from "./utils"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type MintNftMinterParams = {
     minterUtxo: UtxoWithPath,
@@ -82,7 +80,7 @@ export function mintNftMinters(params: MintNftMinterParams): SignTransactionRequ
     if (!funderInput) throw new Error('Insufficient BCH balance to fund the transaction')
 
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
 
     const spentUtxos = [

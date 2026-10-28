@@ -1,12 +1,12 @@
-import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
+import {  Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeCashAddress, getMinimumFee, hexToBin, decodeCashAddress, CashAddressType} from "bitauth-libauth-v3"
 import { buildWcSourceOutputs, jsonReplacer, jsonReviver } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
-import { AbiFunction, scriptToBytecode } from "@cashscript/utils"
+import { binToHex } from "bitauth-libauth-v3"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type TransferFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
@@ -21,6 +21,7 @@ export type TransferFungibleReservesParams = {
 }
 
 export function transferFungibleReserves(params: TransferFungibleReservesParams): SignTransactionRequest {
+    console.log('@CustomElectrumNetworkProvider', CustomElectrumNetworkProvider)
     const feeRateSatsPerKb = params.feeRateSatsPerKb || DEFAULT_FEE_RATE_SATS_PER_KB
 
     if (!params.issuerTokenUtxo?.token) throw new Error(`Transferring tokens requires a token of the same category.`)
@@ -45,7 +46,7 @@ export function transferFungibleReserves(params: TransferFungibleReservesParams)
 
     if (!funderInput) throw new Error('Insufficient BCH balance to fund the transaction')
         const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
     
     const spentUtxos = [

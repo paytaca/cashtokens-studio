@@ -1,5 +1,5 @@
 import { 
-    ElectrumNetworkProvider, 
+     
     Network, 
     placeholderP2PKHUnlocker, 
     TransactionBuilder 
@@ -10,6 +10,7 @@ import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 import { UtxoTxid, UtxoVout, UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type CreateAuthkeyParams = {
     genesisInputId: `${UtxoTxid}:${UtxoVout}`,
@@ -50,7 +51,7 @@ export function createAuthkey(params: CreateAuthkeyParams): SignTransactionReque
     const funderUtxosSecondary = utxos.filter((utxo) => !utxo.token && utxo.vout === 0) as UtxoWithPath[] // Use genesis input compatible utxos if not enough funder utxos
 
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
 
     let recipientAddress = params.authKeyRecipientAddress || genesisInput.address

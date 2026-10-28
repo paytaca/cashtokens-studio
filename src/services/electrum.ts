@@ -1,4 +1,4 @@
-import { ElectrumNetworkProvider, type Network } from 'cashscript'
+import { ElectrumNetworkProvider, Network } from 'cashscript'
 import { delay } from 'mainnet-js'
 import { createAuthguardContract } from 'src/core/authguard'
 
@@ -175,3 +175,19 @@ export async function waitForAuthheadSpent({
         await delay(interval)
     }
 }
+
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - Disables the class field error because the runtime actually uses a method
+export class CustomElectrumNetworkProvider extends ElectrumNetworkProvider {
+    override getServerForNetwork(network: Network): string {
+        switch (network) {
+          case Network.CHIPNET:
+            return 'chipnet.imaginary.cash';
+          default:
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - Disables the class field error because the runtime actually uses a method
+            return super.getServerForNetwork(network)
+        }
+      }
+  }

@@ -1,5 +1,6 @@
-import { type AddressType, Contract, ElectrumNetworkProvider, type Network } from 'cashscript'
+import { type AddressType, Contract,  type Network } from 'cashscript'
 import artifact from './Authguard.json' with { type: 'json'}
+import { CustomElectrumNetworkProvider } from 'src/services/electrum'
 
 export type CreateAuthguardContractOptions = {
     authkeyTokenId: string,
@@ -8,7 +9,7 @@ export type CreateAuthguardContractOptions = {
 
 export function createAuthguardContract(options: CreateAuthguardContractOptions) {
     const contractOptions = {
-        provider: new ElectrumNetworkProvider(options.network || 'mainnet'),
+        provider: new CustomElectrumNetworkProvider(options.network || 'mainnet'),
         addressType: 'p2sh20' as AddressType
     }
 

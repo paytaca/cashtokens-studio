@@ -1,10 +1,11 @@
-import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder } from "cashscript"
+import {  Network, placeholderP2PKHUnlocker, TokenDetails, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { createAuthguardContract } from "../authguard"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { encodeTransactionOutput, getMinimumFee, hexToBin, Output } from "bitauth-libauth-v3"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { buildWcSourceOutputs, jsonReplacer } from "./utils"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type CreateTokenParams = {
     tokenSpec: Omit<TokenDetails, 'category'>,                   // The new spec of the new token to be created
@@ -80,7 +81,7 @@ export function createToken(params: CreateTokenParams): SignTransactionRequest {
     const funderUtxos = sourceUtxos.filter(u => !u.token).sort((u1, u2) => Number(u2.satoshis) - Number(u1.satoshis))
 
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
 
     const spentUtxos = [genesisInput, authkeyInput]

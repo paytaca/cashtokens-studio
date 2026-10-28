@@ -1,9 +1,10 @@
-import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
+import {  Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { addAuthheadSpendInputs, buildSignRequest, usableFunderUtxos } from "./utils"
 import { SignTransactionRequest } from "@wizardconnect/core"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type UnguardAuthheadParams = {
     authheadUtxo: UtxoWithPath
@@ -22,7 +23,7 @@ function buildAuthheadTransaction(
     }
 ) {
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
 
     const { authguardContract, authkeyTokenAddress } = addAuthheadSpendInputs({

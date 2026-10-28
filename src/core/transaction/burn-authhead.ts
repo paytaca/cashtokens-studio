@@ -1,9 +1,10 @@
-import { ElectrumNetworkProvider, Network, TransactionBuilder } from "cashscript"
+import {  Network, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { addAuthheadSpendInputs, buildSignRequest } from "./utils"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { SignTransactionRequest } from "@wizardconnect/core"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 /** Flat fee for a burn: the point is to write the identity off, so the relay minimum is not the goal. */
 export const BURN_FEE_SATS = 1000n
@@ -50,7 +51,7 @@ export type BurnAuthheadParams = {
  */
 export function burnAuthhead(params: BurnAuthheadParams): SignTransactionRequest {
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network),
+        provider: new CustomElectrumNetworkProvider(params.network),
         allowImplicitFungibleTokenBurn: true
     })
 

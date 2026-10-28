@@ -1,10 +1,11 @@
-import { ElectrumNetworkProvider, Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
+import {  Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
 import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { buildWcSourceOutputs, jsonReplacer } from "./utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { binToHex, decodeTransactionCommon, Output, TransactionCommon } from "bitauth-libauth-v3"
+import { decodeTransactionCommon, TransactionCommon } from "bitauth-libauth-v3"
+import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export type TransferFtsParams = {
     category: string,
@@ -48,7 +49,7 @@ export function transferFts(params: TransferFtsParams): SignTransactionRequest {
     if (!funderInput) throw new Error('Insufficient BCH balance to fund the transaction')
 
     const transaction = new TransactionBuilder({
-        provider: new ElectrumNetworkProvider(params.network)
+        provider: new CustomElectrumNetworkProvider(params.network)
     })
 
     const spentUtxos = [...selectedUtxos, funderInput]
