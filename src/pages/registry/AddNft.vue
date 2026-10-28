@@ -1,0 +1,127 @@
+<template>
+  <q-page class="bg-dark-page text-white">
+    <div class="row justify-center">
+      <div class="col-xs-12 col-sm-10 col-md-8 q-my-lg">
+        <div class="bg-dark border-radius-12 q-pa-lg">
+          <q-card v-if="nft" flat class="bg-dark q-mt-lg">
+            <q-card-title class="flex justify-start q-pa-lg">
+              <h6 class="q-my-xs">Add NFT</h6>
+            </q-card-title>
+            <div class="q-pa-lg">
+              <SequentialNft v-if="!route.query.bytecode" :key="'seq-' + saveKey"
+                v-model:commitment="commitmentOrBottomAltStack" v-model:nft="nft" mode="add" allow-edit
+                @save="onSaveClick" @close="goBack" />
+              <ParsableNft v-else :key="'pars-' + saveKey" :bottomAltStack="commitmentOrBottomAltStack"
+                v-model:nft="nft" :allow-edit="true" @save="onSaveClick" :bytecode="route.query.bytecode as string"
+                @close="goBack" />
+            </div>
+          </q-card>
+        </div>
+      </div>
+    </div>
+  </q-page>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from 'vue'
+import { useQuasar } from 'quasar'
+import { useI18n } from 'vue-i18n'
+import { storeToRefs } from 'pinia'
+import SequentialNft from 'src/components/bcmr/SequentialNft.vue'
+import ParsableNft from 'src/components/bcmr/ParsableNft.vue'
+import type { NftType } from 'src/core/bcmr/bcmr-v2.schema'
+import { useRoute, useRouter } from 'vue-router'
+import { commitmentToSequenceNumber, createNftTypeTemplate, sequenceNumberToCommitment } from 'src/core/bcmr/utils'
+import { NftCollectionType } from 'src/core/bcmr'
+import { useAuthguardStore } from 'src/stores/authguard'
+import { db } from 'src/core/client-db'
+import { getErrorMessage } from 'src/core/utils'
+
+const props = defineProps<{
+  lastKnownType?: string
+  tokenSymbol?: string
+  collectionType?: string
+}>()
+
+const $q = useQuasar()
+const { t } = useI18n()
+const router = useRouter()
+const route = useRoute()
+const authguardStore = useAuthguardStore()
+const { activeAuthhead } = storeToRefs(authguardStore)
+const saveKey = ref(0)
+
+
+const nft = ref<NftType>()
+const commitmentOrBottomAltStack = ref<string>('')
+
+const goBack = () => {
+  const returnTo = route.query.returnTo as string | undefined
+  if (returnTo) {
+    router.push({ path: returnTo, query: route.query })
+  } else {
+    router.back()
+  }
+}
+
+const onSaveClick = async (rawNft: NftType) => {
+  if (!activeAuthhead.value) return
+
+  const nft = JSON.parse(JSON.stringify(rawNft))
+  const { contentHash, identity } = activeAuthhead.value.identitySnapshotIdentifier!
+
+  const existing = await db.nfts
+    .where('[contentHash+authbase+timestamp+type]')
+    .equals([
+      contentHash,
+      identity.authbase,
+      identity.timestamp,
+      commitmentOrBottomAltStack.value
+    ])
+    .first()
+
+  try {
+    if (existing) {
+      const status = existing.status === 'published' ? 'modified' : existing.status
+      await db.nfts.put({ ...existing, nft, status })
+    } else {
+      const category = activeAuthhead.value.token?.category
+        || activeAuthhead.value.identitySnapshot?.token?.category
+      await db.nfts.put({
+        contentHash,
+        authbase: identity.authbase,
+        timestamp: identity.timestamp,
+        category: category || '',
+        type: commitmentOrBottomAltStack.value,
+        nft,
+        status: 'new'
+      })
+    }
+    $q.notify({ type: 'positive', message: t('success.savedDescription') })
+    goBack()
+  } catch (error) {
+    $q.notify({ type: 'negative', message: getErrorMessage(error) })
+  }
+}
+
+onMounted(async () => {
+
+  if ((!props.collectionType || props.collectionType === NftCollectionType.sequential) && props.lastKnownType) {
+    const nextSequenceNumber = (commitmentToSequenceNumber(props.lastKnownType) as bigint) + 1n
+    commitmentOrBottomAltStack.value = sequenceNumberToCommitment(nextSequenceNumber)
+  }
+
+  nft.value = createNftTypeTemplate({
+    commitmentOrBottomAltStackHex: commitmentOrBottomAltStack.value,
+    tokenSymbol: props.tokenSymbol,
+    collectionType: props.collectionType as NftCollectionType || NftCollectionType.sequential
+  })
+})
+
+</script>
+
+<style scoped lang="scss">
+.border-radius-12 {
+  border-radius: 12px;
+}
+</style>

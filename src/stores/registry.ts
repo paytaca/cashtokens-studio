@@ -1,0 +1,118 @@
+import * as Comlink from 'comlink'
+import { defineStore } from 'pinia'
+import { ParsedRegistryRecord } from 'src/core/client-db';
+import { ref } from 'vue';
+
+import { type RegistryWorkerAPI } from 'src/workers/registry-worker';
+import { IdentitySnapshot, NftType } from 'src/core/bcmr/bcmr-v2.schema';
+import type { DecoratedUtxo } from 'src/core/types';
+
+let worker: Comlink.Remote<RegistryWorkerAPI> | null = null
+
+export type ActiveNft = {
+    contentHash: string,
+    authbase: string,
+    timestamp: string,
+    category: string,
+    bytecode?: string,
+    commitmentOrBottomAltStack: string,
+    nftType?: NftType,
+    utxo?: DecoratedUtxo,
+    allowEdit?: boolean,
+    isNew?: boolean
+}
+
+
+export const useRegistryStore = defineStore('registry-store', () => {
+
+    if (typeof window !== 'undefined' && !worker) {
+        const w = new Worker(
+            // Note: Verify if your project root alias handles 'src/...'. 
+            // Relative paths like './registry-worker.ts' are usually safer for bundlers.
+            new URL('../workers/registry-worker.ts', import.meta.url),
+            { type: 'module' }
+        );
+        worker = Comlink.wrap(w)
+    }
+
+    const registries = ref<ParsedRegistryRecord[]>([] as any)
+    const activeNft = ref<ActiveNft|undefined|null>()
+    const activeIdentitySnapshot = ref<IdentitySnapshot|undefined|null>()
+    const identitySnapshotCache = ref<Record<string, any>>({})
+
+    const setActiveNft = (newActiveNft: ActiveNft | undefined | null) => {
+        activeNft.value = newActiveNft
+    }
+
+    const setActiveIdentitySnapshot = (identitySnapshot: IdentitySnapshot | undefined | null) => {
+        activeIdentitySnapshot.value = identitySnapshot
+    }
+
+    const loadRegistry = async (authbase: string, sync?: boolean) => {
+        const i = registries.value?.findIndex((r) => r.authbase === authbase)
+        // When syncing, always refetch: the on-chain registry may have been bumped
+        // to a new contentHash, so the cached row would be stale.
+        if (i !== -1 && !sync) {
+            return registries.value[i]
+        }
+        const result = await worker?.loadRegistry({ authbase, sync })
+        if (result) {
+            if (i !== -1) {
+                registries.value.splice(i, 1, result as ParsedRegistryRecord)
+            } else {
+                registries.value.push(result as ParsedRegistryRecord)
+            }
+        }
+        return result
+    }
+
+    const fetchIdentitySnapshot = async (category: string) => {
+
+        const identitySnapshot = await getIdentitySnapshotByCategory(category)
+
+        if (identitySnapshot) {
+            identitySnapshotCache.value[category] = identitySnapshot
+            return identitySnapshot
+        }
+
+        if (identitySnapshotCache.value[category]) {
+            return identitySnapshotCache.value[category]
+        }
+        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/tokens/${category}`);
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        identitySnapshotCache.value[category] = data
+        return data;
+      }
+
+    const fetchNftType = async (category:string, commitment: string): Promise<any> => {
+        const response = await fetch(`${import.meta.env.VITE_BCMR_INDEXER_URL}/api/registry/${category}/identity-snapshot/token-category/nfts/parse/types/${commitment}/?include_metadata=true`)  
+        if (!response.ok) throw new Error('Network response was not ok');
+        const data = await response.json();
+        return data;
+    }
+
+    const getIdentitySnapshotByCategory = async(category: string) => {
+        const identitySnapshotRecord = await worker?.getIdentitySnapshot({ category })
+        return identitySnapshotRecord?.identitySnapshot
+    }
+
+    const getIdentitySnapshot = async(params: { contentHash: string, identity: { authbase: string, timestamp: string } }) => {
+        const identitySnapshotRecord = await worker?.getIdentitySnapshot(params)
+        return identitySnapshotRecord?.identitySnapshot
+    }
+
+    return {
+        registries,
+        activeNft,
+        activeIdentitySnapshot,
+        setActiveNft,
+        setActiveIdentitySnapshot,
+        loadRegistry,
+        getIdentitySnapshot,
+        getIdentitySnapshotByCategory,
+        fetchIdentitySnapshot,
+        identitySnapshotCache,
+        fetchNftType
+    }
+})

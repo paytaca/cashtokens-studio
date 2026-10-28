@@ -1,10 +1,6 @@
 {
-  "extends": "@quasar/app-webpack/tsconfig-preset.json",
+  "extends": "./.quasar/tsconfig.json",
   "compilerOptions": {
-    "baseUrl": ".",
-    "allowSyntheticDefaultImports": true,
-    "target": "ESNext",
-    "lib": ["ESNext", "DOM"]
-  },
-  "include": ["./src/**/*"]
+    "exactOptionalPropertyTypes": false
+  }
 }

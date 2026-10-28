@@ -1,0 +1,11 @@
+pragma cashscript ^0.12.0;
+
+contract AuthGuard(bytes tokenId) {
+    function unlockWithNft(bool keepGuarded) {
+        require(tx.inputs[1].tokenCategory == tokenId);
+        require(tx.inputs[1].tokenAmount == 0);
+        if(keepGuarded){
+            require(tx.outputs[0].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+        }
+    }
+}

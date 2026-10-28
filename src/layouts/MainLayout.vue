@@ -1,235 +1,85 @@
 <template>
-  <q-layout view="lHh Lpr lFf">
-    <TransactionLogger />
-    <q-header style="background-color: rgb(20, 20, 20)">
+  <q-layout view="hHh lpr fFf">
+    <q-header v-if="showAppChrome" class="header-subtle">
       <q-toolbar class="q-py-sm">
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          size="lg"
-          @click="toggleLeftDrawer"
-        />
+        <q-btn v-if="$q.screen.lt.sm && showAppChrome" flat dense round icon="menu" aria-label="Menu" size="lg"
+          @click="toggleLeftDrawer" />
         <q-toolbar-title>
-          <q-img
-            v-if="route.path !== '/'"
-            to="/"
-            @click.stop="router.push('/')"
-            :src="$q.screen.xs ? 'images/cts_icon.png' : 'images/cts_transparent.png'"
-            class="cursor-pointer app-logo"
-          ></q-img>
-          <code
-            v-if="getAppEnv() !== 'production' && !$q.screen.xs"
-            class="text-caption"
-            >[TEST MODE]</code
-          >
+          <q-img v-if="showHeaderLogo" @click.stop="router.push('/')" src="/images/cts_transparent.png"
+            alt="CashTokens Studio" class="cursor-pointer app-logo" />
+
         </q-toolbar-title>
-        <div v-if="user.walletAddress" class="q-mx-sm">
-          <q-btn-group class="text-right" style="position: relative">
-            <q-btn-dropdown
-              auto-close
-              rounded
-              size="lg"
-              @before-show="onBeforeMenuShow"
-              style="
+        <div v-if="!walletIsReady && !isIndexPage" class="row items-center">
+          <q-btn to="/wizard-connect" style="
+              color: rgb(20, 20, 20);
+              padding: 10px;
+              border-radius: 10px;
+              background-color: #282829d4;
+              border: 2px solid #484854d4;
+            " rounded class="text-grey-2">
+            <template v-slot:default>
+              <q-avatar rounded size="md" :class="{
+                pulse: isConnecting,
+              }">
+                <q-img :src="WIZARDCONNECT_LOGO"></q-img>
+              </q-avatar>
+              {{ $t('Connect') }}
+            </template>
+          </q-btn>
+          <WalletConnectButton class="q-ml-sm" />
+        </div>
+        <div v-else-if="walletIsReady" class="q-mx-sm">
+          <q-btn-group class="text-right q-my-sm" style="position: relative">
+            <q-btn-dropdown size="lg" style="
                 color: rgb(20, 20, 20);
                 padding: 10px;
                 border-radius: 10px;
                 background-color: #282829d4;
                 border: 2px solid #484854d4;
-              "
-            >
+              " auto-close rounded :disable="!walletIsReady">
               <template v-slot:label>
-                <q-avatar v-if="user.walletType == 'paytaca'" rounded size="md">
-                  <q-img src="images/paytaca_icon.png"></q-img>
+                <q-avatar rounded size="md" :class="{
+                  pulse: isConnecting,
+                }">
+                  <q-img v-if="walletIcon" :src="walletIcon"></q-img>
+                  <q-img v-else :src="WIZARDCONNECT_LOGO"></q-img>
                 </q-avatar>
-                <q-avatar
-                  v-else-if="user.walletType == 'walletconnect'"
-                  rounded
-                  size="md"
-                >
-                  <q-img src="images/walletconnect_icon.png"></q-img>
-                </q-avatar>
-                <q-icon v-else name="account_balance_wallet"> </q-icon>
               </template>
-              <q-list padding style="width: 300px">
-                <q-item clickable :to="{ name: 'recent-transactions' }">
-                  <q-avatar class="q-mr-xs" icon="receipt"> </q-avatar>
+              <q-list padding style="width: 220px">
+                <q-item v-if="walletName">
                   <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Recent Transactions
-                        <q-badge
-                          v-if="pendingMultisigTransactions?.length > 0"
-                          color="orange"
-                          label="!"
-                          floating
-                          rounded
-                        ></q-badge>
-                      </span>
-                    </q-item-label>
+                    <q-item-label caption>{{ walletName }}</q-item-label>
                   </q-item-section>
                 </q-item>
-                <q-item clickable @click="scanReserves">
-                  <q-avatar class="q-mr-xs" icon="mdi-card-search"> </q-avatar>
-                  <q-item-section>
-                    <q-item-label>
-                      <span style="position: relative">
-                        Scan Wallet For Managed Tokens
-                        <q-badge
-                          v-if="pendingMultisigTransactions?.length > 0"
-                          color="orange"
-                          label="!"
-                          floating
-                          rounded
-                        ></q-badge>
-                      </span>
-                    </q-item-label>
-                    <q-item-label lines="4" caption>
-                      Click here if some tokens aren't showing up on the FT or
-                      NFT reserves or Metadata pages due to possible delayed
-                      indexing.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item-label header>Tokens in Wallet</q-item-label>
-                <q-item clickable to="/account/balance/fungibletokens">
+                <q-item clickable @click="disconnect">
                   <q-item-section avatar>
-                    <q-avatar text-color="white" icon="money"> </q-avatar>
+                    <q-avatar color="negative" icon="link_off"></q-avatar>
                   </q-item-section>
                   <q-item-section>
-                    <q-item-label>My Fungible Tokens</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display fungible token balances of the currently connected
-                      wallet.
-                    </q-item-label>
+                    <q-item-label>{{ $t('button.disconnect') }}</q-item-label>
                   </q-item-section>
-                </q-item>
-                <q-item clickable to="/account/balance/collectibles">
-                  <q-item-section avatar>
-                    <q-avatar text-color="white" icon="collections"> </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label>My Collectibles (NFTs)</q-item-label>
-                    <q-item-label caption lines="2">
-                      Display NFTs of the currently connected wallet.
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item-label header>Addresses</q-item-label>
-                <q-item
-                  clickable
-                  @click="
-                    () => {
-                      copyText(user.walletAddress);
-                      $q.notify({
-                        message: 'Wallet Address Copied',
-                        timeout: 500,
-                      });
-                    }
-                  "
-                >
-                  <q-item-section avatar>
-                    <q-avatar color="bch" text-color="white">
-                      <q-img src="images/bitcoin-cash-circle.svg"></q-img>
-                    </q-avatar>
-                  </q-item-section>
-                  <q-item-section>
-                    <q-item-label
-                      class="text-positive"
-                      style="
-                        font-variant-numeric: tabular-nums;
-                        font-size: 1.1em;
-                        letter-spacing: 2px;
-                      "
-                    >
-                      {{ user.walletBchBalance }}
-                    </q-item-label>
-                    <q-item-label caption>{{
-                      shortenAddress(user.walletAddress)
-                    }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy cash address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-item
-                  clickable
-                  @click="() => { copyText(user.wallet!.getTokenDepositAddress()); $q.notify({ message: 'Token Address Copied', timeout: 500 }) }"
-                >
-                  <q-avatar class="q-mr-xs">
-                    <q-img src="images/cashtokens.svg"></q-img>
-                  </q-avatar>
-                  <q-item-section>
-                    <!-- <q-item-label>TOKEN</q-item-label> -->
-                    <q-item-label caption>{{
-                      shortenAddress(user.wallet!.getTokenDepositAddress())
-                    }}</q-item-label>
-                    <q-item-label caption class="text-grey-6">
-                      <q-icon name="content_copy" size="xs" class="q-mr-xs" />
-                      Click to copy token address
-                    </q-item-label>
-                  </q-item-section>
-                </q-item>
-                <q-separator inset class="q-my-md" />
-                <q-item>
-                  <paytaca-connect
-                    v-if="user.walletType == 'paytaca'"
-                    variant="button"
-                    class="full-width"
-                  />
-                  <wallet-connect
-                    v-else-if="user.walletType == 'walletconnect'"
-                    variant="button"
-                  />
                 </q-item>
               </q-list>
             </q-btn-dropdown>
-            <q-badge
-              v-if="pendingMultisigTransactions?.length > 0"
-              color="orange"
-              label="!"
-              floating
-            ></q-badge>
           </q-btn-group>
         </div>
-        <!-- <light-switch /> -->
       </q-toolbar>
     </q-header>
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-      overlay
-      v-close-popup
-    >
-      <div class="text-right q-ma-lg">
-        <q-btn
-          size="md"
-          text-color="grey-6"
-          icon="chevron_left"
-          label="hide"
-          @click="toggleLeftDrawer"
-          class="justify-right"
-          dense
-          flat
-        />
+    <q-drawer v-if="showAppChrome" v-model="leftDrawerOpen" show-if-above :breakpoint="$q.screen.sizes.sm - 1"
+      class="sidebar-drawer">
+      <div v-if="$q.screen.lt.sm" class="text-right q-ma-lg">
+        <q-btn size="md" text-color="grey-6" icon="chevron_left" label="hide" @click="toggleLeftDrawer"
+          class="justify-right" dense flat />
       </div>
-
-      <q-scroll-area
-        style="position: relative; height: 100vh; max-width: 100vw"
-        :bar-style="{ width: '0px' }"
-      >
+      <q-scroll-area style="position: relative; height: 100%; max-width: 100vw" :bar-style="{ width: '0px' }">
         <div class="row justify-center q-gutter-sm q-pt-lg">
           <div class="col-12 text-center">
             <q-btn to="/" size="2em" flat color="primary">
-              <q-avatar size="4em">
-                <q-img src="images/cts_icon.png"></q-img>
+              <q-avatar v-if="route.name === 'dashboard'" size="3em">
+                <q-img src="/images/cts_icon.png"></q-img>
+              </q-avatar>
+              <q-avatar v-else size="4em">
+                <q-img :src="`https://api.dicebear.com/10.x/voxel-art/svg?tags=animation&seed=${avatar}`"></q-img>
               </q-avatar>
             </q-btn>
           </div>
@@ -237,186 +87,97 @@
         <SidebarMenu />
       </q-scroll-area>
     </q-drawer>
-    <q-scroll-area
-      style="position: relative; height: 100vh; max-width: 100vw"
-      :bar-style="{ width: '0px' }"
-      :thumb-style="{ width: '0px' }"
-    >
+    <q-scroll-area style="position: relative; height: 100vh; max-width: 100vw" :bar-style="{ width: '0px' }"
+      :thumb-style="{ width: '0px' }" class="q-pt-lg">
       <q-page-container>
-        <q-linear-progress
-          v-if="scanning"
-          indeterminate
-          color="primary"
-          class="q-mt-none"
-        />
-        <div
-          v-if="scanning"
-          class="q-ml-sm q-mt-sm text-italic text-grey-200 text-caption"
-        >
-          {{ scanning }}
-        </div>
-        <q-toolbar v-if="ui.routeBack" class="q-mt-sm q-mb-sm">
-          <!-- <q-btn round color="#434242" icon="west" style="background-color: #434242;" :to="{ name: ui.routeBack }" /> -->
-          <q-toolbar-title class="text-h6">{{
-            ui.pageTitle || $route.meta?.pageTitle
-          }}</q-toolbar-title>
-        </q-toolbar>
-        <template
-          v-if="
-            user.wallet?.isMultisig() && pendingMultisigTransactions?.length > 0
-          "
-        >
-          <div class="q-pa-md q-gutter-sm">
-            <q-banner inline-actions rounded class="bg-orange-400 text-warning">
-              It looks like you still have a pending multisig transaction.
-              Please make sure to finalize and broadcast it first, before
-              creating a new transaction in Cashtokens Studio, to avoid any
-              issues.
-              <template v-slot:action>
-                <q-btn
-                  v-if="route.name !== 'recent-transactions'"
-                  color="warning"
-                  icon="launch"
-                  label="Check it out"
-                  text-color="black"
-                  :to="{ name: 'recent-transactions' }"
-                  no-caps
-                />
-              </template>
-            </q-banner>
-          </div>
-        </template>
-        <router-view />
-        <q-ajax-bar />
+        <!-- Only a *first* initialization blanks the app. A relay reconnect re-emits `walletready`,
+             which can re-run `initWallet()` and flip `initializing` back on mid-session — blanking the
+             page (and unmounting the router-view) long after the wallet was usable. `!wallet?.ready`
+             guards the WalletConnect path; `!walletEverReady` guards WizardConnect re-inits. -->
+        <PageSkeleton v-if="wallet?.initializing && !wallet?.ready && !isIndexPage && !walletEverReady"
+          :message="$t('info.initializingWallet')" />
+        <router-view v-else />
       </q-page-container>
     </q-scroll-area>
-
-    <q-footer class="bg-grey-9 text-white">
+    <q-footer class="footer-subtle text-white">
       <div class="row items-center justify-center q-pa-sm">
         <div class="text-caption">
-          Made with <span style="color:#e25555">❤️</span> by
+          Made with <span style="color: #e25555">❤️</span> by
           <a href="https://paytaca.com" target="_blank" rel="noopener" class="text-white q-ml-xs">Paytaca</a>
         </div>
       </div>
     </q-footer>
-
-    <MessageDialog v-model="messageDialog" />
   </q-layout>
 </template>
 
 <script setup lang="ts">
-import { inject, onBeforeMount, onMounted, ref, watch } from 'vue';
+import { computed, inject, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { EventBus, useQuasar } from 'quasar';
-import ClientDB from 'src/apps/clientonly/ClientDB';
+import { LocalStorage, useQuasar } from 'quasar';
 import SidebarMenu from 'components/SidebarMenu.vue';
-import PaytacaConnect from 'components/PaytacaConnect.vue';
-import WalletConnect from 'components/WalletConnect.vue';
-import { useUser } from 'src/stores/user';
-import { useUI } from 'src/stores/ui';
-import TransactionLogger from 'src/components/TransactionLogger.vue';
-import getAppEnv from 'src/apps/utils/getAppEnv';
-import MessageDialog from 'src/components/dialogs/MessageDialog.vue';
-import { useInit } from 'src/composables/useInit';
-import { useWalletConnect } from 'src/composables/useWalletConnect';
-import { shortenAddress, copyText } from 'src/apps/utils';
-import { AuthKey, Watchtower } from 'src/apps';
-import { delay, Wallet } from 'mainnet-js';
+import PageSkeleton from 'src/components/PageSkeleton.vue';
+import WalletConnectButton from 'src/components/WalletConnectButton.vue';
+import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue';
 
 const leftDrawerOpen = ref(false);
-const user = useUser();
-const ui = useUI();
 const route = useRoute();
 const router = useRouter();
 const $q = useQuasar();
-const messageDialog = ref<boolean>(false);
-const pendingMultisigTransactions = ref([]);
-const scanning = ref<string | boolean>(false);
-const eventBus = inject<EventBus>('eventBus');
-useWalletConnect();
+const avatar = ref<string>('')
+const isIndexPage = computed(() => route.path === '/');
 
-eventBus?.on('updatedPendingMultisigTransactions', async () => {
-  pendingMultisigTransactions.value =
-    await user.getPendingMultisigTransactions();
-});
+const showHeaderLogo = computed(() => $q.screen.gt.xs);
+
+// WizardConnect's own state/manager still drive its QR route and connecting pulse; everything the
+// header shows about the connected wallet comes from the provider-agnostic signer.
+const { state, manager, walletEverReady } = inject('wizardConnectWallet') as any;
+const { wallet, walletIsReady, walletName, walletIcon, isConnecting, disconnect } =
+  inject('walletSigner') as any;
+
+const showAppChrome = computed(
+  () =>
+    Boolean(manager.value) ||
+    Boolean(wallet.value?.ready) ||
+    Boolean(wallet.value?.initializing)
+);
 
 const toggleLeftDrawer = () => {
   leftDrawerOpen.value = !leftDrawerOpen.value;
 };
 
-const onBeforeMenuShow = () => {
-  const db = ClientDB.getInstance();
-  db.getPendingMultisigTransactions().then((v) => {
-    pendingMultisigTransactions.value = v;
-  });
-};
-
-const scanReserves = async () => {
-  scanning.value = 'Checking wallet for AuthKeys...';
-  try {
-    if (user.wallet) {
-      const watchtower = new Watchtower();
-      const paginatedAuthKeys = await watchtower.fetchAuthKeys(
-        user.wallet.getTokenDepositAddress()
-      );
-      for (const a of paginatedAuthKeys?.results) {
-        const authKey = new AuthKey(
-          { ...a, ownerWallet: user.wallet as Wallet },
-          user.transactionSigner
-        );
-        scanning.value = 'AuthKey found, scanning for managed tokens...';
-        await delay(2000);
-        watchtower.subscribe(
-          authKey.authGuard.contract!.getTokenDepositAddress()
-        );
-      }
-    }
-  } catch (error) {
-  } finally {
-    scanning.value = false;
+onMounted(() => {
+  avatar.value = LocalStorage.getItem('avatar') || ''
+  if (!avatar.value) {
+    avatar.value = String(Math.floor(Math.random() * 10000))
+    LocalStorage.setItem('avatar', avatar.value)
   }
-};
-
-useInit();
-
-watch(
-  () => route.path,
-  () => {
-    ui.clearStatusMessage();
-  }
-);
-
-watch(
-  () => ui.statusMessage,
-  (value) => {
-    if (value) {
-      messageDialog.value = true;
-    }
-  }
-);
-
-watch(
-  () => user.wallet,
-  async (wallet) => {
-    if (wallet !== undefined && typeof wallet.isMultisig === 'function') {
-      pendingMultisigTransactions.value =
-        await user.getPendingMultisigTransactions();
-    }
-  }
-);
-
-onMounted(async () => {
-  const db = ClientDB.getInstance();
-  pendingMultisigTransactions.value =
-    await user.getPendingMultisigTransactions();
-});
+})
 </script>
 
 <style scoped>
+.sidebar-drawer {
+  background-color: #002b5c;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    radial-gradient(rgba(0, 0, 0, 0.4) 1px, transparent 1px);
+  background-size: 4px 4px;
+  background-position: 0 0, 2px 2px;
+}
+
 .app-logo {
   max-height: 3em;
   max-width: 8em;
   object-fit: contain;
+}
+
+.header-subtle {
+  background: rgba(13, 15, 19, 0.028) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+.footer-subtle {
+  background: transparent !important;
 }
 
 @media (max-width: 600px) {
@@ -424,5 +185,40 @@ onMounted(async () => {
     max-height: 2.2em;
     max-width: 4.5em;
   }
+}
+
+.pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0.6);
+  }
+
+  70% {
+    transform: scale(1.08);
+    box-shadow: 0 0 0 12px rgba(25, 118, 210, 0);
+  }
+
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(25, 118, 210, 0);
+  }
+}
+</style>
+
+<style lang="scss">
+.q-drawer--standard {
+  background: rgba(13, 15, 19, 0.028) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
+}
+
+.q-drawer--mobile {
+  background: rgba(18, 20, 26, 0.72) !important;
+  backdrop-filter: blur(14px) saturate(160%);
+  -webkit-backdrop-filter: blur(14px) saturate(160%);
 }
 </style>

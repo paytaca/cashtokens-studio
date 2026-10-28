@@ -17,7 +17,7 @@
 </template>
 <script setup lang="ts">
 import { delay } from 'mainnet-js';
-import copyText from 'src/apps/utils/copyText'
+import { copyText } from 'src/core/utils/copy-text'
 import { ref } from 'vue';
 defineOptions({ name: 'TokenCategory' })
 defineProps<{ tokenId?: string, iconRight?: string }>()

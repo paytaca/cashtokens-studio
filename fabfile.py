@@ -4,11 +4,6 @@ from fabric import task
 
 
 def _load_dotenv(path=".env"):
-    """Minimal .env loader: set environment variables if not already present.
-
-    We avoid adding a dependency on python-dotenv; this is intentionally small
-    and only supports simple KEY=VALUE lines and comments.
-    """
     try:
         if not os.path.exists(path):
             return
@@ -19,43 +14,121 @@ def _load_dotenv(path=".env"):
                     continue
                 key, val = line.split("=", 1)
                 key = key.strip()
-                # strip quotes and surrounding whitespace
                 val = val.strip().strip("\"'")
-                # don't overwrite existing env vars
                 os.environ.setdefault(key, val)
     except Exception:
-        # .env loading must not break the fabfile usage; fail silently
         pass
 
 
-# Load .env from repo root so DEPLOY_USER / DEPLOY_HOST can be defined there.
 _load_dotenv()
 
-# Read deploy user/host from environment (or fallback to previous defaults)
-DEPLOY_USER = os.environ.get("DEPLOY_USER", "root")
-DEPLOY_HOST = os.environ.get("DEPLOY_HOST", "REMOVED_DEPLOY_HOST")
 
-# hosts needs to be a list available at import-time for fabric tasks
+def _env(name, default):
+    return os.environ.get(name) or default
+
+
+DEPLOY_USER = _env("DEPLOY_USER", "REMOVED_DEPLOY_USER")
+DEPLOY_HOST = _env("DEPLOY_HOST", "REMOVED_DEPLOY_HOST")
+DEPLOY_ROOT = _env("DEPLOY_ROOT", "REMOVED_DEPLOY_ROOT")
+
 hosts = [f"{DEPLOY_USER}@{DEPLOY_HOST}"]
+
+ENVIRONMENTS = ("staging", "prod")
+DEPLOY_HISTORY_DIR = f"{DEPLOY_ROOT}/deploy-history"
+
+
+def deploy_dir(environment):
+    return f"{DEPLOY_ROOT}/{environment}"
+
+
+def compose_project(environment):
+    return f"cashtokens-studio-{environment}"
+
+
+def _require_deploy_root():
+    if DEPLOY_ROOT == "REMOVED_DEPLOY_ROOT":
+        raise Exception(
+            "DEPLOY_ROOT is not set. Define DEPLOY_ROOT, DEPLOY_USER and DEPLOY_HOST "
+            "in .env at the repo root, e.g. DEPLOY_ROOT=/srv/app"
+        )
+
+
+def _require_environment(environment):
+    if environment not in ENVIRONMENTS:
+        raise Exception(
+            f"Invalid environment '{environment}'. Use one of: {', '.join(ENVIRONMENTS)}"
+        )
+
+
+def env_settings(environment):
+    _require_environment(environment)
+    prefix = environment.upper()
+    return {
+        "image": _env(f"{prefix}_IMAGE", f"cashtokens-studio-{environment}-web:latest"),
+        "snapshot": _env(f"{prefix}_SNAPSHOT", f"cashtokens-studio-{environment}"),
+        "keep": int(_env(f"{prefix}_KEEP", "2")),
+        "compose_file": f"deployment/{environment}.yml",
+        "deploy_dir": deploy_dir(environment),
+        "history": f"{DEPLOY_HISTORY_DIR}/{environment}.log",
+        "deploy_script": f"{deploy_dir(environment)}/scripts/{environment}-deploy.sh",
+        "deploy_log": f"{DEPLOY_HISTORY_DIR}/{environment}-deploy.log",
+    }
+
+
+def _confirm(environment, action, confirm_first=True):
+    if not confirm_first:
+        return True
+    if environment == "prod":
+        return input(f"Are you sure you want to {action} PRODUCTION (yes-to-prod/no)?") == "yes-to-prod"
+    return input(f"Are you sure you want to {action} STAGING (yes/no)?").lower() == "yes"
+
+
+def _snapshots(c, environment):
+    snapshot = env_settings(environment)["snapshot"]
+    out = c.run(
+        f"sudo docker images {snapshot} --format '{{{{.Tag}}}}' | sort -r",
+        hide=True,
+        warn=True,
+    ).stdout
+    return [tag for tag in out.split() if tag and tag != "<none>"]
+
+
+def _snapshot_image(c, environment):
+    settings = env_settings(environment)
+    if not c.run(f"sudo docker image inspect {settings['image']}", hide=True, warn=True).ok:
+        print(f"WARNING: {settings['image']} not found — skipping snapshot")
+        return None
+
+    tag = c.run("date -u +%Y%m%d-%H%M%S", hide=True).stdout.strip()
+    c.run(f"sudo docker tag {settings['image']} {settings['snapshot']}:{tag}")
+    c.run(f"mkdir -p $(dirname {settings['history']})")
+    c.run(f"echo '{tag}' >> {settings['history']}")
+    print(f"Snapshot: {settings['snapshot']}:{tag}")
+    return tag
+
+
+def _prune_environment(c, environment):
+    settings = env_settings(environment)
+    c.run("sudo docker image prune -f", warn=True)
+    stale = _snapshots(c, environment)[settings["keep"]:]
+    if stale:
+        refs = " ".join(f"{settings['snapshot']}:{tag}" for tag in stale)
+        c.run(f"sudo docker rmi {refs}", warn=True)
+        print(f"Removed {len(stale)} old snapshot(s): {', '.join(stale)}")
+    c.run("sudo docker builder prune -f", warn=True)
 
 
 def attach_ssh_key(c):
-    # allow overriding the ssh key path via SSH_KEY_PATH in .env
-    # default to standard OpenSSH private key path unless overridden
     key_path = os.environ.get("SSH_KEY_PATH", "~/.ssh/id_rsa")
-    # expand ~ to the actual home directory
     key_path = os.path.expanduser(key_path)
     c.connect_kwargs.key_filename = key_path
 
 
 @task(hosts=hosts)
 def test_uname(c):
-    """Quick connectivity check: run `uname -a` on the remote host.
-
-    Use: fab -f fabfile.py test_uname
-    """
+    """Check connectivity to the deploy host."""
     attach_ssh_key(c)
-    print(f"Running uname -a on {c.host}...")
+    print("Running uname -a on the deploy host...")
     result = c.run("uname -a", hide=False)
     print("Remote uname output:")
     print(result.stdout.strip())
@@ -64,214 +137,238 @@ def test_uname(c):
 @task(hosts=hosts)
 def sync(c, environment, confirm_first=True):
     attach_ssh_key(c)
-    c.run(f"mkdir -p /root/cashtokens-studio/{environment}")
-    if not environment or environment not in ["staging", "prod"]:
-        raise Exception("Invalid environment.")
-    proceed = False
-    if environment == "prod":
-        if confirm_first:
-            answer = input(
-                "Are you sure you wan't to sync to PRODUCTION (yes-to-prod/no)?"
-            )
-            if answer == "yes-to-prod":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-
-    if environment == "staging":
-        if confirm_first:
-            answer = input("Are you sure you wan't to sync to STAGING (yes/no)?")
-            if answer == "yes":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-    if proceed == True:
-        print(f"Syncing to cashtokens-studio/{environment}")
-        rsync(
-            c,
-            ".",
-            f"/root/cashtokens-studio/{environment}",
-            exclude=[
-                ".venv",
-                ".git",
-                ".DS_Store",
-                ".env",
-                "__pycache__",
-                "*.pyc",
-                "*.log",
-                "*.pid",
-                "node_modules",
-            ],
-        )
+    _require_deploy_root()
+    _require_environment(environment)
+    if not _confirm(environment, "sync to", confirm_first):
+        print("Not synced")
+        return
+    c.run(f"mkdir -p {deploy_dir(environment)}")
+    print(f"Syncing to cashtokens-studio/{environment}")
+    rsync(
+        c,
+        ".",
+        deploy_dir(environment),
+        exclude=[
+            ".venv",
+            ".git",
+            ".DS_Store",
+            ".env",
+            "__pycache__",
+            "*.pyc",
+            "*.log",
+            "*.pid",
+            "node_modules",
+            "dist",
+            ".quasar",
+        ],
+    )
 
 
 @task(hosts=hosts)
 def build(c, environment, confirm_first=True):
     attach_ssh_key(c)
+    _require_environment(environment)
+    if not _confirm(environment, "build for", confirm_first):
+        print("Not built")
+        return
 
-    if not environment or environment not in ["staging", "prod"]:
-        raise Exception("Invalid environment.")
-    proceed = False
-    if environment == "prod":
-        if confirm_first:
-            answer = input(
-                "Are you sure you wan't to sync to PRODUCTION (yes-to-prod/no)?"
-            )
-            if answer == "yes-to-prod":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-
-    if environment == "staging":
-        if confirm_first:
-            answer = input("Are you sure you wan't to sync to STAGING (yes/no)?")
-            if answer == "yes":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-
-    if proceed == True:
-        print(f"Building cashtokens-studio/{environment}")
-        with c.cd(f"/root/cashtokens-studio/{environment}"):
-            # c.run('yarn --ignore-engines')
-            if environment == "staging":
-                c.run("cp deployment/.env.dev .env.dev")
-                # c.run('yarn run devbuild -m ssr')
-                c.run(
-                    f"sudo docker compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml build"
-                )
-            elif environment == "prod":
-                c.run("cp deployment/.env.prod .env.prod")
-                # c.run('quasar build -m ssr')
-                c.run(
-                    f"sudo docker compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build"
-                )
+    settings = env_settings(environment)
+    print(f"Building cashtokens-studio/{environment}")
+    with c.cd(settings["deploy_dir"]):
+        c.run(f"cp deployment/.env.{environment} .env.{environment}")
+        c.run(
+            f"sudo docker compose -p {compose_project(environment)} -f {settings['compose_file']} build"
+        )
+        _snapshot_image(c, environment)
 
 
 @task(hosts=hosts)
 def up(c, environment, confirm_first=True):
     attach_ssh_key(c)
-    if not environment or environment not in ["staging", "prod"]:
-        raise Exception("Invalid environment.")
-    proceed = False
-    if environment == "prod":
-        if confirm_first:
-            answer = input(
-                "Are you sure you wan't to sync to PRODUCTION (yes-to-prod/no)?"
-            )
-            if answer == "yes-to-prod":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-    if environment == "staging":
-        if confirm_first:
-            answer = input("Are you sure you wan't to sync to STAGING (yes/no)?")
-            if answer == "yes":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
+    _require_environment(environment)
+    if not _confirm(environment, "bring up", confirm_first):
+        print("Not started")
+        return
 
-    if proceed == True:
-        print(f"Docker up {environment}")
-        with c.cd(f"/root/cashtokens-studio/{environment}"):
-            # if environment == 'staging':
-            #     # lets just commit to this, staging was deployed with 'staging' project name,
-            #     c.run(f'docker compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
-            # elif environment == 'prod':
-            #     c.run(f'docker compose  -f deployment/{environment}.yml build')
-            c.run(
-                f"sudo docker compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml up -d"
-            )
+    settings = env_settings(environment)
+    print(f"Docker up {environment}")
+    with c.cd(settings["deploy_dir"]):
+        c.run(
+            f"sudo docker compose -p {compose_project(environment)} -f {settings['compose_file']} up -d"
+        )
 
 
 @task(hosts=hosts)
 def down(c, environment, confirm_first=True):
     attach_ssh_key(c)
-    if not environment or environment not in ["staging", "prod"]:
-        raise Exception("Invalid environment.")
+    _require_environment(environment)
+    if not _confirm(environment, "take down", confirm_first):
+        print("Not stopped")
+        return
 
-    proceed = False
-
-    if environment == "prod":
-        if confirm_first:
-            answer = input(
-                "Are you sure you wan't to sync to PRODUCTION (yes-to-prod/no)?"
-            )
-            if answer == "yes-to-prod":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-
-    if environment == "staging":
-        if confirm_first:
-            answer = input("Are you sure you wan't to sync to STAGING (yes/no)?")
-            if answer == "yes":
-                proceed = True
-            else:
-                proceed = False
-        else:
-            proceed = True
-
-    if proceed == True:
-        print(f"Executing docker down to cashtokens-studio/{environment}")
-        with c.cd(f"/root/cashtokens-studio/{environment}"):
-            # if environment == 'staging':
-            #     # lets just commit to this, staging was already deployed with 'staging' as project name,
-            #     c.run(f'docker compose  -p cashtokens-studio-{environment} -f deployment/{environment}.yml build')
-            # elif environment == 'prod':
-            #     c.run(f'docker compose  -f deployment/{environment}.yml build')
-            c.run(
-                f"sudo docker compose -p cashtokens-studio-{environment} -f deployment/{environment}.yml rm --stop --force"
-            )
+    settings = env_settings(environment)
+    print(f"Executing docker down to cashtokens-studio/{environment}")
+    with c.cd(settings["deploy_dir"]):
+        c.run(
+            f"sudo docker compose -p {compose_project(environment)} -f {settings['compose_file']} rm --stop --force"
+        )
 
 
 @task(hosts=hosts)
 def prune(c):
+    """Host-wide prune; removes every unused image including snapshots."""
     attach_ssh_key(c)
     c.run("docker system prune --all -f")
 
 
 @task(hosts=hosts)
-def deploy(c, environment):
+def prune_env(c, environment):
+    """Reclaim one environment's build leftovers, keeping the running image."""
     attach_ssh_key(c)
-    if not environment or environment not in ["staging", "prod"]:
-        raise Exception("Invalid deployment environment.")
-    if environment == "prod":
-        answer = input(
-            "Are you sure you wan't to deploy to PRODUCTION (yes-to-prod/no)?"
-        )
-        if answer == "yes-to-prod":
-            sync(c, environment, False)
-            build(c, environment, False)
-            down(c, environment, False)
-            up(c, environment, False)
-            prune(c)
-            print("Deployment of cashtokens-studio/prod done!!!")
-        else:
-            print("Not deployed. Type 'yes-to-prod' to deploy")
+    _require_deploy_root()
+    _prune_environment(c, environment)
 
-    if environment == "staging":
-        answer = input("Are you sure you wan't to deploy to STAGING (yes/no)?")
-        if answer.lower() == "yes":
-            sync(c, environment, False)
-            build(c, environment, False)
-            down(c, environment, False)
-            up(c, environment, False)
-            prune(c)
-            print("Deployment of cashtokens-studio/staging done!!!")
-        else:
-            print("Not deployed")
+
+@task(hosts=hosts)
+def prune_staging(c):
+    """Alias for `fab prune-env staging`."""
+    prune_env(c, "staging")
+
+
+@task(hosts=hosts)
+def rollback(c, environment, tag=None):
+    """Roll an environment's container back to a previous image snapshot."""
+    attach_ssh_key(c)
+    _require_deploy_root()
+    settings = env_settings(environment)
+
+    snapshots = _snapshots(c, environment)
+    if not snapshots:
+        raise Exception(f"No {environment} snapshots found — nothing to roll back to.")
+
+    if tag:
+        if tag not in snapshots:
+            raise Exception(f"Unknown snapshot '{tag}'. Available: {', '.join(snapshots)}")
+        target = tag
+    else:
+        if len(snapshots) < 2:
+            raise Exception(
+                "Only one snapshot exists, so there is no previous build to roll back to "
+                f"({settings['snapshot']}:{snapshots[0]} is the running image)."
+            )
+        target = snapshots[1]
+
+    required = "yes-to-prod" if environment == "prod" else "yes"
+    answer = input(f"Roll {environment} back to {settings['snapshot']}:{target}? ({required})")
+    if answer.strip() != required:
+        print("Not rolled back")
+        return
+
+    c.run(f"sudo docker tag {settings['snapshot']}:{target} {settings['image']}")
+    with c.cd(settings["deploy_dir"]):
+        c.run(
+            f"sudo docker compose -p {compose_project(environment)} -f {settings['compose_file']} "
+            "up -d --no-build --force-recreate"
+        )
+
+    print(f"Rolled {environment} back to {settings['snapshot']}:{target}")
+
+
+@task(hosts=hosts)
+def rollback_staging(c, tag=None):
+    """Alias for `fab rollback staging`."""
+    rollback(c, "staging", tag)
+
+
+@task(hosts=hosts)
+def snapshots(c, environment):
+    """List an environment's image snapshots, newest first."""
+    attach_ssh_key(c)
+    snapshot = env_settings(environment)["snapshot"]
+    for tag in _snapshots(c, environment):
+        print(f"{snapshot}:{tag}")
+
+
+@task(hosts=hosts)
+def staging_snapshots(c):
+    """Alias for `fab snapshots staging`."""
+    snapshots(c, "staging")
+
+
+@task(hosts=hosts)
+def deploy(c, environment):
+    """sync -> build (with snapshot) -> up -> env-scoped prune."""
+    attach_ssh_key(c)
+    _require_deploy_root()
+    _require_environment(environment)
+    settings = env_settings(environment)
+
+    if not _confirm(environment, "deploy to", True):
+        print("Not deployed")
+        return
+
+    sync(c, environment, False)
+    build(c, environment, False)
+
+    print(f"Swapping the {environment} container onto the new image")
+    with c.cd(settings["deploy_dir"]):
+        c.run(
+            f"sudo docker compose -p {compose_project(environment)} -f {settings['compose_file']} up -d"
+        )
+
+    _prune_environment(c, environment)
+
+    print(f"Deployment of cashtokens-studio/{environment} done!!!")
+    current = _snapshots(c, environment)
+    if len(current) > 1:
+        print(
+            f"Rollback if anything is wrong: fab rollback {environment}  "
+            f"(back to {settings['snapshot']}:{current[1]})"
+        )
+    c.run("docker system df", hide=False, warn=True)
+
+
+@task(hosts=hosts)
+def deploy_detached(c, environment):
+    """Sync, then let the server finish the deploy as a detached job."""
+    attach_ssh_key(c)
+    _require_deploy_root()
+    _require_environment(environment)
+    settings = env_settings(environment)
+
+    if not _confirm(environment, "deploy to", True):
+        print("Not deployed")
+        return
+
+    sync(c, environment, False)
+
+    deploy_env = " ".join(
+        [
+            f"DEPLOY_DIR={settings['deploy_dir']}",
+            f"HISTORY={settings['history']}",
+            f"PROJECT={compose_project(environment)}",
+            f"COMPOSE_FILE={settings['compose_file']}",
+            f"IMAGE={settings['image']}",
+            f"SNAPSHOT={settings['snapshot']}",
+            f"SNAPSHOT_KEEP={settings['keep']}",
+        ]
+    )
+    c.run(f"chmod +x {settings['deploy_script']}")
+    c.run(f"mkdir -p {os.path.dirname(settings['deploy_log'])}")
+    launched = c.run(
+        f"{deploy_env} setsid nohup {settings['deploy_script']} "
+        f"> {settings['deploy_log']} 2>&1 < /dev/null & echo $!",
+        pty=False,
+    )
+
+    print()
+    print("=" * 64)
+    print("OK YOU CAN LEAVE")
+    print("=" * 64)
+    print(f"  pid:       {launched.stdout.strip()}")
+    print(f"  log:       {settings['deploy_log']}")
+    print(f"  watch:     ssh {DEPLOY_USER}@<deploy-host> 'tail -f {settings['deploy_log']}'")
+    print(f"  tail:      ssh {DEPLOY_USER}@<deploy-host> 'tail -n 5 {settings['deploy_log']}'")
+    print(f"  snapshots: fab snapshots {environment}")
+    print(f"  rollback:  fab rollback {environment}        (once it has finished)")
+    print()

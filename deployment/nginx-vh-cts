@@ -1,21 +1,24 @@
-upstream ctswebstaging {
-    server 127.0.0.1:3001;
+# Nginx vhost template for the two deployed sites. Anything that depends on the deployment is a
+# placeholder: <staging-domain>/<prod-domain>, <deploy-root>, and the <staging>/<prod> upstreams
+# pointing at host:port1 and host:port2. Substitute the real values before installing this.
+upstream <staging> {
+    server host:port1;
     keepalive 64;
 }
 
-upstream ctswebprod {
-    server 127.0.0.1:3000;
+upstream <prod> {
+    server host:port2;
     keepalive 64;
 }
 
 server {
      listen 80;
      client_max_body_size 10M;
-     server_name cashtokens.studio;
+     server_name <prod-domain>;
      add_header Content-Security-Policy "frame-ancestors 'self' https://verify.walletconnect.com https://verify.walletconnect.org";
      location ^~ /.well-known/ {
         allow all;
-        root /root/cashtokens-studio/prod;
+        root <deploy-root>/prod;
      }
      location / {
     	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -26,7 +29,7 @@ server {
     	proxy_set_header Upgrade $http_upgrade;
     	proxy_set_header Connection "upgrade";
         
-    	proxy_pass http://ctswebprod/;
+    	proxy_pass http://<prod>/;
     	proxy_redirect off;
     	proxy_read_timeout 240s;
     }
@@ -35,10 +38,10 @@ server {
 server {
      listen 80;
      client_max_body_size 10M;
-     server_name chipnet.cashtokens.studio;
+     server_name <staging-domain>;
      location ^~ /.well-known/ {
         allow all;
-        root /root/cashtokens-studio/staging;
+        root <deploy-root>/staging;
      }
      location / {
     	proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
@@ -49,7 +52,7 @@ server {
     	proxy_set_header Upgrade $http_upgrade;
     	proxy_set_header Connection "upgrade";
         
-    	proxy_pass http://ctswebstaging/;
+    	proxy_pass http://<staging>/;
     	proxy_redirect off;
     	proxy_read_timeout 240s;
     }

@@ -39,12 +39,13 @@
 //   font-family: 'cutive-mono';
 //   src: url('/fonts/montserrat/Cutive-Mono.woff2');
 // }
-
 body {
   // font-family: 'montserrat-regular';
   // font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  font-family: 'Gilroy', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
-    'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  // font-family: 'Gilroy', 'Lucida Sans', 'Lucida Sans Regular', 'Lucida Grande',
+  //   'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
   font-size: 1rem;
   /* For Firefox */
   /* Note: You may need to adjust this for older Firefox versions */
@@ -81,8 +82,13 @@ th {
 }
 
 label {
-  font-size: medium;
+  // font-size: medium;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.5;
+  color: #9e9e9e;
 }
+
 input,
 textarea {
   font-size: large;
@@ -96,14 +102,8 @@ textarea {
   letter-spacing: 5px;
 }
 
-.token-symbol,
 .c-unicase {
   font-variant: unicase;
-}
-
-.token-symbol {
-  font-size: 1.2em;
-  font-weight: bolder;
 }
 
 .token-thumbnail {
@@ -174,17 +174,17 @@ textarea {
 //   background-color: red;
 // }
 
-.q-field--disabled .q-field__label {
-  color: rgb(55, 46, 46) !important;
-}
+// .q-field--disabled .q-field__label {
+//   color: rgb(55, 46, 46) !important;
+// }
 
-.q-field--dark.q-field--disabled .q-field__label {
-  color: rgb(228, 201, 201) !important;
-}
+// .q-field--dark.q-field--disabled .q-field__label {
+//   color: rgb(228, 201, 201) !important;
+// }
 
-.q-field__label {
-  color: black;
-}
+// .q-field__label {
+//   color: black;
+// }
 
 i.q-icon.notranslate.material-icons {
   // color: #15416d;
@@ -194,6 +194,12 @@ i.q-icon.notranslate.material-icons {
 }
 
 body.body--dark {
+  background: radial-gradient(
+    circle at 50% 45%,
+    #242936 0%,
+    #0d0f13 70%,
+    #050608 100%
+  );
   color: rgb(200, 198, 198);
 }
 
@@ -211,19 +217,75 @@ body.body--dark {
 }
 
 .rounded-borders {
-  border-radius: 15px;
+  border-radius: 25px;
 }
 
-.q-field--readonly.q-field--float .q-field__native,
-.q-field--readonly.q-field--float .q-field__input {
-  color: #816f6f;
+.feature-card-bg {
+  border-radius: 25px;
+  background: linear-gradient(
+    145deg,
+    rgba(30, 34, 43, 0.98),
+    rgba(20, 23, 30, 0.98)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
+
+.q-card.q-dark {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 34, 43, 0.98),
+    rgba(20, 23, 30, 0.98)
+  ) !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025) !important;
+}
+
+.q-dialog .q-card {
+  border-radius: 25px;
+}
+
+.q-table__container.q-dark,
+.q-table__container.q-table--dark {
+  background: linear-gradient(
+    145deg,
+    rgba(30, 34, 43, 0.98),
+    rgba(20, 23, 30, 0.98)
+  );
+}
+
+.q-table--dark thead th,
+.q-dark thead th {
+  background: #0d0f137a !important;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.q-table--dark thead th .q-table__sort-icon {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+// .q-field--readonly.q-field--float .q-field__native,
+// .q-field--readonly.q-field--float .q-field__input {
+//   color: #816f6f;
+// }
 
 // Custom
 .token-symbol {
+  font-family: 'Gilroy', system-ui, -apple-system, sans-serif;
+  font-size: 1.5em;
+  font-weight: 800;
   letter-spacing: 4px;
   font-variant: unicase;
-  color: grey;
+  color: rgb(203, 200, 200);
 }
 
 .bg-content {
@@ -232,4 +294,50 @@ body.body--dark {
 
 .q-field__inner {
   background-color: #1e1e1e2e;
+}
+
+.border-radius-15 {
+  border-radius: 15px;
+}
+
+.table-header {
+  color: rgb(200, 198, 198);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.icon-badge-hex {
+  font-family: 'Roboto Condensed', 'Arial Narrow', -apple-system, sans-serif;
+  font-size: 1.2em;
+  font-weight: bold;
+  line-height: 1.2em;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// Overrides
+/*
+* Disabled input override
+*/
+.q-field--disabled {
+  .q-field__control > div {
+    opacity: 1 !important;
+  }
+  &.q-field--outlined .q-field__control {
+    background: #2a2a2a; /* your fill color */
+    &:before {
+      border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    }
+  }
+  // Allow click of appended button even when disabled
+  .q-field__append {
+    pointer-events: auto !important;
+  }
+  .q-field__prepend {
+    pointer-events: auto !important;
+  }
 }
