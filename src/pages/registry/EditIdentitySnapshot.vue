@@ -169,7 +169,7 @@ import { useRegistryStore } from 'src/stores/registry'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
-import { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
+import { AuthheadUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { publishRegistry } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { BaseWallet, delay, NetworkType } from 'mainnet-js'
@@ -394,7 +394,7 @@ const onPublishClick = async () => {
 
     try {
 
-        const authhead = activeAuthhead.value as UtxoWithAuthKey
+        const authhead = activeAuthhead.value as AuthheadUtxo
         const existingIdentifier = authhead.identitySnapshotIdentifier
         // The registry's authbase, shared by both branches below: an existing identity's authbase
         // is authoritative; the route and token category are only fallbacks for a brand-new one.
@@ -457,11 +457,11 @@ const onPublishClick = async () => {
         } else {
             // No registry yet — create and publish a brand-new full registry.
             if (clonedSnapshot.token) {
-                clonedSnapshot.token.category = authbase
+                clonedSnapshot.token!.category! = authbase as string
             }
 
             const created = createTokenRegistry({
-                authbase,
+                authbase: authbase as string,
                 identitySnapshot: clonedSnapshot,
                 authKeyNftCategory: authhead.authkey?.token?.category || ''
             })
@@ -481,7 +481,7 @@ const onPublishClick = async () => {
         updateStep(TASK_UPLOAD_REGISTRY, 'done')
         updateStep(TASK_INPUTS_CHECK, 'running')
 
-        await wallet.value.sync()
+        await wallet.value?.sync()
 
         triggerRef(wallet)
 
@@ -490,7 +490,7 @@ const onPublishClick = async () => {
 
         const publishRegistryRequest = publishRegistry({
             authhead,
-            funderUtxos: wallet.value.utxos as UtxoWithPath[],
+            funderUtxos: wallet.value?.utxos as UtxoWithPath[],
             network: import.meta.env.VITE_BCH_NETWORK,
             registryPublicationData: {
                 contentHash,
@@ -527,16 +527,16 @@ const onPublishClick = async () => {
                 publicationUris: uris,
                 contentHash,
                 rawRegistry: newRegistryBlob!,
-                authbase
+                authbase: authbase as string
             })
-            await db.setRegistryPublished(authbase, contentHash)
+            await db.setRegistryPublished(authbase as string, contentHash)
 
             // Materialize the new identity snapshot locally so this page and the
             // active authhead update without waiting for the chain to index it.
             const timestamp = newRegistry!.latestRevision
             await getRegistryWorker().getIdentitySnapshot({
                 contentHash,
-                identity: { authbase, timestamp }
+                identity: { authbase: authbase as string, timestamp }
             })
 
             const updatedAuthhead = {
@@ -573,7 +573,7 @@ const onPublishClick = async () => {
         await updateActiveAuthhead()
 
         await db.saveActivity({
-            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
+            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.symbol || activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
             txid,
             status: 'success'
         })
@@ -591,7 +591,7 @@ const onPublishClick = async () => {
             }
         }).onOk(async () => {
 
-            registryStore.loadRegistry(authbase, true).then(async () => {
+            registryStore.loadRegistry(authbase as string, true).then(async () => {
                 await loadPublishedNfts(0, 5)
                 await onPublishedRequest({ pagination: { page: 1, rowsPerPage: 5 } })
             })

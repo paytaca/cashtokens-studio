@@ -646,7 +646,7 @@ const scheduleOnChainTypeEnrichment = () => {
         } finally {
             nftTypeEnrichRunning = false
         }
-    })
+    }) as any
 }
 
 watch(onChainTokens, scheduleOnChainTypeEnrichment, { immediate: true, deep: true })
@@ -863,7 +863,7 @@ const onPublishClick = async () => {
         updateStep(TASK_REFRESH_UTXOS, 'done')
 
         await db.saveActivity({
-            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
+            event: `Published NFT metadata of ${activeAuthhead.value?.identitySnapshot?.token?.symbol || activeAuthhead.value?.identitySnapshot?.token?.category || activeAuthhead.value!.token?.category}`,
             txid,
             status: 'success'
         })

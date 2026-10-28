@@ -33,6 +33,7 @@ export default {
 <p>It's ideal when each NFT needs to show meaningful information — for example, order receipts with amounts, tickets with seat numbers, or game items with their attributes.</p>
 <p><b>In short:</b> Sequential gives you just a number for each item, while Parsable gives you a number plus extra information that wallets can display.</p>
 <p><b>Quick tip:</b> choose Sequential if you only need unique numbered items; choose Parsable if each item must show extra details.</p>`,
+    fungibleReservesExplainer: `<p>Fungible Reserves are unissued fungible tokens that is found in your token's identity output held by the Authguard Vault Contract. </p><p>This is the portion of the supply which you, the issuer, represents as "not in circulation".</p>`,
     prepareTokenCategoryExplainer: `<p>A CashTokens <span class="text-weight-bold text-primary">Token Category</span> is permanently generated from the unique <span class="text-weight-bold">32-byte Transaction ID (TXID)</span> of the unspent BCH output (UTXO) which was the first output of a previous transaction. To prepare it, CashTokens Studio automatically selects an available UTXO from your wallet; the hex-encoded TXID of that specific transaction will automatically serve as your immutable Token Category identifier, guaranteeing global uniqueness on the network.</p>`,
     whatsThis: `What's this?`,
     changeIcon: 'Change icon',

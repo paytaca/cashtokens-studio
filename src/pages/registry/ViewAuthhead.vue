@@ -125,7 +125,17 @@
                     </FormField>
 
                     <FormField v-if="showReleaseReserves && activeAuthhead" class="rounded-borders">
-                        <label>Fungible Reserves</label>
+                        <label class="flex items-center q-gutter-x-sm">
+                            <span>Fungible Reserves</span>
+                            <q-btn @click="$q.dialog({
+                                class: ['q-py-sm', 'text-body1', $q.screen.gt.xs ? 'text-justify' : 'text-left'],
+                                style: 'width: 100%; max-width: min(92vw, 36rem);',
+                                html: true,
+                                message: `<div class='scroll' style='max-height: 70vh'>${t('info.fungibleReservesExplainer')}</div>`
+                            })" flat no-caps dense text-color="secondary">
+                                {{ t('info.whatsThis') }}
+                            </q-btn>
+                        </label>
                         <q-input :model-value="fungibleReserves" disable outlined bottom-slots
                             :type="$q.screen.lt.sm ? 'textarea' : 'text'" :autogrow="$q.screen.lt.sm">
                             <template v-slot:hint>
