@@ -2,16 +2,16 @@
   <q-dialog ref="dialogRef" @hide="onDialogHide" class="text-title" :title="transferType">
     <q-card class="q-px-xs q-py-lg full-width">
       <q-toolbar>
-        <q-toolbar-title class="text-h4 text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
+        <q-toolbar-title class="text-bold row items-center q-gutter-xs text-grey-4" style="text-wrap:wrap">
           <div class="flex items-center col justify-between">
-            <div class="flex items-center text-capitalize">{{ transferLabel }}</div>
-            <div class="flex items-center token-symbol q-gutter-xs">
+            <div class="text-h4  flex items-center text-capitalize">{{ transferLabel }}</div>
+            <div class="flex items-center q-gutter-xs">
               <q-avatar>
                 <q-img v-if="identitySnapshot?.uris?.icon"
                   :src="ipfsToGatewayUrl(identitySnapshot?.uris?.icon) as string"></q-img>
                 <q-icon v-else></q-icon>
               </q-avatar>
-              <span>{{ identitySnapshot?.token?.symbol }}</span>
+              <span class="token-symbol">{{ identitySnapshot?.token?.symbol }}</span>
             </div>
           </div>
         </q-toolbar-title>
@@ -34,8 +34,9 @@
               <q-input v-if="Number(transferAmount) > 0" :model-value="newBalance" label="New Balance After Send"
                 outlined class="currency-amount" readonly>
               </q-input>
-              <q-input v-model="transferAmount" label="Enter amount to Send" outlined class="currency-amount"
-                :rules="transferAmountRules" autofocus hide-bottom-space>
+              <q-input v-model="transferAmount"
+                :label="transferType === 'burn' ? t('label.enterAmountToBurn') : t('label.enterAmountToSend')" outlined
+                class="currency-amount" :rules="transferAmountRules" autofocus hide-bottom-space>
                 <template v-slot:prepend>
                   <q-avatar>
                     <q-img v-if="identitySnapshot?.uris?.icon"
@@ -58,8 +59,8 @@
         </div>
       </q-card-section>
       <q-card-actions class="row justify-end">
-        <q-btn v-if="transferType === 'issuance' || transferType === 'send'" text-color="primary" label="Send"
-          icon="send" @click.stop="(e) => transferForm.submit(e)" size="lg"
+        <q-btn v-if="transferType === 'issuance' || transferType === 'send'" color="primary" label="Send" icon="send"
+          @click.stop="(e) => transferForm.submit(e)" size="lg"
           :disable="!transferAmount || decimalToBigInt(transferAmount, tokenDecimals) <= 0n">
         </q-btn>
         <q-btn v-else-if="transferType === 'burn'" color="orange" text-color="dark" label="Burn"
@@ -73,6 +74,7 @@
 
 <script setup lang="ts">
 import { useDialogPluginComponent } from 'quasar'
+import { useI18n } from 'vue-i18n';
 import { type IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
@@ -80,6 +82,8 @@ import { isTokenAwareAddress } from 'src/core/utils';
 import { shortenTokenId } from 'src/core/utils';
 import { normalizeTokenDecimals } from 'src/core/bcmr';
 import CopyText from 'components/CopyText.vue'
+
+const { t } = useI18n()
 
 defineEmits([
   ...useDialogPluginComponent.emits,

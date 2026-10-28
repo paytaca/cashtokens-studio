@@ -93,7 +93,7 @@ export default {
     save: 'Save',
     saveIdentity: 'Save Identity',
     saveRegistry: 'Save Registry',
-    issueTokens: 'Issue Tokens',
+    issueTokens: 'Issue Tokens'
   },
   label: {
     options: 'Options',
@@ -157,6 +157,8 @@ export default {
       nftCategory: 'NFT Category',
       nftCategoryHint: 'These are the NFT metadata found on your token\'s metadata registry'
     },
+    enterAmountToBurn: 'Enter amount to burn',
+    enterAmountToSend: 'Enter amount to send',
   },
   onChainTokens: {
     title: 'Minted Tokens',
