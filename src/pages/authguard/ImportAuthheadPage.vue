@@ -10,7 +10,6 @@
           <!-- <q-btn icon="key" :label="t('authguard.importAuthhead.createPairCta')" color="secondary" no-caps rounded
             :to="{ name: 'create-authkey', query: { returnTo: route.fullPath, from: 'import-authhead' } }" /> -->
         </ExplainerBanner>
-
         <q-card v-if="!walletIsReady" flat bordered class="q-pa-lg text-center feature-card-bg">
           <q-icon name="account_balance_wallet" size="2em" color="warning" />
           <div class="q-mt-md text-grey-4">{{ t('authguard.importAuthhead.connectWallet') }}</div>
@@ -74,6 +73,7 @@
             </div>
           </q-card> -->
 
+
           <div class="q-mt-lg flex flex-center text-grey-5">
             <q-spinner-dots color="primary" size="1.5em" />
             <span class="q-ml-md">{{ t('authguard.importAuthhead.waitingDeposit') }}</span>
@@ -89,13 +89,12 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { type Network } from 'cashscript'
-import { createAuthguardContract, filterAuthKeys, findUnusedAuthkey } from 'src/core/authguard'
+import { createAuthguardContract, filterAuthKeys, filterIdentityOutputs, findUnusedAuthkey } from 'src/core/authguard'
 import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { subscribe } from 'src/services/watchtower'
 import CashAddress from 'src/components/CashAddress.vue'
-import TokenCategory from 'src/components/TokenCategory.vue'
 import ExplainerBanner from 'src/components/ExplainerBanner.vue'
 
 /** How often the vault is polled for the imported auth UTXO. */
@@ -112,6 +111,7 @@ const scanError = ref<string>('')
 const unusedAuthkey = ref<UtxoWithPath | undefined>()
 const vaultTokenAddress = ref<string>('')
 const vaultContract = ref<ReturnType<typeof createAuthguardContract> | undefined>()
+const identityOutputs = ref()
 
 let depositPoller: ReturnType<typeof setInterval> | undefined
 
@@ -174,7 +174,7 @@ const scanForUnusedAuthkey = async () => {
   stopWatchingDeposit()
 
   try {
-    const utxos = await wallet.value.getUtxos()
+    const utxos = await wallet.value?.getUtxos() || []
     const authkeys = filterAuthKeys(utxos) as UtxoWithPath[]
     const unused = await findUnusedAuthkey(authkeys, network())
 
@@ -197,15 +197,32 @@ const scanForUnusedAuthkey = async () => {
   }
 }
 
+const scanForIdentityOutputs = async () => {
+  scanning.value = true
+  scanError.value = ''
+  unusedAuthkey.value = undefined
+  stopWatchingDeposit()
+
+  try {
+    const utxos = await wallet.value?.getUtxos() || []
+    identityOutputs.value = filterIdentityOutputs(utxos) as UtxoWithPath[]
+  } catch (error: any) {
+    scanError.value = error?.message || String(error)
+  } finally {
+    scanning.value = false
+  }
+}
+
 watch(walletIsReady, async (ready, readyBefore) => {
   if (ready && ready !== readyBefore) {
-    await scanForUnusedAuthkey()
+    // await scanForUnusedAuthkey()
   }
 })
 
 onMounted(async () => {
   if (walletIsReady.value) {
     await scanForUnusedAuthkey()
+    // await scanForIdentityOutputs()
   }
 })
 

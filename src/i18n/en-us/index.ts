@@ -294,7 +294,7 @@ export default {
       noAuthkey: 'No unused Authkey NFT found. Create one to continue.',
       waitingDeposit: 'Waiting for the Auth UTXO to arrive ...',
       requirementTitle: 'An Authkey NFT is required',
-      requirement: 'To import, we need an Authkey NFT that will serve as the access key for your Auth UTXO later. Creating one also sets up the Authguard Vault the UTXO will be imported into, so you will be brought back to the import step right after.',
+      requirement: 'To import, we need an Authkey NFT that will serve as the access key for your Auth UTXO later. Creating one also sets up the Authguard Vault the UTXO will be imported into.',
       connectWallet: 'Connect your wallet to import an Auth UTXO.',
       scanFailed: 'We could not check your Authkeys just now. Please try again.',
       retry: 'Check again',
