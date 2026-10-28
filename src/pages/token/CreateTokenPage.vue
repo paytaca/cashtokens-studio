@@ -271,7 +271,8 @@ import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useAuthguardStore } from 'src/stores/authguard'
 import { importMetadataRegistry } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
-import { DEFAULT_TOKEN_VALUE } from 'src/apps'
+// import { DEFAULT_TOKEN_VALUE } from 'src/apps'
+import { DEFAULT_TOKEN_VALUE } from 'src/core/constants'
 import { broadcastTransaction } from 'src/services/transaction'
 import { waitForAuthheadVisible } from 'src/services/electrum'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
@@ -413,7 +414,7 @@ const onGenerateGenesisInput = async () => {
             genesisInputCandidates.add(`$${utxo.txid}:0`)
         })
 
-        const funderUtxos = ((wallet.value.utxos || []) as UtxoWithPath[]).filter((utxo) => {
+        const funderUtxos = ((wallet.value?.utxos || []) as UtxoWithPath[]).filter((utxo) => {
             return !genesisInputCandidates.has(`${utxo.txid}:0`) || utxo.satoshis > DEFAULT_TOKEN_VALUE
         })
 
@@ -426,7 +427,7 @@ const onGenerateGenesisInput = async () => {
         updateStep(TASK_PREPARE_TX, 'running')
 
         const signRequest = createGenesisInput({
-            recipientAddress: wallet.value.getDepositAddress(0),
+            recipientAddress: wallet.value!.getDepositAddress(0),
             funderUtxos,
             network: import.meta.env.VITE_BCH_NETWORK as any,
             feeRateSatsPerKb: BigInt(import.meta.env.VITE_TX_FEE_RATE_SATS_PER_KB)
@@ -475,7 +476,7 @@ const onGenerateGenesisInput = async () => {
         })
 
         updateStep(TASK_REFRESH_UTXOS, 'done')
-        await wallet.value.sync()
+        await wallet.value!.sync()
 
         triggerRef(wallet)
 
@@ -487,8 +488,8 @@ const onGenerateGenesisInput = async () => {
                 txid: txid
             }
         }).onOk(() => {
-            genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
-            authkeys.value = filterAuthKeys(wallet.value.utxos || []) as UtxoWithPath[]
+            genesisInputs.value = filterGenesisInputs(wallet.value!.utxos || [])
+            authkeys.value = filterAuthKeys(wallet.value!.utxos || []) as UtxoWithPath[]
         })
 
     } catch (error: any) {
@@ -788,22 +789,22 @@ watch(() => existingVaultOptions.value, (options) => {
     }
 })
 
-watch(() => wallet.value.ready, (ready, readyPrev) => {
+watch(() => wallet.value?.ready, (ready, readyPrev) => {
     if (ready !== readyPrev) {
-        authkeys.value = filterAuthKeys(wallet.value.utxos || []) as Utxo[]
-        genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
+        authkeys.value = filterAuthKeys(wallet.value?.utxos || []) as Utxo[]
+        genesisInputs.value = filterGenesisInputs(wallet.value?.utxos || [])
     }
 })
 
 onMounted(async () => {
-    await wallet.value.sync()
+    await wallet.value?.sync()
     triggerRef(wallet)
     if (route.query.iconCid) {
         identitySnapshot.value.uris = {
             icon: `ipfs://${route.query.iconCid}`
         }
     }
-    if (wallet.value.ready) {
+    if (wallet.value?.ready) {
         authkeys.value = filterAuthKeys(wallet.value.utxos || []) as UtxoWithPath[]
         genesisInputs.value = filterGenesisInputs(wallet.value.utxos || [])
     }
