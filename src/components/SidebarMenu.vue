@@ -9,9 +9,14 @@
       <template v-slot:default-header="prop">
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
           <img v-if="prop.node.img" :src="prop.node.img" class="sidebar-logo q-mr-sm" alt="" />
-          <q-icon v-else :name="prop.node.icon || 'share'"
-            :color="prop.node.label == 'Authguard Vaults' || prop.node.label == 'Authguard Keys' ? 'orange' : undefined"
-            size="28px" class="q-mr-sm" />
+          <q-icon
+            v-else-if="prop.node.icon && (prop.node.label === 'Authguard Vaults' || prop.node.label === 'Authguard Keys')"
+            :name="prop.node.icon || 'share'" color="orange" size="28px" class="q-mr-sm" />
+          <q-icon v-else-if="prop.node.icon && prop.node.label === 'Admin'" :name="prop.node.icon || 'share'"
+            color="accent" size="28px" class="q-mr-sm" />
+          <q-icon v-else-if="prop.node.icon && prop.node.label === 'Opt-In to Airdrops'" :name="prop.node.icon"
+            color="accent" size="28px" class="q-mr-sm" />
+          <q-icon v-else :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
           <div>{{ prop.node.label }}</div>
         </div>
       </template>
@@ -28,9 +33,17 @@ import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 import { useWalletSigner } from 'src/composables/useWalletSigner';
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
-const { walletIsReady } = useWalletSigner();
+const { walletIsReady, wallet } = useWalletSigner();
 
 const linksDisabled = computed(() => !walletIsReady.value);
+
+const receiveAddress = computed(() => {
+  try {
+    return wallet.value?.getDepositAddress?.(0)
+  } catch (e) {
+    return undefined
+  }
+})
 
 defineOptions({ name: 'SidebarMenu' })
 const route = useRoute()
@@ -47,12 +60,13 @@ const hrefs = {
   authguards: '/authguard/authguards',
   authguardKeys: '/authguard/authkeys',
   requests: '/wizard-connect/requests',
+  airdropOptIn: '/airdrop/opt-in'
 }
 
 const selected = ref<string | null>(hrefs.dashboard)
 
 const menu = computed<any[]>(() => {
-  return [
+  const tree = [
     {
       label: 'Dashboard',
       href: hrefs.dashboard,
@@ -96,6 +110,11 @@ const menu = computed<any[]>(() => {
       icon: 'key',
     },
     {
+      label: 'Opt-In to Airdrops',
+      href: hrefs.airdropOptIn,
+      icon: 'mdi-parachute',
+    },
+    {
       label: 'Activities',
       href: hrefs.activities,
       icon: 'history',
@@ -107,6 +126,16 @@ const menu = computed<any[]>(() => {
     },
 
   ].map((node) => ({ ...node, disabled: linksDisabled.value }))
+
+  if (import.meta.env.VITE_CTS_ADMIN_ADDRESS && import.meta.env.VITE_CTS_ADMIN_ADDRESS === receiveAddress.value) {
+    tree.push({
+      label: 'Admin',
+      href: '/admin',
+      icon: 'mdi-security',
+      disabled: false
+    })
+  }
+  return tree
 })
 
 const menuHrefs = computed(() => menu.value.map((node) => node.href))
