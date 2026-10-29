@@ -1,15 +1,19 @@
 <template>
   <div class="explainer-banner">
-    <q-avatar v-if="avatarSrc" rounded size="4em" class="bg-dark shadow-2">
-      <img :src="avatarSrc" alt="avatar" />
-    </q-avatar>
-    <q-avatar v-else-if="icon" rounded text-color="white">
-      <q-icon :name="icon" size="xl" />
-    </q-avatar>
     <div class="explainer-banner-text">
-      <div class="text-h6 text-weight-bold text-white">{{ title }}</div>
-      <div v-if="description || $slots.subtitle" class="text-body2 text-grey-4">
-        <slot name="subtitle">{{ description }}</slot>
+      <div class="flex no-wrap items-center q-gutter-x-sm">
+        <q-avatar v-if="avatarSrc" rounded size="4em" class="bg-dark shadow-2">
+          <img :src="avatarSrc" alt="avatar" />
+        </q-avatar>
+        <q-avatar v-else-if="icon" rounded text-color="white">
+          <q-icon :name="icon" size="xl" />
+        </q-avatar>
+        <div>
+          <div class="text-h6 text-weight-bold text-white">{{ title }}</div>
+          <div v-if="description || $slots.subtitle" class="text-body2 text-grey-4">
+            <slot name="subtitle">{{ description }}</slot>
+          </div>
+        </div>
       </div>
     </div>
     <div v-if="$slots.default" class="explainer-banner-actions">
