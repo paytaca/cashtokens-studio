@@ -8,12 +8,12 @@
     { "name": "optIn", "inputs": [] },
     { "name": "teardown", "inputs": [] }
   ],
-  "bytecode": "OP_2 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_UTXOTOKENCATEGORY 20 OP_SPLIT OP_DROP OP_OVER OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_OUTPUTBYTECODE OP_INPUTINDEX OP_UTXOBYTECODE OP_EQUALVERIFY OP_INPUTINDEX OP_OUTPUTTOKENCATEGORY OP_INPUTINDEX OP_UTXOTOKENCATEGORY OP_EQUALVERIFY OP_INPUTINDEX OP_OUTPUTVALUE OP_INPUTINDEX OP_UTXOVALUE OP_NUMEQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_1 OP_UTXOBYTECODE OP_EQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_EQUALVERIFY OP_1 OP_OUTPUTTOKENCOMMITMENT OP_SIZE OP_NIP OP_0 OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_OUTPUTTOKENCATEGORY OP_SIZE OP_NIP OP_0 OP_NUMEQUALVERIFY OP_ENDIF OP_2DROP OP_1 OP_ELSE OP_ROT OP_1 OP_NUMEQUALVERIFY OP_0 OP_UTXOTOKENCOMMITMENT OP_ROT OP_EQUALVERIFY OP_0 OP_UTXOTOKENCATEGORY 20 OP_SPLIT OP_DROP OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_SIZE OP_NIP OP_0 OP_NUMEQUAL OP_ENDIF",
-  "source": "pragma cashscript ^0.14.0;\n\n/**\n * @param adminCategory - Admin NFT token category\n * @param adminId commitment - Set to 'airdrop'. So admin can differentiate it from beacon NFTs in the future.\n */\ncontract AirdropBeacon(bytes32 adminCategory, bytes adminId) {\n\n    function optIn() {\n        bytes32 sidecarNFTCategory = tx.inputs[this.activeInputIndex].tokenCategory.slice(0, 32);\n        require(sidecarNFTCategory == adminCategory);\n        require(tx.outputs.length <= 3);\n        // preserve admin nft\n        require(this.activeInputIndex == 0);\n        require(tx.outputs[this.activeInputIndex].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);\n        require(tx.outputs[this.activeInputIndex].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);\n        require(tx.outputs[this.activeInputIndex].value == tx.inputs[this.activeInputIndex].value);\n        // mint nft\n        require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);\n        require(tx.outputs[1].tokenCategory == adminCategory);\n        require(tx.outputs[1].nftCommitment.length == 0); \n\n        if (tx.outputs.length == 3) {\n            require(tx.outputs[2].tokenCategory.length == 0);\n        }\n    }\n\n    // Teardown\n    function teardown() {\n        require(tx.inputs[0].nftCommitment == adminId);\n        require(tx.inputs[0].tokenCategory.slice(0, 32) == adminCategory);\n        require(tx.outputs.length == 1);\n        require(tx.outputs[0].tokenCategory.length == 0); // change\n    }\n}\n",
-  "fingerprint": "ab85be9ae1b8b891ba5889084248487d0d39efcc3b0a447e554347d756eba5f3",
+  "bytecode": "OP_2 OP_PICK OP_0 OP_NUMEQUAL OP_IF OP_INPUTINDEX OP_UTXOTOKENCATEGORY 20 OP_SPLIT OP_DROP OP_OVER OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_LESSTHANOREQUAL OP_VERIFY OP_INPUTINDEX OP_0 OP_NUMEQUALVERIFY OP_INPUTINDEX OP_OUTPUTBYTECODE OP_INPUTINDEX OP_UTXOBYTECODE OP_EQUALVERIFY OP_INPUTINDEX OP_OUTPUTTOKENCATEGORY OP_INPUTINDEX OP_UTXOTOKENCATEGORY OP_EQUALVERIFY OP_INPUTINDEX OP_OUTPUTVALUE OP_INPUTINDEX OP_UTXOVALUE OP_NUMEQUALVERIFY OP_1 OP_OUTPUTBYTECODE OP_1 OP_UTXOBYTECODE OP_EQUALVERIFY OP_1 OP_OUTPUTTOKENCATEGORY OP_EQUALVERIFY OP_1 OP_OUTPUTTOKENCOMMITMENT OP_BIN2NUM OP_1 OP_NUMEQUALVERIFY OP_TXOUTPUTCOUNT OP_3 OP_NUMEQUAL OP_IF OP_2 OP_OUTPUTTOKENCATEGORY OP_SIZE OP_NIP OP_0 OP_NUMEQUALVERIFY OP_ENDIF OP_2DROP OP_1 OP_ELSE OP_ROT OP_1 OP_NUMEQUALVERIFY OP_0 OP_UTXOTOKENCOMMITMENT OP_ROT OP_EQUALVERIFY OP_0 OP_UTXOTOKENCATEGORY 20 OP_SPLIT OP_DROP OP_EQUALVERIFY OP_TXOUTPUTCOUNT OP_1 OP_NUMEQUALVERIFY OP_0 OP_OUTPUTTOKENCATEGORY OP_SIZE OP_NIP OP_0 OP_NUMEQUAL OP_ENDIF",
+  "source": "pragma cashscript ^0.14.0;\n\n/**\n * @param adminCategory - Admin NFT token category\n * @param adminId commitment - Set to 'airdrop'. So admin can differentiate it from beacon NFTs in the future.\n */\ncontract AirdropBeacon(bytes32 adminCategory, bytes adminId) {\n\n    function optIn() {\n        bytes32 sidecarNFTCategory = tx.inputs[this.activeInputIndex].tokenCategory.slice(0, 32);\n        require(sidecarNFTCategory == adminCategory);\n        require(tx.outputs.length <= 3);\n        // preserve admin nft\n        require(this.activeInputIndex == 0);\n        require(tx.outputs[this.activeInputIndex].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);\n        require(tx.outputs[this.activeInputIndex].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);\n        require(tx.outputs[this.activeInputIndex].value == tx.inputs[this.activeInputIndex].value);\n        // mint nft\n        require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);\n        require(tx.outputs[1].tokenCategory == adminCategory);\n        require(int(tx.outputs[1].nftCommitment) == 1); // For uniform metadata\n\n        if (tx.outputs.length == 3) {\n            require(tx.outputs[2].tokenCategory.length == 0);\n        }\n    }\n\n    // Teardown\n    function teardown() {\n        require(tx.inputs[0].nftCommitment == adminId);\n        require(tx.inputs[0].tokenCategory.slice(0, 32) == adminCategory);\n        require(tx.outputs.length == 1);\n        require(tx.outputs[0].tokenCategory.length == 0); // change\n    }\n}\n",
+  "fingerprint": "96ce3cdb2711d65564287ad98653b34f92376a0a4c2564393cd34a59746d0677",
   "debug": {
-    "bytecode": "5279009c63c0ce01207f757888c453a169c0009dc0cdc0c788c0d1c0ce88c0ccc0c69d51cd51c78851d18851d28277009dc4539c6352d18277009d686d51677b519d00cf7b8800ce01207f7588c4519d00d18277009c68",
-    "sourceMap": "9:4:26:5;;;;;10:47:10:68;:37::83:1;:93::95:0;:37::96:1;;11:38:11:51:0;:8::53:1;12:16:12:33:0;:37::38;:16:::1;:8::40;14:16:14:37:0;:41::42;:8::44:1;15:27:15:48:0;:16::65:1;:79::100:0;:69::117:1;:8::119;16:27:16:48:0;:16::63:1;:77::98:0;:67::113:1;:8::115;17:27:17:48:0;:16::55:1;:69::90:0;:59::97:1;:8::99;19:27:19:28:0;:16::45:1;:59::60:0;:49::77:1;:8::79;20:27:20:28:0;:16::43:1;:8::62;21:27:21:28:0;:16::43:1;:::50;;:54::55:0;:8::57:1;23:12:23:29:0;:33::34;:12:::1;:36:25:9:0;24:31:24:32;:20::47:1;:::54;;:58::59:0;:12::61:1;23:36:25:9;9:21:26:5;;:4;29::34::0;;;30:26:30:27;:16::42:1;:46::53:0;:8::55:1;31:26:31:27:0;:16::42:1;:52::54:0;:16::55:1;;:8::74;32:16:32:33:0;:37::38;:8::40:1;33:27:33:28:0;:16::43:1;:::50;;:54::55:0;:8::57:1;7:0:35:1",
+    "bytecode": "5279009c63c0ce01207f757888c453a169c0009dc0cdc0c788c0d1c0ce88c0ccc0c69d51cd51c78851d18851d281519dc4539c6352d18277009d686d51677b519d00cf7b8800ce01207f7588c4519d00d18277009c68",
+    "sourceMap": "9:4:26:5;;;;;10:47:10:68;:37::83:1;:93::95:0;:37::96:1;;11:38:11:51:0;:8::53:1;12:16:12:33:0;:37::38;:16:::1;:8::40;14:16:14:37:0;:41::42;:8::44:1;15:27:15:48:0;:16::65:1;:79::100:0;:69::117:1;:8::119;16:27:16:48:0;:16::63:1;:77::98:0;:67::113:1;:8::115;17:27:17:48:0;:16::55:1;:69::90:0;:59::97:1;:8::99;19:27:19:28:0;:16::45:1;:59::60:0;:49::77:1;:8::79;20:27:20:28:0;:16::43:1;:8::62;21:31:21:32:0;:20::47:1;:16::48;:52::53:0;:8::55:1;23:12:23:29:0;:33::34;:12:::1;:36:25:9:0;24:31:24:32;:20::47:1;:::54;;:58::59:0;:12::61:1;23:36:25:9;9:21:26:5;;:4;29::34::0;;;30:26:30:27;:16::42:1;:46::53:0;:8::55:1;31:26:31:27:0;:16::42:1;:52::54:0;:16::55:1;;:8::74;32:16:32:33:0;:37::38;:8::40:1;33:27:33:28:0;:16::43:1;:::50;;:54::55:0;:8::57:1;7:0:35:1",
     "logs": [],
     "requires": [
       { "ip": 13, "line": 11 },
@@ -24,12 +24,12 @@
       { "ip": 35, "line": 17 },
       { "ip": 40, "line": 19 },
       { "ip": 43, "line": 20 },
-      { "ip": 49, "line": 21 },
-      { "ip": 59, "line": 24 },
-      { "ip": 70, "line": 30 },
-      { "ip": 76, "line": 31 },
-      { "ip": 79, "line": 32 },
-      { "ip": 86, "line": 33 }
+      { "ip": 48, "line": 21 },
+      { "ip": 58, "line": 24 },
+      { "ip": 69, "line": 30 },
+      { "ip": 75, "line": 31 },
+      { "ip": 78, "line": 32 },
+      { "ip": 85, "line": 33 }
     ]
   },
   "compiler": {
@@ -40,5 +40,5 @@
       "enforceLocktimeGuard": true
     }
   },
-  "updatedAt": "2026-10-29T04:23:11.613Z"
+  "updatedAt": "2026-10-29T06:41:19.574Z"
 }
