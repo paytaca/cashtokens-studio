@@ -18,7 +18,7 @@ contract AirdropBeacon(bytes32 adminCategory, bytes adminId) {
         // mint nft
         require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);
         require(tx.outputs[1].tokenCategory == adminCategory);
-        require(tx.outputs[1].nftCommitment.length == 0); 
+        require(int(tx.outputs[1].nftCommitment) == 1); // For uniform metadata
 
         if (tx.outputs.length == 3) {
             require(tx.outputs[2].tokenCategory.length == 0);
