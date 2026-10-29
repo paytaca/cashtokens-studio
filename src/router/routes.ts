@@ -259,6 +259,17 @@ const routes: RouteRecordRaw[] = [
       }
     ],
   },
+  {
+    path: '/airdrop',
+    component: () => import('layouts/MainLayout.vue'),
+    children: [
+      {
+        name: 'airdrop-opt-in',
+        path: 'opt-in',
+        component: () => import('pages/AirdopBeaconOptInPage.vue'),
+      },
+    ],
+  },
   // Always leave this as last one,
   // but you can also remove it
   {

@@ -1,3 +1,5 @@
+import { createAirdropBeaconContract } from "src/core/airdrop/create-airdrop-beacon-contract";
+
 export default {
   success: {
     genesisInputCreation: 'Genesis input created successfully.',
@@ -35,6 +37,7 @@ export default {
 <p><b>Quick tip:</b> choose Sequential if you only need unique numbered items; choose Parsable if each item must show extra details.</p>`,
     fungibleReservesExplainer: `<p>Fungible Reserves are unissued fungible tokens that is found in your token's identity output held by the Authguard Vault Contract. </p><p>This is the portion of the supply which you, the issuer, represents as "not in circulation".</p>`,
     prepareTokenCategoryExplainer: `<p>A CashTokens <span class="text-weight-bold text-primary">Token Category</span> is permanently generated from the unique <span class="text-weight-bold">32-byte Transaction ID (TXID)</span> of the unspent BCH output (UTXO) which was the first output of a previous transaction. To prepare it, CashTokens Studio automatically selects an available UTXO from your wallet; the hex-encoded TXID of that specific transaction will automatically serve as your immutable Token Category identifier, guaranteeing global uniqueness on the network.</p>`,
+    receiveAirdropBeaconNftExplainer: `<p></p>`,
     whatsThis: `What's this?`,
     changeIcon: 'Change icon',
     uploadingRegistryToIpfs: 'Uploading registry to IPFS',
@@ -347,6 +350,10 @@ export default {
       lockedTokensUnknown: '?',
       sequenceUnknown: '?',
     },
+  },
+  airdropBeaconOptInPage: {
+    pageTitle: 'Opt-In to Airdrops',
+    pageSubtitle: 'Mint an Airdrop Beacon NFT to opt-in for airdrops within CashTokens Studio and across the broader ecosystem.'
   },
   wizardConnect: {
     requests: {
