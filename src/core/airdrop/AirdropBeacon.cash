@@ -1,0 +1,35 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * @param adminCategory - Admin NFT token category
+ * @param adminId commitment - Set to 'airdrop'. So admin can differentiate it from beacon NFTs in the future.
+ */
+contract AirdropBeacon(bytes32 adminCategory, bytes adminId) {
+
+    function optIn() {
+        bytes32 sidecarNFTCategory = tx.inputs[this.activeInputIndex].tokenCategory.slice(0, 32);
+        require(sidecarNFTCategory == adminCategory);
+        require(tx.outputs.length <= 3);
+        // preserve admin nft
+        require(this.activeInputIndex == 0);
+        require(tx.outputs[this.activeInputIndex].lockingBytecode == tx.inputs[this.activeInputIndex].lockingBytecode);
+        require(tx.outputs[this.activeInputIndex].tokenCategory == tx.inputs[this.activeInputIndex].tokenCategory);
+        require(tx.outputs[this.activeInputIndex].value == tx.inputs[this.activeInputIndex].value);
+        // mint nft
+        require(tx.outputs[1].lockingBytecode == tx.inputs[1].lockingBytecode);
+        require(tx.outputs[1].tokenCategory == adminCategory);
+        require(tx.outputs[1].nftCommitment.length == 0); 
+
+        if (tx.outputs.length == 3) {
+            require(tx.outputs[2].tokenCategory.length == 0);
+        }
+    }
+
+    // Teardown
+    function teardown() {
+        require(tx.inputs[0].nftCommitment == adminId);
+        require(tx.inputs[0].tokenCategory.slice(0, 32) == adminCategory);
+        require(tx.outputs.length == 1);
+        require(tx.outputs[0].tokenCategory.length == 0); // change
+    }
+}
