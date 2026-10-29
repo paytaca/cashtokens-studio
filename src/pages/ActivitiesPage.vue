@@ -3,10 +3,12 @@
     <div class="q-px-md q-px-md-xl content-container">
       <ExplainerBanner class="q-my-md" icon="history" :title="$t('dashboard.pageTitle.activities')"
         :description="$t('dashboard.activity.caption')" />
-
-      <div class="row q-gutter-sm q-mb-md items-center">
-        <q-input v-model="activitySearchQuery" dark dense outlined :placeholder="$t('dashboard.activity.searchPlaceholder')"
-          class="bg-grey-10" style="border-radius: 0.75rem; min-width: 200px;">
+      <div class="row q-gutter-sm q-mb-md items-center flex justify-end q-mt-xl">
+        <q-btn flat color="negative" icon="clear_all" :label="$t('dashboard.activity.clearActivities')"
+          @click="clearActivities" class="q-ml-sm" no-caps />
+        <q-input v-model="activitySearchQuery" dark dense outlined
+          :placeholder="$t('dashboard.activity.searchPlaceholder')" class="bg-grey-10"
+          style="border-radius: 0.75rem; min-width: 200px;" rounded>
           <template v-slot:prepend>
             <q-icon name="search" color="grey-6" size="xs" />
           </template>
@@ -14,12 +16,9 @@
             <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="activitySearchQuery = ''" />
           </template>
         </q-input>
-        <q-btn flat color="grey-6" :label="$t('dashboard.activity.clearActivities')" @click="clearActivities"
-          class="q-ml-sm" />
       </div>
       <q-table :rows="filteredActivities" :columns="activityColumns" :row-key="(row: any) => row.id"
-        :pagination="{ rowsPerPage: 5 }" :loading="activityLoading" flat
-        class="border-radius-12 token-reserves-table">
+        :pagination="{ rowsPerPage: 5 }" :loading="activityLoading" flat class="border-radius-12 token-reserves-table">
         <template v-slot:body-cell-activityEvent="props">
           <q-td :props="props">
             <span class="text-weight-bold text-white">{{ props.value }}</span>
