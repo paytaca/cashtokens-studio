@@ -79,7 +79,7 @@ const registryWorker = {
       if (!uris.length || !contentHash) return
 
       const existing = await db.registry.where('contentHash').equals(contentHash).first();
-        if(existing) {
+        if(existing && !params.sync) {
           const { rawRegistry, ...rest } = existing
           const parsedRegistry = compactRegistry(await parseRegistryBlob(rawRegistry))
           return { 
@@ -88,7 +88,7 @@ const registryWorker = {
         }
 
         params.onProgress?.('Downloading registry...');
-
+        
         const httpUris = Array.from(new Set(
           uris.flatMap((uri: string) => {
 
@@ -109,7 +109,7 @@ const registryWorker = {
             return [uri]
           })
         ))
-        
+
         const fetchPromises = httpUris.map(async (uri: string) => {
           const controller = new AbortController()
           const id = setTimeout(() => controller.abort(), 30_000)
@@ -136,7 +136,7 @@ const registryWorker = {
             .where('contentHash')
             .equals(contentHash)
             .first()
-          
+
           let registryIdentity = compactParsedRegistry.registryIdentity
 
           if (typeof(compactParsedRegistry.registryIdentity) !== 'string') {
@@ -166,6 +166,7 @@ const registryWorker = {
               // identityHistory contains strings of new Date().toISOString() values
               identityHistory.sort((a, b) => b.localeCompare(a)); // latest first
               const latest = identityHistory[0] as string
+              
               const identitySnapshot = parsedRegistry.identities![authbase]![latest] as IdentitySnapshot
               const nftTypeKeys = extractNftTypeKeys(identitySnapshot)
               if (identitySnapshot.token?.nfts?.parse?.types) {
@@ -192,7 +193,6 @@ const registryWorker = {
                 identitySnapshotRecord.category = identitySnapshot.token.category
               }
               
-
               await db.identitySnapshot.put(identitySnapshotRecord)
             }
           }
