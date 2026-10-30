@@ -4,6 +4,9 @@ import { BCMR_PREFIX } from '../bcmr';
 import { inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs';
 import { type BaseParams } from './types';
 
+export { getTokenHolders } from './get-token-holders'
+export type { GetTokenHoldersParams } from './get-token-holders'
+
 export async function fetchAuthheadTxid(params: BaseParams): Promise<string> {
     
     const url = params.chainGraphUrl || import.meta.env.VITE_CHAINGRAPH_URL

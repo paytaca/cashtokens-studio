@@ -1,7 +1,9 @@
 import { fetchWithTimeout } from "../utils/fetch-with-timeout"
 import { type CashAddressResult, type DecodedCashAddress, decodeCashAddress, hexToBin, lockingBytecodeToCashAddress } from "bitauth-libauth-v3"
 
-export async function getTokenHolders(params: { category: string, chainGraphUrl?: string }): Promise<Array<string>>{
+export type GetTokenHoldersParams = { category: string, chainGraphUrl?: string }
+
+export async function getTokenHolders(params: GetTokenHoldersParams): Promise<Array<string>>{
 
     const url = params.chainGraphUrl || import.meta.env.VITE_CHAINGRAPH_URL
     if (!url)  {
