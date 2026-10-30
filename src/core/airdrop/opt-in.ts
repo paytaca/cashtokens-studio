@@ -1,10 +1,9 @@
 import {  Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
-import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
-import { buildWcSourceOutputs, jsonReplacer } from "../transaction/utils"
+import { getMinimumFee, hexToBin, bigIntToVmNumber, binToHex } from "bitauth-libauth-v3"
+import { jsonReplacer } from "../transaction/utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
-import { decodeTransactionCommon, TransactionCommon } from "bitauth-libauth-v3"
 import { CustomElectrumNetworkProvider } from "src/services/electrum"
 import { createAirdropBeaconContract } from "./create-airdrop-beacon-contract"
 
@@ -36,6 +35,8 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
         beaconAdminId: params.airdropBeaconAdminId,
         network: params.network
     })
+
+    console.log('airdropBeaconContract', airdropBeaconContract.tokenAddress)
     
     if (airdropBeaconContract.unlock?.optIn === undefined) throw new Error('Error creating Airdrop contract.')
     const airdropBeaconAdminNfts = 
@@ -54,7 +55,11 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
         amount: airdropBeaconAdminNft.satoshis,
         token: {
             category: airdropBeaconAdminNft.token!.category,
-            amount: airdropBeaconAdminNft.token!.amount
+            amount: airdropBeaconAdminNft.token!.amount,
+            nft: {
+                capability: airdropBeaconAdminNft.token!.nft!.capability,
+                commitment: airdropBeaconAdminNft.token!.nft!.commitment,
+            }
         }
     })
 
@@ -72,6 +77,7 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
     })
 
     let transactionHex = transaction.build()
+    
     const fixedCost = DEFAULT_TOKEN_VALUE
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
@@ -91,6 +97,7 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
         transactionHex = transaction.build()
     }
 
+    
     while (funderUtxos.length > 0 && !enoughFunds) {
         const additionalFunderInput = funderUtxos.shift() as UtxoWithPath
         transaction.addInput(
@@ -128,6 +135,8 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
     const userPrompt = 'Receive Airdrop Beacon NFT'
 
     const wcPayload = transaction.generateWcTransactionObject()
+
+    console.log('@transactionHEx', transaction, transactionHex)
 
     return {
         action: RelayMsgAction.SignTransactionRequest,
