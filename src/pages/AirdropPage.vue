@@ -64,7 +64,7 @@
                     <template v-else-if="beaconHoldersLoading">
                         <div class="flex items-center q-gutter-x-sm">
                             <span class="text-grey-5 text-caption">{{ $t('airdropIssuePage.beaconHoldersLoading')
-                                }}</span>
+                            }}</span>
                             <q-spinner-dots color="grey-5" size="sm" />
                         </div>
                     </template>
@@ -368,7 +368,7 @@ const loadBeaconHolders = async () => {
     beaconHoldersLoading.value = true
     beaconHoldersError.value = false
     try {
-        const holders = await getTokenHolders({ category: getBeaconNftTokenCategory() })
+        const holders = await getTokenHolders({ category: getBeaconNftTokenCategory(), network: import.meta.env.VITE_BCH_NETWORK })
         beaconHolders.value = holders.filter((address) => classifyAddress(address) === 'valid')
     } catch {
         beaconHolders.value = []

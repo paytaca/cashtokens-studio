@@ -369,7 +369,7 @@ export default {
     addressesPlaceholder: 'bitcoincash:qq..., bitcoincash:qp..., ...',
     loadCsv: 'Load from CSV file',
     beaconHoldersLoading: 'Loading beacon NFT holders...',
-    beaconHoldersLoaded: '{count} opted-in addresses loaded from beacon NFT holders',
+    beaconHoldersLoaded: '{count} Airdrop Beacon NFT holder found',
     beaconHoldersEmpty: 'No opted-in addresses found yet. Beacon NFT holders appear here once wallets opt in.',
     beaconHoldersError: 'Could not load beacon NFT holders. Check the Chaingraph configuration.',
     recipientsSummary: '{count} valid recipients · total {total} tokens',
