@@ -5,7 +5,6 @@
         <span class="text-caption text-italic">{{ network }}</span>
       </q-chip>
     </div>
-    {{ airdropBeaconSoon }} {{ isAirdropBeaconConfigured() }}
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
       <template v-slot:default-header="prop">
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
