@@ -140,8 +140,7 @@
                             :type="$q.screen.lt.sm ? 'textarea' : 'text'" :autogrow="$q.screen.lt.sm">
                             <template v-if="!$q.screen.lt.sm" v-slot:append>
                                 <div class="flex no-wrap q-gutter-sm">
-                                    <q-btn no-wrap icon="mdi-parachute" color="secondary"
-                                        :disable="!airdropBeaconConfigured" @click="goToAirdropIssue">
+                                    <q-btn no-wrap icon="mdi-parachute" color="secondary" @click="goToAirdropIssue">
                                         <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
                                             $t('dashboard.managed.actionAirdrop') }}</span>
                                     </q-btn>
@@ -168,8 +167,7 @@
                         <!-- On small screens the actions leave the append slot: the reserves value
                              keeps the full row and the buttons wrap below it. -->
                         <div v-if="$q.screen.lt.sm" class="flex no-wrap justify-end q-gutter-sm q-mt-sm">
-                            <q-btn no-wrap icon="mdi-parachute" color="secondary"
-                                :disable="!airdropBeaconConfigured" @click="goToAirdropIssue" />
+                            <q-btn no-wrap icon="mdi-parachute" color="secondary" @click="goToAirdropIssue" />
                             <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
                                 @click="() => releaseReserves('burn')" />
                             <q-btn no-wrap icon="mdi-send-circle-outline" color="primary"

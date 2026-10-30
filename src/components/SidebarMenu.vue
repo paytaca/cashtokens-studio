@@ -5,6 +5,7 @@
         <span class="text-caption text-italic">{{ network }}</span>
       </q-chip>
     </div>
+    {{ airdropBeaconSoon }} {{ isAirdropBeaconConfigured() }}
     <q-tree :nodes="menu" node-key="href" no-connectors v-model:selected="selected">
       <template v-slot:default-header="prop">
         <div class="row items-center sidebar-link" :class="{ 'sidebar-selected': selected === prop.node.href }">
@@ -17,10 +18,11 @@
           <q-icon v-else-if="prop.node.icon && prop.node.label === 'Opt-In to Airdrops'" :name="prop.node.icon"
             color="accent" size="28px" class="q-mr-sm" />
           <q-icon v-else :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
-          <div>{{ prop.node.label }}</div>
-          <q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs">
-            {{ t('dashboard.badgeSoon') }}
-          </q-badge>
+          <div>{{ prop.node.label }}<q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs"
+              floating>
+              {{ t('badge.soon') }}
+            </q-badge></div>
+
         </div>
       </template>
     </q-tree>

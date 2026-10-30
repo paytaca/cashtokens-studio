@@ -18,8 +18,8 @@
       <div class="q-pa-md">
         <div class="row q-col-gutter-md">
           <div v-for="card in sectionCards" :key="card.name" class="col-12 col-sm-6 col-md-4">
-            <q-card clickable flat class="dashboard-section-card cursor-pointer"
-              :class="{ 'card-disabled': card.soon }" @click="!card.soon && router.push(card.to)">
+            <q-card clickable flat class="dashboard-section-card cursor-pointer" :class="{ 'card-disabled': card.soon }"
+              @click="!card.soon && router.push(card.to)">
               <q-card-section class="q-pa-lg">
                 <div class="row items-center no-wrap q-gutter-md">
                   <q-avatar text-color="white" size="56px" flat>
@@ -28,8 +28,8 @@
                   <div class="col" style="min-width: 0">
                     <div class="text-subtitle1 text-weight-bold text-white flex items-center q-gutter-x-xs">
                       {{ card.title }}
-                      <q-badge v-if="card.soon" color="warning" text-color="dark">{{ $t('dashboard.badgeSoon')
-                        }}</q-badge>
+                      <q-badge v-if="card.soon" color="warning" text-color="dark">{{ $t('badge.soon')
+                      }}</q-badge>
                     </div>
                     <div class="text-caption text-grey-4 card-description">{{ card.description }}</div>
                   </div>
@@ -219,13 +219,13 @@
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.protocol') }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ protocol || t('dashboard.wallet.notAvailable')
-                        }}</q-item-label>
+                      }}</q-item-label>
                     </q-item-section>
                   </q-item>
                   <q-item class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.discovered')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="text-grey-2">{{ isDiscovered ? t('dashboard.connection.yes') :
                         t('dashboard.connection.no') }}</q-item-label>
                     </q-item-section>
@@ -240,10 +240,10 @@
                   <q-item v-if="walletPublicKey" class="px-0">
                     <q-item-section>
                       <q-item-label caption class="text-grey-5">{{ t('dashboard.connection.walletPublicKey')
-                        }}</q-item-label>
+                      }}</q-item-label>
                       <q-item-label class="row items-center no-wrap q-gutter-x-sm">
                         <span class="ellipsis text-grey-2" :title="walletPublicKey">{{ shorten(walletPublicKey, 12, 6)
-                          }}</span>
+                        }}</span>
                         <q-btn flat dense round size="sm" icon="content_copy" color="grey-5"
                           @click="copyValue(walletPublicKey)">
                           <q-tooltip>{{ t('dashboard.copy.tooltip') }}</q-tooltip>

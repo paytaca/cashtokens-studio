@@ -49,6 +49,9 @@ export default {
     parsableCollectionHelp:
       'A parsable NFT collection where each NFT may include additional metadata fields beyond a sequential identifier within its on-chain commitment. Parsable collections require a parsing bytecode with which to inspect each NFT commitment: the type of each NFT is indexed by the bottom item on the altstack following evaluation of the parsing bytecode.',
   },
+  badge: {
+    soon: 'soon'
+  },
   error: {
     genesisInputCreation: 'Error creating genesis input.',
     tokenCreation: 'Error creating token.',
@@ -371,7 +374,7 @@ export default {
     beaconHoldersLoading: 'Loading beacon NFT holders...',
     beaconHoldersLoaded: '{count} Airdrop Beacon NFT holder found',
     beaconHoldersEmpty: 'No opted-in addresses found yet. Beacon NFT holders appear here once wallets opt in.',
-    beaconHoldersError: 'Could not load beacon NFT holders. Check the Chaingraph configuration.',
+    beaconHoldersError: 'Feature not yet available',
     recipientsSummary: '{count} valid recipients · total {total} tokens',
     excludedAddresses: 'Excluded Addresses',
     excludedAddressesHint: 'Duplicated, non-token or P2SH addresses, and entries beyond the {max} recipient limit.',
