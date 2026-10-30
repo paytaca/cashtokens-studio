@@ -64,7 +64,7 @@
                     <template v-else-if="beaconHoldersLoading">
                         <div class="flex items-center q-gutter-x-sm">
                             <span class="text-grey-5 text-caption">{{ $t('airdropIssuePage.beaconHoldersLoading')
-                            }}</span>
+                                }}</span>
                             <q-spinner-dots color="grey-5" size="sm" />
                         </div>
                     </template>
@@ -459,7 +459,7 @@ const onSubmit = async () => {
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
         await db.saveActivity({
-            event: t('airdropIssuePage.activityEvent'),
+            event: t('airdropIssuePage.activityEvent', { token: activeAuthhead.value?.identitySnapshot?.token?.symbol || activeAuthhead.value?.identitySnapshot?.name || activeAuthhead.value?.token?.category }),
             txid,
             status: 'success'
         })

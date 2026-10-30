@@ -383,7 +383,7 @@ export default {
     insufficientReserves: 'Amount exceeds the reserves available for {count} recipients',
     invalidAmount: 'Invalid amount',
     requiresWallet: 'Connect a wallet to issue an airdrop',
-    activityEvent: 'Airdropped tokens from reserves',
+    activityEvent: 'Airdropped {token} tokens from reserves',
     successText: 'Airdrop sent to {count} recipients',
     summaryTitle: 'Airdrop completed',
     summarySubtitle: '{count} recipients received {total} tokens in total.',
