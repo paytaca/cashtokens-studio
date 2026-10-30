@@ -18,6 +18,9 @@
             color="accent" size="28px" class="q-mr-sm" />
           <q-icon v-else :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
           <div>{{ prop.node.label }}</div>
+          <q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs">
+            {{ t('dashboard.badgeSoon') }}
+          </q-badge>
         </div>
       </template>
     </q-tree>
@@ -31,11 +34,15 @@ import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 import { useWalletSigner } from 'src/composables/useWalletSigner';
+import { isAirdropBeaconConfigured } from 'src/core/airdrop';
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
 const { walletIsReady, wallet } = useWalletSigner();
 
 const linksDisabled = computed(() => !walletIsReady.value);
+
+/** Build-time static: the airdrop beacon entry points are parked while no category is configured. */
+const airdropBeaconSoon = !isAirdropBeaconConfigured();
 
 const receiveAddress = computed(() => {
   try {
@@ -113,6 +120,7 @@ const menu = computed<any[]>(() => {
       label: 'Opt-In to Airdrops',
       href: hrefs.airdropOptIn,
       icon: 'mdi-parachute',
+      soon: airdropBeaconSoon,
     },
     {
       label: 'Activities',
@@ -125,7 +133,7 @@ const menu = computed<any[]>(() => {
       img: WIZARDCONNECT_LOGO,
     },
 
-  ].map((node) => ({ ...node, disabled: linksDisabled.value }))
+  ].map((node) => ({ ...node, disabled: linksDisabled.value || Boolean(node.soon) }))
 
   if (import.meta.env.VITE_CTS_ADMIN_ADDRESS && import.meta.env.VITE_CTS_ADMIN_ADDRESS === receiveAddress.value) {
     tree.push({
