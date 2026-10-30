@@ -18,14 +18,19 @@
       <div class="q-pa-md">
         <div class="row q-col-gutter-md">
           <div v-for="card in sectionCards" :key="card.name" class="col-12 col-sm-6 col-md-4">
-            <q-card clickable flat class="dashboard-section-card cursor-pointer" @click="router.push(card.to)">
+            <q-card clickable flat class="dashboard-section-card cursor-pointer"
+              :class="{ 'card-disabled': card.soon }" @click="!card.soon && router.push(card.to)">
               <q-card-section class="q-pa-lg">
                 <div class="row items-center no-wrap q-gutter-md">
                   <q-avatar text-color="white" size="56px" flat>
                     <q-icon :name="card.icon" size="28px" flat />
                   </q-avatar>
                   <div class="col" style="min-width: 0">
-                    <div class="text-subtitle1 text-weight-bold text-white">{{ card.title }}</div>
+                    <div class="text-subtitle1 text-weight-bold text-white flex items-center q-gutter-x-xs">
+                      {{ card.title }}
+                      <q-badge v-if="card.soon" color="warning" text-color="dark">{{ $t('dashboard.badgeSoon')
+                        }}</q-badge>
+                    </div>
                     <div class="text-caption text-grey-4 card-description">{{ card.description }}</div>
                   </div>
                 </div>
@@ -308,6 +313,7 @@ import { useAuthguardStore } from 'src/stores/authguard'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { isPureFungible } from 'src/core/utils'
+import { getBeaconNftTokenCategory, isAirdropBeaconConfigured } from 'src/core/airdrop'
 import { db } from 'src/core/client-db'
 import { useRouter } from 'vue-router'
 import ExplainerBanner from 'src/components/ExplainerBanner.vue'
@@ -456,6 +462,14 @@ const walletTokenUtxos = computed(() =>
   (wallet.value?.utxos || []).filter((u: any) => !!u.token)
 )
 
+/**
+ * Opting in mints an NFT of the beacon category to the wallet's own address, so holding one is
+ * the opt-in state — the same signal the opt-in page itself checks.
+ */
+const optedInToAirdrops = computed(() =>
+  walletTokenUtxos.value.some((u: any) => u.token?.category === getBeaconNftTokenCategory())
+)
+
 const utxoCount = computed(() => wallet.value?.utxos?.length ?? 0)
 const tokenUtxoCount = computed(() => walletTokenUtxos.value.length)
 
@@ -583,6 +597,19 @@ const sectionCards = computed(() => [
     countLabel: t('dashboard.card.countTokens'),
   },
   {
+    name: 'airdrop-opt-in',
+    to: { name: 'airdrop-opt-in' },
+    icon: 'mdi-parachute',
+    color: 'warning',
+    title: t('airdropBeaconOptInPage.pageTitle'),
+    description: t('dashboard.airdrop.caption'),
+    count: optedInToAirdrops.value ? 1 : 0,
+    countLabel: optedInToAirdrops.value
+      ? t('dashboard.card.airdropOptedIn')
+      : t('dashboard.card.airdropNotOptedIn'),
+    soon: !isAirdropBeaconConfigured(),
+  },
+  {
     name: 'activities',
     to: { name: 'activities' },
     icon: 'history',
@@ -656,6 +683,13 @@ onUnmounted(() => {
   background: linear-gradient(135deg, rgba(36, 41, 54, 0.85) 0%, rgba(13, 15, 19, 0.95) 100%);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
   height: 100%;
+}
+
+/* Parked feature card (airdrop opt-in before its beacon is configured): dimmed and inert. */
+.card-disabled {
+  opacity: 0.55;
+  pointer-events: none;
+  cursor: default;
 }
 
 .dashboard-section-card:hover {
