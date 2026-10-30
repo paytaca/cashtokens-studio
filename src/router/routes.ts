@@ -268,6 +268,11 @@ const routes: RouteRecordRaw[] = [
         path: 'opt-in',
         component: () => import('pages/AirdopBeaconOptInPage.vue'),
       },
+      {
+        name: 'airdrop-issue',
+        path: 'issue',
+        component: () => import('pages/AirdropIssuePage.vue'),
+      },
     ],
   },
   // Always leave this as last one,
