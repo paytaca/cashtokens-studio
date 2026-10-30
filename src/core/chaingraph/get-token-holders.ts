@@ -1,7 +1,7 @@
 import { fetchWithTimeout } from "../utils/fetch-with-timeout"
 import { type CashAddressResult, type DecodedCashAddress, decodeCashAddress, hexToBin, lockingBytecodeToCashAddress } from "bitauth-libauth-v3"
 
-export type GetTokenHoldersParams = { category: string, chainGraphUrl?: string }
+export type GetTokenHoldersParams = { category: string, chainGraphUrl?: string, network?: 'mainnet' | 'chipnet'}
 
 export async function getTokenHolders(params: GetTokenHoldersParams): Promise<Array<string>>{
 
@@ -11,20 +11,20 @@ export async function getTokenHolders(params: GetTokenHoldersParams): Promise<Ar
     }
 
     const query = `{
-    output(
-        where: {
-        token_category: { _eq: "\\\\x${params.category}" }
+        output(
+          where: {
+            token_category: { _eq: "\\\\x${params.category}" }
             _not:{ spent_by: {} }
+          }
+        ) {
+        
+          locking_bytecode
+          value_satoshis
+          transaction {
+            hash
+          }
         }
-
-    ) {
-
-        locking_bytecode_hex
-        transaction {
-        hash
-        }
-    }
-    }`
+      }`
 
     const payload = {
         headers: {
@@ -41,6 +41,7 @@ export async function getTokenHolders(params: GetTokenHoldersParams): Promise<Ar
     const response: any = await fetchWithTimeout(url, payload);
 
     if (response.status >= 400) {
+        
         throw response.statusText;
     }
 
@@ -48,7 +49,8 @@ export async function getTokenHolders(params: GetTokenHoldersParams): Promise<Ar
     const { data } = JSON.parse(responseText || '')
     const addresses = new Set()
     for (const o of data.output) {
-        const address = lockingBytecodeToCashAddress({ bytecode: hexToBin(o.locking_bytecode_hex), tokenSupport: true }) as CashAddressResult
+        const lockingBytecodeHex = o.locking_bytecode.replace('\\x', '') || ''
+        const address = lockingBytecodeToCashAddress({ bytecode: hexToBin(lockingBytecodeHex), tokenSupport: true, prefix: params.network === 'chipnet'? 'bchtest': 'bitcoincash' }) as CashAddressResult
         const decoded = decodeCashAddress(address.address) as DecodedCashAddress
         if (decoded.type === 'p2pkhWithTokens') {
             addresses.add(address.address)
