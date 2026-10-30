@@ -14,6 +14,10 @@
                         Studio
                     </q-banner>
                     <FormField>
+                        <label>Airdrop Beacon Address</label>
+                        <q-input :model-value="airdropBeaconContract?.tokenAddress" outlined readonly></q-input>
+                    </FormField>
+                    <FormField>
                         <label>Your Address</label>
                         <q-input :model-value="wallet?.getDepositAddress?.(0)" outlined readonly></q-input>
                     </FormField>
@@ -113,7 +117,8 @@ const onSubmit = async () => {
             airdropBeaconTokenCategory: beaconNftTokenCategory,
             airdropBeaconAdminId: AIRDROP_NFT_ADMIN_ID,
             recipientAddress,
-            walletUtxos: walletutxos
+            walletUtxos: walletutxos,
+            network: import.meta.env.VITE_BCH_NETWORK
         })
 
         updateStep(TASK_PREPARE_TX, 'done')
