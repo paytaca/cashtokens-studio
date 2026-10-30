@@ -199,6 +199,16 @@
                       </q-item-section>
                     </q-item>
 
+                    <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))"
+                      :disable="airdropBeaconDisabled" clickable @click="navigateToAirdrop(value.row)">
+                      <q-item-section avatar>
+                        <q-icon name="mdi-parachute" color="teal-4" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionAirdrop') }}
+                      </q-item-section>
+                    </q-item>
+
                     <q-separator dark inset />
                     <q-separator dark inset />
                     <q-item v-if="value.row.token" clickable @click="refreshCache(value.row.token!.category as string)">
@@ -433,6 +443,16 @@
                         </q-item-section>
                       </q-item>
 
+                      <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))"
+                        :disable="airdropBeaconDisabled" clickable @click="navigateToAirdrop(value.row)">
+                        <q-item-section avatar>
+                          <q-icon name="mdi-parachute" color="teal-4" size="xs" />
+                        </q-item-section>
+                        <q-item-section class="text-caption text-grey-3">
+                          {{ $t('dashboard.managed.actionAirdrop') }}
+                        </q-item-section>
+                      </q-item>
+
                       <q-separator dark inset />
                       <q-separator dark inset />
                       <q-item clickable @click="refreshCache(value.row.token!.category as string)">
@@ -520,6 +540,7 @@ import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialo
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import { Network } from 'cashscript';
 import { decodeCashAddress } from 'bitauth-libauth-v3';
+import { isAirdropBeaconConfigured } from 'src/core/airdrop';
 import { BaseWallet, NetworkType } from 'mainnet-js';
 import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
@@ -558,6 +579,9 @@ const cancelChainRefresh = () => debouncedChainRefresh?.cancel();
 
 const tokenTypeFilter = ref<'all' | 'fungible' | 'nft' | 'mixed'>('all');
 const createdSearchQuery = ref('');
+
+/** Build-time static: the airdrop actions are parked while no beacon category is configured. */
+const airdropBeaconDisabled = computed(() => !isAirdropBeaconConfigured());
 
 const fungibleCount = computed(
   () => authheads.value.filter((r) => getTokenType(r) === 'fungible').length
@@ -740,6 +764,11 @@ const navigateToMint = (row: UtxoWithAuthKey) => {
       category: row.token!.category
     }
   })
+};
+
+const navigateToAirdrop = (row: UtxoWithAuthKey) => {
+  authguardStore.setActiveAuthhead(row);
+  router.push({ name: 'airdrop-issue' });
 };
 
 const refreshCache = async (category: string) => {

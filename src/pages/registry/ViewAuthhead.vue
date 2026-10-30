@@ -138,20 +138,13 @@
                         </label>
                         <q-input :model-value="fungibleReserves" disable outlined bottom-slots
                             :type="$q.screen.lt.sm ? 'textarea' : 'text'" :autogrow="$q.screen.lt.sm">
-                            <template v-slot:hint>
-                                <div v-if="showDecimals" class="flex items-center q-gutter-x-md">
-                                    <label>Decimals</label>
-                                    <q-badge outline color="grey-7" class="text-weight-bold text-grey-4" size="lg">
-                                        {{ localSnapshot.token!.decimals === undefined ? '?' :
-                                            localSnapshot.token!.decimals }}
-                                    </q-badge>
-                                </div>
-                            </template>
-                            <template v-slot:prepend>
-
-                            </template>
-                            <template v-slot:append>
+                            <template v-if="!$q.screen.lt.sm" v-slot:append>
                                 <div class="flex no-wrap q-gutter-sm">
+                                    <q-btn no-wrap icon="mdi-parachute" color="secondary"
+                                        :disable="!airdropBeaconConfigured" @click="goToAirdropIssue">
+                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
+                                            $t('dashboard.managed.actionAirdrop') }}</span>
+                                    </q-btn>
                                     <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
                                         @click="() => releaseReserves('burn')">
                                         <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Burn</span>
@@ -161,9 +154,27 @@
                                         <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Release</span>
                                     </q-btn>
                                 </div>
-
+                            </template>
+                            <template v-slot:hint>
+                                <div v-if="showDecimals" class="flex items-center q-gutter-x-md">
+                                    <label>Decimals</label>
+                                    <q-badge outline color="grey-7" class="text-weight-bold text-grey-4" size="lg">
+                                        {{ localSnapshot.token!.decimals === undefined ? '?' :
+                                            localSnapshot.token!.decimals }}
+                                    </q-badge>
+                                </div>
                             </template>
                         </q-input>
+                        <!-- On small screens the actions leave the append slot: the reserves value
+                             keeps the full row and the buttons wrap below it. -->
+                        <div v-if="$q.screen.lt.sm" class="flex no-wrap justify-end q-gutter-sm q-mt-sm">
+                            <q-btn no-wrap icon="mdi-parachute" color="secondary"
+                                :disable="!airdropBeaconConfigured" @click="goToAirdropIssue" />
+                            <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
+                                @click="() => releaseReserves('burn')" />
+                            <q-btn no-wrap icon="mdi-send-circle-outline" color="primary"
+                                @click="() => releaseReserves('issuance')" />
+                        </div>
 
                     </FormField>
                 </q-card>
@@ -194,6 +205,7 @@ import { Network } from 'cashscript'
 import { BaseWallet, NetworkType } from 'mainnet-js'
 import { db } from 'src/core/client-db'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
+import { isAirdropBeaconConfigured } from 'src/core/airdrop'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
 
@@ -214,6 +226,9 @@ const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingD
 const appStore = useAppStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { wallet, signTransaction } = inject('walletSigner') as any
+
+/** Build-time static: the airdrop actions are parked while no beacon category is configured. */
+const airdropBeaconConfigured = isAirdropBeaconConfigured()
 
 
 const category = computed(() => activeAuthhead.value?.token?.category || '')
@@ -303,6 +318,10 @@ const mintNft = () => {
         params: { category: category.value },
         query: route.query
     })
+}
+
+const goToAirdropIssue = () => {
+    router.push({ name: 'airdrop-issue', query: route.query })
 }
 
 const releaseReserves = (action: 'issuance' | 'burn') => {
