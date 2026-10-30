@@ -39,6 +39,7 @@ export default {
     prepareTokenCategoryExplainer: `<p>A CashTokens <span class="text-weight-bold text-primary">Token Category</span> is permanently generated from the unique <span class="text-weight-bold">32-byte Transaction ID (TXID)</span> of the unspent BCH output (UTXO) which was the first output of a previous transaction. To prepare it, CashTokens Studio automatically selects an available UTXO from your wallet; the hex-encoded TXID of that specific transaction will automatically serve as your immutable Token Category identifier, guaranteeing global uniqueness on the network.</p>`,
     receiveAirdropBeaconNftExplainer: `<p></p>`,
     whatsThis: `What's this?`,
+    airdropOptInExplainer: `While unsolicited airdrops to known addresses cannot be entirely prevented on a public blockchain, CashTokens Studio refuses to facilitate or normalize the ecosystem's degeneration. By rejecting blind "push" distributions and strictly supporting the self-sovereign Opt-In Beacon NFT, the platform establishes a cleaner, consent-driven standard. This mechanism forces projects to use a "Claim" model, empowering privacy-conscious users to safely raise their hands using clean, disposable addresses while shielding their primary, mixed stashes from public deanonymization and spam.`,
     changeIcon: 'Change icon',
     uploadingRegistryToIpfs: 'Uploading registry to IPFS',
     verifyingAuthhead: 'Verifying authhead authorization',
@@ -353,7 +354,43 @@ export default {
   },
   airdropBeaconOptInPage: {
     pageTitle: 'Opt-In to Airdrops',
-    pageSubtitle: 'Mint an Airdrop Beacon NFT to opt-in for airdrops within CashTokens Studio and across the broader ecosystem.'
+    pageSubtitle: 'Mint an Airdrop Beacon NFT to opt-in for airdrops within CashTokens Studio and across the broader ecosystem.',
+    comingSoon: 'Airdrop opt-in is coming soon — the Airdrop Beacon has not been deployed to this network yet.'
+  },
+  airdropIssuePage: {
+    pageTitle: 'Issue Airdrop',
+    pageSubtitle: 'Send fungible tokens from your reserves to up to 50 recipients in a single transaction.',
+    tokenCaption: 'Airdropping from the reserves of',
+    reservesLabel: 'Fungible Reserves',
+    recipientSource: 'Select recipient source',
+    sourceList: 'I have a list',
+    sourceBeaconHolders: 'Beacon NFT Holders',
+    addressesLabel: 'Addresses (comma separated)',
+    addressesPlaceholder: 'bitcoincash:qq..., bitcoincash:qp..., ...',
+    loadCsv: 'Load from CSV file',
+    beaconHoldersLoading: 'Loading beacon NFT holders...',
+    beaconHoldersLoaded: '{count} opted-in addresses loaded from beacon NFT holders',
+    beaconHoldersEmpty: 'No opted-in addresses found yet. Beacon NFT holders appear here once wallets opt in.',
+    beaconHoldersError: 'Could not load beacon NFT holders. Check the Chaingraph configuration.',
+    recipientsSummary: '{count} valid recipients · total {total} tokens',
+    excludedAddresses: 'Excluded Addresses',
+    excludedAddressesHint: 'Duplicated, non-token or P2SH addresses, and entries beyond the {max} recipient limit.',
+    p2shTitle: 'P2SH addresses are not allowed',
+    p2shMessage: 'Sending airdrops to P2SH addresses is not allowed. Only opted-in P2PKH token addresses can receive tokens — any P2SH entries were moved to the excluded list.',
+    amountPerAddress: 'Amount per address',
+    send: 'Send Airdrop',
+    noActiveAuthhead: 'Select a token to airdrop from your managed tokens first.',
+    insufficientReserves: 'Amount exceeds the reserves available for {count} recipients',
+    invalidAmount: 'Invalid amount',
+    requiresWallet: 'Connect a wallet to issue an airdrop',
+    activityEvent: 'Airdropped tokens from reserves',
+    successText: 'Airdrop sent to {count} recipients',
+    summaryTitle: 'Airdrop completed',
+    summarySubtitle: '{count} recipients received {total} tokens in total.',
+    summaryAddressColumn: 'Address',
+    summaryAmountColumn: 'Amount',
+    doAnotherAirdrop: 'Do Another Airdrop',
+    cancelText: 'Cancelled by user'
   },
   wizardConnect: {
     requests: {
@@ -465,6 +502,12 @@ export default {
     card: {
       countTokens: 'tokens',
       countActivities: 'activities',
+      airdropOptedIn: 'opted in',
+      airdropNotOptedIn: 'not opted in',
+    },
+    airdrop: {
+      caption: 'Receive Airdrop Beacon NFT to receive future airdrops.',
+      badgeSoon: 'soon',
     },
     managed: {
       caption:
@@ -500,6 +543,7 @@ export default {
       actionReleaseReserves: 'Release Reserves',
       actionBurnReserves: 'Burn Reserves',
       actionMintChildNft: 'Mint Child NFT',
+      actionAirdrop: 'Airdrop',
       actionBurn: 'Burn',
       actionRefreshCache: 'Refresh Cache',
     },
