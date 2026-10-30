@@ -271,7 +271,7 @@ const routes: RouteRecordRaw[] = [
       {
         name: 'airdrop-issue',
         path: 'issue',
-        component: () => import('pages/AirdropIssuePage.vue'),
+        component: () => import('pages/AirdropPage.vue'),
       },
     ],
   },
