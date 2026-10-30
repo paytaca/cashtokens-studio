@@ -1,4 +1,5 @@
 export * from './transfer-ft-reserves'
+export * from './airdrop-ft-reserves'
 export * from './transfer-ft'
 export * from './transfer-nft'
 export * from './create-token'
