@@ -253,7 +253,7 @@ const onPublishClick = async () => {
         updateStep(TASK_UPLOAD_REGISTRY, 'done')
         updateStep(TASK_INPUTS_CHECK, 'running')
 
-        await wallet.value.sync()
+        await wallet.value?.sync()
         triggerRef(wallet)
 
         updateStep(TASK_INPUTS_CHECK, 'done')
@@ -261,7 +261,7 @@ const onPublishClick = async () => {
 
         const publishRegistryRequest = publishRegistry({
             authhead: activeAuthhead.value as UtxoWithAuthKey,
-            funderUtxos: wallet.value.utxos as UtxoWithPath[],
+            funderUtxos: wallet.value?.utxos as UtxoWithPath[],
             network: import.meta.env.VITE_BCH_NETWORK,
             registryPublicationData: {
                 contentHash: bumpArtifact.contentHash,
