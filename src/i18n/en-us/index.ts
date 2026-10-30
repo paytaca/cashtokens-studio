@@ -358,7 +358,7 @@ export default {
     comingSoon: 'Airdrop opt-in is coming soon — the Airdrop Beacon has not been deployed to this network yet.'
   },
   airdropIssuePage: {
-    pageTitle: 'Issue Airdrop',
+    pageTitle: 'Airdrop',
     pageSubtitle: 'Send fungible tokens from your reserves to up to 50 recipients in a single transaction.',
     tokenCaption: 'Airdropping from the reserves of',
     reservesLabel: 'Fungible Reserves',
