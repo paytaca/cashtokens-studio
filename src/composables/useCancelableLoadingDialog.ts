@@ -41,7 +41,8 @@ export function useCancelableLoadingDialog() {
     canCancel.value = !cancelLocked;
 
     loadingDialog?.update({
-      componentProps: { steps: [...steps.value], canCancel: canCancel.value },
+      steps: [...steps.value],
+      canCancel: canCancel.value,
     });
   };
 
