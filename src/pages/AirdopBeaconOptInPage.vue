@@ -2,9 +2,12 @@
     <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
         <div class="q-px-md q-px-md-xl content-container q-mt-xl q-gutter-y-lg">
             <ExplainerBanner class="q-my-md" icon="mdi-parachute" :title="$t('airdropBeaconOptInPage.pageTitle')"
-                :description="$t('airdropBeaconOptInPage.pageSubtitle')" />
+                :description="$t('airdropBeaconOptInPage.pageSubtitle')" explainer="info.airdropOptInExplainer" />
             <q-card class="q-pa-lg rounded-borders">
-                <div v-if="wallet?.getDepositAddress?.(0)" class="q-gutter-y-lg">
+                <q-banner v-if="!beaconConfigured" class="bg-warning text-dark rounded-borders">
+                    {{ $t('airdropBeaconOptInPage.comingSoon') }}
+                </q-banner>
+                <div v-else-if="wallet?.getDepositAddress?.(0)" class="q-gutter-y-lg">
                     <q-banner>
                         Once you have the Airdrop Beacon
                         NFT, your address will be whitelisted as recipient to future airdrops in Cashtokens
@@ -58,10 +61,16 @@ const { t } = useI18n();
 const $q = useQuasar();
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog();
 const { wallet, signTransaction } = useWalletSigner();
+/** The opt-in needs both the beacon category and the contract's admin id; without either the
+    page renders its "coming soon" state and never touches the chain. */
+const beaconConfigured = Boolean(
+    import.meta.env.VITE_AIRDROP_BEACON_TOKEN_CATEGORY && import.meta.env.VITE_AIRDROP_BEACON_ADMIN_ID
+)
 const airdropBeaconContract = ref()
 const airdropBeaconContractSidecarNfts = ref()
 
 const onSubmit = async () => {
+    if (!beaconConfigured) return
 
     const genesisTaskList = [
         ...txTaskList,
@@ -180,12 +189,14 @@ const onSubmit = async () => {
 }
 
 onMounted(async () => {
-    if (import.meta.env.VITE_AIRDROP_BEACON_TOKEN_CATEGORY && import.meta.env.VITE_AIRDROP_BEACON_ADMIN_ID)
-        airdropBeaconContract.value = createAirdropBeaconContract({
-            beaconTokenCategory: import.meta.env.VITE_AIRDROP_BEACON_TOKEN_CATEGORY,
-            beaconAdminId: import.meta.env.VITE_AIRDROP_BEACON_ADMIN_ID,
-            network: import.meta.env.VITE_BCH_NETWORK
-        })
+    // Guarded: without the env config there is no contract to introspect, and the page shows its
+    // "coming soon" banner instead.
+    if (!beaconConfigured) return
+    airdropBeaconContract.value = createAirdropBeaconContract({
+        beaconTokenCategory: import.meta.env.VITE_AIRDROP_BEACON_TOKEN_CATEGORY,
+        beaconAdminId: import.meta.env.VITE_AIRDROP_BEACON_ADMIN_ID,
+        network: import.meta.env.VITE_BCH_NETWORK
+    })
     airdropBeaconContractSidecarNfts.value = await airdropBeaconContract.value.getUtxos()
 })
 

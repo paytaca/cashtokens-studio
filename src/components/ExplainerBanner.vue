@@ -9,7 +9,13 @@
           <q-icon :name="icon" size="xl" />
         </q-avatar>
         <div>
-          <div class="text-h6 text-weight-bold text-white">{{ title }}</div>
+          <div class="flex items-center no-wrap q-gutter-x-sm">
+            <div class="text-h6 text-weight-bold text-white">{{ title }}</div>
+            <q-btn v-if="explainer" flat dense no-caps text-color="secondary" icon="help_outline" size="sm"
+              @click="showExplainer">
+              {{ t('info.whatsThis') }}
+            </q-btn>
+          </div>
           <div v-if="description || $slots.subtitle" class="text-body2 text-grey-4">
             <slot name="subtitle">{{ description }}</slot>
           </div>
@@ -23,12 +29,27 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+import { useI18n } from 'vue-i18n';
+import { useQuasar } from 'quasar';
+
+const props = defineProps<{
   icon?: string;
   avatarSrc?: string;
   title: string;
   description?: string;
+  /** i18n key of an explainer text; set to render a "What's this?" button beside the title. */
+  explainer?: string;
 }>();
+
+const { t } = useI18n();
+const $q = useQuasar();
+
+const showExplainer = () => $q.dialog({
+  class: ['q-py-sm', 'text-body1', $q.screen.gt.xs ? 'text-justify' : 'text-left'],
+  style: 'width: 100%; max-width: min(92vw, 36rem);',
+  html: true,
+  message: `<div class='scroll' style='max-height: 70vh'>${t(props.explainer!)}</div>`,
+});
 </script>
 
 <style scoped>
