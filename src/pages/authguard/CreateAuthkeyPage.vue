@@ -138,7 +138,8 @@ const onGenerateGenesisInput = async () => {
         if (!wallet.value?.ready) {
             updateStep(TASK_INPUTS_CHECK, 'failed')
             $q.notify({
-                message: 'Wallet not ready'
+                type: 'negative',
+                message: t('info.walletNotReady')
             })
             return
         }
@@ -156,7 +157,12 @@ const onGenerateGenesisInput = async () => {
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await signTransaction(genesisInputSignReq, { signal: getSignal() });
+        const signal = getSignal()
+        const response = await signTransaction(genesisInputSignReq, { signal });
+
+        // The user cancelled while the wallet had the request: the run is over, so nothing else
+        // may happen — continuing here is how a cancelled flow used to keep broadcasting.
+        if (signal?.aborted) return
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')
@@ -205,7 +211,7 @@ const onGenerateGenesisInput = async () => {
     } catch (error: any) {
         if (error?.name === 'AbortError') return
         $q.notify({
-            type: 'Error',
+            type: 'negative',
             message: t('error.genesisInputCreation')
         })
     } finally {
@@ -224,6 +230,7 @@ const onCreateAuthKey = async () => {
         if (!wallet.value?.ready) {
             updateStep(TASK_INPUTS_CHECK, 'failed')
             $q.notify({
+                type: 'negative',
                 message: t('info.walletNotReady')
             })
             return
@@ -248,12 +255,16 @@ const onCreateAuthKey = async () => {
         })
 
         // Best effort watchtower subscription
-        subscribe(authguard.address).catch()
+        subscribe(authguard.address).catch(() => undefined)
 
         updateStep(TASK_PREPARE_TX, 'done')
         updateStep(TASK_WAIT_FOR_SIG, 'running')
 
-        const response = await signTransaction(signRequest, { signal: getSignal() });
+        const signal = getSignal()
+        const response = await signTransaction(signRequest, { signal });
+
+        // Cancelled while the wallet had the request: stop here instead of carrying on to broadcast.
+        if (signal?.aborted) return
 
         if (!response) {
             updateStep(TASK_WAIT_FOR_SIG, 'failed')
@@ -304,6 +315,10 @@ const onCreateAuthKey = async () => {
     } catch (error: any) {
         if (error?.name === 'AbortError') return
         console.error(error)
+        $q.notify({
+            type: 'negative',
+            message: t('error.authkeyCreation')
+        })
     } finally {
         stopLoader(1000)
     }
