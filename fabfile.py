@@ -70,7 +70,7 @@ def env_settings(environment):
         "compose_file": f"deployment/{environment}.yml",
         "deploy_dir": deploy_dir(environment),
         "history": f"{DEPLOY_HISTORY_DIR}/{environment}.log",
-        "deploy_script": f"{deploy_dir(environment)}/scripts/{environment}-deploy.sh",
+        "deploy_script": f"{deploy_dir(environment)}/deployment/scripts/{environment}-deploy.sh",
         "deploy_log": f"{DEPLOY_HISTORY_DIR}/{environment}-deploy.log",
     }
 
