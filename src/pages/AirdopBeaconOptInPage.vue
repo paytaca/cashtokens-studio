@@ -1,7 +1,7 @@
 <template>
     <q-page class="bg-dark-page text-grey-1 q-pb-xl page-root">
         <div class="q-px-md q-px-md-xl content-container q-mt-xl q-gutter-y-lg">
-            <ExplainerBanner class="q-my-md" icon="mdi-parachute" :title="$t('airdropBeaconOptInPage.pageTitle')"
+            <ExplainerBanner class="q-my-md" avatar-src="/images/airdrop-beacon-icon.png" :title="$t('airdropBeaconOptInPage.pageTitle')"
                 :description="$t('airdropBeaconOptInPage.pageSubtitle')" explainer="info.airdropOptInExplainer" />
             <q-card class="q-pa-lg rounded-borders">
                 <q-banner v-if="!beaconConfigured" class="bg-warning text-dark rounded-borders">
@@ -40,7 +40,8 @@
                     </FormField>
 
                     <div class="flex justify-end">
-                        <q-btn color="primary" @click="onSubmit" no-caps>Claim Airdrop Beacon NFT</q-btn>
+                        <q-btn color="primary" @click="onSubmit" no-caps
+                            icon="img:/images/airdrop-beacon-icon.png">Claim Airdrop Beacon NFT</q-btn>
                     </div>
                 </div>
             </q-card>

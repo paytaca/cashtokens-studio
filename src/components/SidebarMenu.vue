@@ -14,8 +14,6 @@
             :name="prop.node.icon || 'share'" color="orange" size="28px" class="q-mr-sm" />
           <q-icon v-else-if="prop.node.icon && prop.node.label === 'Admin'" :name="prop.node.icon || 'share'"
             color="accent" size="28px" class="q-mr-sm" />
-          <q-icon v-else-if="prop.node.icon && prop.node.label === 'Opt-In to Airdrops'" :name="prop.node.icon"
-            color="accent" size="28px" class="q-mr-sm" />
           <q-icon v-else :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
           <div>{{ prop.node.label }}<q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs"
               floating>
@@ -120,7 +118,7 @@ const menu = computed<any[]>(() => {
     {
       label: 'Opt-In to Airdrops',
       href: hrefs.airdropOptIn,
-      icon: 'mdi-parachute',
+      img: '/images/airdrop-beacon-icon.png',
       soon: airdropBeaconSoon,
     },
     {
