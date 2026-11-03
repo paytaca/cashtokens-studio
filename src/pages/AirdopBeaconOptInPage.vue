@@ -14,18 +14,31 @@
                         Studio
                     </q-banner>
                     <FormField>
-                        <label>Airdrop Beacon Address</label>
-                        <q-input :model-value="airdropBeaconContract?.tokenAddress" outlined readonly></q-input>
-                    </FormField>
-                    <FormField>
-                        <label>Your Address</label>
-                        <q-input :model-value="wallet?.getDepositAddress?.(0)" outlined readonly></q-input>
-                    </FormField>
-                    <FormField>
-                        <label>Beacon NFT Category</label>
+                        <label>Airdrop Beacon NFT</label>
                         <q-input :model-value="getBeaconNftTokenCategory()" outlined readonly class="ellipsis"
-                            autogrow></q-input>
+                            label="Category" autogrow></q-input>
                     </FormField>
+                    <FormField>
+                        <label>Your Token Address</label>
+                        <q-input :model-value="recipientAddress" outlined readonly>
+                            <template #prepend>
+                                <q-btn v-if="recipientAddress" flat dense round size="sm" icon="qr_code_2"
+                                    color="grey-5"
+                                    @click="openQrDialog(recipientAddress, { title: $t('dashboard.qr.tokenTitle'), icon: '/images/cashtokens.svg' })">
+                                    <q-tooltip>{{ $t('dashboard.wallet.showQr') }}</q-tooltip>
+                                </q-btn>
+                            </template>
+                        </q-input>
+                        <div v-if="recipientAddress" class="text-caption q-mt-sm"
+                            :class="hasRecipientBch ? 'text-grey-5' : 'text-negative'">
+                            {{ $t('airdropBeaconOptInPage.recipientBalance') }}:
+                            {{ formatBch(recipientBalance) }} BCH
+                        </div>
+                        <div v-if="recipientAddress && !hasRecipientBch" class="text-negative text-caption">
+                            {{ $t('airdropBeaconOptInPage.fundRecipientFirst') }}
+                        </div>
+                    </FormField>
+
                     <div class="flex justify-end">
                         <q-btn color="primary" @click="onSubmit" no-caps>Claim Airdrop Beacon NFT</q-btn>
                     </div>
@@ -37,7 +50,7 @@
 
 <script setup lang="ts">
 
-import { ref, onMounted, triggerRef } from 'vue';
+import { computed, ref, onMounted, triggerRef } from 'vue';
 import { BaseWallet, NetworkType } from 'mainnet-js';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
@@ -55,16 +68,24 @@ import {
     txTaskList
 } from 'src/utils';
 import { createAirdropBeaconContract } from 'src/core/airdrop/create-airdrop-beacon-contract';
-import { AIRDROP_NFT_ADMIN_ID, getBeaconNftTokenCategory, optInToAirdrops } from 'src/core/airdrop';
+import {
+    AIRDROP_NFT_ADMIN_ID,
+    getBeaconNftTokenCategory,
+    optInToAirdrops,
+    selectOptInFunding,
+    type OptInFundingSelection
+} from 'src/core/airdrop';
+import type { UtxoWithPath } from 'src/core/types';
 import { subscribe } from 'src/services/watchtower';
 import FormField from 'src/components/FormField.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
+import QrCodeModal from 'src/components/wizard-connect/QrCodeModal.vue';
 
 const { t } = useI18n();
 const $q = useQuasar();
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog();
-const { wallet, signTransaction } = useWalletSigner();
+const { wallet, signTransaction, utxosVersion } = useWalletSigner();
 /** The opt-in needs both the beacon category and the contract's admin id; without either the
     page renders its "coming soon" state and never touches the chain. */
 const beaconConfigured = Boolean(
@@ -73,8 +94,75 @@ const beaconConfigured = Boolean(
 const airdropBeaconContract = ref()
 const airdropBeaconContractSidecarNfts = ref()
 
+/**
+ * Mirrors the selection the builder will use, so the page shows the actual NFT destination.
+ * Reading `utxosVersion` keeps this reactive when the wallet replaces its UTXO set in place.
+ */
+const fundingSelection = computed<OptInFundingSelection | undefined>(() => {
+    void utxosVersion.value
+    const activeWallet = wallet.value
+    if (!activeWallet) return undefined
+
+    return selectOptInFunding({
+        walletUtxos: (activeWallet.utxos ?? []) as UtxoWithPath[],
+        walletType: activeWallet.getWalletType(),
+        defaultRecipientAddress: activeWallet.getTokenDepositAddress(0),
+    })
+})
+
+const recipientAddress = computed(() =>
+    fundingSelection.value?.recipientAddress || wallet.value?.getTokenDepositAddress?.(0) || ''
+)
+const recipientBalance = computed(() => fundingSelection.value?.recipientBalance ?? 0n)
+const hasRecipientBch = computed(() => recipientBalance.value > 0n)
+
+const formatBch = (satoshis: bigint) => {
+    const bch = Number(satoshis) / 100_000_000
+    return bch.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 8 })
+}
+
+function openQrDialog(address: string, options: { title: string, icon: string }) {
+    $q.dialog({
+        component: QrCodeModal,
+        componentProps: {
+            contents: address,
+            title: options.title,
+            icon: options.icon,
+            subtitle: t('dashboard.qr.subtitle'),
+            copyLabel: t('dashboard.qr.copyLabel'),
+        },
+    })
+}
+
 const onSubmit = async () => {
     if (!beaconConfigured) return
+
+    const activeWallet = wallet.value
+    if (!activeWallet) return
+
+    const beaconNftTokenCategory = getBeaconNftTokenCategory()
+    const walletutxos = (await activeWallet.getUtxos()) as UtxoWithPath[]
+
+    const beaconNftExists = walletutxos.find((u) => u.token?.category === beaconNftTokenCategory)
+
+    if (beaconNftExists) {
+        return $q.notify({
+            message: 'You already have and Airdrop Beacon NFT on your wallet.'
+        })
+    }
+
+    const funding = selectOptInFunding({
+        walletUtxos: walletutxos,
+        walletType: activeWallet.getWalletType(),
+        defaultRecipientAddress: activeWallet.getTokenDepositAddress(0),
+    })
+
+    if (!funding.success || funding.recipientBalance === 0n) {
+        return $q.notify({
+            type: 'warning',
+            message: t('airdropBeaconOptInPage.fundRecipientFirst')
+        })
+    }
 
     const genesisTaskList = [
         ...txTaskList,
@@ -85,29 +173,8 @@ const onSubmit = async () => {
     })
 
     try {
-
-        const beaconNftTokenCategory = getBeaconNftTokenCategory()
-
-        const walletutxos = await wallet.value?.getUtxos() || []
-
-        const beaconNftExists = walletutxos.find((u) => u.token?.category === beaconNftTokenCategory)
-
-        if (beaconNftExists) {
-            return $q.notify({
-                message: 'You already have and Airdrop Beacon NFT on your wallet.'
-            })
-        }
-
-        if (!wallet?.value?.utxos || wallet.value?.utxos?.length === 0) {
-            return $q.notify({
-                type: 'Error',
-                message: 'Insufficient balance'
-            })
-        }
-
-        const recipientAddress = wallet.value.getTokenDepositAddress(0)
-        // Best effor watchtower subscription
-        subscribe(recipientAddress).catch()
+        // Best effort watchtower subscription
+        subscribe(funding.recipientAddress).catch()
 
         updateStep(TASK_INPUTS_CHECK, 'done')
 
@@ -116,8 +183,9 @@ const onSubmit = async () => {
         const optInRequest = await optInToAirdrops({
             airdropBeaconTokenCategory: beaconNftTokenCategory,
             airdropBeaconAdminId: AIRDROP_NFT_ADMIN_ID,
-            recipientAddress,
-            walletUtxos: walletutxos,
+            recipientAddress: funding.recipientAddress,
+            funderInput: funding.funderInput,
+            feeUtxos: funding.feeUtxos,
             network: import.meta.env.VITE_BCH_NETWORK
         })
 

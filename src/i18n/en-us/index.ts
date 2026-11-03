@@ -362,7 +362,9 @@ export default {
   airdropBeaconOptInPage: {
     pageTitle: 'Opt-In to Airdrops',
     pageSubtitle: 'Mint an Airdrop Beacon NFT to opt-in for airdrops within CashTokens Studio and across the broader ecosystem.',
-    comingSoon: 'Airdrop opt-in is coming soon — the Airdrop Beacon has not been deployed to this network yet.'
+    comingSoon: 'Airdrop opt-in is coming soon — the Airdrop Beacon has not been deployed to this network yet.',
+    recipientBalance: 'BCH Balance',
+    fundRecipientFirst: 'Please send BCH to this address first.'
   },
   airdropIssuePage: {
     pageTitle: 'Airdrop',

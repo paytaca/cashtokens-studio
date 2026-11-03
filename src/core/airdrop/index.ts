@@ -1,5 +1,6 @@
 export * from './create-airdrop-beacon-contract'
 export * from './opt-in'
+export * from './select-opt-in-funding'
 
 
 export const MAX_AIRDROP_RECIPIENTS = 50

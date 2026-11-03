@@ -1,29 +1,34 @@
 import {  Network, placeholderP2PKHUnlocker, TransactionBuilder } from "cashscript"
 import { UtxoWithPath } from "../types"
 import { DEFAULT_FEE_RATE_SATS_PER_KB, DEFAULT_TOKEN_VALUE, P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE, P2PKH_UNLOCKING_BYTECODE_BYTESIZE } from "../constants"
-import { getMinimumFee, hexToBin, bigIntToVmNumber, binToHex } from "bitauth-libauth-v3"
+import { getMinimumFee, hexToBin } from "bitauth-libauth-v3"
 import { jsonReplacer } from "../transaction/utils"
 import { RelayMsgAction, SignTransactionRequest } from "@wizardconnect/core"
 import { CustomElectrumNetworkProvider } from "src/services/electrum"
 import { createAirdropBeaconContract } from "./create-airdrop-beacon-contract"
+import { lockingBytecodeOf } from "./select-opt-in-funding"
 
 export type optIntParams = {
     airdropBeaconTokenCategory: string,
     airdropBeaconAdminId: string,
     recipientAddress: string,
-    walletUtxos: UtxoWithPath[],
+    funderInput: UtxoWithPath,
+    feeUtxos: UtxoWithPath[],
     network?: Network,
 }
 
 export async function optInToAirdrops(params: optIntParams): Promise<SignTransactionRequest> {
 
-    const funderUtxos = params.walletUtxos
-        .filter(u => !u.token)
-        .sort((a, b) => Number(b.satoshis) - Number(a.satoshis))
+    /**
+     * AirdropBeacon.optIn() requires tx.outputs[1] and tx.inputs[1] to share a locking script.
+     * The selector guarantees this, but keep the invariant explicit here so a mis-wired caller
+     * fails before building an unspendable transaction.
+     */
+    if (lockingBytecodeOf(params.funderInput.address) !== lockingBytecodeOf(params.recipientAddress)) {
+        throw new Error('The first funding UTXO must be at the Airdrop Beacon NFT recipient address')
+    }
 
-    const funderInput = funderUtxos.shift()
-
-    if (!funderInput) throw new Error('Insufficient BCH balance to fund the transaction')
+    const feeUtxos = [...params.feeUtxos]
 
     const transaction = new TransactionBuilder({
         provider: new CustomElectrumNetworkProvider(params.network)
@@ -37,6 +42,7 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
     })
 
     console.log('airdropBeaconContract', airdropBeaconContract.tokenAddress)
+    console.log('airdropBeaconContract.unlock', await airdropBeaconContract.getUtxos())
     
     if (airdropBeaconContract.unlock?.optIn === undefined) throw new Error('Error creating Airdrop contract.')
     const airdropBeaconAdminNfts = 
@@ -45,10 +51,10 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
     const airdropBeaconAdminNft = airdropBeaconAdminNfts[Math.floor(Math.random() * airdropBeaconAdminNfts.length)];
     if (!airdropBeaconAdminNft) throw new Error('Error, no available Airdrop beacon admin NFT.')
 
-    const spentUtxos = [airdropBeaconAdminNft, funderInput] as UtxoWithPath[]
+    const spentUtxos = [airdropBeaconAdminNft, params.funderInput] as UtxoWithPath[]
 
     transaction.addInput(airdropBeaconAdminNft!, airdropBeaconContract.unlock.optIn())
-    transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
+    transaction.addInput(params.funderInput, placeholderP2PKHUnlocker(params.funderInput.address))
 
     transaction.addOutput({
         to: airdropBeaconContract.tokenAddress,
@@ -84,7 +90,7 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
         DEFAULT_FEE_RATE_SATS_PER_KB
     )
     const estimatedCost = fixedCost + minimumFee
-    let totalSatoshiFunds = BigInt(funderInput.satoshis)
+    let totalSatoshiFunds = BigInt(params.funderInput.satoshis)
     let enoughFunds = totalSatoshiFunds > estimatedCost
     const change = totalSatoshiFunds - estimatedCost
     let changeOutputIndex = -1
@@ -98,8 +104,8 @@ export async function optInToAirdrops(params: optIntParams): Promise<SignTransac
     }
 
     
-    while (funderUtxos.length > 0 && !enoughFunds) {
-        const additionalFunderInput = funderUtxos.shift() as UtxoWithPath
+    while (feeUtxos.length > 0 && !enoughFunds) {
+        const additionalFunderInput = feeUtxos.shift() as UtxoWithPath
         transaction.addInput(
             additionalFunderInput,
             placeholderP2PKHUnlocker(additionalFunderInput.address)
