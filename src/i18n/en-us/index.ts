@@ -27,6 +27,10 @@ export default {
     authkeyTokenIdCandidateHint:
       'This will become the token id of your Authkey NFT',
     authkeyTokenIdCandidateNotFoundHint: 'No available token category candidate',
+    genesisInputIndexing:
+      'Waiting for your wallet to see the new genesis input…',
+    genesisInputPending:
+      'Genesis input broadcast. It will appear here as soon as your wallet syncs, no need to reload.',
     createAuthkeyNftExplainer: `<p>The Authkey is just an NFT that's serves as a  key to an <b>Authguard</b> contract: it grants you the authority to manage the token identity output that the Authguard protects, while the vault guards that output from being accidentally spent.</p>`,
     nftCollectionTypeExplainer: `<p>When you create an NFT collection, you choose how each NFT stores its information on-chain. There are two styles to pick from: Sequential and Parsable.</p>
 <p><b>Sequential collection</b> — every NFT is simply numbered in order (1, 2, 3…). The only thing stored on-chain is that number, which makes it the simplest and cheapest option.</p>

@@ -1,4 +1,4 @@
-import { computed, shallowRef, triggerRef, watch } from 'vue'
+import { computed, effectScope, ref, shallowRef, triggerRef, watch } from 'vue'
 import type { SignTransactionRequest } from '@wizardconnect/core'
 import type { WalletConnectExternalWallet } from 'src/core/wallet/wallet-connect'
 import type { WizardConnectExternalWallet } from 'src/core/wallet'
@@ -48,13 +48,37 @@ const createWalletSigner = () => {
     triggerRef(wallet)
   }
 
-  // The array source is rebuilt on every trigger, so this fires for in-place mutations too, not just
-  // for instance swaps.
-  watch(
-    [wizardConnect.wallet, walletConnect.wallet, activeProvider],
-    syncWallet,
-    { immediate: true, flush: 'sync' }
-  )
+  /**
+   * Tick for readers that keep their own copy of the wallet's UTXO set (the authkey and vault forms
+   * do). WizardConnect deliberately publishes background syncs without poking the wallet ref, so
+   * without this a page would stay on the snapshot it read at mount until a full reload.
+   */
+  const utxosVersion = ref(0)
+  const publishUtxos = () => { utxosVersion.value = Date.now() }
+  let lastWalletInstance: WizardConnectExternalWallet | WalletConnectExternalWallet | undefined
+
+  /**
+   * Detached scope: a `watch()` created during the setup of whichever page happens to use this
+   * composable first is stopped when that page unmounts, which would freeze wallet mirroring and
+   * the sync tick for the rest of the session. The wallet outlives every page, so its watchers must
+   * too.
+   */
+  effectScope(true).run(() => {
+    watch(
+      [wizardConnect.wallet, walletConnect.wallet, activeProvider],
+      syncWallet,
+      { immediate: true, flush: 'sync' }
+    )
+
+    watch(wizardConnect.walletLasySync, publishUtxos)
+
+    // Only a different instance means a different UTXO set; `triggerRef` re-fires with the same one.
+    watch(wallet, (current) => {
+      if (current === lastWalletInstance) return
+      lastWalletInstance = current
+      publishUtxos()
+    })
+  })
 
   const walletIsReady = computed(() => Boolean(wallet.value?.ready))
 
@@ -100,6 +124,8 @@ const createWalletSigner = () => {
     walletName,
     walletIcon,
     isConnecting,
+    /** Watch this to re-read the wallet's UTXOs after a background sync or a reconnect. */
+    utxosVersion,
     signTransaction,
     disconnect
   }
