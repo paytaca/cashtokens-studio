@@ -309,14 +309,14 @@ const onCreateAuthKey = async () => {
     }
 }
 
-watch(() => wallet.value.ready, async (ready, readyPrev) => {
+watch(() => wallet.value?.ready, async (ready, readyPrev) => {
     if (ready !== readyPrev) {
-        utxos.value = await wallet.value.getUtxos()
+        utxos.value = await wallet.value?.getUtxos() || []
     }
 })
 
 onMounted(async () => {
-    if (wallet.value.ready) {
+    if (wallet.value?.ready) {
         utxos.value = await wallet.value.getUtxos()
     }
 })
