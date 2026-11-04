@@ -85,7 +85,7 @@ export function selectOptInFunding(params: SelectOptInFundingParams): OptInFundi
         : ''
 
     const balanceAtDefault = defaultRecipientAddress
-        ? bchBalanceAt(params.walletUtxos, defaultRecipientAddress)
+        ? bchBalanceAt(bchUtxos, defaultRecipientAddress)
         : 0n
 
     if (params.walletType === 'wallet-connect') {
@@ -128,6 +128,6 @@ export function selectOptInFunding(params: SelectOptInFundingParams): OptInFundi
         recipientAddress: tokenAwareAddressOf(funderInput.address),
         funderInput,
         feeUtxos: bchUtxos.filter((utxo) => utxo !== funderInput),
-        recipientBalance: bchBalanceAt(params.walletUtxos, funderInput.address),
+        recipientBalance: bchBalanceAt(bchUtxos, funderInput.address),
     }
 }
