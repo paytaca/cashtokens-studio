@@ -375,6 +375,7 @@ export default {
       burnedNote: 'Permanently destroyed tokens: OP_RETURN burns, tokens sent to a burn address, and implicit burns — tokens spent without being recreated in an output, the way tokenburner.cash destroys supply.',
       holders: 'Holders',
     },
+    marketPrice: 'Market Price',
     authchain: {
       title: 'Authchain',
       empty: 'No authchain entries found for this token.',
@@ -687,5 +688,9 @@ export default {
       broadcasting: 'Broadcasting transaction, please wait...',
       awaitingPropagation: 'Broadcast success, awaiting tx propagation...',
     },
+    
   },
+  contextMenu: {
+    exploreToken: 'Explore Token'
+  }
 };

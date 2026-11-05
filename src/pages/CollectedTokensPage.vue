@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -172,13 +172,13 @@
               <q-td :props="value">
                 <q-btn round icon="more_vert" size="sm" @click.stop>
                   <q-menu dark auto-close class="bg-dark-2 shadow-2">
-                    <q-list dark class="bg-dark" dense style="min-width: 180px">
+                    <q-list dark class="bg-dark" style="min-width: 180px">
                       <q-item clickable @click="viewTokenProfile(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                          <q-icon name="mdi-information-outline" color="secondary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
-                          {{ $t('dashboard.collected.actionTokenProfile') }}
+                        <q-item-section class="text-grey-3">
+                          {{ $t('contextMenu.exploreToken') }}
                         </q-item-section>
                       </q-item>
 
@@ -188,9 +188,9 @@
                       <q-item v-if="getTokenType(value.row) !== 'nft'" clickable
                         @click="sendCollectedTokens(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                          <q-icon name="mdi-send-circle-outline" color="primary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{
                             getTokenType(value.row) === 'mixed'
                               ? $t('dashboard.collected.actionTransferFt')
@@ -202,9 +202,9 @@
                       <q-item v-if="getTokenType(value.row) !== 'fungible'" clickable
                         @click="transferCollectedNft(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-transfer-right" color="primary" size="xs" />
+                          <q-icon name="mdi-transfer-right" color="primary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.collected.actionTransferNft') }}
                         </q-item-section>
                       </q-item>
@@ -213,9 +213,9 @@
 
                       <q-item clickable @click="burnCollectedTokens(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-fire" color="orange" size="xs" />
+                          <q-icon name="mdi-fire" color="orange" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{
                             getTokenType(value.row) === 'nft'
                               ? $t('dashboard.collected.actionBurnNft')

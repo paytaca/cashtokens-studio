@@ -62,8 +62,20 @@
                     <slot />
                 </q-card>
             </div>
-
             <div v-if="profile" class="col-12 column q-gutter-y-lg">
+                <q-card v-if="profile.marketPrice" flat class="bg-grey-10 rounded-borders">
+                    <q-card-section>
+                        <div class="text-h6 text-weight-medium q-mb-md flex items-center">
+                            <q-icon name="img:/images/cauldron-logo.png" size="lg" />
+                            {{ $t('tokenProfile.marketPrice') }}
+                        </div>
+                        <div class="row q-col-gutter-md">
+                            <span class="text-h6">1 {{ profile.symbol || shortenTokenId(profile.category) }} = {{
+                                profile.marketPrice }} <q-icon name="img:/images/bitcoin-cash-circle.svg"></q-icon>
+                            </span>
+                        </div>
+                    </q-card-section>
+                </q-card>
                 <q-card flat class="bg-grey-10 rounded-borders">
                     <q-card-section>
                         <div class="text-h6 text-weight-medium q-mb-md flex items-center">

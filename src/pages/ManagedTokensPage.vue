@@ -147,27 +147,27 @@
                   <q-list dark class="bg-dark" style="min-width: 180px">
                     <!-- <q-item v-if="value.row.token" clickable @click="viewRegistry(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="description" color="secondary" size="xs" />
+                        <q-icon name="description" color="secondary" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionViewRegistry') }}
                       </q-item-section>
                     </q-item> -->
 
                     <q-item clickable @click="viewTokenProfile(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                        <q-icon name="mdi-information-outline" color="secondary" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionTokenProfile') }}
                       </q-item-section>
                     </q-item>
 
                     <q-item clickable @click="navigateToAuthguard(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="mdi-safe-square-outline" color="secondary" size="xs" />
+                        <q-icon name="mdi-safe-square-outline" color="secondary" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionTokenVault') }}
                       </q-item-section>
                     </q-item>
@@ -178,9 +178,9 @@
                       ['fungible', 'mixed'].includes(getTokenType(value.row))
                     " clickable @click="openTransferDialog(value.row, 'issuance')">
                       <q-item-section avatar>
-                        <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                        <q-icon name="mdi-send-circle-outline" color="primary" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionReleaseReserves') }}
                       </q-item-section>
                     </q-item>
@@ -189,9 +189,9 @@
                       ['fungible', 'mixed'].includes(getTokenType(value.row))
                     " clickable @click="openTransferDialog(value.row, 'burn')">
                       <q-item-section avatar>
-                        <q-icon name="mdi-fire" color="orange" size="xs" />
+                        <q-icon name="mdi-fire" color="orange" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionBurnReserves') }}
                       </q-item-section>
                     </q-item>
@@ -201,9 +201,9 @@
                       value.row.token?.nft?.capability === 'minting'
                     " clickable @click="navigateToMint(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="add_circle" color="primary" size="xs" />
+                        <q-icon name="add_circle" color="primary" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionMintChildNft') }}
                       </q-item-section>
                     </q-item>
@@ -211,9 +211,9 @@
                     <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))"
                       :disable="airdropBeaconDisabled" clickable @click="navigateToAirdrop(value.row)">
                       <q-item-section avatar>
-                        <q-icon name="mdi-parachute" color="teal-4" size="xs" />
+                        <q-icon name="mdi-parachute" color="teal-4" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionAirdrop') }}
                       </q-item-section>
                     </q-item>
@@ -222,9 +222,9 @@
                     <q-separator dark inset />
                     <q-item v-if="value.row.token" clickable @click="refreshCache(value.row.token!.category as string)">
                       <q-item-section avatar>
-                        <q-icon name="refresh" color="grey-5" size="xs" />
+                        <q-icon name="refresh" color="grey-5" />
                       </q-item-section>
-                      <q-item-section class="text-caption text-grey-3">
+                      <q-item-section class="text-grey-3">
                         {{ $t('dashboard.managed.actionRefreshCache') }}
                       </q-item-section>
                     </q-item>
@@ -241,7 +241,7 @@
         <template v-if="firstLoadPending">
           <q-banner class="flex items-bottom q-gutter-x-sm">
             <span class="text-italic q-mr-sm text-warning">{{ $t('dashboard.managed.checkingForManagedTokens')
-              }}</span><q-spinner-dots color="grey-5" size="sm" />
+            }}</span><q-spinner-dots color="grey-5" size="sm" />
           </q-banner>
 
           <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
@@ -273,10 +273,10 @@
               :placeholder="$t('dashboard.managed.searchPlaceholder')" class="bg-grey-10"
               style="border-radius: 0.75rem; min-width: 200px; margin-left: auto">
               <template v-slot:prepend>
-                <q-icon name="search" color="grey-6" size="xs" />
+                <q-icon name="search" color="grey-6" />
               </template>
               <template v-slot:append v-if="createdSearchQuery">
-                <q-icon name="close" color="grey-6" size="xs" class="cursor-pointer" @click="createdSearchQuery = ''" />
+                <q-icon name="close" color="grey-6" class="cursor-pointer" @click="createdSearchQuery = ''" />
               </template>
             </q-input>
           </div>
@@ -293,7 +293,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -400,26 +400,26 @@
                     <q-list dark class="bg-dark" style="min-width: 180px">
                       <q-item clickable @click="viewRegistry(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="description" color="secondary" size="xs" />
+                          <q-icon name="description" color="secondary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionViewRegistry') }}
                         </q-item-section>
                       </q-item>
                       <q-item clickable @click="viewTokenProfile(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                          <q-icon name="mdi-information-outline" color="secondary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
-                          {{ $t('dashboard.managed.actionTokenProfile') }}
+                        <q-item-section class="text-grey-3">
+                          {{ $t('contextMenu.exploreToken') }}
                         </q-item-section>
                       </q-item>
 
                       <q-item clickable @click="navigateToAuthguard(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-safe-square-outline" color="secondary" size="xs" />
+                          <q-icon name="mdi-safe-square-outline" color="secondary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionTokenVault') }}
                         </q-item-section>
                       </q-item>
@@ -430,9 +430,9 @@
                         ['fungible', 'mixed'].includes(getTokenType(value.row))
                       " clickable @click="openTransferDialog(value.row, 'issuance')">
                         <q-item-section avatar>
-                          <q-icon name="mdi-send-circle-outline" color="primary" size="xs" />
+                          <q-icon name="mdi-send-circle-outline" color="primary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionReleaseReserves') }}
                         </q-item-section>
                       </q-item>
@@ -441,9 +441,9 @@
                         ['fungible', 'mixed'].includes(getTokenType(value.row))
                       " clickable @click="openTransferDialog(value.row, 'burn')">
                         <q-item-section avatar>
-                          <q-icon name="mdi-fire" color="orange" size="xs" />
+                          <q-icon name="mdi-fire" color="orange" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionBurnReserves') }}
                         </q-item-section>
                       </q-item>
@@ -453,9 +453,9 @@
                         value.row.token?.nft?.capability === 'minting'
                       " clickable @click="navigateToMint(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="add_circle" color="primary" size="xs" />
+                          <q-icon name="add_circle" color="primary" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionMintChildNft') }}
                         </q-item-section>
                       </q-item>
@@ -463,9 +463,9 @@
                       <q-item v-if="['fungible', 'mixed'].includes(getTokenType(value.row))"
                         :disable="airdropBeaconDisabled" clickable @click="navigateToAirdrop(value.row)">
                         <q-item-section avatar>
-                          <q-icon name="mdi-parachute" color="teal-4" size="xs" />
+                          <q-icon name="mdi-parachute" color="teal-4" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionAirdrop') }}
                         </q-item-section>
                       </q-item>
@@ -474,9 +474,9 @@
                       <q-separator dark inset />
                       <q-item clickable @click="refreshCache(value.row.token!.category as string)">
                         <q-item-section avatar>
-                          <q-icon name="refresh" color="grey-5" size="xs" />
+                          <q-icon name="refresh" color="grey-5" />
                         </q-item-section>
-                        <q-item-section class="text-caption text-grey-3">
+                        <q-item-section class="text-grey-3">
                           {{ $t('dashboard.managed.actionRefreshCache') }}
                         </q-item-section>
                       </q-item>
