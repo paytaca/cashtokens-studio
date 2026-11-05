@@ -17,7 +17,7 @@
 
                         <template v-else-if="profile">
                             <div class="row items-center q-gutter-x-md">
-                                <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1">
+                                <q-avatar size="80px" class="bg-grey-9 border-radius-8 shadow-1" flat>
                                     <q-img v-if="profile.iconUrl" :src="profile.iconUrl" fit="cover" />
                                     <q-icon v-else name="token" color="primary" size="32px" />
                                 </q-avatar>
@@ -73,7 +73,15 @@
                         <div class="row q-col-gutter-md">
                             <div v-for="stat in supplyStats" :key="stat.label" class="col-12 col-sm-6">
                                 <div class="bg-dark q-pa-md rounded-borders full-height">
-                                    <div class="token-profile-label">{{ stat.label }}</div>
+                                    <div class="token-profile-label flex items-center">
+                                        <span>{{ stat.label }}</span>
+                                        <q-icon v-if="stat.hint" name="info_outline" size="13px"
+                                            class="q-ml-xs text-grey-6">
+                                            <q-tooltip class="bg-grey-9 text-caption text-grey-4" max-width="260px">
+                                                {{ stat.hint }}
+                                            </q-tooltip>
+                                        </q-icon>
+                                    </div>
                                     <div class="text-h6 text-mono q-mt-xs supply-value">{{ stat.value }}</div>
                                 </div>
                             </div>
@@ -246,7 +254,9 @@ const formatAmount = (amount?: bigint): string => {
     return fraction ? `${whole}.${fraction}` : whole
 }
 
-const supplyStats = computed(() => [
+type SupplyStat = { label: string, value: string, hint?: string }
+
+const supplyStats = computed<SupplyStat[]>(() => [
     {
         label: t('tokenProfile.supply.genesis'),
         value: formatAmount(props.profile?.genesisSupply),
@@ -259,10 +269,11 @@ const supplyStats = computed(() => [
         label: t('tokenProfile.supply.reserved'),
         value: formatAmount(props.profile?.reservedSupply),
     },
-    {
-        label: t('tokenProfile.supply.burned'),
-        value: formatAmount(props.profile?.burnedSupply),
-    },
+    // {
+    //     label: t('tokenProfile.supply.burned'),
+    //     value: formatAmount(props.profile?.burnedSupply),
+    //     hint: t('tokenProfile.supply.burnedNote'),
+    // },
     {
         label: t('tokenProfile.supply.holders'),
         value: props.profile?.holders?.toLocaleString('en-US') ?? t('tokenProfile.unknown'),

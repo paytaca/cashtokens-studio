@@ -10,7 +10,13 @@ export type { GetTokenHoldersParams } from './get-token-holders'
 export { getTokenGenesis } from './get-token-genesis'
 export type { GetTokenGenesisParams, GetTokenGenesisResponse } from './get-token-genesis'
 
-export { getTokenSupply, isBurnScript, supplyStatsFromUnspentOutputs, sumFungibleAmounts } from './get-token-supply'
+export {
+    TOKEN_BURNER_LOCKING_BYTECODE_HEX,
+    circulatingStatsFromUnspentOutputs,
+    getTokenSupply,
+    isBurnScript,
+    sumFungibleAmounts,
+} from './get-token-supply'
 export type { GetTokenSupplyParams, TokenSupplyStats } from './get-token-supply'
 
 export { getAuthheadReserve } from './get-authhead-supply'

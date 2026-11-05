@@ -372,6 +372,7 @@ export default {
       circulating: 'Circulating Supply',
       reserved: 'Reserved Supply',
       burned: 'Burned Supply',
+      burnedNote: 'Permanently destroyed tokens: OP_RETURN burns, tokens sent to a burn address, and implicit burns — tokens spent without being recreated in an output, the way tokenburner.cash destroys supply.',
       holders: 'Holders',
     },
     authchain: {

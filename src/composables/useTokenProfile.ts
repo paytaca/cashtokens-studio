@@ -1,10 +1,12 @@
 import { ref, toValue, watch, type MaybeRefOrGetter } from 'vue'
+import { binToHex, cashAddressToLockingBytecode } from 'bitauth-libauth-v3'
 import { getBasicTokenMetadata } from 'src/core/bcmr'
 import {
     getAuthchain,
     getAuthheadReserve,
     getTokenGenesis,
     getTokenSupply,
+    TOKEN_BURNER_LOCKING_BYTECODE_HEX,
     type AuthchainEntry,
     type AuthheadReserve,
 } from 'src/core/chaingraph'
@@ -38,6 +40,25 @@ type TokenIdentitySnapshot = {
     uris?: Record<string, string>,
     token?: { symbol?: string, decimals?: number },
 }
+
+/**
+ * Burn destinations whose balances are destroyed: the tokenburner.cash covenant (which burns by
+ * omitting tokens from its spend's outputs) and the app's configured burn address, if it decodes.
+ */
+const BURN_LOCKING_BYTECODES_HEX = (() => {
+    const destinations = [TOKEN_BURNER_LOCKING_BYTECODE_HEX]
+    const address = import.meta.env.VITE_BURN_ADDRESS
+    if (!address) return destinations
+
+    try {
+        const decoded = cashAddressToLockingBytecode(address)
+        if (typeof decoded !== 'string') destinations.push(binToHex(decoded.bytecode))
+    } catch {
+        // An undecodable address only drops that destination; the burner still counts.
+    }
+
+    return [...new Set(destinations)]
+})()
 
 type TokenProfileSources = {
     category: string,
@@ -133,7 +154,10 @@ export function useTokenProfile(
             await Promise.allSettled([
                 getBasicTokenMetadata(category),
                 getTokenGenesis({ category }),
-                getTokenSupply({ category }),
+                getTokenSupply({
+                    category,
+                    burnLockingBytecodesHex: BURN_LOCKING_BYTECODES_HEX,
+                }),
                 getAuthheadReserve({ authbase }),
                 getAuthchain({ authbase }),
             ])

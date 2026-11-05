@@ -1,4 +1,5 @@
 import { fetchWithTimeout } from "../utils/fetch-with-timeout"
+import { sumFungibleAmounts } from "./get-token-supply"
 
 export type GetTokenGenesisParams = { category: string, chainGraphUrl?: string, network?: 'mainnet' | 'chipnet'}
 
@@ -54,8 +55,17 @@ export async function getTokenGenesis(params: GetTokenGenesisParams): Promise<Ge
     const responseText = await response.text()
     const { data } = JSON.parse(responseText || '')
     const genesisTxid = data?.transaction?.[0]?.hash?.replace('\\x', '') || ''
-    const genesisFtSupply = data?.transaction?.[0]?.outputs?.[0]?.fungible_token_amount ?? ''
-    const genesisNftCapability = data?.transaction?.[0]?.outputs?.[0]?.nonfungible_token_capability
+    // Every category output of the genesis transaction creates supply, so the total is their sum
+    // rather than the first output's denomination (which may be the minting NFT with zero tokens).
+    const genesisOutputs = data?.transaction?.[0]?.outputs ?? []
+    const genesisFtSupply = genesisOutputs.length
+        ? sumFungibleAmounts(
+            genesisOutputs.map((output: { fungible_token_amount: string }) =>
+                output.fungible_token_amount
+            )
+        ).toString()
+        : ''
+    const genesisNftCapability = genesisOutputs[0]?.nonfungible_token_capability
     const genesisTimestamp = data?.transaction?.[0]?.block_inclusions?.[0]?.block?.timestamp ?? ''
 
     return {
