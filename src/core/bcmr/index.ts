@@ -8,8 +8,7 @@ export * from './authenticate'
 export * from './reserved-symbols'
 export * from './locate-registry'
 export * from './parse-nft'
-
-export const BCMR_PREFIX = '6a0442434d52'
+export * from './op-return'
 
 export type CreateBcmrOptions = {
     authbase: string,
