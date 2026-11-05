@@ -11,6 +11,7 @@ import {
     type AuthheadReserve,
 } from 'src/core/chaingraph'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
+import { getTokenMarketPrice } from 'src/services/cauldron'
 
 /** A metadata URI from the token's BCMR identity snapshot (e.g. `web`, `twitter`, `github`). */
 export type TokenProfileLink = { id: string, uri: string }
@@ -32,6 +33,7 @@ export type TokenProfile = {
     holders?: number,
     /** Every identity re-lock from genesis (index 0) to the current authhead. */
     authchain?: AuthchainEntry[],
+    marketPrice?: string
 }
 
 type TokenIdentitySnapshot = {
@@ -135,6 +137,7 @@ export function useTokenProfile(
     let latestRequest = 0
 
     const load = async () => {
+        console.log('@import.meta.env.VITE_CAULDRON_INDEXER', import.meta.env.VITE_CAULDRON_INDEXER)
         const category = toValue(categorySource)
         if (!category) {
             profile.value = undefined
@@ -159,7 +162,7 @@ export function useTokenProfile(
                     burnLockingBytecodesHex: BURN_LOCKING_BYTECODES_HEX,
                 }),
                 getAuthheadReserve({ authbase }),
-                getAuthchain({ authbase }),
+                getAuthchain({ authbase })
             ])
 
         // A newer category was requested while this one was in flight; drop the stale result.
@@ -189,6 +192,13 @@ export function useTokenProfile(
             authheadReserve,
             authchain,
         })
+        
+        if (metadata?.token?.decimals) {
+            const cauldronMarketPrice = await getTokenMarketPrice({ category, tokenDecimals: Number(metadata.token.decimals ?? 0), cauldronIndexerUrl: import.meta.env.VITE_CAULDRON_INDEXER})
+            profile.value.marketPrice = cauldronMarketPrice.priceRounded
+            console.log('@cauldron', cauldronMarketPrice)
+        }
+        
         loading.value = false
     }
 
