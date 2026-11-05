@@ -384,10 +384,14 @@ export default {
       contentHash: 'Content Hash',
     },
   },
-  tokenProfilePage: {
+  tokenExplorerPage: {
     back: 'Back',
     refresh: 'Refresh token information',
-    missingCategory: 'No token category was provided.',
+    searchTitle: 'Token Explorer',
+    searchHint: 'Enter a token category to load its metadata, supply and authchain.',
+    categoryPlaceholder: 'Token category (64 hex characters)',
+    search: 'Explore',
+    clearSearch: 'Clear the token category',
   },
   airdropBeaconOptInPage: {
     pageTitle: 'Opt-In to Airdrops',

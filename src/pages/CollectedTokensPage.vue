@@ -455,7 +455,7 @@ const viewTokenProfile = (row: any) => {
   const category = row.token?.category;
   if (!category) return;
   router.push({
-    name: 'token-profile',
+    name: 'token-explorer',
     params: { category },
   });
 };

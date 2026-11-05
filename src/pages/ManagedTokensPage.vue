@@ -737,7 +737,7 @@ const viewTokenProfile = (row: any) => {
   console.log('@ViewTokenProfile')
   const category = row.token?.category;
   if (!category) return;
-  router.push({ name: 'token-profile', params: { category } });
+  router.push({ name: 'token-explorer', params: { category } });
 };
 
 const navigateToAuthguard = (row: UtxoWithAuthKey) => {

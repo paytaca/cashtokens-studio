@@ -164,9 +164,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import('pages/MintNftPage.vue'),
       },
       {
-        name: 'token-profile',
-        path: ':category/profile',
-        component: () => import('pages/TokenProfilePage.vue'),
+        name: 'token-explorer',
+        // Without a category the explorer shows its search view; `explorer/<category>` loads it.
+        path: 'explorer/:category?',
+        component: () => import('pages/TokenExplorerPage.vue'),
+        // Keep profile links shared before the explorer rename working.
+        alias: '/token/:category/profile',
       },
     ],
   },
