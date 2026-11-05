@@ -163,6 +163,11 @@ const routes: RouteRecordRaw[] = [
         path: ':category/mint',
         component: () => import('pages/MintNftPage.vue'),
       },
+      {
+        name: 'token-profile',
+        path: ':category/profile',
+        component: () => import('pages/TokenProfilePage.vue'),
+      },
     ],
   },
   // {
