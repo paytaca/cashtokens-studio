@@ -154,6 +154,15 @@
                       </q-item-section>
                     </q-item> -->
 
+                    <q-item clickable @click="viewTokenProfile(value.row)">
+                      <q-item-section avatar>
+                        <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                      </q-item-section>
+                      <q-item-section class="text-caption text-grey-3">
+                        {{ $t('dashboard.managed.actionTokenProfile') }}
+                      </q-item-section>
+                    </q-item>
+
                     <q-item clickable @click="navigateToAuthguard(value.row)">
                       <q-item-section avatar>
                         <q-icon name="mdi-safe-square-outline" color="secondary" size="xs" />
@@ -395,6 +404,14 @@
                         </q-item-section>
                         <q-item-section class="text-caption text-grey-3">
                           {{ $t('dashboard.managed.actionViewRegistry') }}
+                        </q-item-section>
+                      </q-item>
+                      <q-item clickable @click="viewTokenProfile(value.row)">
+                        <q-item-section avatar>
+                          <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                        </q-item-section>
+                        <q-item-section class="text-caption text-grey-3">
+                          {{ $t('dashboard.managed.actionTokenProfile') }}
                         </q-item-section>
                       </q-item>
 
@@ -714,6 +731,13 @@ const viewRegistry = (authhead: DecoratedUtxo) => {
     query.contentHash = authhead.identitySnapshotIdentifier.contentHash;
   }
   router.push({ name: 'edit-registry', query });
+};
+
+const viewTokenProfile = (row: any) => {
+  console.log('@ViewTokenProfile')
+  const category = row.token?.category;
+  if (!category) return;
+  router.push({ name: 'token-profile', params: { category } });
 };
 
 const navigateToAuthguard = (row: UtxoWithAuthKey) => {

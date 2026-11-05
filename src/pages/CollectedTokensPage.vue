@@ -173,6 +173,17 @@
                 <q-btn round icon="more_vert" size="sm" @click.stop>
                   <q-menu dark auto-close class="bg-dark-2 shadow-2">
                     <q-list dark class="bg-dark" dense style="min-width: 180px">
+                      <q-item clickable @click="viewTokenProfile(value.row)">
+                        <q-item-section avatar>
+                          <q-icon name="mdi-information-outline" color="secondary" size="xs" />
+                        </q-item-section>
+                        <q-item-section class="text-caption text-grey-3">
+                          {{ $t('dashboard.collected.actionTokenProfile') }}
+                        </q-item-section>
+                      </q-item>
+
+                      <q-separator dark inset />
+
                       <!-- Mixed rows get both directions: an amount out, or the whole UTXO out. -->
                       <q-item v-if="getTokenType(value.row) !== 'nft'" clickable
                         @click="sendCollectedTokens(value.row)">
@@ -437,6 +448,15 @@ const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
     params: {
       category: row.token!.category
     }
+  });
+};
+
+const viewTokenProfile = (row: any) => {
+  const category = row.token?.category;
+  if (!category) return;
+  router.push({
+    name: 'token-profile',
+    params: { category },
   });
 };
 

@@ -578,6 +578,7 @@ export default {
       badgeMutable: 'Mutable',
       badgeImmutable: 'Immutable',
       actionViewRegistry: 'View Registry',
+      actionTokenProfile: 'Token Profile',
       actionTokenVault: 'Token Vault',
       actionReleaseReserves: 'Release Reserves',
       actionBurnReserves: 'Burn Reserves',
@@ -595,6 +596,7 @@ export default {
       actionSend: 'Send Tokens',
       actionTransferNft: 'Transfer NFT',
       actionTransferFt: 'Transfer FT',
+      actionTokenProfile: 'Token Profile',
       actionBurn: 'Burn Tokens',
       actionBurnNft: 'Burn NFT',
       authKeyGuard: {
