@@ -7,6 +7,7 @@ export * from './utils'
 export * from './authenticate'
 export * from './reserved-symbols'
 export * from './locate-registry'
+export * from './parse-nft'
 
 export const BCMR_PREFIX = '6a0442434d52'
 
