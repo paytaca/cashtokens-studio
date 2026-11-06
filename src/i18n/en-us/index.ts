@@ -434,7 +434,7 @@ export default {
   },
   liquidityPoolsPage: {
     title: 'Liquidity Pools',
-    menuLabel: 'Cauldron Dex Pools',
+    menuLabel: 'Cauldron Dex LPs',
     caption: 'Active Cauldron pools for the token categories held by your authheads.',
     myPools: 'My Pools',
     myPoolsHint: 'Connect a wallet to filter the pools you own.',
