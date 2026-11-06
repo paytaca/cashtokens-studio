@@ -111,7 +111,8 @@ export function createPoolFromFungibleReserves(params: CreatePoolFromFungibleRes
     transaction.addOpReturnOutput(['SUMMON', '0x' + poolOwnerPkh])
     
     let transactionHex = transaction.build()
-    const fixedCost = DEFAULT_TOKEN_VALUE * 3n
+    // const fixedCost = DEFAULT_TOKEN_VALUE * 3n
+    const fixedCost = 0n
     let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
