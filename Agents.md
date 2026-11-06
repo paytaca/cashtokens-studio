@@ -49,6 +49,7 @@ You must strictly isolate platform-agnostic application architecture, applicatio
 
 - **`src/components/dialogs/`**: Contains modal windows and popup interfaces. These must remain completely "dumb" presentation components.
 - **Behavior:** Dialogs receive data purely via Vue props and emit all user interactions (clicks, saves, closures) up to parent layers using clear callbacks or events. They must not query APIs or handle persistent states themselves.
+- **Quasar-First Styling:** When creating or editing components and pages, use Quasar's built-in classes as much as possible — layout (`row`, `column`, `col`, `items-*`, `justify-*`, `q-gutter-*`), typography (`text-h*`, `text-caption`, `text-weight-*`, `ellipsis`), colors (`bg-*`, `text-*`), and helpers (`rounded-borders`, `overflow-hidden`, `full-width`, `no-wrap`). Only add scoped CSS when Quasar has no equivalent class (e.g. `min-width: 0` so `ellipsis` truncates inside a flex item, or `flex: none` to keep a fixed-size element from shrinking), and keep those style blocks as small as possible.
 
 ### 4. 🌐 Internationalization & Text Resources
 
