@@ -11,10 +11,13 @@ export interface CauldronActivePool {
 /**
  * @returns Active Token Category Pools
  */
-export async function getTokenLiquidityPools(params: { category: string, cauldronIndexerUrl: string }){
-    const result = await fetch(`${params.cauldronIndexerUrl}/pool/active?token=${params.category}`)
+export async function getTokenLiquidityPools(params: { category: string, poolOwnerPkh?: string, cauldronIndexerUrl: string }){
+    let url = `${params.cauldronIndexerUrl}/pool/active?token=${params.category}`
+    if (params.poolOwnerPkh) {
+      url += `&owner_pkh=${encodeURIComponent(params.poolOwnerPkh)}`
+    }
+    const result = await fetch(url)
     const data = await result.json() 
-    console.log('@data', data)
     const bch = data.active.reduce((acc: number, next: any) => acc = acc + next.sats, 0)
     const tokens = data.active.reduce((acc: number, next: any) => acc = acc + next.tokens, 0)
     const largestPool = data.active.reduce((acc: any, next: any) => {
