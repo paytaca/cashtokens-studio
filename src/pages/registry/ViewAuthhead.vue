@@ -140,6 +140,11 @@
                             :type="$q.screen.lt.sm ? 'textarea' : 'text'" :autogrow="$q.screen.lt.sm">
                             <template v-if="!$q.screen.lt.sm" v-slot:append>
                                 <div class="flex no-wrap q-gutter-sm">
+                                    <q-btn v-if="settings.cauldron.enabled" no-wrap icon="img:/images/cauldron-logo.png"
+                                        :aria-label="$t('addLiquidityPage.addLiquidity')" @click="goToAddLiquidity">
+                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
+                                            $t('addLiquidityPage.addLiquidity') }}</span>
+                                    </q-btn>
                                     <q-btn no-wrap icon="mdi-parachute" color="secondary" @click="goToAirdropIssue">
                                         <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
                                             $t('dashboard.managed.actionAirdrop') }}</span>
@@ -167,6 +172,9 @@
                         <!-- On small screens the actions leave the append slot: the reserves value
                              keeps the full row and the buttons wrap below it. -->
                         <div v-if="$q.screen.lt.sm" class="flex no-wrap justify-end q-gutter-sm q-mt-sm">
+                            <q-btn v-if="settings.cauldron.enabled" no-wrap icon="mdi-pool" color="teal"
+                                text-color="dark" :aria-label="$t('addLiquidityPage.addLiquidity')"
+                                @click="goToAddLiquidity" />
                             <q-btn no-wrap icon="mdi-parachute" color="secondary" @click="goToAirdropIssue" />
                             <q-btn no-wrap icon="mdi-fire" color="orange" text-color="dark"
                                 @click="() => releaseReserves('burn')" />
@@ -204,6 +212,7 @@ import { BaseWallet, NetworkType } from 'mainnet-js'
 import { db } from 'src/core/client-db'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { isAirdropBeaconConfigured } from 'src/core/airdrop'
+import { settings } from 'src/settings'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { broadcastTransaction } from 'src/services/transaction'
 
@@ -320,6 +329,20 @@ const mintNft = () => {
 
 const goToAirdropIssue = () => {
     router.push({ name: 'airdrop-issue', query: route.query })
+}
+
+/**
+ * Liquidity is created from the selected authhead's fungible reserves, so the page reads
+ * `activeAuthhead` from the store rather than any route parameter.
+ */
+const goToAddLiquidity = () => {
+    const tokenCategory = activeAuthhead.value?.token?.category
+    if (!tokenCategory) return
+
+    router.push({
+        name: 'cauldron-add-liquidity',
+        params: { category: tokenCategory },
+    })
 }
 
 const releaseReserves = (action: 'issuance' | 'burn') => {
