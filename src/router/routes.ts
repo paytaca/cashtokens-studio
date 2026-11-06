@@ -1,4 +1,5 @@
 import { RouteRecordRaw } from 'vue-router';
+import { settings } from 'src/settings';
 
 const registryRoutesProps = (route: any) => ({
   authkey: route.query.authkey,
@@ -173,6 +174,26 @@ const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  // Cauldron DeFi is a build-time opt-in: without the flag these paths fall through to the 404 route.
+  ...(settings.cauldron.enabled
+    ? [{
+        path: '/cauldron',
+        component: () => import('layouts/MainLayout.vue'),
+        children: [
+          {
+            name: 'cauldron-liquidity-pools',
+            path: 'liquidity',
+            component: () => import('pages/cauldron/LiquidityPoolsPage.vue'),
+          },
+          {
+            name: 'cauldron-add-liquidity',
+            path: 'liquidity/:category/add',
+            component: () => import('pages/cauldron/AddLiquidityPage.vue'),
+            props: true,
+          },
+        ],
+      } as RouteRecordRaw]
+    : []),
   // {
   //   path: '/registry/:registryIdentity',
   //   component: () => import('layouts/MainLayout.vue'),

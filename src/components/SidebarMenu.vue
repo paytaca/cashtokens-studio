@@ -11,14 +11,18 @@
           <img v-if="prop.node.img" :src="prop.node.img" class="sidebar-logo q-mr-sm" alt="" />
           <q-icon
             v-else-if="prop.node.icon && (prop.node.label === 'Authguard Vaults' || prop.node.label === 'Authguard Keys')"
-            :name="prop.node.icon || 'share'" color="orange" size="28px" class="q-mr-sm" />
+            :name="prop.node.icon || 'share'" color="orange-9" size="28px" class="q-mr-sm" />
           <q-icon v-else-if="prop.node.icon && prop.node.label === 'Admin'" :name="prop.node.icon || 'share'"
             color="accent" size="28px" class="q-mr-sm" />
           <q-icon v-else :name="prop.node.icon || 'share'" size="28px" class="q-mr-sm" />
-          <div>{{ prop.node.label }}<q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs"
-              floating>
+          <div>
+
+            {{ prop.node.label }}<q-icon v-if="prop.node.releaseTag === 'experimental'" name="science" color="yellow-8"
+              dense></q-icon>
+            <q-badge v-if="prop.node.soon" color="warning" text-color="dark" class="q-ml-xs" floating>
               {{ t('badge.soon') }}
-            </q-badge></div>
+            </q-badge>
+          </div>
 
         </div>
       </template>
@@ -34,6 +38,8 @@ import { useI18n } from 'vue-i18n'
 import { WIZARDCONNECT_LOGO } from 'wizardconnect-vue'
 import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { isAirdropBeaconConfigured } from 'src/core/airdrop';
+import { settings } from 'src/settings';
+import ReleaseTagBadge from 'src/components/ReleaseTagBadge.vue';
 const network = computed(() => import.meta.env.VITE_BCH_NETWORK);
 
 const { walletIsReady, wallet } = useWalletSigner();
@@ -60,6 +66,7 @@ const hrefs = {
   managedTokens: '/dashboard/managed-tokens',
   collectedTokens: '/dashboard/collected-tokens',
   activities: '/dashboard/activities',
+  cauldronDexPools: '/cauldron/liquidity',
   createNewToken: '/token/create',
   createAuthKey: '/authguard/authkeys/create',
   importAuthhead: '/authguard/authheads/import',
@@ -115,6 +122,14 @@ const menu = computed<any[]>(() => {
       href: hrefs.authguardKeys,
       icon: 'key',
     },
+    ...(settings.cauldron.enabled
+      ? [{
+        label: t('liquidityPoolsPage.menuLabel'),
+        href: hrefs.cauldronDexPools,
+        img: '/images/cauldron-logo.png',
+        releaseTag: settings.cauldron.releaseTag,
+      }]
+      : []),
     {
       label: 'Opt-In to Airdrops',
       href: hrefs.airdropOptIn,

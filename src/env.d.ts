@@ -1,5 +1,10 @@
 /* eslint-disable */
 
+interface ImportMetaEnv {
+  readonly VITE_CAULDRON_ENABLED?: string;
+  readonly VITE_CAULDRON_RELEASE_TAG?: string;
+}
+
 declare namespace NodeJS {
   interface ProcessEnv {
     NODE_ENV: string;
