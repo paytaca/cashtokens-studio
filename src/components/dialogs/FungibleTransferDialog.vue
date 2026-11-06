@@ -78,7 +78,7 @@ import { useI18n } from 'vue-i18n';
 import { type IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
 import { computed, nextTick, onMounted, ref } from 'vue';
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
-import { isTokenAwareAddress } from 'src/core/utils';
+import { isTokenAwareAddress, decimalToBigInt, bigIntToDecimal } from 'src/core/utils';
 import { shortenTokenId } from 'src/core/utils';
 import { normalizeTokenDecimals } from 'src/core/bcmr';
 import CopyText from 'components/CopyText.vue'
@@ -100,22 +100,6 @@ const props = defineProps<{
   selfAddress?: string
   burnAddress?: string
 }>()
-
-function decimalToBigInt(value: string, decimals: number): bigint {
-  const parts = value.split('.')
-  const whole = parts[0] || '0'
-  const fraction = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals)
-  return BigInt(whole + fraction)
-}
-
-function bigIntToDecimal(value: bigint, decimals: number): string {
-  const s = value.toString()
-  if (decimals === 0) return s
-  if (s.length <= decimals) return '0.' + s.padStart(decimals, '0')
-  const whole = s.slice(0, -decimals)
-  const fraction = s.slice(-decimals)
-  return whole + '.' + fraction
-}
 
 const transferLabel = computed(() => {
   if (props.transferType === 'issuance') return 'Release Reserves'

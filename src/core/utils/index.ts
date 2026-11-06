@@ -6,6 +6,28 @@ export function shortenTokenId(tokenId = '') {
     return tokenId.replace(tokenId.substring(5, 60), '...')
 }
 
+/**
+ * Parses a decimal string into its smallest-unit bigint: `'1.25'` at 2 decimals becomes `125n`.
+ * The fraction is padded when short and truncated when longer than the token allows, so a value
+ * typed past the token's precision never rounds up into more base units than the user can own.
+ */
+export function decimalToBigInt(value: string, decimals: number): bigint {
+    const parts = value.split('.')
+    const whole = parts[0] || '0'
+    const fraction = (parts[1] || '').padEnd(decimals, '0').slice(0, decimals)
+    return BigInt(whole + fraction)
+}
+
+/** Renders smallest units as a decimal string: `125n` at 2 decimals becomes `'1.25'`. */
+export function bigIntToDecimal(value: bigint, decimals: number): string {
+    const s = value.toString()
+    if (decimals === 0) return s
+    if (s.length <= decimals) return '0.' + s.padStart(decimals, '0')
+    const whole = s.slice(0, -decimals)
+    const fraction = s.slice(-decimals)
+    return whole + '.' + fraction
+}
+
 export function shortenCashAddress(address = '') {
     return address.replace(address.substring(15, 45), '...')
 }
