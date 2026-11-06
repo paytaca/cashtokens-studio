@@ -31,7 +31,7 @@ export function createPoolFromFungibleReserves(params: CreatePoolFromFungibleRes
     const feeRateSatsPerKb = params.feeRateSatsPerKb || DEFAULT_FEE_RATE_SATS_PER_KB
     if (!params.fungibleReserveUtxo?.token) throw new Error(`Transferring tokens requires a token of the same category.`)
     if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
-    if (!params.poolSatoshiValue || params.poolTokenValue) throw new Error(`Invalid Amounts.`)
+    if (!params.poolSatoshiValue || !params.poolTokenValue) throw new Error(`Invalid Amounts.`)
     
     const poolOwnerDecodedAddress = decodeCashAddress(params.poolOwnerAddress)
     if (typeof(poolOwnerDecodedAddress) === 'string') throw new Error(`Error decoding pool owner's address.`)
@@ -117,7 +117,9 @@ export function createPoolFromFungibleReserves(params: CreatePoolFromFungibleRes
         BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE), 
         feeRateSatsPerKb
     )
-    const estimatedCost = fixedCost + minimumFee
+    // The pool output is funded from the same wallet inputs as the fee, so both must be reserved
+    // before change is returned.
+    const estimatedCost = params.poolSatoshiValue + fixedCost + minimumFee
     let totalSatoshiFunds = funderInput.satoshis
     let enoughFunds = totalSatoshiFunds > estimatedCost
     const change = totalSatoshiFunds - estimatedCost
@@ -146,7 +148,7 @@ export function createPoolFromFungibleReserves(params: CreatePoolFromFungibleRes
             BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),
             feeRateSatsPerKb
         )
-        const newEstimatedCost = fixedCost + newMinimumFee
+        const newEstimatedCost = params.poolSatoshiValue + fixedCost + newMinimumFee
         enoughFunds = totalSatoshiFunds > newEstimatedCost
         const newChange = totalSatoshiFunds - newEstimatedCost
         if (newChange > 546n) {
