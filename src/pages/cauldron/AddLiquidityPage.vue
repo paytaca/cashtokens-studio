@@ -117,7 +117,7 @@
                         <span class="text-caption text-grey-6 text-uppercase">
                             {{ $t('addLiquidityPage.positionValue') }}
                         </span>
-                        <span class="text-h6">{{ positionValueLabel }}</span>
+                        <span class="text-h6">{{ positionValueLabel }} ({{ positionValueUsd }} USD)</span>
                     </div>
 
                     <!-- 5. Submit through the same wallet-signing pipeline the registry pages use. -->
@@ -165,6 +165,7 @@ import {
     TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS,
     TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel,
 } from 'src/utils'
+import { getAssetPrices, WatchtowerAssetPrice } from 'src/services/watchtower'
 
 defineOptions({ name: 'AddLiquidityPage' })
 
@@ -199,6 +200,8 @@ const reserveAmount = computed(() => BigInt(authhead.value?.token?.amount ?? 0))
 const reserveLabel = computed(() =>
     formatTokenAmount(reserveAmount.value, symbol.value, decimals.value, 'suffix')
 )
+
+const currentBchUsdPrice = ref<WatchtowerAssetPrice>()
 
 const BCH_DECIMALS = 8
 
@@ -400,6 +403,11 @@ const positionValueLabel = computed(() =>
     `${trimDecimal(bigIntToDecimal(positionValueSats.value, BCH_DECIMALS))} BCH`
 )
 
+const positionValueUsd = computed(() => {
+    if (!currentBchUsdPrice.value?.price_value) return 0
+    return Number(positionValueLabel.value.replace(' BCH', '')) * Number(currentBchUsdPrice.value.price_value)
+})
+
 const canSubmit = computed(() =>
     !!authhead.value
     && tokenAmountBase.value > 0n
@@ -514,10 +522,15 @@ const addLiquidity = async () => {
     }
 }
 
+watch([category, decimals], loadMarketPrice)
+
 const goBack = () => router.back()
 
-onMounted(loadMarketPrice)
-watch([category, decimals], loadMarketPrice)
+onMounted(async () => {
+    await loadMarketPrice()
+    currentBchUsdPrice.value = await getAssetPrices('BCH', 'USD')
+})
+
 </script>
 
 <style scoped>

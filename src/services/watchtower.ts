@@ -112,4 +112,32 @@ export async function authenticateAuthhead(
     return Boolean(data?.success) && !data?.failed;
   }, options);
 }
+
+export type WatchtowerAssetPrice = {
+  id: number;
+  asset: string;        // or a union of specific tickers like "BCH" | "BTC"
+  asset_type: string;   // or a union like "bch" | "btc"
+  asset_name: string;   // e.g., "Bitcoin Cash"
+  asset_symbol: string; // e.g., "BCH"
+  currency: string;     // e.g. "USD"
+  price_value: string;  // Kept as a string to preserve high precision decimal points
+  timestamp: string;    // ISO 8601 DateTime string (e.g., "2026-11-06T10:32:22Z")
+  source: "coingecko" | string;
+  source_ids: string[] | null; // Typed as an array or null assuming it scales to hold IDs
+  calculation: string | null;  // Typed as string or null based on your fallback payload
+}
+
   
+/**
+ * @param {string} asset 'bch' or token category
+ * @param {string} currency comma separated currency symbols example, USD,BCH to get price of token in USD and BCH
+ */
+export async function getAssetPrices(asset: 'bch'| string, currency: string, options?: RetryOptions): Promise<WatchtowerAssetPrice> {
+  return withRetry(async (signal) => {
+    const response = await fetch(`${import.meta.env.VITE_WATCHTOWER_API}asset-prices/?assets=${encodeURI(asset)}&vs_currencies=${encodeURI(currency)}`, { signal });
+    if (!response.ok) {
+        throw new HttpError(response.status, `HTTP Error ${response.status}: ${response.statusText}`);
+    }
+      return response.json();
+  }, options);
+}
