@@ -141,9 +141,9 @@
                             <template v-if="!$q.screen.lt.sm" v-slot:append>
                                 <div class="flex no-wrap q-gutter-sm">
                                     <q-btn v-if="settings.cauldron.enabled" no-wrap icon="img:/images/cauldron-logo.png"
-                                        :aria-label="$t('addLiquidityPage.addLiquidity')" @click="goToAddLiquidity">
-                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
-                                            $t('addLiquidityPage.addLiquidity') }}</span>
+                                        :aria-label="$t('addLiquidityPage.addLiquidity')" @click="goToAddLiquidity"
+                                        text-color="green">
+                                        <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">Add Cauldron LP</span>
                                     </q-btn>
                                     <q-btn no-wrap icon="mdi-parachute" color="secondary" @click="goToAirdropIssue">
                                         <span v-if="$q.screen.gt.sm" class="gt-xs q-ml-xs">{{
