@@ -1,6 +1,6 @@
 import { type AddressType, Contract,  type Network } from 'cashscript'
 import artifact from './Authguard.json' with { type: 'json'}
-import { CustomElectrumNetworkProvider } from 'src/services/electrum'
+import { CustomElectrumNetworkProvider } from '../../services/electrum.ts'
 
 export type CreateAuthguardContractOptions = {
     authkeyTokenId: string,

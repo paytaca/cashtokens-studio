@@ -1,6 +1,7 @@
 import { ElectrumNetworkProvider, Network } from 'cashscript'
 import { delay } from 'mainnet-js'
-import { createAuthguardContract } from 'src/core/authguard'
+// import { createAuthguardContract } from '../core/authguard'
+import { createAuthguardContract } from '../core/authguard/create-authguard-contract.ts'
 
 /** Networks this app is expected to run against (cashscript also knows mocknet/regtest). */
 const SUPPORTED_NETWORKS: Network[] = ['mainnet', 'testnet3', 'testnet4', 'chipnet']
