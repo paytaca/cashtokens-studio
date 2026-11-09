@@ -89,6 +89,20 @@
                         <q-table v-if="selectedPools.length > 0" :rows="selectedPools" :columns="columns"
                             :row-key="rowKey" flat dark hide-pagination :rows-per-page-options="[0]"
                             :grid="$q.screen.lt.sm" class="bg-dark">
+                            <template v-slot:body-cell-withdraw="props">
+                                <q-td :props="props">
+                                    <div class="flex justify-center">
+                                        <q-btn v-if="canWithdraw(props.row)"
+                                            icon="img:/images/hugeicons--bitcoin-withdraw.svg"
+                                            :loading="withdrawingPoolKey === rowKey(props.row)"
+                                            :disable="Boolean(withdrawingPoolKey) && withdrawingPoolKey !== rowKey(props.row)"
+                                            @click.stop="withdrawPosition(props.row)" round text-color="secondary"
+                                            size="lg" color="default" />
+                                    </div>
+
+                                </q-td>
+                            </template>
+
                             <template v-slot:body-cell-pool="props">
                                 <q-td :props="props">
                                     <span class="text-mono text-caption">
@@ -130,6 +144,17 @@
                                     <CopyText :text="ownerAddress(props.row.owner_p2pkh_addr)" />
                                 </q-td>
                             </template>
+
+                            <!-- <template v-slot:body-cell-withdraw="props">
+                                <q-td :props="props">
+                                    <q-btn v-if="canWithdraw(props.row)" flat dense no-caps color="secondary"
+                                        icon="img:/images/hugeicons--bitcoin-withdraw.svg"
+                                        :label="$t('liquidityPoolsPage.withdraw')"
+                                        :loading="withdrawingPoolKey === rowKey(props.row)"
+                                        :disable="Boolean(withdrawingPoolKey) && withdrawingPoolKey !== rowKey(props.row)"
+                                        @click.stop="withdrawPosition(props.row)" />
+                                </q-td>
+                            </template> -->
 
                             <template v-slot:item="props">
                                 <div class="q-pa-xs col-12">
@@ -178,6 +203,13 @@
                                                 <CopyText :text="ownerAddress(props.row.owner_p2pkh_addr)" />
                                             </span>
                                         </div>
+                                        <div v-if="canWithdraw(props.row)" class="row justify-end q-my-lg">
+                                            <q-btn flat dense no-caps color="secondary"
+                                                icon="img:/images/hugeicons--bitcoin-withdraw.svg"
+                                                :loading="withdrawingPoolKey === rowKey(props.row)"
+                                                :disable="Boolean(withdrawingPoolKey) && withdrawingPoolKey !== rowKey(props.row)"
+                                                @click.stop="withdrawPosition(props.row)" size="lg" />
+                                        </div>
                                     </div>
                                 </div>
                             </template>
@@ -198,24 +230,36 @@ import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useQuasar, type QTableColumn } from 'quasar'
+import { Network } from 'cashscript'
+import { BaseWallet, NetworkType } from 'mainnet-js'
 import { binToHex, decodeCashAddress, encodeCashAddress } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
 import ReleaseTagBadge from 'src/components/ReleaseTagBadge.vue'
+import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
+import WithdrawPoolConfirmationDialog from 'src/components/dialogs/WithdrawPoolConfirmationDialog.vue'
 import { normalizeTokenDecimals } from 'src/core/bcmr'
+import { db } from 'src/core/client-db'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import type { DecoratedUtxo } from 'src/core/types'
 import { bigIntToDecimal, formatTokenAmount, shortenCashAddress, shortenTokenId } from 'src/core/utils'
+import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useAuthguardStore } from 'src/stores/authguard'
-import { getTokenLiquidityPools, type CauldronActivePool } from 'src/services/cauldron'
+import { broadcastTransaction } from 'src/services/transaction'
+import { getTokenLiquidityPools, withdrawPool, type CauldronActivePool } from 'src/services/cauldron'
 import { settings } from 'src/settings'
+import {
+    TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS,
+    TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel,
+} from 'src/utils'
 
 defineOptions({ name: 'LiquidityPoolsPage' })
 
 const { t } = useI18n()
 const $q = useQuasar()
 const router = useRouter()
-const { wallet, walletIsReady } = useWalletSigner()
+const { wallet, walletIsReady, signTransaction } = useWalletSigner()
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const authguardStore = useAuthguardStore()
 const { loadAuthkeys, setActiveAuthhead } = authguardStore
 const { authheads, authkeysLoading, authheadsLoading, authheadsLastSync } = storeToRefs(authguardStore)
@@ -322,6 +366,9 @@ const myPkhs = computed(() => {
 
 const myPoolsOnly = ref(false)
 const canFilterMyPools = computed(() => walletIsReady.value && myPkhs.value.size > 0)
+
+/** Only the wallet that owns a pool holds the key the pool manager contract expects. */
+const canWithdraw = (pool: PoolRow) => walletIsReady.value && myPkhs.value.has(pool.owner_pkh)
 
 watch(canFilterMyPools, (canFilter) => {
     if (!canFilter) myPoolsOnly.value = false
@@ -454,7 +501,128 @@ const formatTokens = (pool: PoolRow) =>
 
 const rowKey = (row: PoolRow) => row.pool_id ?? `${row.txid}:${row.tx_pos}`
 
+const withdrawingPoolKey = ref('')
+
+/**
+ * Confirms the withdrawal before anything is built. The cancel path never calls the tx builder; only
+ * the dialog's Proceed handler starts the loader and signs.
+ */
+const withdrawPosition = (pool: PoolRow) => {
+    if (!canWithdraw(pool)) return
+
+    const card = selectedCard.value
+
+    $q.dialog({
+        component: WithdrawPoolConfirmationDialog,
+        componentProps: {
+            symbol: card?.symbol ?? '',
+            iconUrl: card?.iconUrl,
+            poolId: `${pool.txid}:${pool.tx_pos}`,
+            bchAmount: formatBch(pool.sats),
+            tokenAmount: formatTokens(pool),
+            destinationAddress: ownerAddress(pool.owner_p2pkh_addr),
+        },
+        focus: 'none',
+    })
+        .onOk(() => executeWithdrawal(pool))
+        .onCancel(() => {
+            $q.notify({ type: 'warning', message: t('liquidityPoolsPage.withdrawCancelled') })
+        })
+}
+
+/**
+ * Withdraws a whole pool position through the Cauldron pool manager contract. The loader dialog
+ * stays cancelable until the transaction is broadcast, matching every other signing flow.
+ */
+const executeWithdrawal = async (pool: PoolRow) => {
+    if (!canWithdraw(pool)) return
+
+    const symbol = selectedCard.value?.symbol ?? ''
+    const poolKey = rowKey(pool)
+
+    startLoader(txTaskList, () => {
+        $q.notify({ type: 'warning', message: t('liquidityPoolsPage.withdrawCancelled') })
+    })
+
+    updateStep(TASK_INPUTS_CHECK, 'done')
+    updateStep(TASK_PREPARE_TX, 'running')
+    withdrawingPoolKey.value = poolKey
+
+    try {
+        const signRequest = withdrawPool({
+            pool,
+            poolOwnerPkh: pool.owner_pkh,
+            network: import.meta.env.VITE_BCH_NETWORK as Network,
+            userPrompt: t('liquidityPoolsPage.withdrawSignPrompt', { token: symbol }),
+        })
+        updateStep(TASK_PREPARE_TX, 'done')
+        updateStep(TASK_WAIT_FOR_SIG, 'running')
+
+        const response = await signTransaction(signRequest, { signal: getSignal() })
+
+        updateStep(TASK_WAIT_FOR_SIG, 'done')
+        updateStep(TASK_BROADCASTING, 'running')
+
+        const [broadcastError, txid] = await broadcastTransaction({
+            transactionHex: response.signedTransaction,
+            network: import.meta.env.VITE_BCH_NETWORK,
+            onProgress: (progress: string) => {
+                const label = updateTxTaskLabel({ txTaskList, taskId: TASK_BROADCASTING, newTaskLabel: progress })
+                updateStep(TASK_BROADCASTING, 'running', label)
+            },
+        })
+
+        if (broadcastError) {
+            updateStep(TASK_BROADCASTING, 'failed')
+            throw broadcastError
+        }
+
+        updateStep(TASK_BROADCASTING, 'done')
+        updateStep(TASK_WAITING_PROPAGATION, 'running')
+
+        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet'
+            ? NetworkType.Testnet
+            : NetworkType.Mainnet
+        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+
+        updateStep(TASK_WAITING_PROPAGATION, 'done')
+        updateStep(TASK_REFRESH_UTXOS, 'running')
+
+        await db.saveActivity({
+            event: t('liquidityPoolsPage.withdrawActivityEvent', { token: symbol }),
+            txid,
+            status: 'success',
+        })
+
+        await loadPools()
+
+        updateStep(TASK_REFRESH_UTXOS, 'done')
+        stopLoader(1000)
+
+        $q.dialog({
+            component: TransactionStatusDialog,
+            componentProps: {
+                statusType: 'success',
+                statusText: t('liquidityPoolsPage.withdrawSuccess', { token: symbol }),
+                txid,
+            },
+        })
+    } catch (error: any) {
+        stopLoader(3000)
+        if (error?.name === 'AbortError') return
+        $q.notify({ type: 'negative', message: error.message })
+    } finally {
+        if (withdrawingPoolKey.value === poolKey) withdrawingPoolKey.value = ''
+    }
+}
+
 const columns = computed(() => [
+    {
+        label: t('liquidityPoolsPage.withdraw'),
+        name: 'withdraw',
+        field: () => '',
+        align: 'right',
+    },
     {
         name: 'pool',
         label: t('liquidityPoolsPage.columns.pool'),
@@ -488,6 +656,7 @@ const columns = computed(() => [
         field: (row: PoolRow) => row.owner_p2pkh_addr,
         align: 'left',
     },
+
 ] as QTableColumn[])
 
 watch(() => walletIsReady.value, (isReady, wasReady) => {
