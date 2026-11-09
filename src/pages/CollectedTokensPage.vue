@@ -58,7 +58,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                        }}
+                          }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -256,10 +256,13 @@ import CopyText from 'components/CopyText.vue';
 import ExplainerBanner from 'src/components/ExplainerBanner.vue';
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue';
 import NFTTransferDialog from 'src/components/dialogs/NFTTransferDialog.vue';
+import NftCardViewerDialog from 'src/components/dialogs/NftCardViewerDialog.vue';
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
 import { BaseWallet, NetworkType } from 'mainnet-js';
+import { resolveNftType } from 'src/core/bcmr';
+import type { ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema';
 import { db } from 'src/core/client-db';
 
 const { t } = useI18n();
@@ -426,29 +429,33 @@ const loadCollectedIdentitySnapshots = async () => {
   });
 };
 
-const onCollectedRowClick = (_evt: Event, row: any, index: number) => {
-  const type = getTokenType(row);
-  if (type !== 'nft') return;
-
-  authguardStore.setActiveAuthhead(null as any);
-
-  registryStore.setActiveNft({
-    contentHash: '',
-    authbase: '',
-    timestamp: '',
-    category: row.token?.category || '',
-    commitmentOrBottomAltStack: row.token?.nft?.commitment || '',
-    nftType: undefined,
-    utxo: row as any,
-    allowEdit: false,
+const openNftViewer = (row: any) => {
+  const category = row.token?.category;
+  const commitment = row.token?.nft?.commitment ?? '';
+  const localNftType = resolveNftType(row.identitySnapshot?.token?.nfts, commitment);
+  console.log('localNftType', localNftType)
+  $q.dialog({
+    component: NftCardViewerDialog,
+    componentProps: {
+      nftType: localNftType,
+      // Open immediately; only pay the indexer round-trip when the local registry has no record.
+      nftTypeLoader: localNftType || !category || !commitment
+        ? undefined
+        : () => registryStore.fetchNftType(category, commitment).catch(() => undefined),
+      commitment,
+      bytecode: (row.identitySnapshot?.token?.nfts?.parse as ParsableNftCollection | undefined)?.bytecode,
+      symbol: row.identitySnapshot?.token?.symbol,
+      capability: row.token?.nft?.capability,
+      tokenIcon: row.identitySnapshot?.uris?.icon,
+    },
+    focus: 'none',
   });
+};
 
-  router.push({
-    name: 'nft-detail',
-    params: {
-      category: row.token!.category
-    }
-  });
+const onCollectedRowClick = (_evt: Event, row: any) => {
+  if (getTokenType(row) !== 'nft') return;
+
+  openNftViewer(row);
 };
 
 const viewTokenProfile = (row: any) => {
