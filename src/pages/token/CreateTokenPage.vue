@@ -226,6 +226,28 @@
                                     </q-file>
                                     <q-input v-model="identitySnapshot.uris!.web" label="Website" outlined type="text"
                                         placeholder="https://" class="full-width" />
+
+                                    <template v-if="hasNftSupport">
+                                        <div class="flex justify-end">
+                                            <q-btn flat dense no-caps color="secondary"
+                                                :icon="showAdvancedOptions ? 'expand_less' : 'expand_more'"
+                                                :label="showAdvancedOptions ? $t('createToken.hideAdvancedOptions') : $t('createToken.showAdvancedOptions')"
+                                                @click="showAdvancedOptions = !showAdvancedOptions" />
+                                        </div>
+
+                                        <template v-if="showAdvancedOptions">
+                                            <FormField>
+                                                <label>{{ $t('createToken.nftCollectionType') }}</label>
+                                                <q-option-group v-model="nftCollectionType"
+                                                    :options="nftCollectionTypeOptions" type="radio" inline dense
+                                                    class="text-caption" />
+                                            </FormField>
+
+                                            <ParsableNftCollection v-if="nftCollectionType === 'parsable'"
+                                                v-model:parsable-nft-collection="parsableNftCollection"
+                                                v-model:fields="nftCategoryFields" />
+                                        </template>
+                                    </template>
                                 </div>
 
                                 <q-stepper-navigation>
@@ -249,7 +271,12 @@ import { computed, onMounted, ref, triggerRef, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useI18n } from 'vue-i18n'
 import { MAX_VM_NUMBER } from 'src/core/constants'
-import { IdentitySnapshot } from 'src/core/bcmr/bcmr-v2.schema'
+import type {
+    IdentitySnapshot,
+    NftCategory,
+    NftCategoryField,
+    ParsableNftCollection as ParsableNftCollectionI
+} from 'src/core/bcmr/bcmr-v2.schema'
 import { isSquareImage } from 'src/core/utils/is-square-image'
 import { uploadFile } from 'src/core/ipfs/upload-file'
 import { NFTCapability, Utxo } from 'mainnet-js'
@@ -269,8 +296,9 @@ import { TokenType } from 'src/core/types'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useAuthguardStore } from 'src/stores/authguard'
-import { importMetadataRegistry } from 'bitauth-libauth-v3'
+import { importMetadataRegistry, isHex } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
+import ParsableNftCollection from 'src/components/bcmr/ParsableNftCollection.vue'
 // import { DEFAULT_TOKEN_VALUE } from 'src/apps'
 import { DEFAULT_TOKEN_VALUE } from 'src/core/constants'
 import { broadcastTransaction } from 'src/services/transaction'
@@ -346,6 +374,45 @@ const iconFileRef = ref()
 const iconPreviewUrl = ref()
 const iconFileUploading = ref<boolean>(false)
 const authKeySelected = ref<Utxo>()
+
+const showAdvancedOptions = ref(false)
+const nftCollectionType = ref<'sequential' | 'parsable'>('sequential')
+const nftCategoryFields = ref<NftCategoryField>({})
+const parsableNftCollection = ref<ParsableNftCollectionI>({ bytecode: '', types: {} })
+
+const hasNftSupport = computed(() => tokenType.value !== 'Fungible')
+
+const nftCollectionTypeOptions = computed(() => [
+    { label: t('label.registry.sequentialNftCollection'), value: 'sequential' },
+    { label: t('label.registry.parsableNftCollection'), value: 'parsable' },
+])
+
+const normalizedBytecode = () => parsableNftCollection.value.bytecode.trim().toLowerCase()
+
+/**
+ * Assemble the NFT category from the advanced options. Field definitions only apply to
+ * parsable collections, and sequential collections omit `parse.bytecode` entirely.
+ */
+const buildNftCategory = (): NftCategory => {
+    if (nftCollectionType.value === 'sequential') {
+        return { parse: { types: {} } }
+    }
+
+    const parse = { bytecode: normalizedBytecode(), types: {} }
+    return Object.keys(nftCategoryFields.value).length > 0
+        ? { parse, fields: nftCategoryFields.value }
+        : { parse }
+}
+
+const validateNftCategory = (): string | undefined => {
+    if (!hasNftSupport.value || nftCollectionType.value !== 'parsable') return undefined
+
+    const bytecode = normalizedBytecode()
+    if (!bytecode) return t('createToken.bytecodeRequired')
+    if (!isHex(bytecode)) return t('createToken.bytecodeInvalid')
+
+    return undefined
+}
 
 const isStep2Done = computed(() =>
     authguardState.value === 'new'
@@ -504,6 +571,12 @@ const onGenerateGenesisInput = async () => {
 
 const onSubmit = async () => {
 
+    const nftCategoryError = validateNftCategory()
+    if (nftCategoryError) {
+        $q.notify({ type: 'Error', message: nftCategoryError })
+        return
+    }
+
     const TASK_CREATE_REGISTRY = 'create-registry'
     const TASK_UPLOAD_REGISTRY = 'upload-registry'
     const TASK_REFRESH_UTXOS = 'refresh-utxos'
@@ -563,6 +636,8 @@ const onSubmit = async () => {
 
         if (tokenType.value === 'Fungible') {
             delete identitySnapshot.value.token!.nfts
+        } else {
+            identitySnapshot.value.token!.nfts = buildNftCategory()
         }
         identitySnapshot.value.token!.category = authbase
         identitySnapshot.value.token!.decimals = computedDecimals.value ?? 0
