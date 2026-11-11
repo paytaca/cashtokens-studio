@@ -1,8 +1,8 @@
 import { ChainSnapshot, IdentitySnapshot, NftCategory, NftType, ParsableNftCollection, Registry, RegistryTimestampKeyedValues } from "./bcmr-v2.schema";
 import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
-import { hexToBin } from "bitauth-libauth-v3";
-import { bigIntToVmNumber, binToBigIntUintLE, binToHex, vmNumberToBigInt } from "bitauth-libauth-v3";
+import { bigIntToVmNumber, flattenBinArray, binToBigIntUintLE, binToHex, isHex, vmNumberToBigInt, hexToBin, utf8ToBin } from "bitauth-libauth-v3";
+import type { NftCategoryField } from './bcmr-v2.schema'
 
 /**
  * BCMR declares `decimals` as an integer between `0` and `18`, but registries in the wild (and
@@ -243,3 +243,176 @@ export function sequenceNumberToCommitment(sequenceNumber: string|bigint|number)
   return binToHex(bigIntToVmNumber(BigInt(sequenceNumber)))
 }
 
+
+export type NftFieldDefinition = NftCategoryField[string]
+
+export type NftFieldEncodeResult =
+  | { success: true; data: Uint8Array }
+  | { success: false; error: string }
+
+export type NftCommitmentResult =
+  | { success: true; data: { bytes: Uint8Array; fieldIds: string[] } }
+  | { success: false; error: string }
+
+const success = (data: Uint8Array): NftFieldEncodeResult => ({ success: true, data })
+const failure = (error: string): NftFieldEncodeResult => ({ success: false, error })
+
+const normalizeHex = (value: string) =>
+  value.trim().replace(/^0x/i, '').replace(/\s+/g, '').toLowerCase()
+
+const encodeNumber = (rawValue: string, decimals: number): NftFieldEncodeResult => {
+  const value = rawValue.trim()
+  if (!/^\d+(\.\d+)?$/.test(value)) return failure('Must be a non-negative number')
+
+  const [whole, fraction = ''] = value.split('.')
+  if (fraction.length > decimals) {
+    return failure(`Maximum of ${decimals} decimal place(s) allowed`)
+  }
+
+  const scaled = BigInt(`${whole}${fraction.padEnd(decimals, '0')}`)
+  return success(bigIntToVmNumber(scaled))
+}
+
+const encodeLocktime = (rawValue: string): NftFieldEncodeResult => {
+  const value = rawValue.trim()
+  if (!/^\d+$/.test(value)) return failure('Must be a whole number')
+
+  const locktime = BigInt(value)
+  if (locktime > 4294967295n) return failure('Must be between 0 and 4294967295')
+  return success(bigIntToVmNumber(locktime))
+}
+
+const encodeBinary = (rawValue: string): NftFieldEncodeResult => {
+  const value = rawValue.trim().replace(/^0b/i, '').replace(/\s+/g, '')
+  if (!/^[01]+$/.test(value)) return failure('Must contain only 0 and 1')
+
+  const padded = value.padStart(Math.ceil(value.length / 8) * 8, '0')
+  const bytes = new Uint8Array(padded.length / 8)
+  for (let index = 0; index < bytes.length; index += 1) {
+    bytes[index] = parseInt(padded.slice(index * 8, index * 8 + 8), 2)
+  }
+  return success(bytes)
+}
+
+const booleanBytes: { [value: string]: number } = { true: 1, '1': 1, false: 0, '0': 0 }
+
+const encodeBoolean = (rawValue: string): NftFieldEncodeResult => {
+  const byte = booleanBytes[rawValue.trim().toLowerCase()]
+  return byte === undefined ? failure('Must be true or false') : success(Uint8Array.from([byte]))
+}
+
+const encodeHttpsUrl = (rawValue: string): NftFieldEncodeResult => {
+  const value = rawValue.trim().replace(/^https:\/\//i, '')
+  if (!value) return failure('Must be an https URL')
+  return success(utf8ToBin(encodeURI(value)))
+}
+
+const base58Alphabet = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
+const base32Alphabet = 'abcdefghijklmnopqrstuvwxyz234567'
+
+const decodeBase58 = (encoded: string): NftFieldEncodeResult => {
+  let value = 0n
+  for (const character of encoded) {
+    const index = base58Alphabet.indexOf(character)
+    if (index === -1) return failure('Invalid base58 CID')
+    value = value * 58n + BigInt(index)
+  }
+
+  const leadingZeros = encoded.match(/^1*/)?.[0].length ?? 0
+  const rawHex = value === 0n ? '' : value.toString(16)
+  const hex = rawHex.length % 2 === 0 ? rawHex : `0${rawHex}`
+  const bytes = new Uint8Array([...new Uint8Array(leadingZeros), ...hexToBin(hex)])
+  return success(bytes)
+}
+
+const decodeBase32 = (encoded: string): NftFieldEncodeResult => {
+  const cleaned = encoded.replace(/=+$/, '').toLowerCase()
+  let buffer = 0
+  let bitCount = 0
+  const bytes: number[] = []
+
+  for (const character of cleaned) {
+    const index = base32Alphabet.indexOf(character)
+    if (index === -1) return failure('Invalid base32 CID')
+    buffer = (buffer << 5) | index
+    bitCount += 5
+    if (bitCount >= 8) {
+      bitCount -= 8
+      bytes.push((buffer >>> bitCount) & 0xff)
+    }
+  }
+
+  return success(Uint8Array.from(bytes))
+}
+
+const decodeIpfsCid = (rawValue: string): NftFieldEncodeResult => {
+  const value = rawValue.trim()
+  if (value.startsWith('Qm')) return decodeBase58(value)
+  if (value.startsWith('b')) return decodeBase32(value.slice(1))
+  if (value.startsWith('B')) return decodeBase32(value.slice(1))
+  if (value.startsWith('z')) return decodeBase58(value.slice(1))
+  if (value.startsWith('f') || value.startsWith('F')) {
+    const hex = normalizeHex(value.slice(1))
+    return isHex(hex) ? success(hexToBin(hex)) : failure('Invalid hex CID')
+  }
+  return failure('Only base58 (Qm…) and base32 (b…) CIDs are supported')
+}
+
+/**
+ * Encode a human-readable field value into the bytes expected on the NFT parsing altstack,
+ * following the `encoding` definition of the field in the BCMR identity snapshot.
+ */
+export const encodeNftFieldValue = (
+  definition: NftFieldDefinition,
+  rawValue: string
+): NftFieldEncodeResult => {
+  switch (definition.encoding.type) {
+    case 'number':
+      return encodeNumber(rawValue, definition.encoding.decimals ?? 0)
+    case 'locktime':
+      return encodeLocktime(rawValue)
+    case 'utf8':
+      return success(utf8ToBin(rawValue))
+    case 'hex': {
+      const value = normalizeHex(rawValue)
+      return isHex(value) ? success(hexToBin(value)) : failure('Must be an even-length hex string')
+    }
+    case 'binary':
+      return encodeBinary(rawValue)
+    case 'boolean':
+      return encodeBoolean(rawValue)
+    case 'https-url':
+      return encodeHttpsUrl(rawValue)
+    case 'ipfs-cid':
+      return decodeIpfsCid(rawValue)
+    default:
+      return failure(`Unsupported encoding type: ${(definition.encoding as { type: string }).type}`)
+  }
+}
+
+/**
+ * Build an NFT commitment by concatenating the encoded values of the collection's fields, in
+ * declaration order. Blank values are omitted from the commitment.
+ */
+export const encodeNftCommitmentFromFields = (params: {
+  fields: [string, NftFieldDefinition][]
+  values: { [identifier: string]: string }
+}): NftCommitmentResult => {
+  const chunks: Uint8Array[] = []
+  const fieldIds: string[] = []
+
+  for (const [identifier, definition] of params.fields) {
+    const value = params.values[identifier] ?? ''
+    if (value.trim() === '') continue
+
+    const encoded = encodeNftFieldValue(definition, value)
+    if (!encoded.success) {
+      return { success: false, error: `${definition.name || identifier}: ${encoded.error}` }
+    }
+
+    chunks.push(encoded.data)
+    fieldIds.push(identifier)
+  }
+
+  return { success: true, data: { bytes: flattenBinArray(chunks), fieldIds } }
+}
