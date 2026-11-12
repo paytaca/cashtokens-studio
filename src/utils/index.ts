@@ -24,4 +24,5 @@ export function updateTxTaskLabel({txTaskList, taskId, newTaskLabel }: { txTaskL
 }
 
 export * from './create-square-thumbnail'
+export * from './download-registry'
 export * from './load-image'
