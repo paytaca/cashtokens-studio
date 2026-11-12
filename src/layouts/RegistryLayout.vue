@@ -12,7 +12,7 @@
             <q-btn flat dense icon="arrow_back" label="Back" color="grey-4" @click="router.back()" />
           </div>
           <q-card flat class="bg-dark q-pa-sm q-mx-md rounded-borders registry-card q-py-lg">
-            <div class="row justify-end">
+            <div class="row justify-end q-gutter-x-sm">
               <q-btn
                 v-if="activeAuthhead && (!route.name?.toString().includes('edit') && route.name !== 'view-authhead')"
                 icon="mdi-text-box-edit" :label="$q.screen.gt.xs ? 'Edit' : ''" dense flat color="secondary"
@@ -65,7 +65,47 @@
               </div>
             </div>
 
-            <!-- Only this nav scrolls horizontally when the links don't fit -->
+            <!-- <div class="inline-nav-wrap" :style="$q.screen.lt.sm ? { maxWidth: '350px' } : undefined">
+              <nav ref="navRef" class="inline-nav q-py-lg" @scroll.passive="updateScrollState">
+                <div class="inline-nav-row">
+                  <q-item v-for="link in navLinks" :key="link.title" clickable v-ripple :to="link.to" exact
+                    active-class="inline-item-active" class="inline-item q-px-md q-py-sm rounded-borders text-no-wrap">
+                    <q-item-section v-if="link.icon" avatar class="inline-icon-section q-mr-sm">
+                      <q-icon :name="link.icon" size="20px" class="inline-icon" />
+                    </q-item-section>
+                    <q-item-section class="inline-text-section">
+                      <span class="nav-text-wrapper">
+                        <q-item-label class="text-weight-medium text-body2">
+                          {{ link.title }}
+                        </q-item-label>
+                      </span>
+                    </q-item-section>
+                  </q-item>
+                  <q-item clickable v-ripple exact active-class="inline-item-active"
+                    class="inline-item q-py-sm rounded-borders text-no-wrap" @click="downloadRegistry">
+                    <q-item-section avatar class="inline-icon-section">
+                      <q-icon name="download" size="20px" class="inline-icon" />
+                    </q-item-section>
+                    <q-item-section class="inline-text-section">
+                      <span class="nav-text-wrapper">
+                        <q-item-label class="text-weight-medium text-body2">
+                          Download Metadata
+                        </q-item-label>
+                      </span>
+                    </q-item-section>
+                  </q-item>
+                </div>
+              </nav>
+
+              <div class="nav-fade nav-fade-left" :class="{ visible: canScrollLeft }">
+                <q-icon name="chevron_left" size="20px" class="nav-chevron" @click="scrollNav(-1)" />
+              </div>
+              <div class="nav-fade nav-fade-right" :class="{ visible: canScrollRight }">
+                <q-icon name="chevron_right" size="20px" class="nav-chevron" @click="scrollNav(1)" />
+              </div>
+            </div> -->
+          </q-card>
+          <q-card flat class="bg-dark q-pa-sm q-mx-md rounded-borders registry-card q-mt-lg q-py-sm">
             <div class="inline-nav-wrap" :style="$q.screen.lt.sm ? { maxWidth: '350px' } : undefined">
               <nav ref="navRef" class="inline-nav q-py-lg" @scroll.passive="updateScrollState">
                 <div class="inline-nav-row">
@@ -78,6 +118,19 @@
                       <span class="nav-text-wrapper">
                         <q-item-label class="text-weight-medium text-body2">
                           {{ link.title }}
+                        </q-item-label>
+                      </span>
+                    </q-item-section>
+                  </q-item>
+                  <q-item clickable v-ripple exact active-class="inline-item-active"
+                    class="inline-item q-py-sm rounded-borders text-no-wrap" @click="downloadRegistry">
+                    <q-item-section avatar class="inline-icon-section">
+                      <q-icon name="download" size="20px" class="inline-icon" color="secondary" />
+                    </q-item-section>
+                    <q-item-section class="inline-text-section">
+                      <span class="nav-text-wrapper">
+                        <q-item-label class="text-weight-medium text-body2 text-secondary">
+                          Download Metadata
                         </q-item-label>
                       </span>
                     </q-item-section>
@@ -104,10 +157,13 @@
 <script setup lang="ts">
 import { ipfsToGatewayUrl } from 'src/core/ipfs';
 import { shortenTokenId } from 'src/core/utils';
+import { db } from 'src/core/client-db';
+import { downloadRegistryFile } from 'src/utils/download-registry';
 import { useAuthguardStore } from 'src/stores/authguard';
 import { useRegistryStore } from 'src/stores/registry';
 import { computed, inject, onBeforeUnmount, provide, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import CopyText from 'src/components/CopyText.vue';
 import PageSkeleton from 'src/components/PageSkeleton.vue';
 import { storeToRefs } from 'pinia';
@@ -124,9 +180,42 @@ const { walletEverReady } = inject('wizardConnectWallet') as any;
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const mode = ref<'edit' | 'view'>('view');
 
 const isUploadTriggered = ref(false)
+
+const downloadingRegistry = ref(false)
+
+const downloadRegistry = async () => {
+  const registryIdentity = route.query.registryIdentity as string | undefined
+  if (!registryIdentity) {
+    $q.notify({ type: 'negative', message: t('error.noPublishedRegistry') })
+    return
+  }
+
+  downloadingRegistry.value = true
+  try {
+    const record = await db.registry
+      .where('registryIdentity')
+      .equals(registryIdentity)
+      .first()
+
+    if (!record) {
+      $q.notify({ type: 'negative', message: t('error.noPublishedRegistry') })
+      return
+    }
+
+    const result = downloadRegistryFile({ rawRegistry: record.rawRegistry })
+    if (!result.success) {
+      $q.notify({ type: 'negative', message: t('error.registryDownload') })
+    }
+  } catch {
+    $q.notify({ type: 'negative', message: t('error.registryDownload') })
+  } finally {
+    downloadingRegistry.value = false
+  }
+}
 
 const triggerUpload = () => {
   if (route.name !== 'edit-identity-snapshot') return
