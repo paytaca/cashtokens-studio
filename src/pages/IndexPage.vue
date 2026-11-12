@@ -87,7 +87,7 @@
 
         <div class="row q-col-gutter-md">
           <div v-for="card in featureCards" :key="card.name" class="col-12 col-sm-6">
-            <q-card class="feature-card feature-card-bg" :class="{ 'card-muted': !walletIsReady }"
+            <q-card class="feature-card feature-card-bg cursor-pointer" :class="{ 'card-muted': !walletIsReady }"
               :clickable="walletIsReady" :aria-disabled="!walletIsReady" @click="onFeatureCardClick(card)">
               <q-card-section class="feature-card-content">
 
