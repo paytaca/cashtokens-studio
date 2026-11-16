@@ -3,6 +3,7 @@ import { NftCollectionType } from "./enum";
 import { CompactRegistry } from "./types";
 import { bigIntToVmNumber, flattenBinArray, binToBigIntUintLE, binToHex, isHex, vmNumberToBigInt, hexToBin, utf8ToBin } from "bitauth-libauth-v3";
 import type { NftCategoryField } from './bcmr-v2.schema'
+import { inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs/utils'
 
 /**
  * BCMR declares `decimals` as an integer between `0` and `18`, but registries in the wild (and
@@ -415,4 +416,69 @@ export const encodeNftCommitmentFromFields = (params: {
   }
 
   return { success: true, data: { bytes: flattenBinArray(chunks), fieldIds } }
+}
+
+export type PublishedUris = {
+    /** URIs normalised for fetching: `ipfs://<cid>` or an absolute `https://` URL. */
+    uris: string[],
+    /** The URIs exactly as published on chain or reported by the indexer. */
+    urisOriginal: string[],
+    /** Best HTTPS URL to load the registry from; empty when none of the URIs yield one. */
+    httpsUrl: string,
+}
+
+/**
+ * Normalise the URIs a BCMR registry was published under.
+ *
+ * Publications may carry a bare CID (older IPFS-only publications), `ipfs://`/`ipns://` URIs, or
+ * plain domains, with or without a scheme. Every URI keeps a fetchable form in `uris`, while
+ * `httpsUrl` holds the first HTTPS location found so callers have a single URL to try first.
+ *
+ * Plain domains without a path resolve to their `/.well-known/bitcoin-cash-metadata-registry.json`
+ * document, as BCMR consumers expect.
+ */
+export function normalizePublishedUris(publishedUris: string[]): PublishedUris {
+    const result: PublishedUris = { uris: [], urisOriginal: [], httpsUrl: '' }
+
+    const rememberHttpsUrl = (candidate: string) => {
+        if (!result.httpsUrl) result.httpsUrl = candidate
+    }
+
+    for (const uri of publishedUris ?? []) {
+        result.urisOriginal.push(uri)
+
+        try {
+            // Older publications stored the bare CID instead of an `ipfs://` URI.
+            if (isCID(uri)) {
+                rememberHttpsUrl(inbrowserGatewayUrl(uri))
+                result.uris.push(`ipfs://${uri}`)
+                continue
+            }
+
+            const url = new URL(uri.includes('://') ? uri : `https://${uri}`)
+
+            if (url.protocol === 'ipfs:' || url.protocol === 'ipns:') {
+                rememberHttpsUrl(inbrowserGatewayUrl(parseIpfsUrl(uri).id))
+                result.uris.push(uri)
+                continue
+            }
+
+            if (url.protocol === 'https:') {
+                const candidateUrl =
+                    url.pathname && url.pathname !== '/'
+                        ? url.href
+                        : `${url.protocol}//${url.host}/.well-known/bitcoin-cash-metadata-registry.json`
+
+                rememberHttpsUrl(candidateUrl)
+                result.uris.push(candidateUrl)
+                continue
+            }
+        } catch (error) {
+            console.error('@normalizePublishedUris:', error)
+        }
+
+        result.uris.push(uri)
+    }
+
+    return result
 }
