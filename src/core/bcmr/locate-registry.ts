@@ -1,7 +1,11 @@
 import { importMetadataRegistry, type MetadataRegistry } from 'bitauth-libauth-v3'
 import type { OffChainRegistryIdentity, Registry } from './bcmr-v2.schema'
-import { getRegistryFromIndexer } from './indexer'
-import { fetchLastRegistryPublication } from '../chaingraph'
+import {
+    fetchLastRegistryPublication as fetchIndexerPublication,
+    getRegistryFromIndexer,
+    type LastRegistryPublication,
+} from './indexer'
+import { fetchLastRegistryPublication as fetchChainGraphPublication } from '../chaingraph'
 import { fetchIpfsFile } from '../ipfs/fetch-file'
 import { isCID, tryParseIpfsUrl } from '../ipfs/utils'
 
@@ -24,6 +28,24 @@ const extractCidAndPath = (url: string): { cid: string; path: string } => {
 }
 
 /**
+ * Resolve the authchain's last publication, preferring the BCMR indexer.
+ *
+ * The indexer is the cheaper source, but it may be unconfigured, unreachable, or simply not
+ * have indexed the authbase yet, so a missing or failed answer falls back to reading the
+ * authchain through ChainGraph.
+ */
+const resolveLastPublication = async (authbase: string): Promise<LastRegistryPublication> => {
+    try {
+        const indexed = await fetchIndexerPublication({ authbase })
+        if (indexed.uris.length || indexed.httpsUrl) return indexed
+    } catch (error) {
+        console.warn('@locateRegistry: indexer publication lookup failed, falling back to ChainGraph', error)
+    }
+
+    return fetchChainGraphPublication({ authbase })
+}
+
+/**
  * Look for the last published registry of the provided authbase.
  *
  * Asks the BCMR indexer first, then reads the authchain's last publication and tries each
@@ -40,7 +62,7 @@ export const locateRegistry = async (
     const indexedRegistry = await getRegistryFromIndexer(registryIdentity)
     if (indexedRegistry) return indexedRegistry
 
-    const publication = await fetchLastRegistryPublication({ authbase: registryIdentity })
+    const publication = await resolveLastPublication(registryIdentity)
 
     if (!publication?.httpsUrl && !publication?.uris?.length) {
         throw new Error(`Unable to locate registry for ${registryIdentity}`)
