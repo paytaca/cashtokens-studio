@@ -23,6 +23,8 @@
         </div>
 
         <WizardConnectQRDialog v-else :show="showQR" :qr-uri="(qrUri as string)" :uri="(uri as string)"
+            :title="t('index.connect.wizardConnect.title')" :subtitle="t('index.connect.wizardConnect.qrSubtitle')"
+            :copy-label="t('index.connect.wizardConnect.copyUri')" :qr-copy-label="t('index.connect.wizardConnect.copyQr')"
             :onClose="closeQR" @update:show="onQRUpdateShow" />
     </q-page>
 </template>
@@ -31,7 +33,9 @@
 
 import { inject, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import { WizardConnectQRDialog } from 'wizardconnect-vue'
+const { t } = useI18n()
 const { showQR, qrUri, uri, connect, state } = inject('wizardConnectWallet') as any
 const closeQR = () => { showQR.value = false }
 const onQRUpdateShow = (val: boolean) => { if (!val) showQR.value = false }

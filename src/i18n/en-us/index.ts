@@ -384,6 +384,9 @@ export default {
       wizardConnect: {
         title: 'Wizard Connect',
         subtitle: 'Connect an HD wallet over the WizardConnect relay',
+        qrSubtitle: 'Scan with your wallet to connect',
+        copyUri: 'Copy connection link',
+        copyQr: 'Click the QR code to copy the connection link',
       },
       walletConnect: {
         title: 'Wallet Connect',

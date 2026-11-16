@@ -121,6 +121,8 @@
     </div>
 
     <WizardConnectQRDialog :show="showQR" :qr-uri="qrUri as string" :uri="uri as string" :onClose="closeQR"
+      :title="t('index.connect.wizardConnect.title')" :subtitle="t('index.connect.wizardConnect.qrSubtitle')"
+      :copy-label="t('index.connect.wizardConnect.copyUri')" :qr-copy-label="t('index.connect.wizardConnect.copyQr')"
       @update:show="onQRUpdateShow" />
   </q-page>
 </template>
