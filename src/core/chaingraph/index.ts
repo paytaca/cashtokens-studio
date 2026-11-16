@@ -1,6 +1,5 @@
 import { fetchWithTimeout } from '../utils/fetch-with-timeout';
-import { decodeBcmrOpReturn } from '../bcmr';
-import { inbrowserGatewayUrl, isCID, parseIpfsUrl } from '../ipfs';
+import { decodeBcmrOpReturn, normalizePublishedUris } from '../bcmr';
 import { type BaseParams } from './types';
 import { getAuthheadReserve } from './get-authhead-supply';
 
@@ -202,7 +201,7 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
       throw new Error('ChainGraph url required')
   }
 
-  let result = {
+  const result = {
     authbase: params.authbase,
     txHash: '',
     contentHash: '',
@@ -236,77 +235,17 @@ export async function fetchLastRegistryPublication(params: BaseParams) {
   if (!data) return result
   const lastPublicationTxid = data.transaction?.[0]?.authchains?.[0]?.migrations?.[0]?.transaction[0]?.hash 
   const opReturnOutput = data.transaction?.[0]?.authchains?.[0]?.migrations?.[0]?.transaction[0]?.outputs?.[0]
+  if (!opReturnOutput) return result
   const publication = decodeBcmrOpReturn(opReturnOutput.locking_bytecode)
   if (!publication) return result
 
-  try {
-    result = {
-      ...result,
-      txHash: lastPublicationTxid?.replace('\\x', ''),
-      contentHash: publication.contentHash
-    }
-
-    if (publication.bareCid) {
-      // IPFS publication output: `OP_RETURN "BCMR" <bare CID>` with no URI chunks.
-      // (mainnet-js v2 derived `ipfs://<cid>` from this same payload.)
-      const cid = publication.uris[0] || ''
-      if (isCID(cid)) {
-        result.uris.push(`ipfs://${cid}`)
-        result.httpsUrl = inbrowserGatewayUrl(cid)
-      }
-      return result
-    }
-
-    // Process published URIS
-    publication.uris.forEach((uri) => {
-      result.urisOriginal!.push(uri)
-      try {
-
-        if (isCID(uri)) { // handle maybe older publications that didn't include ipfs:// scheme to the cid
-          result.httpsUrl = inbrowserGatewayUrl(uri)
-          return result.uris.push(`ipfs://${uri}`)
-        }
-        
-        const url = new URL(uri.includes('://') ? uri: `https://${uri}`)
-        
-        if (url.protocol === 'ipfs:' || url.protocol === 'ipns:') {
-          const { id: cid }  = parseIpfsUrl(uri)
-          result.httpsUrl = inbrowserGatewayUrl(cid)
-          return result.uris.push(uri as string)
-        }
-
-        if (url.protocol === 'https:') {
-          let candidateUrl = `${url.protocol}//${url.host}`
-
-          if (url.pathname && url.pathname !== '/') {
-
-            candidateUrl = url.href
-
-          } else {
-            
-            candidateUrl = `${candidateUrl}/.well-known/bitcoin-cash-metadata-registry.json`
-
-          }
-          
-          if (!result.httpsUrl) {
-            result.httpsUrl = candidateUrl
-          }
-          
-          return result.uris.push(result.httpsUrl)
-          
-        }
-
-      } catch (error) {
-        console.error('@fetchLastRegistryPublication:', error)
-      }
-      result.uris.push(uri as string)
-    })
-
-    return result
-  } catch (error) {
-    console.error('@fetchLastRegistryPublication:', error)
-    return result
+  // The payload is either a bare CID (older IPFS-only publications) or a content hash followed by
+  // the published URIs; the normaliser handles both forms.
+  return {
+    ...result,
+    txHash: lastPublicationTxid?.replace('\\x', ''),
+    contentHash: publication.contentHash,
+    ...normalizePublishedUris(publication.uris),
   }
-
 }
 
