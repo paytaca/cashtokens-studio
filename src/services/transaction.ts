@@ -11,19 +11,28 @@ export type BroadcastTransactionParams = {
 
 export async function broadcastTransaction(params: BroadcastTransactionParams ): Promise<any> {
 
-    const [watchtowerBroadcastError, watchtowerBroadcastResult] = await safeAsync(watchtowerBroadcast(params.transactionHex))
+    // const [watchtowerBroadcastError, watchtowerBroadcastResult] = await safeAsync(watchtowerBroadcast(params.transactionHex))
 
-    if (!watchtowerBroadcastError && isBroadcastSuccess(watchtowerBroadcastResult)) {
-        return [watchtowerBroadcastError, watchtowerBroadcastResult.txid]
-    }
+    // if (!watchtowerBroadcastError && isBroadcastSuccess(watchtowerBroadcastResult)) {
+    //     return [watchtowerBroadcastError, watchtowerBroadcastResult.txid]
+    // }
 
-    params.onProgress?.('Primary broadcast provider unreachable. Trying alternative route. Please wait...')
+    // params.onProgress?.('Primary broadcast provider unreachable. Trying alternative route. Please wait...')
 
     let n = NetworkType.Mainnet
     if (params.network && params.network !== NetworkType.Mainnet) {
         n = params.network && NetworkType.Testnet
     }
 
+    if (n === NetworkType.Mainnet) {
+        const [watchtowerBroadcastError, watchtowerBroadcastResult] = await safeAsync(watchtowerBroadcast(params.transactionHex))
+
+        if (!watchtowerBroadcastError && isBroadcastSuccess(watchtowerBroadcastResult)) {
+            return [watchtowerBroadcastError, watchtowerBroadcastResult.txid]
+        }
+        
+    }
+    params.onProgress?.('Primary broadcast provider unreachable. Trying alternative route. Please wait...')
     const baseWallet = new BaseWallet(n)
 
     const [electrumBroadcastError, electrumBroadcastResult] = 
