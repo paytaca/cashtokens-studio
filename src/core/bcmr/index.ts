@@ -7,8 +7,9 @@ export * from './utils'
 export * from './authenticate'
 export * from './reserved-symbols'
 export * from './locate-registry'
-export * from './parse-nft'
 export * from './op-return'
+export * from './bcmr-v2.schema-extra-types'
+export * from './parsable-nft-helpers'
 
 export type CreateBcmrOptions = {
     authbase: string,
