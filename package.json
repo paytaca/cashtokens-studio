@@ -32,6 +32,7 @@
     "bignumber.js": "^9.1.2",
     "bitauth-libauth-v3": "npm:@bitauth/libauth@^3.1.0-next.4",
     "cashscript": "^0.12.1",
+    "cid": "multiformats/cid",
     "comlink": "^4.4.2",
     "dexie": "^4.4.2",
     "express-throttle-bandwidth": "^1.0.1",
