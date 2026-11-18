@@ -241,7 +241,7 @@
         <template v-if="firstLoadPending">
           <q-banner class="flex items-bottom q-gutter-x-sm">
             <span class="text-italic q-mr-sm text-warning">{{ $t('dashboard.managed.checkingForManagedTokens')
-            }}</span><q-spinner-dots color="grey-5" size="sm" />
+              }}</span><q-spinner-dots color="grey-5" size="sm" />
           </q-banner>
 
           <div v-for="i in 3" :key="i" class="row items-center q-gutter-x-md q-pa-md bg-dark q-mb-sm rounded-borders">
@@ -293,7 +293,7 @@
                         :src="`https://api.dicebear.com/10.x/identicon/svg?seed=${props.row.token.commitment}`"
                         fit="cover">
                         <q-tooltip class="bg-grey-9 text-caption text-grey-4">{{ $t('dashboard.managed.noIconTooltip')
-                          }}
+                        }}
                         </q-tooltip>
                       </q-img>
                     </q-avatar>
@@ -558,7 +558,6 @@ import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDia
 import { Network } from 'cashscript';
 import { decodeCashAddress } from 'bitauth-libauth-v3';
 import { isAirdropBeaconConfigured } from 'src/core/airdrop';
-import { BaseWallet, NetworkType } from 'mainnet-js';
 import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';

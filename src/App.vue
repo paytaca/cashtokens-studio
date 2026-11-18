@@ -3,13 +3,13 @@
 </template>
 
 <script setup lang="ts">
-import { watch, provide, ref, onMounted, triggerRef } from 'vue';
+import { watch, provide, ref, onMounted } from 'vue';
 import { useWizardConnectWallet } from './composables/useWizardConnectWallet';
 import { useWalletSigner } from './composables/useWalletSigner';
 import { isWalletConnectEnabled, useWalletConnectWallet } from './composables/useWalletConnectWallet';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthguardStore } from './stores/authguard';
-import { UtxoWithAuthKey, UtxoWithPath } from './core/types';
+import { UtxoWithAuthKey } from './core/types';
 import { AuthheadId } from './core/authguard';
 
 import { useRegistryStore } from './stores/registry';
