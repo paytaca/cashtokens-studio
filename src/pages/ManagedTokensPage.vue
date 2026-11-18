@@ -563,11 +563,13 @@ import { db } from 'src/core/client-db';
 import { broadcastTransaction } from 'src/services/transaction';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils';
-const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+import { useLiveTxStore } from 'src/stores/live-tx';
 
+const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const { t } = useI18n();
 const $q = useQuasar();
 const router = useRouter();
+const liveTxStore = useLiveTxStore()
 
 const { wallet, walletIsReady, signTransaction } = useWalletSigner();
 
@@ -897,28 +899,7 @@ const openTransferDialog = (
       // cell shows the refresh instead of the previous amount.
       beginRowRefresh(rowId(v))
       updateStep(TASK_WAITING_PROPAGATION, 'running')
-
-      const networkType =
-        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-          ? NetworkType.Testnet
-          : NetworkType.Mainnet;
-
-      // Two providers, two views of the same chain. `waitForTransaction` resolves on mainnet-js's
-      // electrum server, but the authhead's reserves are read back through cashscript's — a
-      // different host entirely. Waiting only on the former let a landed release leave the reserves
-      // column showing its previous amount, so also wait on the AuthGuard contract's own address,
-      // the client the refresh actually uses.
-      await Promise.all([
-        new BaseWallet(networkType).waitForTransaction({
-          txHash: txid,
-        }),
-        // waitForAuthheadSpent({
-        //   address: v.address,
-        //   authheadId: `${v.txid}:${v.vout}`,
-        //   network: import.meta.env.VITE_BCH_NETWORK as Network,
-        // }),
-      ]);
-
+      await liveTxStore.waitForTransactionWithFallback(txid)
       const spentAuthhead = authheads.value.find((authhead) => {
         return authhead.txid === issuerTokenUtxo.txid && authhead.vout === 0
       })
