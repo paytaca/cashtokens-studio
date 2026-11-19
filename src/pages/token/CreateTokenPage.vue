@@ -141,9 +141,6 @@
 
                             <q-step :name="3" title="Step 3" icon="token" header-nav>
                                 <q-separator class="q-my-lg" />
-                                <q-banner class="text-justify q-mb-md rounded-borders bg-grey-9" icon="info">
-                                    Configure your token's specifications including type, amount, name, and metadata.
-                                </q-banner>
                                 <q-banner class="q-mb-md bg-transparent text-grey-8 rounded-borders"
                                     style="border: 1px solid var(--q-grey-4);">
                                     <div class="row items-center no-wrap q-gutter-x-sm">
@@ -156,6 +153,34 @@
                                         </div>
                                     </div>
                                 </q-banner>
+
+                                <div class="q-mb-lg rounded-borders q-pa-sm">
+                                    <div class="column q-gutter-y-xs">
+                                        <div class="row items-center no-wrap q-gutter-x-sm">
+                                            <q-icon name="done_all" color="primary" size="xs" class="col-auto" /><q-icon
+                                                name="token" color="grey-6" size="xs" class="col-auto" />
+                                            <span class="text-caption text-grey-5 ellipsis">
+                                                {{ $t('createToken.tokenCategory') }}
+                                            </span>
+                                            <span class="col text-mono text-body2 text-grey-4 ellipsis">
+                                                {{ tokenCategory ? shortenTokenId(tokenCategory) : '—' }}
+                                            </span>
+                                            <CopyText v-if="tokenCategory" :text="tokenCategory" class="col-auto" />
+                                        </div>
+                                        <div class="row items-center no-wrap q-gutter-x-sm">
+                                            <q-icon name="done_all" color="primary" size="xs" class="col-auto" /><q-icon
+                                                name="key" color="orange-9" size="xs" class="col-auto" />
+                                            <span class="text-caption text-grey-5 ellipsis">
+                                                {{ $t('createToken.authKeyNftCategory') }}
+                                            </span>
+                                            <span class="col text-mono text-body2 text-grey-4 ellipsis">
+                                                {{ authKeyNftCategory ? shortenTokenId(authKeyNftCategory) : '—' }}
+                                            </span>
+                                            <CopyText v-if="authKeyNftCategory" :text="authKeyNftCategory"
+                                                class="col-auto" />
+                                        </div>
+                                    </div>
+                                </div>
 
 
                                 <div class="q-gutter-y-md">
@@ -289,7 +314,7 @@ import { broadcast } from 'src/core/transaction/broadcast'
 import { createGenesisInput } from 'src/core/transaction/create-genesis-input'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { createAuthguardContract, filterAuthKeys, getAuthguardContractAddress } from 'src/core/authguard'
-import { shortenCashAddress } from 'src/core/utils'
+import { shortenCashAddress, shortenTokenId } from 'src/core/utils'
 import FormField from 'src/components/FormField.vue'
 import { filterGenesisInputs } from 'src/core/wallet'
 import { TokenType } from 'src/core/types'
@@ -432,6 +457,16 @@ const existingVaultOptions = computed(() =>
 
 const authkeys = ref<UtxoWithPath[]>([])
 const genesisInputs = ref<UtxoWithPath[]>([])
+
+// The genesis input's txid is the category the token will be created with.
+const tokenCategory = computed(() => genesisInputs.value[0]?.txid ?? '')
+
+// Mirrors the authkey resolution in `onSubmit`: a fresh key uses the second genesis input,
+// an existing vault uses the selected AuthKey NFT.
+const authKeyNftCategory = computed(() => {
+    const authKey = authguardState.value === 'new' ? genesisInputs.value[1] : authKeySelected.value
+    return authKey?.token?.category || authKey?.txid || ''
+})
 
 // Logic to count digits after the decimal point
 const computedDecimals = computed(() => {
