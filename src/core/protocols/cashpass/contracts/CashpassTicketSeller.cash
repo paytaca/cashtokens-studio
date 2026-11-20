@@ -1,0 +1,63 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * CashPass ticket seller.
+ *
+ * Holds minted tickets and releases one per purchase. The ticket price is the fungible
+ * amount carried by the ticket UTXO, so tiers can be priced independently.
+ *
+ * Purchase output convention: 0 = payment to the cashier, 1 = ticket to the buyer.
+ * Any further outputs are the buyer's own BCH change.
+ *
+ * @param ticketCategory - Category of the ticket NFT and fungible supply
+ * @param ownerPkh - Public key hash of the issuer
+ * @param minterLockingBytecode - Locking bytecode of the CashpassTicketMinter contract
+ * @param cashierLockingBytecode - Locking bytecode of the CashpassCashier contract
+ */
+contract CashpassTicketSeller(
+    bytes32 ticketCategory,
+    bytes20 ownerPkh,
+    bytes minterLockingBytecode,
+    bytes cashierLockingBytecode
+) {
+    function buy(sig buyerSig, pubkey buyerPubKey) {
+        bytes ticketCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        int price = tx.inputs[this.activeInputIndex].tokenAmount;
+
+        require(tx.inputs[this.activeInputIndex].tokenCategory == ticketCategory, "not a CashPass ticket");
+        require(ticketCommitment.length >= 8, "malformed ticket");
+
+        require(tx.outputs[0].lockingBytecode == cashierLockingBytecode, "payment must go to the cashier");
+        require(tx.outputs[0].tokenCategory.length == 0, "payment must be plain BCH");
+        require(tx.outputs[0].value >= price, "underpaid");
+
+        require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(hash160(buyerPubKey)), "ticket must go to the buyer");
+        require(tx.outputs[1].tokenCategory == ticketCategory, "wrong ticket category");
+        require(tx.outputs[1].nftCommitment == ticketCommitment, "ticket altered");
+        require(tx.outputs[1].tokenAmount == price, "ticket amount altered");
+
+        require(checkSig(buyerSig, buyerPubKey), "buyer must sign");
+    }
+
+    /**
+     * Unsold tickets go back to the minter, which burns them at teardown.
+     * The seller's satoshis go to the issuer.
+     */
+    function reclaim(sig ownerSig, pubkey ownerPubKey) {
+        require(hash160(ownerPubKey) == ownerPkh, "not the owner");
+        require(checkSig(ownerSig, ownerPubKey), "bad owner signature");
+        require(tx.outputs.length == 2, "reclaim returns the ticket and pays the owner");
+
+        bytes ticketCommitment = tx.inputs[this.activeInputIndex].nftCommitment;
+        int amount = tx.inputs[this.activeInputIndex].tokenAmount;
+        require(tx.inputs[this.activeInputIndex].tokenCategory == ticketCategory, "not a CashPass ticket");
+
+        require(tx.outputs[0].lockingBytecode == minterLockingBytecode, "ticket must return to the minter");
+        require(tx.outputs[0].tokenCategory == ticketCategory, "wrong ticket category");
+        require(tx.outputs[0].nftCommitment == ticketCommitment, "ticket altered");
+        require(tx.outputs[0].tokenAmount == amount, "ticket amount altered");
+
+        require(tx.outputs[1].lockingBytecode == new LockingBytecodeP2PKH(ownerPkh), "sats must go to the owner");
+        require(tx.outputs[1].tokenCategory.length == 0, "owner payout must be plain BCH");
+    }
+}
