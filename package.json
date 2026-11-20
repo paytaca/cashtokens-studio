@@ -9,6 +9,7 @@
     "lint": "eslint --ext .js,.ts,.vue ./",
     "format": "prettier --write \"**/*.{js,ts,vue,scss,html,md,json}\" --ignore-path .gitignore",
     "test": "mocha",
+    "test:unit": "vitest run",
     "dev": "quasar dev -m ssr",
     "build": "quasar build",
     "devbuild": "NODE_ENV=production quasar build",
@@ -63,7 +64,8 @@
     "mocha": "^10.2.0",
     "patch-package": "^8.0.1",
     "prettier": "^2.5.1",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.1"
   },
   "resolutions": {
     "@wizardconnect/core/@bitauth/libauth": "npm:@bitauth/libauth@3.1.0-next.2",
