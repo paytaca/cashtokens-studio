@@ -6,7 +6,7 @@ import type {
     ResolvedTransactionCommon,
   } from 'bitauth-libauth-v3';
 
-  import { createVirtualMachineBch, binStringToBin, binToHex, utf8ToBin, binToUtf8, bigIntToVmNumber, vmNumberToBigInt,  binsAreEqual, hexToBin, binToBinString } from "bitauth-libauth-v3";
+  import { createVirtualMachineBch2026, binStringToBin, binToHex, utf8ToBin, binToUtf8, bigIntToVmNumber, vmNumberToBigInt,  binsAreEqual, hexToBin, binToBinString } from "bitauth-libauth-v3";
   import { CID } from "multiformats/cid"
   import { NftCategoryFieldEncoding } from "./bcmr-v2.schema-extra-types";
   
@@ -36,7 +36,7 @@ import type {
   ): NftParseState => {
     const vm = createVirtualMachine
       ? createVirtualMachine()
-      : createVirtualMachineBch();
+      : createVirtualMachineBch2026();
   
     const { alternateStack, error } = vm.evaluate({
       inputIndex: 1,
