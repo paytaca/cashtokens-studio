@@ -1,0 +1,102 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * CashPass event-ticket minter.
+ *
+ * Holds a minting-capable NFT of the ticket category plus the remaining fungible supply.
+ * Minting NFT commitment:
+ *   byte 0     : 0x00 = first come, first served, 0x01 = assigned seating
+ *   bytes 1-32 : (assigned seating only) sha256 of the last seat minted, the minting cursor
+ *
+ * Mint output convention: 0 = change (minting NFT + remaining supply), 1..n = tickets sent
+ * to the seller contract, optionally one final tokenless output for the issuer's BCH change.
+ *
+ * @param ticketCategory - Category of the ticket NFT and fungible supply
+ * @param sellerLockingBytecode - Locking bytecode of the CashpassTicketSeller contract
+ * @param ownerPkh - Public key hash of the issuer
+ * @param ownerLockingBytecode - Locking bytecode the issuer is paid at teardown
+ * @param burnLockingBytecode - Locking bytecode the token is destroyed at teardown
+ * @param eventEndTime - Unix seconds at which the event ends
+ */
+contract CashpassTicketMinter(
+    bytes32 ticketCategory,
+    bytes sellerLockingBytecode,
+    bytes20 ownerPkh,
+    bytes ownerLockingBytecode,
+    bytes burnLockingBytecode,
+    int eventEndTime
+) {
+    function mint(
+        sig ownerSig,
+        pubkey ownerPubKey,
+        int ticketPrice,
+        bytes newMinterCommitment,
+        bytes lastSeatCommitment
+    ) {
+        require(hash160(ownerPubKey) == ownerPkh, "not the issuer");
+        require(checkSig(ownerSig, ownerPubKey), "bad issuer signature");
+        require(this.activeInputIndex == 0, "minter must be input 0");
+        require(tx.inputs[0].tokenCategory == ticketCategory + 0x02, "missing minting NFT");
+
+        bytes oldMode, bytes oldCursor = tx.inputs[0].nftCommitment.split(1);
+        bytes newMode, bytes newCursor = newMinterCommitment.split(1);
+        require(oldMode == newMode, "minting mode changed");
+        require(oldMode == 0x00 || oldMode == 0x01, "unknown minting mode");
+
+        // Change keeps the minting NFT and the remaining supply at this contract.
+        require(tx.outputs[0].lockingBytecode == tx.inputs[0].lockingBytecode, "change must stay here");
+        require(tx.outputs[0].tokenCategory == ticketCategory + 0x02, "change lost the minting NFT");
+        require(tx.outputs[0].nftCommitment == newMinterCommitment, "unexpected change commitment");
+
+        // Assigned seating: the cursor advances to sha256 of the last seat in this batch.
+        if (oldMode == 0x01) {
+            require(oldCursor.length == 32, "malformed minting cursor");
+            require(newCursor.length == 32, "cursor must be 32 bytes");
+            require(newCursor == sha256(lastSeatCommitment), "cursor does not match the last seat");
+        }
+
+        int mintedAmount = 0;
+        bool cursorMatched = false;
+        for (int i = 1; i < tx.outputs.length; i++) {
+            if (tx.outputs[i].tokenCategory == ticketCategory) {
+                require(tx.outputs[i].lockingBytecode == sellerLockingBytecode, "ticket must go to the seller");
+                require(tx.outputs[i].tokenAmount == ticketPrice, "wrong ticket price");
+                require(tx.outputs[i].nftCommitment.length >= 8, "commitment too short");
+                mintedAmount += tx.outputs[i].tokenAmount;
+                if (tx.outputs[i].nftCommitment == lastSeatCommitment) {
+                    cursorMatched = true;
+                }
+            } else {
+                require(i == tx.outputs.length - 1, "only the last output may be change");
+                require(tx.outputs[i].tokenCategory.length == 0, "change must not carry tokens");
+            }
+        }
+
+        require(mintedAmount > 0, "nothing minted");
+        if (oldMode == 0x01) {
+            require(cursorMatched, "cursor does not belong to this batch");
+        }
+        require(tx.outputs[0].tokenAmount == tx.inputs[0].tokenAmount - mintedAmount, "supply mismatch");
+    }
+
+    /**
+     * Anyone may call, 10 days after the event, to burn the token and pay the issuer.
+     * Accepts the minting UTXO as well as tickets reclaimed from the seller.
+     */
+    function teardown() {
+        require(tx.time >= eventEndTime + 10 days, "too early to tear down");
+        require(tx.outputs.length == 2, "teardown burns and pays out");
+
+        int idx = this.activeInputIndex;
+        bytes category = tx.inputs[idx].tokenCategory;
+        require(category == ticketCategory || category == ticketCategory + 0x02, "not a CashPass token");
+
+        require(tx.outputs[0].lockingBytecode == burnLockingBytecode, "first output must burn");
+        require(tx.outputs[0].tokenCategory == category, "burn must take the token");
+        require(tx.outputs[0].nftCommitment == tx.inputs[idx].nftCommitment, "burn must take the NFT");
+        require(tx.outputs[0].tokenAmount == tx.inputs[idx].tokenAmount, "burn must take the supply");
+
+        require(tx.outputs[1].lockingBytecode == ownerLockingBytecode, "second output must pay the owner");
+        require(tx.outputs[1].tokenCategory.length == 0, "payout must be plain BCH");
+    }
+}
