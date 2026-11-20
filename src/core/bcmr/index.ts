@@ -8,5 +8,4 @@ export * from './op-return'
 export * from './bcmr-v2.schema-extra-types'
 export * from './registry-helpers'
 export * from './parsable-nft-helpers'
-export * from './templates'
 
