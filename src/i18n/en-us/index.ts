@@ -273,6 +273,8 @@ export default {
     nftCollectionType: 'NFT Collection Type',
     bytecodeRequired: 'Bytecode is required for a parsable collection',
     bytecodeInvalid: 'Bytecode must be a valid hex string (even number of hex characters)',
+    tokenCategory: 'Token Category',
+    authKeyNftCategory: 'AuthKey NFT Category',
   },
   nftTransfer: {
     title: 'Transfer NFT',
