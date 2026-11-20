@@ -1,0 +1,22 @@
+pragma cashscript ^0.14.0;
+
+/**
+ * CashPass cashier.
+ *
+ * Receives the payment of every ticket sale and holds it until the event is over.
+ * A single withdrawal may sweep any number of cashier UTXOs: many inputs, one output.
+ *
+ * @param ownerPkh - Public key hash of the issuer
+ * @param ownerLockingBytecode - Locking bytecode the issuer is paid at withdrawal
+ * @param eventEndTime - Unix seconds at which the event ends
+ */
+contract CashpassCashier(bytes20 ownerPkh, bytes ownerLockingBytecode, int eventEndTime) {
+    function withdraw(sig ownerSig, pubkey ownerPubKey) {
+        require(hash160(ownerPubKey) == ownerPkh, "not the owner");
+        require(checkSig(ownerSig, ownerPubKey), "bad owner signature");
+        require(tx.time >= eventEndTime, "event has not ended");
+        require(tx.outputs.length == 1, "withdrawal must be a single output");
+        require(tx.outputs[0].lockingBytecode == ownerLockingBytecode, "must pay the owner");
+        require(tx.outputs[0].tokenCategory.length == 0, "withdrawal must be plain BCH");
+    }
+}
