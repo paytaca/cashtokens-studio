@@ -9,11 +9,15 @@ import { CustomElectrumNetworkProvider } from "src/services/electrum"
 
 export const AIRDROP_MAX_RECIPIENTS = 50
 
+export type AirdropRecipient = {
+    address: string,
+    /** Fungible token amount this recipient receives. */
+    amount: bigint
+}
+
 export type AirdropFungibleReservesParams = {
     issuerTokenUtxo: UtxoWithPath,
-    /** Fungible token amount each recipient receives. */
-    airdropTokenAmount: bigint,
-    recipientAddresses: string[],
+    recipients: AirdropRecipient[],
     authkeyUtxo: UtxoWithPath,
     funderUtxos: UtxoWithPath[],
     network?: Network,
@@ -25,10 +29,12 @@ export function airdropFungibleReserves(params: AirdropFungibleReservesParams): 
 
     if (!params.issuerTokenUtxo?.token) throw new Error(`Airdropping tokens requires a token of the same category.`)
     if (params.authkeyUtxo?.token?.nft?.commitment !== '00') throw new Error(`Invalid AuthKey.`)
-    if (!params.airdropTokenAmount) throw new Error(`Invalid token amount.`)
-    if (params.recipientAddresses.length === 0) throw new Error(`No airdrop recipients.`)
-    if (params.recipientAddresses.length > AIRDROP_MAX_RECIPIENTS) {
+    if (params.recipients.length === 0) throw new Error(`No airdrop recipients.`)
+    if (params.recipients.length > AIRDROP_MAX_RECIPIENTS) {
         throw new Error(`Airdrops are limited to ${AIRDROP_MAX_RECIPIENTS} recipients per transaction.`)
+    }
+    if (params.recipients.some((recipient) => recipient.amount <= 0n)) {
+        throw new Error(`Invalid token amount.`)
     }
 
     const authguardContract = createAuthguardContract({
@@ -72,7 +78,7 @@ export function airdropFungibleReserves(params: AirdropFungibleReservesParams): 
     transaction.addInput(params.authkeyUtxo, placeholderP2PKHUnlocker(params.authkeyUtxo.address))
     transaction.addInput(funderInput, placeholderP2PKHUnlocker(funderInput.address))
 
-    const airdroppedAmount = params.airdropTokenAmount * BigInt(params.recipientAddresses.length)
+    const airdroppedAmount = params.recipients.reduce((total, recipient) => total + recipient.amount, 0n)
     const tokenChange = params.issuerTokenUtxo.token.amount - airdroppedAmount
     if (tokenChange < 0n) {
         throw new Error('Insufficient token balance')
@@ -90,19 +96,20 @@ export function airdropFungibleReserves(params: AirdropFungibleReservesParams): 
         amount: params.authkeyUtxo.satoshis,
         token: params.authkeyUtxo.token
     })
-    for (const recipientAddress of params.recipientAddresses) {
+    for (const recipient of params.recipients) {
         transaction.addOutput({
-            to: recipientAddress,
+            to: recipient.address,
             amount: DEFAULT_TOKEN_VALUE,
             token: {
                 category: params.issuerTokenUtxo.token.category,
-                amount: params.airdropTokenAmount
+                amount: recipient.amount
             }
         })
     }
 
     let transactionHex = transaction.build()
-    const fixedCost = DEFAULT_TOKEN_VALUE * 3n
+    // The funder input covers every recipient output; the change output returns whatever is left.
+    const fixedCost = DEFAULT_TOKEN_VALUE * BigInt(params.recipients.length)
     let unlockingBytecodesBytesize = P2PKH_UNLOCKING_BYTECODE_BYTESIZE * transaction.inputs.length
     const minimumFee = getMinimumFee(
         BigInt(hexToBin(transactionHex).length + unlockingBytecodesBytesize + P2PKH_SATOSHI_CHANGE_OUTPUT_BYTESIZE),

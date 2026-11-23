@@ -79,11 +79,11 @@
                     </template>
                 </FormField>
 
-                <!-- Excluded addresses (duplicates, invalid, beyond the limit) -->
+                <!-- Excluded addresses (invalid, non-token-aware, beyond the limit) -->
                 <FormField v-if="excludedAddresses.length > 0">
                     <label>{{ $t('airdropIssuePage.excludedAddresses') }}</label>
                     <q-input :model-value="excludedAddresses.join(', ')" type="textarea" dark outlined readonly
-                        :hint="$t('airdropIssuePage.excludedAddressesHint', { max: MAX_AIRDROP_RECIPIENTS })" />
+                        :hint="$t('airdropIssuePage.excludedAddressesHint', { max: AIRDROP_MAX_RECIPIENTS })" />
                 </FormField>
 
                 <!-- 2. Amount per address -->
@@ -97,7 +97,55 @@
                             total: totalAmountDecimal
                         }) }}
                     </div>
+                    <div v-if="recipientCount > AIRDROP_MAX_RECIPIENTS" class="text-caption text-negative q-mt-xs">
+                        {{ $t('airdropIssuePage.recipientLimitExceeded', { max: AIRDROP_MAX_RECIPIENTS }) }}
+                    </div>
+                    <div v-else-if="amountPerAddressRaw > 0 && totalAmount > reserves"
+                        class="text-caption text-negative q-mt-xs">
+                        {{ $t('airdropIssuePage.insufficientReserves', { count: recipientCount }) }}
+                    </div>
                 </FormField>
+
+                <!-- Recipient summary: one row per unique address, with an editable multiplier. -->
+                <q-expansion-item v-if="recipientRows.length > 0" default-opened icon="format_list_numbered"
+                    :label="$t('airdropIssuePage.recipientSummaryTitle')"
+                    :caption="$t('airdropIssuePage.recipientSummaryCaption', {
+                        addresses: recipientCount,
+                        airdrops: airdropCount.toString()
+                    })" dark header-class="text-grey-3" class="rounded-borders bg-dark-2">
+                    <div class="q-pa-md q-gutter-y-sm">
+                        <div class="text-caption text-grey-5">
+                            {{ $t('airdropIssuePage.recipientSummaryHint') }}
+                        </div>
+                        <q-table flat dark dense :rows="recipientRows" :columns="recipientSummaryColumns"
+                            row-key="key" :pagination="{ rowsPerPage: 0 }" hide-pagination
+                            class="border-radius-8">
+                            <template #body-cell-address="props">
+                                <q-td :props="props" class="text-mono" style="word-break: break-all">
+                                    {{ props.row.address }}
+                                    <span class="text-grey-5">({{ props.row.kind }})</span>
+                                </q-td>
+                            </template>
+                            <template #body-cell-multiplier="props">
+                                <q-td :props="props" class="text-center">
+                                    <q-input v-model="props.row.multiplier" type="number" min="1" dense dark outlined
+                                        input-class="text-center" class="multiplier-input"
+                                        @blur="normalizeMultiplier(props.row)" />
+                                </q-td>
+                            </template>
+                        </q-table>
+                    </div>
+                </q-expansion-item>
+
+                <!-- P2SH recipients are allowed, but the issuer is warned. -->
+                <q-banner v-if="p2shRecipientCount > 0" class="bg-dark-2 rounded-borders">
+                    <template #avatar>
+                        <q-icon name="warning_amber" color="warning" />
+                    </template>
+                    <span class="text-grey-4">
+                        {{ $t('airdropIssuePage.p2shRecipientWarning', p2shRecipientCount) }}
+                    </span>
+                </q-banner>
 
                 <!-- 3. Submit -->
                 <div class="flex justify-end">
@@ -125,11 +173,12 @@
                     </div>
                 </div>
 
-                <q-table flat dark :rows="summaryRows" :columns="summaryColumns" row-key="address"
+                <q-table flat dark :rows="summaryRows" :columns="summaryColumns" row-key="key"
                     :pagination="{ rowsPerPage: 0 }" hide-pagination class="border-radius-8">
                     <template v-slot:body-cell-address="props">
                         <q-td :props="props" class="text-mono" style="word-break: break-all">
                             {{ props.row.address }}
+                            <span class="text-grey-5">({{ props.row.kind }})</span>
                         </q-td>
                     </template>
                 </q-table>
@@ -162,7 +211,7 @@ import {
     jsonReplacer
 } from 'src/core/transaction'
 import { getTokenHolders } from 'src/core/chaingraph'
-import { getBeaconNftTokenCategory, MAX_AIRDROP_RECIPIENTS } from 'src/core/airdrop'
+import { getBeaconNftTokenCategory } from 'src/core/airdrop'
 import { formatTokenAmount } from 'src/core/utils'
 import { normalizeTokenDecimals } from 'src/core/bcmr'
 import type { UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
@@ -225,86 +274,102 @@ const rawAddresses = computed(() => {
     return addressesInput.value
 })
 
-/**
- * The pasted list is comma separated; newlines pasted around entries are treated as separators.
- * Only P2PKH token addresses are valid; duplicates, invalid entries, P2SH addresses and anything
- * beyond the recipient limit all land in the excluded list (P2SH additionally gets flagged).
- */
-const parsedRecipients = computed(() => {
-    const seen = new Set<string>()
-    const valid: string[] = []
-    const excluded: string[] = []
-    const p2sh: string[] = []
-    for (const candidate of rawAddresses.value.replace(/\r?\n/g, ',').split(',')) {
-        const address = candidate.trim()
-        if (!address) continue
-        if (seen.has(address)) {
-            excluded.push(address)
-            continue
-        }
-        seen.add(address)
-        const verdict = classifyAddress(address)
-        if (verdict === 'p2sh') {
-            p2sh.push(address)
-            excluded.push(address)
-            continue
-        }
-        if (verdict === 'invalid' || valid.length >= AIRDROP_MAX_RECIPIENTS) {
-            excluded.push(address)
-            continue
-        }
-        valid.push(address)
-    }
-    return { valid, excluded, p2sh }
-})
+type RecipientKind = 'p2pkh' | 'p2sh'
 
-const validAddresses = computed(() => parsedRecipients.value.valid)
-const excludedAddresses = computed(() => parsedRecipients.value.excluded)
-const p2shAddresses = computed(() => parsedRecipients.value.p2sh)
+type RecipientRow = {
+    key: string
+    address: string
+    kind: RecipientKind
+    /** Raw input value; parsed through rowMultiplier for calculations. */
+    multiplier: string
+}
 
-const recipientCount = computed(() => validAddresses.value.length)
+type CompletedRecipient = {
+    address: string
+    kind: RecipientKind
+    amount: bigint
+    multiplier: number
+}
+
+type CompletedAirdrop = {
+    recipients: CompletedRecipient[]
+    total: bigint
+    txid: string
+}
+
+const recipientRows = ref<RecipientRow[]>([])
+const excludedAddresses = ref<string[]>([])
+
+const tokenSymbol = computed(() => activeAuthhead.value?.identitySnapshot?.token?.symbol || '')
+
+const recipientCount = computed(() => recipientRows.value.length)
+
+/** A multiplier is a positive safe integer; anything else falls back to one airdrop. */
+function rowMultiplier(row: RecipientRow): number {
+    const parsed = Number(row.multiplier)
+    return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : 1
+}
+
+const airdropCount = computed(() =>
+    recipientRows.value.reduce((total, row) => total + BigInt(rowMultiplier(row)), 0n)
+)
 
 const amountPerAddressRaw = computed(() => parseTokenAmount(amountPerAddress.value, tokenDecimals.value))
 
-const totalAmount = computed(() =>
-    BigInt(validAddresses.value.length) * amountPerAddressRaw.value
-)
+const totalAmount = computed(() => airdropCount.value * amountPerAddressRaw.value)
 
 const totalAmountDecimal = computed(() => bigIntToDecimal(totalAmount.value, tokenDecimals.value))
 
+const p2shRecipientCount = computed(() =>
+    recipientRows.value.filter((row) => row.kind === 'p2sh').length
+)
+
 const canSubmit = computed(() =>
     recipientCount.value > 0 &&
+    recipientCount.value <= AIRDROP_MAX_RECIPIENTS &&
     amountPerAddressRaw.value > 0n &&
     totalAmount.value <= reserves.value
 )
 
 /** Snapshot of the last successful airdrop; non-null while the summary card is showing. */
-const completedAirdrop = ref<{ recipients: string[]; amountPerRecipient: bigint; txid: string } | null>(null)
+const completedAirdrop = ref<CompletedAirdrop | null>(null)
 
 const completedTotal = computed(() => {
     const snapshot = completedAirdrop.value
     if (!snapshot) return ''
-    return bigIntToDecimal(
-        snapshot.amountPerRecipient * BigInt(snapshot.recipients.length),
-        tokenDecimals.value
-    )
+    return bigIntToDecimal(snapshot.total, tokenDecimals.value)
 })
 
-const summaryRows = computed(() => {
+type SummaryRow = {
+    key: string
+    address: string
+    kind: RecipientKind
+    amount: string
+    multiplier: number
+}
+
+const summaryRows = computed<SummaryRow[]>(() => {
     const snapshot = completedAirdrop.value
     if (!snapshot) return []
-    const amount = formatTokenAmount(
-        snapshot.amountPerRecipient,
-        activeAuthhead.value?.identitySnapshot?.token?.symbol || '',
-        tokenDecimals.value,
-        'none'
-    )
-    return snapshot.recipients.map((address) => ({ address, amount }))
+    return snapshot.recipients.map((recipient) => ({
+        key: recipient.address,
+        address: recipient.address,
+        kind: recipient.kind,
+        amount: formatTokenAmount(recipient.amount, tokenSymbol.value, tokenDecimals.value, 'suffix'),
+        multiplier: recipient.multiplier
+    }))
 })
 
-const summaryColumns: QTableColumn[] = [
+const recipientSummaryColumns: QTableColumn<RecipientRow>[] = [
     { name: 'address', label: t('airdropIssuePage.summaryAddressColumn'), field: 'address', align: 'left' },
-    { name: 'amount', label: t('airdropIssuePage.summaryAmountColumn'), field: 'amount', align: 'right' },
+    { name: 'amount', label: t('airdropIssuePage.summaryAmountColumn'), field: (row) => rowAmount(row), align: 'right', style: 'width: 9rem' },
+    { name: 'multiplier', label: t('airdropIssuePage.summaryMultiplierColumn'), field: 'multiplier', align: 'center', style: 'width: 7rem' },
+]
+
+const summaryColumns: QTableColumn<SummaryRow>[] = [
+    { name: 'address', label: t('airdropIssuePage.summaryAddressColumn'), field: 'address', align: 'left' },
+    { name: 'amount', label: t('airdropIssuePage.summaryAmountColumn'), field: 'amount', align: 'right', style: 'width: 9rem' },
+    { name: 'multiplier', label: t('airdropIssuePage.summaryMultiplierColumn'), field: 'multiplier', align: 'center', style: 'width: 7rem' },
 ]
 
 /** Back to a fresh form; the beacon-holder cache is kept so re-selecting it won't refetch. */
@@ -318,19 +383,83 @@ const doAnotherAirdrop = () => {
 const amountRules = [
     (v: string) => parseTokenAmount(v, tokenDecimals.value) > 0n || t('airdropIssuePage.invalidAmount'),
     (v: string) => {
-        const total = BigInt(validAddresses.value.length) * parseTokenAmount(v, tokenDecimals.value)
+        const total = airdropCount.value * parseTokenAmount(v, tokenDecimals.value)
         return total <= reserves.value ||
-            t('airdropIssuePage.insufficientReserves', { count: validAddresses.value.length })
+            t('airdropIssuePage.insufficientReserves', { count: recipientCount.value })
     },
+    () => recipientCount.value <= AIRDROP_MAX_RECIPIENTS ||
+        t('airdropIssuePage.recipientLimitExceeded', { max: AIRDROP_MAX_RECIPIENTS }),
 ]
 
-/** Only opted-in P2PKH token addresses may receive airdrops; P2SH is flagged separately. */
-function classifyAddress(address: string): 'valid' | 'p2sh' | 'invalid' {
+/** Only token-aware P2PKH and P2SH addresses can receive token outputs. */
+function decodeRecipient(address: string): { kind: RecipientKind } | null {
     const decoded = decodeCashAddress(address)
-    if (typeof decoded === 'string') return 'invalid'
-    if (decoded.type === CashAddressType.p2sh || decoded.type === CashAddressType.p2shWithTokens) return 'p2sh'
-    return decoded.type === CashAddressType.p2pkhWithTokens ? 'valid' : 'invalid'
+    if (typeof decoded === 'string') return null
+    if (decoded.type === CashAddressType.p2pkhWithTokens) return { kind: 'p2pkh' }
+    if (decoded.type === CashAddressType.p2shWithTokens) return { kind: 'p2sh' }
+    return null
 }
+
+/**
+ * Groups the raw list by address. The list source keeps duplicates and counts them in the
+ * multiplier, while beacon holders stay deduplicated and P2PKH-only. The recipient limit
+ * applies to unique addresses, i.e. transaction outputs.
+ */
+function rebuildRecipientRows() {
+    const isBeaconSource = recipientSource.value === 'beacon-holders'
+    const rowsByAddress = new Map<string, RecipientRow>()
+    const excluded: string[] = []
+
+    for (const candidate of rawAddresses.value.replace(/\r?\n/g, ',').split(',')) {
+        const address = candidate.trim()
+        if (!address) continue
+
+        const decoded = decodeRecipient(address)
+        if (!decoded || (isBeaconSource && decoded.kind !== 'p2pkh')) {
+            excluded.push(address)
+            continue
+        }
+
+        const key = address.toLowerCase()
+        const existing = rowsByAddress.get(key)
+        if (existing) {
+            if (isBeaconSource) {
+                excluded.push(address)
+            } else {
+                existing.multiplier = String(rowMultiplier(existing) + 1)
+            }
+            continue
+        }
+
+        if (rowsByAddress.size >= AIRDROP_MAX_RECIPIENTS) {
+            excluded.push(address)
+            continue
+        }
+
+        rowsByAddress.set(key, {
+            key,
+            address,
+            kind: decoded.kind,
+            multiplier: '1'
+        })
+    }
+
+    recipientRows.value = [...rowsByAddress.values()]
+    excludedAddresses.value = excluded
+}
+
+function rowAmount(row: RecipientRow): string {
+    if (amountPerAddressRaw.value <= 0n) return '—'
+    const total = amountPerAddressRaw.value * BigInt(rowMultiplier(row))
+    return formatTokenAmount(total, tokenSymbol.value, tokenDecimals.value, 'suffix')
+}
+
+/** Keeps the editable input readable and protects the amount maths from non-integer values. */
+function normalizeMultiplier(row: RecipientRow) {
+    row.multiplier = String(rowMultiplier(row))
+}
+
+watch(rawAddresses, rebuildRecipientRows, { immediate: true })
 
 function parseTokenAmount(value: string, decimals: number): bigint {
     const parts = (value || '').trim().split('.')
@@ -369,7 +498,7 @@ const loadBeaconHolders = async () => {
     beaconHoldersError.value = false
     try {
         const holders = await getTokenHolders({ category: getBeaconNftTokenCategory(), network: import.meta.env.VITE_BCH_NETWORK })
-        beaconHolders.value = holders.filter((address) => classifyAddress(address) === 'valid')
+        beaconHolders.value = holders.filter((address) => decodeRecipient(address)?.kind === 'p2pkh')
     } catch {
         beaconHolders.value = []
         beaconHoldersError.value = true
@@ -395,17 +524,15 @@ watch(() => activeAuthhead.value, (value) => {
 const onSubmit = async () => {
     if (!walletIsReady.value || !canSubmit.value) return
 
-    if (p2shAddresses.value.length > 0) {
-        $q.dialog({
-            title: t('airdropIssuePage.p2shTitle'),
-            message: t('airdropIssuePage.p2shMessage')
-        })
-        return
-    }
-
     const authhead = activeAuthhead.value as UtxoWithAuthKey
-    const recipients = validAddresses.value
-    const airdropAmount = amountPerAddressRaw.value
+    const perAddressAmount = amountPerAddressRaw.value
+    const recipients: CompletedRecipient[] = recipientRows.value.map((row) => ({
+        address: row.address,
+        kind: row.kind,
+        amount: perAddressAmount * BigInt(rowMultiplier(row)),
+        multiplier: rowMultiplier(row)
+    }))
+    const airdropTotal = recipients.reduce((total, recipient) => total + recipient.amount, 0n)
 
     startLoader(txTaskList, () => {
         $q.notify({ type: 'warning', message: t('airdropIssuePage.cancelText') })
@@ -422,8 +549,7 @@ const onSubmit = async () => {
 
         const signRequest = airdropFungibleReserves({
             issuerTokenUtxo,
-            airdropTokenAmount: amountPerAddressRaw.value,
-            recipientAddresses: recipients,
+            recipients: recipients.map(({ address, amount }) => ({ address, amount })),
             authkeyUtxo: issuerTokenUtxo.authkey as UtxoWithPath,
             funderUtxos: (wallet.value?.utxos || []) as UtxoWithPath[],
             network: import.meta.env.VITE_BCH_NETWORK as Network,
@@ -473,7 +599,7 @@ const onSubmit = async () => {
         stopLoader(1000)
 
         amountPerAddress.value = ''
-        completedAirdrop.value = { recipients: [...recipients], amountPerRecipient: airdropAmount, txid }
+        completedAirdrop.value = { recipients, total: airdropTotal, txid }
 
         $q.dialog({
             component: TransactionStatusDialog,
@@ -517,6 +643,12 @@ const onSubmit = async () => {
 
 .border-radius-8 {
     border-radius: 8px;
+}
+
+.multiplier-input {
+    max-width: 6rem;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .text-mono {
