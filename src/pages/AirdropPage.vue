@@ -193,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, ref, triggerRef, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
@@ -202,6 +202,7 @@ import type { QTableColumn } from 'quasar'
 import { CashAddressType, decodeCashAddress } from 'bitauth-libauth-v3'
 import { Network } from 'cashscript'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import {
@@ -217,6 +218,7 @@ import { normalizeTokenDecimals } from 'src/core/bcmr'
 import type { UtxoWithPath, UtxoWithAuthKey } from 'src/core/types'
 import { db } from 'src/core/client-db'
 import { broadcastTransaction } from 'src/services/transaction'
+import { waitForAuthheadVisible } from 'src/services/electrum'
 import {
     TASK_BROADCASTING,
     TASK_INPUTS_CHECK,
@@ -237,10 +239,11 @@ const $q = useQuasar()
 const router = useRouter()
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const { wallet, walletIsReady, signTransaction } = useWalletSigner()
+const liveTxStore = useLiveTxStore()
 
 const authguardStore = useAuthguardStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
-const { loadAuthkeys } = authguardStore
+const { loadAuthkeys, setActiveAuthhead, updateActiveAuthhead } = authguardStore
 
 const recipientSource = ref<'list' | 'beacon-holders'>('list')
 const addressesInput = ref('')
@@ -584,6 +587,19 @@ const onSubmit = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
+        await liveTxStore.waitForTransactionWithFallback(txid)
+
+        const authkeyCategory = authhead.authkey?.token?.category
+        if (authkeyCategory) {
+            // The authhead scan reads a different electrum host than the wallet. Give that host
+            // the new authhead before asking the store to adopt it.
+            await waitForAuthheadVisible({
+                authkeyCategory,
+                authheadId: `${txid}:0`,
+                network: import.meta.env.VITE_BCH_NETWORK,
+            })
+        }
+
         await db.saveActivity({
             event: t('airdropIssuePage.activityEvent', { token: activeAuthhead.value?.identitySnapshot?.token?.symbol || activeAuthhead.value?.identitySnapshot?.name || activeAuthhead.value?.token?.category }),
             txid,
@@ -593,7 +609,35 @@ const onSubmit = async () => {
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')
 
-        await loadAuthkeys(wallet.value, true, true)
+        const freshAuthkeys = await loadAuthkeys(wallet.value, true, true).catch((error) => {
+            console.error('Failed to refresh wallet UTXOs after airdrop:', error)
+            return [] as UtxoWithPath[]
+        })
+        triggerRef(wallet)
+        await updateActiveAuthhead({ authheadTxid: txid, bumpedRegistry: false }).catch((error) => {
+            console.error('Failed to refresh the active authhead after airdrop:', error)
+        })
+
+        // The airdrop creates the next authhead at vout 0 and its authkey at vout 1. If the scan
+        // host has not caught up yet, adopt those known outputs directly so a second airdrop never
+        // reuses the inputs this one just spent.
+        const activeIsFresh = activeAuthhead.value?.txid === txid &&
+            activeAuthhead.value?.vout === 0 &&
+            activeAuthhead.value?.authkey?.txid === txid &&
+            activeAuthhead.value?.authkey?.vout === 1
+        if (!activeIsFresh) {
+            const freshAuthkey = freshAuthkeys.find((utxo) => utxo.txid === txid && utxo.vout === 1)
+                ?? (authhead.authkey ? { ...authhead.authkey, txid, vout: 1 } : undefined)
+            if (authhead.token && freshAuthkey) {
+                setActiveAuthhead({
+                    ...authhead,
+                    txid,
+                    vout: 0,
+                    token: { ...authhead.token, amount: authhead.token.amount - airdropTotal },
+                    authkey: freshAuthkey,
+                })
+            }
+        }
 
         updateStep(TASK_REFRESH_UTXOS, 'done')
         stopLoader(1000)

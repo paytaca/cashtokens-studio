@@ -61,11 +61,20 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
    */
   async function updateActiveAuthhead(params?: {authheadTxid: string, bumpedRegistry: boolean}) {
     if (!activeAuthhead.value || !activeAuthhead.value.authkey?.token?.category) return
+    const currentAuthkey = activeAuthhead.value.authkey
+    // Spending an authhead recreates its authkey in the same transaction. `loadAuthkeys` replaces
+    // the wallet's authkey row, so prefer that fresh row instead of reattaching the spent one.
+    const freshAuthkey = authkeys.value.find((utxo) =>
+      utxo.token?.category === currentAuthkey.token!.category &&
+      utxo.token.nft?.commitment === '00' &&
+      (!params?.authheadTxid || utxo.txid === params.authheadTxid)
+    )
+    const authkey = freshAuthkey ?? currentAuthkey
     // Re-decorate the authhead from the (possibly bumped) registry so the
     // identitySnapshotIdentifier tracks the current contentHash.
     if (params?.bumpedRegistry !== false) {
       const refreshed = await loadAuthhead({
-        authkey: activeAuthhead.value.authkey,
+        authkey,
         sync: true,
         // Pin the scan to the expected authhead when the caller knows it: the authguard address can
         // hold more than one unspent authhead, and the first one is not necessarily this one.
@@ -79,18 +88,20 @@ export const useAuthguardStore = defineStore('authguard-store', () => {
       }
     }
 
-    
-
     // Fallback: refresh the UTXO while keeping the previous identity.
     const authheadId = params?.authheadTxid ? `${params.authheadTxid}:0`: params?.authheadTxid
-    const latestAuthhead = (await getLockedAuthheadUtxos([activeAuthhead.value.authkey], authheadId as AuthheadId))?.[0]
+    const latestAuthhead = (await getLockedAuthheadUtxos([authkey], authheadId as AuthheadId))?.[0]
 
-    if (!latestAuthhead) return 
+    if (!latestAuthhead) return
     latestAuthhead.identitySnapshot = activeAuthhead.value.identitySnapshot
     latestAuthhead.identitySnapshotIdentifier = activeAuthhead.value.identitySnapshotIdentifier
-    latestAuthhead.authkey = activeAuthhead.value.authkey
-    latestAuthhead.authkey.vout = activeAuthhead.value.authkey.vout
-    latestAuthhead.authkey.txid = latestAuthhead.txid
+    latestAuthhead.authkey = { ...authkey }
+    if (!freshAuthkey) {
+      // The refreshed authkey is not available yet; the spend still puts it at the same vout as
+      // before, in the transaction that produced the new authhead.
+      latestAuthhead.authkey.vout = currentAuthkey.vout
+      latestAuthhead.authkey.txid = latestAuthhead.txid
+    }
     activeAuthhead.value = Object.assign({}, latestAuthhead)
     setActiveAuthhead(latestAuthhead)
   }
