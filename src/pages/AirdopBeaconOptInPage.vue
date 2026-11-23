@@ -54,13 +54,13 @@
 <script setup lang="ts">
 
 import { computed, ref, onMounted, triggerRef } from 'vue';
-import { BaseWallet, NetworkType } from 'mainnet-js';
 import { useI18n } from 'vue-i18n';
 import { useQuasar } from 'quasar';
 import { db } from 'src/core/client-db';
 import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog';
 import { broadcastTransaction } from 'src/services/transaction';
+import { useLiveTxStore } from 'src/stores/live-tx';
 import {
     TASK_BROADCASTING,
     TASK_INPUTS_CHECK,
@@ -89,6 +89,7 @@ const { t } = useI18n();
 const $q = useQuasar();
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog();
 const { wallet, signTransaction, utxosVersion } = useWalletSigner();
+const liveTxStore = useLiveTxStore();
 /** The opt-in needs both the beacon category and the contract's admin id; without either the
     page renders its "coming soon" state and never touches the chain. */
 const beaconConfigured = Boolean(
@@ -221,10 +222,7 @@ const onSubmit = async () => {
 
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'done')

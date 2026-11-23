@@ -241,6 +241,7 @@ import { QTableColumn, useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
@@ -253,7 +254,7 @@ import { decodeCashAddress } from 'bitauth-libauth-v3'
 import { broadcastTransaction } from 'src/services/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
-import { BaseWallet, delay, NetworkType } from 'mainnet-js'
+import { delay } from 'mainnet-js'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { ParsableNftCollection, NftType } from 'src/core/bcmr/bcmr-v2.schema'
@@ -271,6 +272,7 @@ const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingD
 const { ensureAuthorized } = useRegistryPublishAuthorization()
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
@@ -485,10 +487,7 @@ const publishNfts = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

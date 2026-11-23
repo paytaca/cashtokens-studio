@@ -192,6 +192,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { type Output as TransactionOutput } from 'cashscript'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { storeToRefs } from 'pinia'
 import { ipfsToGatewayUrl } from 'src/core/ipfs'
 import CopyText from 'components/CopyText.vue'
@@ -199,7 +200,7 @@ import { DecoratedUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { mintNextNftSequence, mintNftSequence, mintNftMinters, isBroadcastSuccess } from 'src/core/transaction'
 import { broadcast } from 'src/core/transaction/broadcast'
 import { decodeCashAddress, vmNumberToBigInt } from 'bitauth-libauth-v3'
-import { BaseWallet, delay, hexToBin, NetworkType } from 'mainnet-js'
+import { delay, hexToBin } from 'mainnet-js'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import { NftType, ParsableNftCollection, SequentialNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import { type SignTransactionRequest } from '@wizardconnect/core'
@@ -223,6 +224,7 @@ const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingD
 
 
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const appStore = useAppStore()
 const { activeMinter } = storeToRefs(appStore)
@@ -454,11 +456,7 @@ const mint = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         // The minted authhead sits in the AuthGuard contract at output 0. Wait for it on the electrum
         // host the authhead scan reads from (`waitForTransaction` watches a different one), so the

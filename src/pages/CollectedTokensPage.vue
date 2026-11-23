@@ -241,6 +241,7 @@ import { useWalletSigner } from 'src/composables/useWalletSigner';
 import { ref, computed, onMounted, onUnmounted, watch, triggerRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useAuthguardStore } from 'src/stores/authguard';
+import { useLiveTxStore } from 'src/stores/live-tx';
 import { useRegistryStore } from 'src/stores/registry';
 import { storeToRefs } from 'pinia';
 import { QTableColumn, useQuasar } from 'quasar';
@@ -260,7 +261,6 @@ import NftCardViewerDialog from 'src/components/dialogs/NftCardViewerDialog.vue'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue';
 import PromptDialog from 'src/components/dialogs/PromptDialog.vue';
 import { Network } from 'cashscript';
-import { BaseWallet, NetworkType } from 'mainnet-js';
 import { resolveNftType } from 'src/core/bcmr';
 import type { ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema';
 import { db } from 'src/core/client-db';
@@ -273,6 +273,7 @@ const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingD
 const { wallet, walletIsReady, signTransaction } = useWalletSigner();
 
 const authguardStore = useAuthguardStore();
+const liveTxStore = useLiveTxStore();
 const { authkeysLoading, authheadsLoading } = storeToRefs(authguardStore);
 
 const registryStore = useRegistryStore();
@@ -523,11 +524,7 @@ const performSendCollectedTokens = (row: any) => {
       updateStep(TASK_BROADCASTING, 'done');
       updateStep(TASK_WAITING_PROPAGATION, 'running');
 
-      const networkType =
-        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-          ? NetworkType.Testnet
-          : NetworkType.Mainnet;
-      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+      await liveTxStore.waitForTransactionWithFallback(txid);
 
       updateStep(TASK_WAITING_PROPAGATION, 'done');
       updateStep(TASK_REFRESH_UTXOS, 'running');
@@ -617,11 +614,7 @@ const performSendCollectedNft = (row: any) => {
       updateStep(TASK_BROADCASTING, 'done');
       updateStep(TASK_WAITING_PROPAGATION, 'running');
 
-      const networkType =
-        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-          ? NetworkType.Testnet
-          : NetworkType.Mainnet;
-      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+      await liveTxStore.waitForTransactionWithFallback(txid);
 
       updateStep(TASK_WAITING_PROPAGATION, 'done');
       updateStep(TASK_REFRESH_UTXOS, 'running');
@@ -713,11 +706,7 @@ const performBurnCollectedNft = (row: any) => {
       updateStep(TASK_BROADCASTING, 'done');
       updateStep(TASK_WAITING_PROPAGATION, 'running');
 
-      const networkType =
-        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-          ? NetworkType.Testnet
-          : NetworkType.Mainnet;
-      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+      await liveTxStore.waitForTransactionWithFallback(txid);
 
       updateStep(TASK_WAITING_PROPAGATION, 'done');
       updateStep(TASK_REFRESH_UTXOS, 'running');
@@ -808,11 +797,7 @@ const performBurnCollectedTokens = (row: any) => {
       updateStep(TASK_BROADCASTING, 'done');
       updateStep(TASK_WAITING_PROPAGATION, 'running');
 
-      const networkType =
-        import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-          ? NetworkType.Testnet
-          : NetworkType.Mainnet;
-      await new BaseWallet(networkType).waitForTransaction({ txHash: txid });
+      await liveTxStore.waitForTransactionWithFallback(txid);
 
       updateStep(TASK_WAITING_PROPAGATION, 'done');
       updateStep(TASK_REFRESH_UTXOS, 'running');

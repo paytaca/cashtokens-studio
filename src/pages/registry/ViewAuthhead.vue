@@ -195,6 +195,7 @@ import { useI18n } from 'vue-i18n'
 import { useRouter, onBeforeRouteLeave, useRoute } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useAppStore } from 'src/stores/app'
 import type { IdentitySnapshot, ParsableNftCollection } from 'src/core/bcmr/bcmr-v2.schema'
 import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
@@ -208,7 +209,6 @@ import { decodeCashAddress } from 'bitauth-libauth-v3'
 import FungibleTransferDialog from 'src/components/dialogs/FungibleTransferDialog.vue'
 import { transferFungibleReserves } from 'src/core/transaction'
 import { Network } from 'cashscript'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { db } from 'src/core/client-db'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { isAirdropBeaconConfigured } from 'src/core/airdrop'
@@ -228,6 +228,7 @@ const { t } = useI18n()
 const router = useRouter()
 const route = useRoute()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys, updateActiveAuthhead, authheadLoading } = authguardStore
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const appStore = useAppStore()
@@ -426,10 +427,7 @@ const releaseReserves = (action: 'issuance' | 'burn') => {
             updateStep(TASK_BROADCASTING, 'done')
             updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-            const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-            await (new BaseWallet(networkType)).waitForTransaction({
-                txHash: txid
-            })
+            await liveTxStore.waitForTransactionWithFallback(txid)
 
             updateStep(TASK_WAITING_PROPAGATION, 'done')
             updateStep(TASK_REFRESH_UTXOS, 'running')

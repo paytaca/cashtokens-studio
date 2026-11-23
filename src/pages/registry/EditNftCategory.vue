@@ -265,9 +265,9 @@ import ParsableNftCollection from 'components/bcmr/ParsableNftCollection.vue'
 import SequentialNftCollection from 'components/bcmr/SequentialNftCollection.vue'
 import HelpDialog from 'components/dialogs/HelpDialog.vue'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useObservable } from '@vueuse/rxjs'
 import { liveQuery } from 'dexie'
 import NftTable from 'src/components/bcmr/NftTable.vue'
@@ -297,6 +297,7 @@ const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const { activeAuthhead } = storeToRefs(authguardStore)
 const registryStore = useRegistryStore()
@@ -839,11 +840,7 @@ const onPublishClick = async () => {
 
         initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

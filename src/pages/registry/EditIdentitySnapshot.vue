@@ -164,6 +164,7 @@ import { useObservable } from '@vueuse/rxjs'
 import { storeToRefs } from 'pinia'
 
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useRegistryStore } from 'src/stores/registry'
 
 import { useWalletSigner } from 'src/composables/useWalletSigner'
@@ -172,7 +173,7 @@ import CopyText from 'components/CopyText.vue'
 import { AuthheadUtxo, UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { publishRegistry } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { BaseWallet, delay, NetworkType } from 'mainnet-js'
+import { delay } from 'mainnet-js'
 import { useAppStore } from 'src/stores/app'
 import FormField from 'src/components/FormField.vue'
 import { NftType, IdentitySnapshot, Registry } from 'src/core/bcmr/bcmr-v2.schema'
@@ -199,6 +200,7 @@ const symbolRules = [
 ]
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead, setActiveAuthhead } = authguardStore
@@ -557,11 +559,7 @@ const onPublishClick = async () => {
 
         initialSnapshotJson.value = JSON.stringify(clonedSnapshot)
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

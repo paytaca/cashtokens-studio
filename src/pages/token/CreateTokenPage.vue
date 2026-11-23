@@ -319,8 +319,8 @@ import FormField from 'src/components/FormField.vue'
 import { filterGenesisInputs } from 'src/core/wallet'
 import { TokenType } from 'src/core/types'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { importMetadataRegistry, isHex } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
 import ParsableNftCollection from 'src/components/bcmr/ParsableNftCollection.vue'
@@ -348,6 +348,7 @@ const {
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys } = authguardStore
 
 const typeOptions: TokenType[] = ['Fungible', 'NonFungible', 'Mixed']
@@ -564,10 +565,7 @@ const onGenerateGenesisInput = async () => {
 
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
 
@@ -785,10 +783,7 @@ const onSubmit = async () => {
 
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({
-            txHash: txid
-        })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         // The new authhead sits in the AuthGuard contract at output 0. Wait for it on the electrum
         // host the authhead scan reads from, otherwise the refresh below runs before that host has

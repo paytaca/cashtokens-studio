@@ -180,6 +180,7 @@ import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { storeToRefs } from 'pinia'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useRegistryStore } from 'src/stores/registry'
 import { createAuthguardContract } from 'src/core/authguard/create-authguard-contract'
 import { unguardAuthhead, burnAuthhead, transferNfts } from 'src/core/transaction'
@@ -193,7 +194,6 @@ import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoading
 import { broadcastTransaction } from 'src/services/transaction'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 import { useQuasar } from 'quasar'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import CopyText from 'components/CopyText.vue'
 import UnguardAuthheadDialog from 'src/components/dialogs/UnguardAuthheadDialog.vue'
 import BurnAuthheadDialog from 'src/components/dialogs/BurnAuthheadDialog.vue'
@@ -209,6 +209,7 @@ const $q = useQuasar()
 const { t } = useI18n()
 const { wallet, signTransaction } = useWalletSigner()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead, authheads } = storeToRefs(authguardStore)
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
@@ -386,8 +387,7 @@ const handleUnguard = async (row: any, finalDestinationAddress: string) => {
     updateStep(TASK_BROADCASTING, 'done')
     updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+    await liveTxStore.waitForTransactionWithFallback(txid)
 
     updateStep(TASK_WAITING_PROPAGATION, 'done')
     updateStep(TASK_REFRESH_UTXOS, 'running')
@@ -522,8 +522,7 @@ const handleBurn = async (row: any) => {
     updateStep(TASK_BROADCASTING, 'done')
     updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+    await liveTxStore.waitForTransactionWithFallback(txid)
 
     updateStep(TASK_WAITING_PROPAGATION, 'done')
     updateStep(TASK_REFRESH_UTXOS, 'running')
@@ -647,8 +646,7 @@ const transferVaultOwnership = async (authkeyUtxo: any, recipient: string) => {
     updateStep(TASK_BROADCASTING, 'done')
     updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-    const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-    await new BaseWallet(networkType).waitForTransaction({ txHash: txid })
+    await liveTxStore.waitForTransactionWithFallback(txid)
 
     updateStep(TASK_WAITING_PROPAGATION, 'done')
     updateStep(TASK_REFRESH_UTXOS, 'running')

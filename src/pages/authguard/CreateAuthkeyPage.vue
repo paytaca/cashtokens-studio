@@ -67,7 +67,6 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { createAuthkey, createGenesisInput } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
 import FormField from 'src/components/FormField.vue'
@@ -77,6 +76,7 @@ import { createAuthguardContract } from 'src/core/authguard'
 import { subscribe } from 'src/services/watchtower'
 import { broadcastTransaction } from 'src/services/transaction'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { TASK_BROADCASTING, TASK_INPUTS_CHECK, TASK_PREPARE_TX, TASK_REFRESH_UTXOS, TASK_WAIT_FOR_SIG, TASK_WAITING_PROPAGATION, txTaskList, updateTxTaskLabel } from 'src/utils'
 
 const $q = useQuasar()
@@ -113,6 +113,7 @@ const isImportAuthUtxoFlow = computed(() => {
 })
 
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
+const liveTxStore = useLiveTxStore()
 
 const utxos = ref<UtxoWithPath[]>([])
 /** Outpoint created by the last genesis-input broadcast, preferred over any other vout-0 UTXO. */
@@ -275,8 +276,7 @@ const onGenerateGenesisInput = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running', t('info.genesisInputIndexing'))
@@ -397,8 +397,7 @@ const onCreateAuthKey = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

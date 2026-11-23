@@ -92,6 +92,7 @@ import { useQuasar } from 'quasar'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { useRegistryStore } from 'src/stores/registry'
 import { storeToRefs } from 'pinia'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
@@ -107,7 +108,6 @@ import { getErrorMessage } from 'src/core/utils'
 import type { UtxoWithAuthKey, UtxoWithPath } from 'src/core/types'
 import { publishRegistry } from 'src/core/transaction'
 import TransactionStatusDialog from 'src/components/dialogs/TransactionStatusDialog.vue'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { getRegistryWorker } from 'src/workers'
 import { broadcastTransaction } from 'src/services/transaction'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
@@ -131,6 +131,7 @@ const publishTaskList = [
 ]
 const appStore = useAppStore()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const registryStore = useRegistryStore()
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
@@ -298,8 +299,7 @@ const onPublishClick = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet' ? NetworkType.Testnet : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

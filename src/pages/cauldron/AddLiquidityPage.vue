@@ -145,7 +145,6 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useQuasar } from 'quasar'
 import { Network } from 'cashscript'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import FormField from 'components/FormField.vue'
 import TokenIdentityBanner from 'src/components/TokenIdentityBanner.vue'
 import ReleaseTagBadge from 'src/components/ReleaseTagBadge.vue'
@@ -158,6 +157,7 @@ import type { DecoratedUtxo, UtxoWithPath } from 'src/core/types'
 import { bigIntToDecimal, decimalToBigInt, formatTokenAmount, shortenTokenId } from 'src/core/utils'
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { broadcastTransaction } from 'src/services/transaction'
 import { createPoolFromFungibleReserves, getTokenMarketPrice } from 'src/services/cauldron'
 import { settings } from 'src/settings'
@@ -175,6 +175,7 @@ const $q = useQuasar()
 const { t } = useI18n()
 const router = useRouter()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys, updateActiveAuthhead } = authguardStore
 const { activeAuthhead } = storeToRefs(authguardStore)
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
@@ -477,10 +478,7 @@ const addLiquidity = async () => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-            ? NetworkType.Testnet
-            : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')

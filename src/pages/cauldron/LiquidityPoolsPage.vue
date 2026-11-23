@@ -231,7 +231,6 @@ import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useQuasar, type QTableColumn } from 'quasar'
 import { Network } from 'cashscript'
-import { BaseWallet, NetworkType } from 'mainnet-js'
 import { binToHex, decodeCashAddress, encodeCashAddress } from 'bitauth-libauth-v3'
 import CopyText from 'src/components/CopyText.vue'
 import ReleaseTagBadge from 'src/components/ReleaseTagBadge.vue'
@@ -245,6 +244,7 @@ import { bigIntToDecimal, formatTokenAmount, shortenCashAddress, shortenTokenId 
 import { useCancelableLoadingDialog } from 'src/composables/useCancelableLoadingDialog'
 import { useWalletSigner } from 'src/composables/useWalletSigner'
 import { useAuthguardStore } from 'src/stores/authguard'
+import { useLiveTxStore } from 'src/stores/live-tx'
 import { broadcastTransaction } from 'src/services/transaction'
 import { getTokenLiquidityPools, withdrawPool, type CauldronActivePool } from 'src/services/cauldron'
 import { settings } from 'src/settings'
@@ -261,6 +261,7 @@ const router = useRouter()
 const { wallet, walletIsReady, signTransaction } = useWalletSigner()
 const { startLoader, updateStep, stopLoader, getSignal } = useCancelableLoadingDialog()
 const authguardStore = useAuthguardStore()
+const liveTxStore = useLiveTxStore()
 const { loadAuthkeys, setActiveAuthhead } = authguardStore
 const { authheads, authkeysLoading, authheadsLoading, authheadsLastSync } = storeToRefs(authguardStore)
 
@@ -580,10 +581,7 @@ const executeWithdrawal = async (pool: PoolRow) => {
         updateStep(TASK_BROADCASTING, 'done')
         updateStep(TASK_WAITING_PROPAGATION, 'running')
 
-        const networkType = import.meta.env.VITE_BCH_NETWORK === 'chipnet'
-            ? NetworkType.Testnet
-            : NetworkType.Mainnet
-        await (new BaseWallet(networkType)).waitForTransaction({ txHash: txid })
+        await liveTxStore.waitForTransactionWithFallback(txid)
 
         updateStep(TASK_WAITING_PROPAGATION, 'done')
         updateStep(TASK_REFRESH_UTXOS, 'running')
