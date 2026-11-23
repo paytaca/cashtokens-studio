@@ -556,6 +556,8 @@ export default {
     recipientSummaryHint: 'Duplicate addresses are grouped. Edit the multiplier to change how many airdrops that address receives.',
     recipientSummaryCaption: '{addresses} recipients · {airdrops} airdrops',
     summaryMultiplierColumn: 'Multiplier',
+    decreaseMultiplier: 'Decrease multiplier',
+    increaseMultiplier: 'Increase multiplier',
     p2shRecipientWarning: '{count} P2SH recipient address detected. Make sure it can receive tokens. | {count} P2SH recipient addresses detected. Make sure they can receive tokens.',
     recipientLimitExceeded: 'Recipients exceed the {max} address limit.',
     send: 'Send Airdrop',

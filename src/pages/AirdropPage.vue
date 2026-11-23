@@ -121,16 +121,30 @@
                             row-key="key" :pagination="{ rowsPerPage: 0 }" hide-pagination
                             class="border-radius-8">
                             <template #body-cell-address="props">
-                                <q-td :props="props" class="text-mono" style="word-break: break-all">
-                                    {{ props.row.address }}
+                                <q-td :props="props" class="text-mono">
+                                    {{ shortenAddress(props.row.address) }}
                                     <span class="text-grey-5">({{ props.row.kind }})</span>
+                                    <q-tooltip>{{ props.row.address }}</q-tooltip>
                                 </q-td>
                             </template>
                             <template #body-cell-multiplier="props">
                                 <q-td :props="props" class="text-center">
-                                    <q-input v-model="props.row.multiplier" type="number" min="1" dense dark outlined
-                                        input-class="text-center" class="multiplier-input"
-                                        @blur="normalizeMultiplier(props.row)" />
+                                    <div class="row items-center no-wrap justify-center q-gutter-x-xs">
+                                        <q-btn flat round dense size="sm" icon="remove" color="grey-4"
+                                            :disable="rowMultiplier(props.row) <= 1"
+                                            :aria-label="$t('airdropIssuePage.decreaseMultiplier')"
+                                            @click="decrementMultiplier(props.row)">
+                                            <q-tooltip>{{ $t('airdropIssuePage.decreaseMultiplier') }}</q-tooltip>
+                                        </q-btn>
+                                        <q-input v-model="props.row.multiplier" type="number" min="1" dense dark outlined
+                                            input-class="text-center" class="multiplier-input"
+                                            @blur="normalizeMultiplier(props.row)" />
+                                        <q-btn flat round dense size="sm" icon="add" color="grey-4"
+                                            :aria-label="$t('airdropIssuePage.increaseMultiplier')"
+                                            @click="incrementMultiplier(props.row)">
+                                            <q-tooltip>{{ $t('airdropIssuePage.increaseMultiplier') }}</q-tooltip>
+                                        </q-btn>
+                                    </div>
                                 </q-td>
                             </template>
                         </q-table>
@@ -176,9 +190,10 @@
                 <q-table flat dark :rows="summaryRows" :columns="summaryColumns" row-key="key"
                     :pagination="{ rowsPerPage: 0 }" hide-pagination class="border-radius-8">
                     <template v-slot:body-cell-address="props">
-                        <q-td :props="props" class="text-mono" style="word-break: break-all">
-                            {{ props.row.address }}
+                        <q-td :props="props" class="text-mono">
+                            {{ shortenAddress(props.row.address) }}
                             <span class="text-grey-5">({{ props.row.kind }})</span>
+                            <q-tooltip>{{ props.row.address }}</q-tooltip>
                         </q-td>
                     </template>
                 </q-table>
@@ -366,7 +381,7 @@ const summaryRows = computed<SummaryRow[]>(() => {
 const recipientSummaryColumns: QTableColumn<RecipientRow>[] = [
     { name: 'address', label: t('airdropIssuePage.summaryAddressColumn'), field: 'address', align: 'left' },
     { name: 'amount', label: t('airdropIssuePage.summaryAmountColumn'), field: (row) => rowAmount(row), align: 'right', style: 'width: 9rem' },
-    { name: 'multiplier', label: t('airdropIssuePage.summaryMultiplierColumn'), field: 'multiplier', align: 'center', style: 'width: 7rem' },
+    { name: 'multiplier', label: t('airdropIssuePage.summaryMultiplierColumn'), field: 'multiplier', align: 'center', style: 'width: 10rem' },
 ]
 
 const summaryColumns: QTableColumn<SummaryRow>[] = [
@@ -457,9 +472,26 @@ function rowAmount(row: RecipientRow): string {
     return formatTokenAmount(total, tokenSymbol.value, tokenDecimals.value, 'suffix')
 }
 
+/** Compact display for the tables; the full address stays available as a tooltip. */
+function shortenAddress(address: string): string {
+    const prefixEnd = address.indexOf(':')
+    const prefix = prefixEnd >= 0 ? address.slice(0, prefixEnd + 1) : ''
+    const payload = prefixEnd >= 0 ? address.slice(prefixEnd + 1) : address
+    if (payload.length <= 12) return address
+    return `${prefix}${payload.slice(0, 6)}…${payload.slice(-6)}`
+}
+
 /** Keeps the editable input readable and protects the amount maths from non-integer values. */
 function normalizeMultiplier(row: RecipientRow) {
     row.multiplier = String(rowMultiplier(row))
+}
+
+function decrementMultiplier(row: RecipientRow) {
+    row.multiplier = String(Math.max(1, rowMultiplier(row) - 1))
+}
+
+function incrementMultiplier(row: RecipientRow) {
+    row.multiplier = String(rowMultiplier(row) + 1)
 }
 
 watch(rawAddresses, rebuildRecipientRows, { immediate: true })
@@ -690,9 +722,19 @@ const onSubmit = async () => {
 }
 
 .multiplier-input {
-    max-width: 6rem;
-    margin-left: auto;
-    margin-right: auto;
+    width: 4rem;
+    flex: none;
+}
+
+.multiplier-input :deep(input[type='number']) {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+
+.multiplier-input :deep(input[type='number']::-webkit-outer-spin-button),
+.multiplier-input :deep(input[type='number']::-webkit-inner-spin-button) {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .text-mono {
